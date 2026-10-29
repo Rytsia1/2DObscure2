@@ -68,51 +68,50 @@ namespace Obscure
 
             // Left panel: 6 Primary Ability Scores
             Ui.Panel(Root, 2, 19, 108, 108);
-            Ui.Label(Root, "PRIMARY STATS", 8, 23, Palette.Gold);
+            Ui.Label(Root, "PRIMARY STATS", 10, 23, Palette.Gold);
 
             // Right panel: 16 Derived Stats in two columns
             Ui.Panel(Root, 112, 19, 206, 108);
-            Ui.Label(Root, "DERIVED STATS (SELECT FOR TOOLTIP)", 118, 23, Palette.Gold);
+            Ui.Label(Root, "DERIVED STATS (SELECT FOR TOOLTIP)", 120, 23, Palette.Gold);
 
-            // Bottom panel: 4-line Stat Detail Tooltip
+            // Bottom panel: Portrait + 4-line Stat Detail Tooltip
             Ui.Panel(Root, 0, 128, Ui.Width, 52);
-            TooltipLabel = Ui.Label(Root, "", 6, 132, Palette.Bone);
-
-            portrait = Ui.Image(Root, PixelArt.FromRows(CurrentUnit.sprite), 86, 22, Ui.Widget);
+            portrait = Ui.Image(Root, PixelArt.FromRows(CurrentUnit.sprite), 8, 136, Ui.Widget);
+            TooltipLabel = Ui.Label(Root, "", 28, 132, Palette.Bone);
 
             var menu = Root.gameObject.AddComponent<Menu>();
-            menu.onFocus = s => TooltipLabel.Set(PixelFont.Wrap(s?.tooltip ?? "", 306));
+            menu.onFocus = s => TooltipLabel.Set(PixelFont.Wrap(s?.tooltip ?? "", 284));
             menu.onBack = () => Game?.Go(returnState);
 
-            // Hero switch button
-            var switchBtn = Ui.Button(Root, "NEXT HERO", 6, 112, 52, () => SwitchHero(1), 12);
+            // Hero switch button (spaced so '>' cursor never overlaps border or adjacent button)
+            var switchBtn = Ui.Button(Root, "NEXT", 10, 112, 44, () => SwitchHero(1), 12);
             switchBtn.onAdjust = SwitchHero;
             switchBtn.tooltip = "LEFT/RIGHT OR CLICK: INSPECT ANOTHER PARTY MEMBER";
             menu.Add(switchBtn);
 
-            var backBtn = Ui.Button(Root, "BACK", 62, 112, 42, () => Game?.Go(returnState), 12);
+            var backBtn = Ui.Button(Root, "BACK", 64, 112, 42, () => Game?.Go(returnState), 12);
             backBtn.tooltip = "RETURN TO PREVIOUS SCREEN";
             menu.Add(backBtn);
 
-            // Primary Ability Score interactive rows
+            // Primary Ability Score interactive rows (x=10 keeps '>' cursor at x=3 inside left panel border)
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
             {
                 var a = AbilityScores.AllAbilities[i];
                 int y = 34 + i * 12;
-                var btn = Ui.Button(Root, "", 6, y, 98, () => TooltipLabel.Set(PixelFont.Wrap(CurrentUnit.ExplainAbility(a), 306)), 11);
+                var btn = Ui.Button(Root, "", 10, y, 96, () => TooltipLabel.Set(PixelFont.Wrap(CurrentUnit.ExplainAbility(a), 284)), 11);
                 PrimaryStatLabels[a] = btn.label;
                 menu.Add(btn);
             }
 
-            // Derived Stat interactive rows (2 columns x 8 rows)
+            // Derived Stat interactive rows (2 columns x 8 rows, with 10px gap between columns for '>' cursor)
             for (int i = 0; i < DisplayedDerivedStats.Length; i++)
             {
                 var st = DisplayedDerivedStats[i];
                 int col = i / 8;
                 int row = i % 8;
-                int x = 116 + col * 100;
+                int x = 121 + col * 100;
                 int y = 34 + row * 11;
-                var btn = Ui.Button(Root, "", x, y, 96, () => ShowStatTooltip(st), 10);
+                var btn = Ui.Button(Root, "", x, y, 90, () => ShowStatTooltip(st), 10);
                 DerivedStatLabels[st] = btn.label;
                 menu.Add(btn);
             }
@@ -141,18 +140,18 @@ namespace Obscure
         }
 
         void ShowStatTooltip(DerivedStatId st) =>
-            TooltipLabel.Set(PixelFont.Wrap(GetStatTooltip(st), 306));
+            TooltipLabel.Set(PixelFont.Wrap(GetStatTooltip(st), 284));
 
         public void Refresh()
         {
             var u = CurrentUnit;
             u.RecalculateStats();
 
-            HeaderLabel.Set($"{u.name.ToUpperInvariant()}  HP {u.hp}/{u.stats.maxHp}  MP {u.mp}/{u.stats.maxMp}");
+            string heroName = u.name != null && u.name.Length > 12 ? u.name.Substring(0, 12) : (u.name ?? "HERO");
+            HeaderLabel.Set($"{heroName.ToUpperInvariant()} HP {u.hp}/{u.stats.maxHp} MP {u.mp}/{u.stats.maxMp}");
             string raceName = u.race?.name ?? "Human";
             string className = u.classDef?.name ?? u.role;
-            string bgName = u.background?.name ?? "Adventurer";
-            IdentityLabel.Set($"LV{u.level} {raceName.ToUpperInvariant()} {className.ToUpperInvariant()} ({bgName.ToUpperInvariant()})");
+            IdentityLabel.Set($"LV{u.level} {raceName.ToUpperInvariant()} {className.ToUpperInvariant()}");
 
             if (portrait != null && u.sprite != null)
                 portrait.sprite = PixelArt.FromRows(u.sprite);
@@ -180,7 +179,7 @@ namespace Obscure
             }
 
             if (menu?.Current != null)
-                TooltipLabel.Set(PixelFont.Wrap(menu.Current.tooltip ?? "", 306));
+                TooltipLabel.Set(PixelFont.Wrap(menu.Current.tooltip ?? "", 284));
         }
     }
 }

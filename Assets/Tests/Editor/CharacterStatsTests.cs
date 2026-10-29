@@ -414,6 +414,28 @@ namespace Obscure.Tests
                 Assert.AreEqual("POINTS 25/27", creation.RemainingPointsLabel.Text);
                 Assert.Greater(creation.Session.PreviewDerivedStats.maxHp, hpBefore);
                 StringAssert.Contains(creation.Session.PreviewDerivedStats.maxHp.ToString(), creation.PreviewStatLabels[DerivedStatId.MaxHP].Text);
+
+                // Verify UI labels never overflow 160px buttons (<=26 chars) or 320px bottom bar (<=50 chars)
+                for (int r = 0; r < Database.PlayableRaceIds.Length; r++)
+                {
+                    creation.CycleRace(1);
+                    Assert.LessOrEqual(creation.RaceLabel.Text.Length, 26, $"RaceLabel overflow: {creation.RaceLabel.Text}");
+                    Assert.LessOrEqual(creation.RaceFeatLabel.Text.Length, 18, $"RaceFeatLabel overflow: {creation.RaceFeatLabel.Text}");
+                }
+                for (int c = 0; c < Database.PlayableClassIds.Length; c++)
+                {
+                    creation.CycleClass(1);
+                    Assert.LessOrEqual(creation.ClassLabel.Text.Length, 26, $"ClassLabel overflow: {creation.ClassLabel.Text}");
+                    Assert.LessOrEqual(creation.ClassIdentityLabel.Text.Length, 18, $"ClassIdentityLabel overflow: {creation.ClassIdentityLabel.Text}");
+                    Assert.LessOrEqual(creation.StarterPassiveLabel.Text.Length, 26, $"StarterPassiveLabel overflow: {creation.StarterPassiveLabel.Text}");
+                    for (int s = 0; s < EquipmentSlots.All.Length; s++)
+                    {
+                        creation.CycleEquipmentSlot(1);
+                        Assert.LessOrEqual(creation.EquipmentSlotLabel.Text.Length, 26, $"EquipmentSlotLabel overflow: {creation.EquipmentSlotLabel.Text}");
+                    }
+                }
+                Assert.LessOrEqual(creation.HintLabel.Text.Length, 50);
+                Assert.LessOrEqual(creation.PartySummaryLabel.Text.Length, 50);
                 creation.Close();
 
                 // 2. Character Status Screen & Tooltips

@@ -20,6 +20,8 @@ namespace Obscure
         public Label StepLabel { get; private set; }
         public Label RaceLabel { get; private set; }
         public Label ClassLabel { get; private set; }
+        public Label ClassIdentityLabel { get; private set; }
+        public Label RaceFeatLabel { get; private set; }
         public Label BackgroundLabel { get; private set; }
         public Label StarterPassiveLabel { get; private set; }
         public Label EquipmentSlotLabel { get; private set; }
@@ -72,7 +74,7 @@ namespace Obscure
             // Top bar: Title, Current Step & Remaining Point Buy Budget
             Ui.Panel(Root, 0, 0, Ui.Width, 16);
             Ui.Label(Root, "CHARACTER CREATION", 6, 4, Palette.Gold);
-            StepLabel = Ui.Label(Root, "", 132, 4, Palette.Parchment);
+            StepLabel = Ui.Label(Root, "", 162, 4, Palette.Parchment, Align.Center);
             RemainingPointsLabel = Ui.Label(Root, "", 314, 4, Palette.Gold, Align.Right);
 
             // Left panel: Race, Class, Starter Passive, Equipment (8 slots), and 6 Point Buy Ability Rows
@@ -85,68 +87,71 @@ namespace Obscure
             var menu = Root.gameObject.AddComponent<Menu>();
             HintLabel = Ui.Label(Root, "", 6, 155, Palette.Parchment);
             PartySummaryLabel = Ui.Label(Root, "", 6, 165, Palette.Ash);
-            menu.onFocus = s => HintLabel.Set(s?.tooltip ?? "LEFT/RIGHT: ADJUST   ENTER: SELECT");
+            menu.onFocus = s => SetHint(s?.tooltip ?? "LEFT/RIGHT: ADJUST   ENTER: SELECT");
 
-            // 1. Race Selector (7 Playable Races)
-            var raceBtn = Ui.Button(Root, "", 8, 19, 162, () => CycleRace(1), 10);
+            // 1. Race Selector (7 Playable Races) — x=11 keeps '>' cursor at x=4 inside left panel border
+            var raceBtn = Ui.Button(Root, "", 11, 19, 160, () => CycleRace(1), 10);
             raceBtn.onAdjust = CycleRace;
-            raceBtn.tooltip = "STEP 2: SELECT RACE (BONUS + RACIAL FEAT + RACIAL UTILITY)";
+            raceBtn.tooltip = "STEP 2: LEFT/RIGHT SELECT RACE (BONUS+FEAT+UTIL)";
             RaceLabel = raceBtn.label;
             menu.Add(raceBtn);
 
             // 2. Class Selector (9 Playable Classes)
-            var classBtn = Ui.Button(Root, "", 8, 29, 162, () => CycleClass(1), 10);
+            var classBtn = Ui.Button(Root, "", 11, 29, 160, () => CycleClass(1), 10);
             classBtn.onAdjust = CycleClass;
-            classBtn.tooltip = "STEP 3: SELECT CLASS (IDENTITY, STARTER PASSIVE, STRICT WEAPONS)";
+            classBtn.tooltip = "STEP 3: LEFT/RIGHT SELECT CLASS & STARTER PASSIVE";
             ClassLabel = classBtn.label;
             menu.Add(classBtn);
 
             // 3. Starter Passive & Background Display
-            StarterPassiveLabel = Ui.Label(Root, "", 8, 40, Palette.Moss);
-            BackgroundLabel = Ui.Label(Root, "", 8, 40, Color.clear); // retained for compatibility
+            StarterPassiveLabel = Ui.Label(Root, "", 11, 40, Palette.Moss);
+            BackgroundLabel = Ui.Label(Root, "", 11, 40, Color.clear); // retained for compatibility
 
             // 4. Equipment Slot Configurator (8 Slots with Strict Weapon Compatibility)
-            var eqBtn = Ui.Button(Root, "", 8, 48, 162, () => CycleEquipmentSlot(1), 10);
+            var eqBtn = Ui.Button(Root, "", 11, 48, 160, () => CycleEquipmentSlot(1), 10);
             eqBtn.onAdjust = CycleEquipmentItem;
-            eqBtn.tooltip = "STEP 7: CLICK TO NEXT SLOT (1-8), LEFT/RIGHT TO EQUIP COMPATIBLE ITEM";
+            eqBtn.tooltip = "STEP 7: ENTER NEXT SLOT (1-8), L/R EQUIP ITEM";
             EquipmentSlotLabel = eqBtn.label;
             menu.Add(eqBtn);
 
-            Ui.Label(Root, "STAT  BASE RACE FIN MOD COST", 8, 59, Palette.Ash);
+            // Centered column header aligned with 25-char ability rows inside x=11..171 (center=91)
+            Ui.Label(Root, "STAT BS  RAC FIN  MOD CST", 91, 59, Palette.Ash, Align.Center);
 
             // 5. Six Primary Ability Score Point-Buy rows
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
             {
                 var ability = AbilityScores.AllAbilities[i];
                 int y = 67 + i * 11;
-                var btn = Ui.Button(Root, "", 8, y, 162, () => AdjustAbility(ability, 1), 10);
+                var btn = Ui.Button(Root, "", 11, y, 160, () => AdjustAbility(ability, 1), 10);
                 btn.onAdjust = d => AdjustAbility(ability, d);
-                btn.tooltip = $"{Database.AbilityDefs[ability].displayName.ToUpperInvariant()}: {Database.AbilityDefs[ability].description.ToUpperInvariant()}";
+                btn.tooltip = GetAbilityShortTooltip(ability);
                 AbilityRowLabels[ability] = btn.label;
                 menu.Add(btn);
             }
 
-            // 6. Action Buttons: Reset, New Hero, Add to Party, Status View, Begin Expedition, Back
-            var resetBtn = Ui.Button(Root, "RESET", 8, 135, 38, () => { Session.ResetPointBuy(); Refresh(); }, 12);
-            resetBtn.tooltip = "RESET ALL ABILITY SCORES TO 8 (27 POINTS REMAINING)";
+            // 6. Action Buttons spaced with >=8px gaps so the '>' focus cursor never overlaps adjacent buttons
+            var resetBtn = Ui.Button(Root, "RESET", 10, 135, 34, () => { Session.ResetPointBuy(); Refresh(); }, 12);
+            resetBtn.tooltip = "RESET ALL ABILITY SCORES TO 8 (27 POINTS LEFT)";
             menu.Add(resetBtn);
 
-            var newBtn = Ui.Button(Root, "NEW", 48, 135, 34, () => { Session.CreateNewCharacter(); Refresh(); }, 12);
+            var newBtn = Ui.Button(Root, "NEW", 52, 135, 26, () => { Session.CreateNewCharacter(); Refresh(); }, 12);
             newBtn.tooltip = "CREATE A NEW CHARACTER BUILD FROM STEP 1";
             menu.Add(newBtn);
 
-            confirmBtn = Ui.Button(Root, "ADD HERO", 84, 135, 56, ConfirmAndAddToParty, 12);
-            confirmBtn.tooltip = "CONFIRM CHARACTER AND ADD TO EXPEDITION PARTY (4 REQUIRED)";
+            confirmBtn = Ui.Button(Root, "ADD HERO", 86, 135, 52, ConfirmAndAddToParty, 12);
+            confirmBtn.tooltip = "CONFIRM HERO AND ADD TO EXPEDITION PARTY (4 REQ)";
             menu.Add(confirmBtn);
 
-            var backBtn = Ui.Button(Root, "BACK", 142, 135, 30, () => Game?.Go(GameState.MainMenu), 12);
+            var backBtn = Ui.Button(Root, "BACK", 146, 135, 28, () => Game?.Go(GameState.MainMenu), 12);
             backBtn.tooltip = "RETURN TO TITLE SCREEN";
             menu.Add(backBtn);
             menu.onBack = () => Game?.Go(GameState.MainMenu);
 
-            // Right Panel: Portrait + Live Derived Stats Preview
-            portrait = Ui.Image(Root, PixelArt.FromRows(Session.Class.sprite), 184, 20, Ui.Widget);
-            Ui.Label(Root, "DERIVED PREVIEW", 206, 22, Palette.Gold);
+            // Right Panel: Portrait (16x24 at y=19..43) + Identity/Feat header + Live Derived Stats (y=46..123)
+            portrait = Ui.Image(Root, PixelArt.FromRows(Session.Class.sprite), 182, 19, Ui.Widget);
+            Ui.Label(Root, "DERIVED PREVIEW", 202, 19, Palette.Gold);
+            ClassIdentityLabel = Ui.Label(Root, "", 202, 28, Palette.Parchment);
+            RaceFeatLabel = Ui.Label(Root, "", 202, 37, Palette.Ash);
 
             for (int i = 0; i < PreviewedStats.Length; i++)
             {
@@ -154,20 +159,42 @@ namespace Obscure
                 int col = i / 8;
                 int row = i % 8;
                 int x = 183 + col * 68;
-                int y = 38 + row * 11;
+                int y = 46 + row * 10;
                 PreviewStatLabels[st] = Ui.Label(Root, "", x, y, Palette.Bone);
             }
 
-            var statusBtn = Ui.Button(Root, "STATUS", 183, 135, 56, () => Game?.Go(GameState.CharacterStatus), 12);
-            statusBtn.tooltip = "INSPECT FULL CHARACTER STATUS AND STAT FORMULA TOOLTIPS";
+            var statusBtn = Ui.Button(Root, "STATUS", 188, 135, 52, () => Game?.Go(GameState.CharacterStatus), 12);
+            statusBtn.tooltip = "INSPECT FULL CHARACTER STATUS & STAT FORMULAS";
             menu.Add(statusBtn);
 
-            startBtn = Ui.Button(Root, "EXPEDITION", 243, 135, 70, () => TryBeginExpedition(out _), 12);
+            startBtn = Ui.Button(Root, "EXPEDITION", 249, 135, 66, () => TryBeginExpedition(out _), 12);
             startBtn.tooltip = "BEGIN EXPEDITION (REQUIRES COMPLETE 4-HERO PARTY)";
             menu.Add(startBtn);
 
             Session.Changed += Refresh;
             Refresh();
+        }
+
+        static string GetAbilityShortTooltip(Ability ability) => ability switch
+        {
+            Ability.STR => "STRENGTH: MELEE POWER, BREAK POWER, BLOCK POWER",
+            Ability.DEX => "DEXTERITY: RANGED POWER, ACCURACY, EVASION, CRIT",
+            Ability.VIT => "VITALITY: MAX HP, PHYSICAL DEFENSE, STAGGER RES",
+            Ability.INT => "INTELLIGENCE: MAGIC POWER, MAX MP, MAGIC BREAK",
+            Ability.WIS => "WISDOM: HEALING POWER, MAGIC DEFENSE, STATUS RES",
+            Ability.CHA => "CHARISMA: SUPPORT POWER, SOCIAL & PACT EFFECTS",
+            _ => ability.ToString(),
+        };
+
+        static string Truncate(string s, int maxChars)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Length <= maxChars ? s : s.Substring(0, maxChars);
+        }
+
+        void SetHint(string text)
+        {
+            HintLabel?.Set(Truncate((text ?? "").ToUpperInvariant(), 50));
         }
 
         public void CycleRace(int dir)
@@ -213,7 +240,7 @@ namespace Obscure
             if (compatible.Count == 0)
             {
                 Sfx.Play(Sound.Deny);
-                HintLabel?.Set($"NO COMPATIBLE ITEMS FOR {EquipmentSlots.DisplayName(SelectedEquipmentSlot).ToUpperInvariant()}.");
+                SetHint($"NO COMPATIBLE ITEMS FOR {EquipmentSlots.DisplayName(SelectedEquipmentSlot)}.");
                 return;
             }
             var current = Session.GetEquipped(SelectedEquipmentSlot);
@@ -228,7 +255,7 @@ namespace Obscure
             Session.GoToStep(CreationStep.AllocateAbilityScores);
             bool ok = delta > 0 ? Session.IncreaseStat(ability) : Session.DecreaseStat(ability);
             if (!ok) Sfx.Play(Sound.Deny);
-            HintLabel?.Set(Session.LastFeedbackMessage);
+            SetHint(Session.LastFeedbackMessage);
             Refresh();
         }
 
@@ -237,7 +264,7 @@ namespace Obscure
             if (!Session.CanConfirm)
             {
                 Sfx.Play(Sound.Deny);
-                HintLabel?.Set((Session.Validate() ?? "INVALID CHARACTER CONFIGURATION").ToUpperInvariant());
+                SetHint(Session.Validate() ?? "INVALID CHARACTER CONFIGURATION");
                 return;
             }
 
@@ -251,7 +278,7 @@ namespace Obscure
                 var created = Session.Confirm(activeRoster, customId);
                 activeRoster.SetPartySlot(editingPartySlot, created.id);
                 editingPartySlot = (editingPartySlot + 1) % CharacterRoster.PartySize;
-                HintLabel?.Set($"ADDED {created.name.ToUpperInvariant()} TO PARTY ({activeRoster.PartyCount}/{CharacterRoster.PartySize})!");
+                SetHint($"ADDED {created.name} TO PARTY ({activeRoster.PartyCount}/{CharacterRoster.PartySize})!");
                 Session.CreateNewCharacter();
                 Refresh();
                 return;
@@ -259,15 +286,15 @@ namespace Obscure
 
             string newId = $"hero_{activeRoster.PartyCount + 1}_{Session.Class.id}_{Guid.NewGuid().ToString("N").Substring(0, 4)}";
             Session.CharacterName = $"{Session.Class.name}";
-            var confirmed = Session.Confirm( null, newId);
+            var confirmed = Session.Confirm(null, newId);
             if (!activeRoster.TryAddToParty(confirmed, out string partyErr))
             {
                 Sfx.Play(Sound.Deny);
-                HintLabel?.Set(partyErr.ToUpperInvariant());
+                SetHint(partyErr);
                 return;
             }
 
-            HintLabel?.Set($"ADDED {confirmed.name.ToUpperInvariant()} ({activeRoster.PartyCount}/{CharacterRoster.PartySize})!");
+            SetHint($"ADDED {confirmed.name} ({activeRoster.PartyCount}/{CharacterRoster.PartySize})!");
             if (!activeRoster.IsPartyComplete)
                 Session.CreateNewCharacter();
             Refresh();
@@ -280,7 +307,7 @@ namespace Obscure
             if (error != null)
             {
                 Sfx.Play(Sound.Deny);
-                HintLabel?.Set(error.ToUpperInvariant());
+                SetHint(error);
                 Refresh();
                 return false;
             }
@@ -299,17 +326,20 @@ namespace Obscure
             StepLabel?.Set($"STEP {(int)Session.CurrentStep}/7");
 
             string featName = Session.Race?.racialFeat?.name ?? "NONE";
-            RaceLabel.Set($"RACE < {Session.Race.name.ToUpperInvariant()} ({featName.ToUpperInvariant()}) >");
+            RaceLabel.Set($"RACE < {Truncate(Session.Race.name.ToUpperInvariant(), 16)} >");
             string identity = Session.Class?.gameplayIdentity ?? Session.Class?.role ?? "";
-            ClassLabel.Set($"CLASS < {Session.Class.name.ToUpperInvariant()} ({identity.ToUpperInvariant()}) >");
+            ClassLabel.Set($"CLASS < {Truncate(Session.Class.name.ToUpperInvariant(), 15)} >");
             BackgroundLabel?.Set($"BG < {Session.Background.name.ToUpperInvariant()} >");
 
+            ClassIdentityLabel?.Set(Truncate($"ID:{identity.ToUpperInvariant()}", 18));
+            RaceFeatLabel?.Set(Truncate($"FT:{featName.ToUpperInvariant()}", 18));
+
             var sp = Session.StarterPassive;
-            StarterPassiveLabel?.Set($"PASSIVE: {(sp != null ? sp.name.ToUpperInvariant() : "NONE")}");
+            StarterPassiveLabel?.Set(Truncate($"PASSIVE: {(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 26));
 
             var eq = Session.GetEquipped(SelectedEquipmentSlot);
             string eqName = eq != null ? eq.name.ToUpperInvariant() : "EMPTY";
-            EquipmentSlotLabel?.Set($"EQP [{EquipmentSlots.ShortName(SelectedEquipmentSlot)}]: < {eqName} >");
+            EquipmentSlotLabel?.Set($"[{EquipmentSlots.ShortName(SelectedEquipmentSlot)}] < {Truncate(eqName, 15)} >");
 
             if (portrait != null && Session.Class?.sprite != null)
                 portrait.sprite = PixelArt.FromRows(Session.Class.sprite);
@@ -352,9 +382,10 @@ namespace Obscure
                     {
                         var c = activeRoster.Characters.FirstOrDefault(x => x.id == id)
                                 ?? (Database.Characters.TryGetValue(id, out var dc) ? dc : null);
-                        return $"{i + 1}:{(c != null ? c.name.ToUpperInvariant() : id.ToUpperInvariant())}";
+                        string shortName = Truncate((c != null ? c.name : id).ToUpperInvariant(), 8);
+                        return $"{i + 1}:{shortName}";
                     });
-                PartySummaryLabel.Set($"PARTY ({activeRoster.PartyCount}/{CharacterRoster.PartySize}): " + string.Join("  ", members));
+                PartySummaryLabel.Set(Truncate($"PARTY ({activeRoster.PartyCount}/{CharacterRoster.PartySize}): " + string.Join(" ", members), 50));
             }
         }
     }
