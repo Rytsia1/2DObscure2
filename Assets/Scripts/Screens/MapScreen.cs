@@ -42,7 +42,7 @@ namespace Obscure
 
             tooltip = Ui.Label(Root, "", 160, 141, Palette.Bone, Align.Center);
             var menu = Root.gameObject.AddComponent<Menu>();
-            menu.onFocus = s => tooltip.Set(Describe(nodeOf[s]));
+            menu.onFocus = s => tooltip.Set(nodeOf.TryGetValue(s, out var nd) ? Describe(nd) : (s.tooltip ?? ""));
             foreach (var n in map.nodes)
             {
                 var view = NodeView(n, available.Contains(n), ahead.Contains(n));
@@ -54,10 +54,14 @@ namespace Obscure
             for (int i = 0; i < Run.Party.Count; i++)
             {
                 var u = Run.Party[i];
-                Ui.Label(Root, u.name.ToUpper(), 8 + i * 80, 157, Palette.Bone);
-                Ui.Label(Root, $"{u.hp}/{u.stats.maxHp}", 8 + i * 80, 167, u.Alive ? Palette.Parchment : Palette.Crimson);
-                Ui.Label(Root, $"MP{u.mp}", 52 + i * 80, 167, Palette.Lilac);
+                Ui.Label(Root, u.name.ToUpper(), 6 + i * 66, 157, Palette.Bone);
+                Ui.Label(Root, $"{u.hp}/{u.stats.maxHp}", 6 + i * 66, 167, u.Alive ? Palette.Parchment : Palette.Crimson);
+                Ui.Label(Root, $"MP{u.mp}", 44 + i * 66, 167, Palette.Lilac);
             }
+
+            var statusBtn = Ui.Button(Root, "STATUS", 270, 159, 44, () => Game.Go(GameState.CharacterStatus), 14);
+            statusBtn.tooltip = "INSPECT PARTY PRIMARY STATS, DERIVED STATS, AND TOOLTIPS";
+            menu.Add(statusBtn);
         }
 
         // Every node still reachable from the current choices (including them).

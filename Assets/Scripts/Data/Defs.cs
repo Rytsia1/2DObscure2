@@ -38,6 +38,10 @@ namespace Obscure
     public class CharacterDef
     {
         public string id, name, role, description;
+        public string raceId = "human", classId = "knight", backgroundId = "oathsworn";
+        public AbilityScores baseScores = AbilityScores.DefaultBase;
+        public string[] startingEquipment = Array.Empty<string>();
+        public string[] passives = Array.Empty<string>();
         public Affinities affinities = Affinities.None;
         public Stats stats;
         public string[] skills;
@@ -51,7 +55,15 @@ namespace Obscure
         public Tier tier;             // also selects the defense QTE profile
         public AiKind ai;
         public Affinities affinities = Affinities.None;
+        public AbilityScores abilityScores = AbilityScores.Uniform(10);
         public Stats stats;
+        public int magicDef = -1;     // -1 defaults to stats.def if not separately specified
+        public int maxBreakGauge = 40;
+        public int breakResistance = 0;
+        public int breakDuration = 1;
+        public int breakStunTurns = 1;
+        public float breakDamageMultiplier = 1.5f;
+        public bool bossBreakRecoverOnPhase2 = true;
         public int gold;
         public string[] sprite;
         public EnemyAttack[] attacks;
@@ -83,6 +95,10 @@ namespace Obscure
         public float power;
         public int hits = 1;
         public Element element = Element.Physical;
+        public Ability? scalingAbility;    // optional override; defaults by SkillKind (STR/INT/WIS/CHA)
+        public bool isRanged;              // uses RangedPower (DEX) for physical ranged skills
+        public float breakMultiplier = 1f; // multiplier applied to Break Gauge reduction
+        public float bonusVsBroken = 0f;   // extra damage multiplier against Broken targets
         public string word; // typing QTE word for spells, null for physical skills
         public SkillDifficulty difficulty = SkillDifficulty.Medium; // typing QTE difficulty
         public int cooldown;      // own turns before reuse (0 = none)
@@ -109,6 +125,8 @@ namespace Obscure
     {
         public string id, name, description;
         public Stats bonus;
+        public AbilityScores abilityBonus;
+        public StatModifier[] modifiers = Array.Empty<StatModifier>();
         public float victoryHeal; // fraction of max HP restored after each won battle
     }
 
@@ -117,6 +135,8 @@ namespace Obscure
     {
         public string character, name;
         public Stats bonus;
+        public AbilityScores abilityBonus;
+        public StatModifier[] modifiers = Array.Empty<StatModifier>();
     }
 
     public enum RewardKind { Item, Relic, Upgrade, Gold }

@@ -1,0 +1,460 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
+
+namespace Obscure.Tests
+{
+    public class CharacterStatsTests
+    {
+        // =====================================================================
+        // 1. Primary Ability Scores & Modifiers
+        // =====================================================================
+
+        [Test]
+        public void AllSixPrimaryAbilityScoresAreImplemented()
+        {
+            var expected = new[] { Ability.STR, Ability.DEX, Ability.VIT, Ability.INT, Ability.WIS, Ability.CHA };
+            CollectionAssert.AreEqual(expected, AbilityScores.AllAbilities);
+            foreach (var a in expected)
+            {
+                Assert.IsTrue(Database.AbilityDefs.ContainsKey(a), $"Missing AbilityDef for {a}");
+                Assert.AreEqual(a.ToString(), Database.AbilityDefs[a].abilityId);
+                Assert.AreEqual(8, Database.AbilityDefs[a].baseScore);
+                Assert.AreEqual(8, Database.AbilityDefs[a].minimumScore);
+                Assert.AreEqual(20, Database.AbilityDefs[a].maximumScore);
+                Assert.IsTrue(Database.AbilityDefs[a].pointBuyEnabled);
+            }
+        }
+
+        [Test]
+        public void AbilityModifierFormulaMatchesPrdAndUsesMathematicalFloor()
+        {
+            // Exact PRD table (8..20)
+            var table = new (int score, int expectedMod)[]
+            {
+                (8, -1), (9, -1), (10, 0), (11, 0), (12, 1), (13, 1),
+                (14, 2), (15, 2), (16, 3), (17, 3), (18, 4), (19, 4), (20, 5)
+            };
+            foreach (var (score, expectedMod) in table)
+                Assert.AreEqual(expectedMod, AbilityScores.GetModifier(score), $"Score {score}");
+
+            // Mathematical floor check on lower negative odd values (truncation toward zero would fail on 9, 7, 5)
+            Assert.AreEqual(-2, AbilityScores.GetModifier(7));
+            Assert.AreEqual(-2, AbilityScores.GetModifier(6));
+            Assert.AreEqual(-3, AbilityScores.GetModifier(5));
+        }
+
+        [Test]
+        public void AbilityScoreSourcesStaySeparateAndRecalculateCleanly()
+        {
+            var unit = new Unit(Database.Characters["knight"]);
+            var baseBefore = unit.BaseScores;
+            var raceBefore = unit.RacialModifiers;
+            Assert.AreEqual(new AbilityScores(15, 10, 15, 8, 12, 11), baseBefore);
+            Assert.AreEqual(new AbilityScores(1, 0, 1, 0, 0, 1), raceBefore); // Human: +1 STR, +1 VIT, +1 CHA
+            Assert.AreEqual(new AbilityScores(16, 10, 16, 8, 12, 12), unit.FinalScores);
+
+            int atkBefore = unit.Derived.physicalPower;
+            unit.Equip(Database.Equipment["steel_cuirass"]); // +1 VIT, +4 PhysDef, +1 MagDef
+            Assert.AreEqual(1, unit.EquipmentAbilityBonuses.vit);
+            Assert.AreEqual(baseBefore, unit.BaseScores, "Base scores untouched by equipment");
+            Assert.AreEqual(17, unit.Score(Ability.VIT));
+
+            unit.AddPermanentAbilityBonus(Ability.STR, 2); // STR 16 -> 18 (mod +3 -> +4)
+            Assert.AreEqual(2, unit.PermanentAbilityBonuses.str);
+            Assert.AreEqual(18, unit.Score(Ability.STR));
+            Assert.AreEqual(4, unit.Mod(Ability.STR));
+            Assert.Greater(unit.Derived.physicalPower, atkBefore);
+
+            unit.SetTemporaryAbilityModifiers(new AbilityScores(-2, 0, 0, 0, 0, 0));
+            Assert.AreEqual(-2, unit.TemporaryAbilityModifiers.str);
+            Assert.AreEqual(16, unit.Score(Ability.STR));
+
+            unit.ClearTemporaryModifiers();
+            Assert.AreEqual(18, unit.Score(Ability.STR));
+            unit.Unequip(EquipmentSlot.Armor);
+            Assert.AreEqual(0, unit.EquipmentAbilityBonuses.vit);
+            Assert.AreEqual(16, unit.Score(Ability.VIT));
+        }
+
+        // =====================================================================
+        // 2. Point Buy System & Validation
+        // =====================================================================
+
+        [Test]
+        public void PointBuyInitialStateAndCostTableMatchPrd()
+        {
+            var pb = new PointBuyAllocation();
+            Assert.AreEqual(27, pb.Config.budget);
+            Assert.AreEqual(27, pb.RemainingPoints);
+            Assert.AreEqual(0, pb.TotalSpent);
+            Assert.AreEqual(AbilityScores.Uniform(8), pb.Scores);
+
+            var expectedCosts = new Dictionary<int, int>
+            {
+                [8] = 0, [9] = 1, [10] = 2, [11] = 3, [12] = 4, [13] = 5, [14] = 7, [15] = 9
+            };
+            foreach (var kv in expectedCosts)
+                Assert.AreEqual(kv.Value, pb.Config.GetCost(kv.Key), $"Cost for score {kv.Key}");
+        }
+
+        [Test]
+        public void PointBuyExampleWarriorBerserkerBuildCostsExactly27()
+        {
+            // Prompt Section 2 Validation build: STR=15, DEX=12, VIT=15, INT=8, WIS=10, CHA=11 -> 9+4+9+0+2+3 = 27
+            var session = new CharacterCreationSession();
+            var build = new AbilityScores(15, 12, 15, 8, 10, 11);
+            Assert.IsTrue(session.PointBuy.TrySetAll(build));
+            Assert.AreEqual(9, session.PointBuy.GetCost(Ability.STR));
+            Assert.AreEqual(4, session.PointBuy.GetCost(Ability.DEX));
+            Assert.AreEqual(9, session.PointBuy.GetCost(Ability.VIT));
+            Assert.AreEqual(0, session.PointBuy.GetCost(Ability.INT));
+            Assert.AreEqual(2, session.PointBuy.GetCost(Ability.WIS));
+            Assert.AreEqual(3, session.PointBuy.GetCost(Ability.CHA));
+            Assert.AreEqual(27, session.PointBuy.TotalSpent);
+            Assert.AreEqual(0, session.PointBuy.RemainingPoints);
+            Assert.IsTrue(session.PointBuy.IsValid);
+            Assert.IsTrue(session.CanConfirm);
+
+            // Cannot spend even 1 more point when remaining is 0
+            Assert.IsFalse(session.IncreaseStat(Ability.INT));
+            Assert.AreEqual(8, session.BaseScores.intel);
+            Assert.AreEqual(0, session.PointBuy.RemainingPoints);
+        }
+
+        [Test]
+        public void PointBuyRejectsScoresOutsideRangeAndOverBudget()
+        {
+            var pb = new PointBuyAllocation();
+
+            // Cannot decrease below 8
+            foreach (var a in AbilityScores.AllAbilities)
+            {
+                Assert.IsFalse(pb.CanDecrease(a));
+                Assert.IsFalse(pb.TryDecrease(a));
+                Assert.AreEqual(8, pb.GetScore(a));
+            }
+            Assert.IsFalse(pb.TrySetScore(Ability.STR, 7));
+            Assert.IsNotNull(pb.Config.Validate(new AbilityScores(7, 8, 8, 8, 8, 8)));
+
+            // Cannot increase above 15 before racial modifiers
+            for (int s = 8; s < 15; s++) Assert.IsTrue(pb.TryIncrease(Ability.STR));
+            Assert.AreEqual(15, pb.GetScore(Ability.STR));
+            Assert.AreEqual(18, pb.RemainingPoints); // 27 - 9 = 18 points still left, but STR is at cap 15
+            Assert.IsFalse(pb.CanIncrease(Ability.STR));
+            Assert.IsFalse(pb.TryIncrease(Ability.STR));
+            Assert.IsFalse(pb.TrySetScore(Ability.STR, 16));
+            Assert.IsNotNull(pb.Config.Validate(new AbilityScores(16, 8, 8, 8, 8, 8)));
+
+            // Cannot exceed 27 points total
+            Assert.IsTrue(pb.TrySetAll(new AbilityScores(15, 15, 15, 8, 8, 8))); // 9 + 9 + 9 = 27
+            Assert.AreEqual(0, pb.RemainingPoints);
+            Assert.IsFalse(pb.TryIncrease(Ability.INT));
+            Assert.IsFalse(pb.TrySetAll(new AbilityScores(15, 15, 15, 9, 8, 8))); // 28 > 27
+            Assert.Throws<InvalidOperationException>(() => pb.SetAllOrThrow(new AbilityScores(15, 15, 15, 15, 8, 8)));
+
+            // Reset restores all scores to 8 and remaining points to 27
+            pb.Reset();
+            Assert.AreEqual(AbilityScores.Uniform(8), pb.Scores);
+            Assert.AreEqual(27, pb.RemainingPoints);
+        }
+
+        // =====================================================================
+        // 3. Character Creation Flow (Race, Class, Background, Roster)
+        // =====================================================================
+
+        [Test]
+        public void CharacterCreationFlowAppliesRaceAfterPointBuyAndPreservesUnconventionalBuilds()
+        {
+            var roster = new CharacterRoster();
+            var session = new CharacterCreationSession();
+
+            // Allocate an unconventional INT-focused Warrior before choosing class/race
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 12, 12, 15, 13, 11)); // 2+4+4+9+5+3 = 27
+            var allocated = session.BaseScores;
+
+            session.SelectRace("elf");       // +2 DEX, +1 INT
+            session.SelectClass("knight");   // Class selection must NOT overwrite Point Buy scores
+            session.SelectBackground("acolyte");
+
+            Assert.AreEqual(allocated, session.BaseScores, "Class/Background selection never overwrites Point Buy scores");
+            Assert.AreEqual(27, session.PointBuy.TotalSpent, "Background/Race never alter Point Buy costs");
+            // Elf +1 INT raises 15 -> 16 after Point Buy
+            Assert.AreEqual(16, session.FinalScores.intel);
+            Assert.AreEqual(14, session.FinalScores.dex);
+            Assert.AreEqual(3, session.AbilityModifiers.intel);
+            Assert.AreEqual(2, session.AbilityModifiers.dex);
+
+            // Live Derived Stats preview updates immediately when scores change
+            int hpBefore = session.PreviewDerivedStats.maxHp;
+            session.DecreaseStat(Ability.CHA); // CHA 11 -> 10 (+1 pt)
+            session.DecreaseStat(Ability.WIS); // WIS 13 -> 12 (+1 pt)
+            session.IncreaseStat(Ability.VIT); // VIT 12 -> 13 (-1 pt)
+            session.IncreaseStat(Ability.VIT); // VIT 13 -> 14 (-2 pts -> need 1 more, so let's check!)
+            session.DecreaseStat(Ability.STR); // STR 10 -> 9 (+1 pt)
+            Assert.IsTrue(session.IncreaseStat(Ability.VIT)); // VIT 13 -> 14 (mod +1 -> +2)
+            Assert.Greater(session.PreviewDerivedStats.maxHp, hpBefore, "Preview Max HP updates immediately");
+
+            var created = session.Confirm(roster, "custom_spellblade");
+            CollectionAssert.Contains(roster.Characters, created);
+            roster.SetPartySlot(0, created.id);
+            Assert.AreEqual("custom_spellblade", roster.GetActiveParty()[0].id);
+        }
+
+        // =====================================================================
+        // 4. Derived Stats & Recalculation
+        // =====================================================================
+
+        [Test]
+        public void DerivedStatsFormulasAndRecalculationAreAccurate()
+        {
+            var knight = new Unit(Database.Characters["knight"]);
+            // Knight: Human (+1 STR, +1 VIT, +1 CHA) + Base(15,10,15,8,12,11) = Final(16,10,16,8,12,12)
+            // Modifiers: STR +3, DEX 0, VIT +3, INT -1, WIS +1, CHA +1
+            Assert.AreEqual(125, knight.Derived.maxHp);           // 95 + 3 * 10
+            Assert.AreEqual(20, knight.Derived.maxMp);            // 15 + 1 * 5
+            Assert.AreEqual(14, knight.Derived.physicalPower);    // 8 + 3 * 2
+            Assert.AreEqual(4, knight.Derived.magicPower);        // 6 + (-1) * 2
+            Assert.AreEqual(8, knight.Derived.healingPower);      // 6 + 1 * 2
+            Assert.AreEqual(10, knight.Derived.supportPower);     // 8 + 1 * 2
+            Assert.AreEqual(13, knight.Derived.physicalDefense);  // 7 + 3 * 2
+            Assert.AreEqual(7, knight.Derived.magicDefense);      // 5 + 1 * 2
+            Assert.AreEqual(6, knight.Derived.initiative);        // 6 + 0
+
+            // Changing VIT updates MaxHP, PhysicalDefense, StatusResistance, StaggerResistance, QteStability
+            knight.AddPermanentAbilityBonus(Ability.VIT, 2); // VIT 16 -> 18 (mod +3 -> +4)
+            Assert.AreEqual(135, knight.Derived.maxHp);
+            Assert.AreEqual(15, knight.Derived.physicalDefense);
+
+            // Changing WIS updates MaxMP, MagicDefense, HealingPower
+            knight.AddPermanentAbilityBonus(Ability.WIS, 2); // WIS 12 -> 14 (mod +1 -> +2)
+            Assert.AreEqual(25, knight.Derived.maxMp);
+            Assert.AreEqual(9, knight.Derived.magicDefense);
+            Assert.AreEqual(10, knight.Derived.healingPower);
+
+            // Changing DEX updates Initiative, RangedPower, CritChance, Evasion, QteTimingBonus
+            knight.AddPermanentAbilityBonus(Ability.DEX, 4); // DEX 10 -> 14 (mod 0 -> +2)
+            Assert.AreEqual(8, knight.Derived.initiative);
+            Assert.Greater(knight.Derived.qteTimingBonus, 0);
+            Assert.Greater(knight.Derived.rangedPower, 7);
+        }
+
+        [Test]
+        public void ProgressionLevelUpAsiAndRespecWorkCleanly()
+        {
+            var mage = new Unit(Database.Characters["mage"]);
+            int hp1 = mage.Derived.maxHp;
+            int mp1 = mage.Derived.maxMp;
+
+            // Level up 1 -> 4 triggers ASI (configured at level 4)
+            mage.LevelUp(); // Lv 2
+            mage.LevelUp(); // Lv 3
+            mage.LevelUp(); // Lv 4 -> +2 ASI points
+            Assert.AreEqual(4, mage.level);
+            Assert.AreEqual(2, mage.unspentAsiPoints);
+            Assert.Greater(mage.Derived.maxHp, hp1);
+            Assert.Greater(mage.Derived.maxMp, mp1);
+
+            // Spend ASI points on INT (17 -> 19, mod +3 -> +4)
+            int magBefore = mage.Derived.magicPower;
+            Assert.IsTrue(mage.TrySpendAsiPoint(Ability.INT));
+            Assert.IsTrue(mage.TrySpendAsiPoint(Ability.INT));
+            Assert.AreEqual(0, mage.unspentAsiPoints);
+            Assert.AreEqual(19, mage.Score(Ability.INT));
+            Assert.Greater(mage.Derived.magicPower, magBefore);
+
+            // Cannot exceed MaxAbilityScore (20) via ASI
+            mage.unspentAsiPoints = 5;
+            Assert.IsTrue(mage.TrySpendAsiPoint(Ability.INT)); // 19 -> 20
+            Assert.IsFalse(mage.TrySpendAsiPoint(Ability.INT), "Capped at 20");
+            Assert.AreEqual(20, mage.Score(Ability.INT));
+
+            // Respec updates Point Buy base scores and recalculates Derived Stats while preserving identity
+            mage.Respec(new AbilityScores(15, 12, 15, 8, 10, 11));
+            Assert.AreEqual("mage", mage.classDef.id);
+            Assert.AreEqual("highborn", mage.race.id);
+            Assert.AreEqual(15, mage.BaseScores.str);
+        }
+
+        // =====================================================================
+        // 5. Combat Integration, Separate Defenses, Break System & QTE Stats
+        // =====================================================================
+
+        [Test]
+        public void PhysicalMagicAndHealingScaleWithRespectiveAbilityScoresAndSeparateDefenses()
+        {
+            var b = new Battle(
+                Database.Party.Select(id => new Unit(Database.Characters[id])),
+                new[] { Database.Enemies["cursed_knight"] },
+                new List<string>(),
+                new System.Random(10));
+
+            var knight = b.Party[0];
+            var mage = b.Party[2];
+            var healer = b.Party[3];
+            var target = b.Enemies[0];
+
+            // STR increases Physical damage
+            int physBase = Rules.Physical(knight, target, 1f, new System.Random(5));
+            knight.unit.AddPermanentAbilityBonus(Ability.STR, 4); // +2 mod
+            int physBoosted = Rules.Physical(knight, target, 1f, new System.Random(5));
+            Assert.Greater(physBoosted, physBase);
+
+            // INT increases Magic damage
+            int magBase = Rules.Magic(mage, target, 1f, new System.Random(5));
+            mage.unit.AddPermanentAbilityBonus(Ability.INT, 4); // +2 mod
+            int magBoosted = Rules.Magic(mage, target, 1f, new System.Random(5));
+            Assert.Greater(magBoosted, magBase);
+
+            // WIS increases Healing amount
+            int healBase = Rules.Healing(healer, 1.5f, new System.Random(5));
+            healer.unit.AddPermanentAbilityBonus(Ability.WIS, 4); // +2 mod
+            int healBoosted = Rules.Healing(healer, 1.5f, new System.Random(5));
+            Assert.Greater(healBoosted, healBase);
+
+            // Physical Defense and Magic Defense are completely separate
+            int pDefBefore = knight.Def;
+            int mDefBefore = knight.MagicDef;
+            knight.AddStatus(StatusId.MagicDefenseUp, 2, 1.0f, knight);
+            Assert.AreEqual(pDefBefore, knight.Def, "MagicDefenseUp does not change PhysicalDefense");
+            Assert.Greater(knight.MagicDef, mDefBefore, "MagicDefenseUp increases MagicDefense");
+
+            int magDmgBuffed = Rules.Magic(target, knight, 3f, new System.Random(5));
+            knight.statuses.Clear();
+            int magDmgUnbuffed = Rules.Magic(target, knight, 3f, new System.Random(5));
+            Assert.Less(magDmgBuffed, magDmgUnbuffed, "MagicDefense mitigates magic damage");
+        }
+
+        [Test]
+        public void BreakGaugeDepletesTriggersBrokenStateAndIncreasesDamageTaken()
+        {
+            var b = new Battle(
+                Database.Party.Select(id => new Unit(Database.Characters[id])),
+                new[] { Database.Enemies["skeleton"] },
+                new List<string>(),
+                new System.Random(1));
+
+            var sk = b.Enemies[0];
+            sk.unit.hp = 500; // keep alive to test full break cycle
+            sk.MaxBreakGauge = 25;
+            sk.CurrentBreakGauge = 25;
+
+            var rogue = b.NextTurn(); // Rogue acts first
+            int dmgUnbroken = Rules.Physical(rogue, sk, 1f, new System.Random(4));
+
+            var hit1 = b.Perform(BattleAction.Attack(rogue, sk))[0];
+            Assert.Greater(hit1.breakAmount, 0);
+            Assert.Less(sk.CurrentBreakGauge, 25);
+
+            // Next party member finishes breaking the skeleton
+            var healer = b.NextTurn();
+            sk.CurrentBreakGauge = 5;
+            var hit2 = b.Perform(BattleAction.Attack(healer, sk))[0];
+            Assert.IsTrue(hit2.brokeTarget);
+            Assert.AreEqual(0, sk.CurrentBreakGauge);
+            Assert.IsTrue(sk.IsBroken);
+            Assert.GreaterOrEqual(sk.stunTurns, 1, "Broken applies action penalty");
+
+            // Broken enemy takes increased damage
+            int dmgBroken = Rules.Physical(rogue, sk, 1f, new System.Random(4));
+            Assert.Greater(dmgBroken, dmgUnbroken);
+        }
+
+        [Test]
+        public void QteStatInteractionsAndOutcomeCategoriesWorkWithoutRemovingChallenge()
+        {
+            var profile = QteConfig.Profiles[Tier.Elite]; // perfect = 0.065, good = 0.160
+
+            // An error of 0.165s is just outside the base Elite Good window (0.160s), so base Judge is Miss / PartialSuccess
+            Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.165f, profile, 0f));
+            Assert.AreEqual(QteOutcomeCategory.PartialSuccess, QteConfig.JudgeCategory(0.165f, profile, 0f));
+
+            // With DEX QTE Timing Bonus (+6% = 0.06f), effective good window is 0.160 * 1.06 = 0.1696s -> Good / Success!
+            Assert.AreEqual(QteResult.Good, QteConfig.Judge(0.165f, profile, 0.06f));
+            Assert.AreEqual(QteOutcomeCategory.Success, QteConfig.JudgeCategory(0.165f, profile, 0.06f));
+
+            // Large errors still Miss even with max DEX bonus (player reaction still required!)
+            Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.35f, profile, 0.25f));
+            Assert.AreEqual(QteOutcomeCategory.Failure, QteConfig.JudgeCategory(0.35f, profile, 0.25f));
+
+            // VIT Stability reduces PartialSuccess / Failure defense damage multiplier
+            var knight = new Combatant(new Unit(Database.Characters["knight"]), Side.Party, 0, "Knight", "KNI");
+            float partialMult = QteConfig.DefenseCategory(QteOutcomeCategory.PartialSuccess, knight, Element.Physical);
+            Assert.Less(partialMult, QteConfig.PartialDefense);
+
+            // STR + DEX Counter Power calculates positive counterattack damage
+            var sk = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
+            Assert.Greater(QteConfig.CalculateCounterDamage(knight, sk), 0);
+
+            // CHA Support potency multiplier scales with positive CHA modifier
+            Assert.Greater(QteConfig.SupportPotencyMultiplier(knight), 1f);
+        }
+
+        // =====================================================================
+        // 6. UI Screens & Data-Driven Config Serialization
+        // =====================================================================
+
+        [Test]
+        public void CharacterCreationAndStatusUiRenderAndUpdateRealTime()
+        {
+            var root = new GameObject("TestUiRoot").transform;
+            try
+            {
+                // 1. Character Creation Screen
+                var creation = new CharacterCreationScreen();
+                creation.Open(root);
+                Assert.AreEqual("POINTS 27/27", creation.RemainingPointsLabel.Text);
+                Assert.AreEqual(6, creation.AbilityRowLabels.Count);
+
+                int hpBefore = creation.Session.PreviewDerivedStats.maxHp;
+                creation.Session.IncreaseStat(Ability.VIT);
+                creation.Session.IncreaseStat(Ability.VIT); // 8 -> 10 (mod -1 -> 0)
+                Assert.AreEqual("POINTS 25/27", creation.RemainingPointsLabel.Text);
+                Assert.Greater(creation.Session.PreviewDerivedStats.maxHp, hpBefore);
+                StringAssert.Contains(creation.Session.PreviewDerivedStats.maxHp.ToString(), creation.PreviewStatLabels[DerivedStatId.MaxHP].Text);
+                creation.Close();
+
+                // 2. Character Status Screen & Tooltips
+                var party = Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+                party[0].Equip(Database.Equipment["steel_cuirass"]);
+                var status = new CharacterStatusScreen(party);
+                status.Open(root);
+
+                Assert.AreEqual(6, status.PrimaryStatLabels.Count);
+                Assert.AreEqual(CharacterStatusScreen.DisplayedDerivedStats.Length, status.DerivedStatLabels.Count);
+
+                string defTooltip = status.GetStatTooltip(DerivedStatId.PhysicalDefense);
+                StringAssert.Contains("PHYSICAL DEFENSE", defTooltip);
+                StringAssert.Contains("SRC: VIT", defTooltip);
+                StringAssert.Contains("FORMULA:", defTooltip);
+                StringAssert.Contains("EQP +4", defTooltip);
+
+                status.SwitchHero(1);
+                Assert.AreEqual("Rogue", status.CurrentUnit.name);
+                status.Close();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root.gameObject);
+            }
+        }
+
+        [Test]
+        public void DataDrivenConfigSerializesAndDeserializesViaJson()
+        {
+            string json = Database.ExportStatConfigJson();
+            Assert.IsNotEmpty(json);
+            StringAssert.Contains("\"abilityId\": \"STR\"", json);
+            StringAssert.Contains("\"statId\": \"MAX_HP\"", json);
+            StringAssert.Contains("\"formulaId\": \"physical_damage_v1\"", json);
+
+            var parsed = Database.ImportStatConfigJson(json);
+            Assert.IsNotNull(parsed);
+            Assert.AreEqual(6, parsed.abilities.Length);
+            Assert.AreEqual(27, parsed.pointBuy.budget);
+            Assert.AreEqual(20, parsed.asi.maxAbilityScore);
+        }
+    }
+}

@@ -23,7 +23,7 @@ namespace Obscure
 
         public Battle(IEnumerable<Unit> party, IEnumerable<EnemyDef> enemies, List<string> items, Random rng)
         {
-            Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, 3).ToUpperInvariant())).ToList();
+            Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant())).ToList();
             var defs = enemies.ToList();
             Enemies = defs.Select((d, i) =>
             {
@@ -88,7 +88,7 @@ namespace Obscure
             queue.AddRange(TurnOrder.Build(All));
         }
 
-        // Start of the bearer's turn: cooldowns and status durations tick, poison bites.
+        // Start of the bearer's turn: cooldowns and status durations tick, poison bites, Break recovers.
         void StartTurn(Combatant c)
         {
             foreach (var id in c.cooldowns.Keys.ToList())
@@ -107,6 +107,8 @@ namespace Obscure
                 if (--s.turns <= 0)
                 {
                     c.statuses.Remove(s);
+                    if (s.id == StatusId.Broken && c.HasBreakGauge)
+                        c.CurrentBreakGauge = c.MaxBreakGauge;
                     Say($"{c.name}'s {StatusInfo.Name(s.id)} wears off.");
                 }
         }
@@ -186,7 +188,7 @@ namespace Obscure
                         var reaction = defense != null && i < defense.Count ? defense[i] : (QteResult?)null;
                         foreach (var t in targets.Where(c => c.Alive))
                         {
-                            var hit = Deal(t, Rules.Physical(actor, t, (move?.power ?? 1f) * power, Rng), element, reaction);
+                            var hit = Deal(actor, t, Rules.Physical(actor, t, (move?.power ?? 1f) * power, Rng), element, reaction, null);
                             hits.Add(hit);
                             if (!hit.blocked) struck.Add(t);
                         }
@@ -208,12 +210,22 @@ namespace Obscure
                     foreach (var t in Targets(actor, s.target, a.target))
                     {
                         for (int i = 0; i < s.hits && t.Alive; i++)
+                        {
+                            float skillPwr = s.power * power;
                             switch (s.kind)
                             {
-                                case SkillKind.Physical: hits.Add(Deal(t, Rules.Physical(actor, t, s.power * power, Rng), s.element, null)); break;
-                                case SkillKind.Magic: hits.Add(Deal(t, Rules.Magic(actor, t, s.power * power, Rng), s.element, null)); break;
-                                case SkillKind.Heal: hits.Add(Heal(t, Rules.Healing(actor, s.power * power, Rng))); break;
+                                case SkillKind.Physical:
+                                    int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng) : Rules.Physical(actor, t, skillPwr, Rng);
+                                    hits.Add(Deal(actor, t, pDmg, s.element, null, s));
+                                    break;
+                                case SkillKind.Magic:
+                                    hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s));
+                                    break;
+                                case SkillKind.Heal:
+                                    hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng)));
+                                    break;
                             }
+                        }
                         // Self-applied statuses link to the target (Interpose remembers whom it guards).
                         foreach (var ap in s.apply ?? Array.Empty<StatusApply>()) Apply(ap.onSelf ? actor : t, ap, ap.onSelf ? t : actor, power);
                     }
@@ -253,8 +265,8 @@ namespace Obscure
             Say(StatusInfo.IsBuff(ap.id) ? $"{t.name} gains {StatusInfo.Name(ap.id)}." : $"{t.name} suffers {StatusInfo.Name(ap.id)}.");
         }
 
-        // All damage goes through here: reaction, then element, then HP.
-        Hit Deal(Combatant t, int amount, Element element, QteResult? reaction)
+        // All damage goes through here: reaction, then element, then HP, then Break Gauge reduction.
+        Hit Deal(Combatant attacker, Combatant t, int amount, Element element, QteResult? reaction, SkillDef skill)
         {
             if (reaction == QteResult.Perfect)
             {
@@ -276,6 +288,18 @@ namespace Obscure
             }
             var hit = Damage(t, amount, note);
             hit.effect = effect;
+
+            // Break Gauge reduction on enemy targets when struck by an attack or offensive skill.
+            if (t.Alive && t.HasBreakGauge && attacker != null && attacker.side != t.side)
+            {
+                int rawBreak = Rules.BreakDamage(attacker, skill, effect);
+                bool broke = t.ApplyBreakDamage(rawBreak, attacker, out int reduced);
+                hit.breakAmount = reduced;
+                hit.brokeTarget = broke;
+                if (broke)
+                    Say($"{t.name}'s guard shatters! (BROKEN)");
+            }
+
             return hit;
         }
 
@@ -294,6 +318,7 @@ namespace Obscure
             var d = t.enemy;
             if (d == null || d.phase2At <= 0 || t.phase != 1 || t.unit.hp > t.Stats.maxHp * d.phase2At) return;
             t.phase = 2;
+            if (d.bossBreakRecoverOnPhase2 && t.IsBroken) t.RecoverBreakGauge();
             Say(d.phase2Text ?? $"{t.name} changes its stance!");
             if (d.phase2Buff != null) Apply(t, d.phase2Buff, t, 1f);
         }

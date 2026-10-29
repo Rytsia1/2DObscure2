@@ -34,7 +34,7 @@ namespace Obscure
         class Hud
         {
             public Vector2Int pos, size;
-            public SpriteRenderer sprite, hpBar, hpBack, mpBar;
+            public SpriteRenderer sprite, hpBar, hpBack, mpBar, brkBar, brkBack;
             public Label name, hp, mp, status;
             public int phase = 1;
         }
@@ -102,7 +102,9 @@ namespace Obscure
                 h.name = Ui.Label(transform, c.name.ToUpperInvariant(), cx, ly, tierColor, Align.Center);
                 h.hpBack = Bar(cx - 15, ly + 9, 30, Palette.Void, 0);
                 h.hpBar = Bar(cx - 15, ly + 9, 30, Palette.Crimson, 1);
-                h.status = Ui.Label(transform, "", cx, ly + 13, Palette.Frost, Align.Center);
+                h.brkBack = Bar(cx - 15, ly + 12, 30, Palette.Void, 0);
+                h.brkBar = Bar(cx - 15, ly + 12, 30, Palette.Gold, 1);
+                h.status = Ui.Label(transform, "", cx, ly + 15, Palette.Frost, Align.Center);
                 return;
             }
             int y = 117 + c.slot * 15;
@@ -136,6 +138,13 @@ namespace Obscure
                 if (c.IsEnemy)
                 {
                     h.sprite.enabled = h.hpBack.enabled = h.hpBar.enabled = c.Alive;
+                    if (h.brkBack != null) h.brkBack.enabled = c.Alive && c.HasBreakGauge;
+                    if (h.brkBar != null)
+                    {
+                        h.brkBar.enabled = c.Alive && c.HasBreakGauge;
+                        SetBar(h.brkBar, 30, c.CurrentBreakGauge, c.MaxBreakGauge);
+                        h.brkBar.color = c.IsBroken ? Palette.Ash : Palette.Gold;
+                    }
                     h.name.gameObject.SetActive(c.Alive);
                     h.status.gameObject.SetActive(c.Alive);
                     SetBar(h.hpBar, 30, c.unit.hp, c.Stats.maxHp);
@@ -314,6 +323,8 @@ namespace Obscure
             var popup = Ui.Label(transform, hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 4,
                 hit.blocked ? Palette.Frost : immune ? Palette.Ash : hit.heal ? Palette.Moss : Palette.Crimson, Align.Center, order: Ui.Widget + 10);
             popup.gameObject.AddComponent<Popup>();
+            if (hit.brokeTarget)
+                Ui.Label(transform, "BROKEN!", cx, h.pos.y - 21, Palette.Gold, Align.Center, order: Ui.Widget + 10).gameObject.AddComponent<Popup>();
             if (hit.effect == Effectiveness.Weak || hit.effect == Effectiveness.Resist)
                 Ui.Label(transform, hit.effect == Effectiveness.Weak ? "WEAK!" : "RESIST", cx, h.pos.y - 13,
                     hit.effect == Effectiveness.Weak ? Palette.Gold : Palette.Ash, Align.Center, order: Ui.Widget + 10).gameObject.AddComponent<Popup>();
@@ -424,7 +435,8 @@ namespace Obscure
                 var arrow = Ui.Image(go.transform, PixelArt.FromRows(Art.TargetMarker), h.size.x / 2 - 2, -6, Ui.Widget + 6);
                 var sel = go.AddComponent<Selectable>();
                 sel.size = h.size;
-                sel.tooltip = $"{t.name.ToUpperInvariant()} {t.unit.hp}/{t.Stats.maxHp} " + (t.IsEnemy ? t.Affinities.Describe() : t.StatusTags);
+                string brk = t.IsEnemy && t.HasBreakGauge ? $" BRK:{t.CurrentBreakGauge}/{t.MaxBreakGauge}" : "";
+                sel.tooltip = $"{t.name.ToUpperInvariant()} {t.unit.hp}/{t.Stats.maxHp}{brk} " + (t.IsEnemy ? t.Affinities.Describe() : t.StatusTags);
                 sel.visual = on => arrow.enabled = on;
                 sel.visual(false);
                 sel.onClick = () => Choose(make(t));

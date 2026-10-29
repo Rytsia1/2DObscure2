@@ -23,7 +23,10 @@ namespace Obscure
                 var o = r.choices[i];
                 var (label, detail) = RewardGenerator.Describe(o);
                 if (o.kind == RewardKind.Upgrade) // preview against this run's stats, not the base sheet
-                    detail = Run.Party.First(u => u.id == o.id).stats.Preview(Database.Upgrades[o.id].bonus);
+                {
+                    var u = Run.Party.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id) ?? Run.Party[0];
+                    detail = u.stats.Preview(Database.Upgrades[o.id].bonus);
+                }
                 var b = Ui.Button(Root, label.ToUpper(), 50, 84 + i * 15, 220, () => Claim(choice));
                 b.tooltip = detail.ToUpper();
                 menu.Add(b);

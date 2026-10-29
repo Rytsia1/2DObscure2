@@ -24,29 +24,62 @@ namespace Obscure
     {
         public Combatant target;
         public int amount;
-        public bool heal, killed, blocked;
+        public int breakAmount;
+        public bool heal, killed, blocked, brokeTarget, critical;
         public Effectiveness effect;
     }
 
+    // Combat calculation pipeline (PRD Section 8).
+    // Uses Ability Scores -> Derived Stats -> Skill Scaling -> Buffs/Debuffs -> Defense Mitigation.
     public static class Rules
     {
         public const float GuardMultiplier = 0.5f;
 
-        public static int Physical(Combatant a, Combatant t, float power, Random rng) =>
-            Mitigate(t, a.Atk * power * Variance(rng) - t.Def * 0.5f);
+        // Physical damage uses PhysicalPower (WeaponPower + STRModifier * WeaponScaling) against PhysicalDefense.
+        public static int Physical(Combatant a, Combatant t, float power, Random rng)
+        {
+            float raw = a.Atk * power * Variance(rng);
+            float afterDef = StatCalculator.MitigateByDefense(raw, t.Def, a.ArmorPen);
+            return Mitigate(t, afterDef);
+        }
 
-        // Magic leans on Mag and only partly respects armor.
-        public static int Magic(Combatant a, Combatant t, float power, Random rng) =>
-            Mitigate(t, a.Magic * power * Variance(rng) - t.Def * 0.25f);
+        // Ranged physical damage uses RangedPower (RangedWeaponPower + DEXModifier * RangedScaling) against PhysicalDefense.
+        public static int Ranged(Combatant a, Combatant t, float power, Random rng)
+        {
+            float raw = a.RangedAtk * power * Variance(rng);
+            float afterDef = StatCalculator.MitigateByDefense(raw, t.Def, a.ArmorPen);
+            return Mitigate(t, afterDef);
+        }
 
+        // Magic damage uses MagicPower (SpellPower + INTModifier * SpellScaling) against MagicDefense (separate from PhysicalDefense).
+        public static int Magic(Combatant a, Combatant t, float power, Random rng)
+        {
+            float raw = a.Magic * power * Variance(rng);
+            float afterDef = StatCalculator.MitigateByDefense(raw, t.MagicDef, a.MagicPen);
+            return Mitigate(t, afterDef);
+        }
+
+        // Healing uses HealingPower (BaseHealing + WISModifier * HealingScaling).
         public static int Healing(Combatant a, float power, Random rng) =>
-            Math.Max(1, (int)Math.Round(a.Magic * power * Variance(rng)));
+            Math.Max(1, (int)Math.Round(a.HealPower * power * Variance(rng)));
 
-        static float Variance(Random rng) => 0.9f + (float)rng.NextDouble() * 0.2f;
+        // Break damage scaling: Physical -> STR (PhysicalBreak), Magic -> INT (MagicBreak).
+        public static int BreakDamage(Combatant a, SkillDef skill = null, Effectiveness effect = Effectiveness.Neutral)
+        {
+            if (effect == Effectiveness.Immune) return 0;
+            bool isMagic = skill != null && skill.kind == SkillKind.Magic;
+            int baseBreak = isMagic ? a.MagicBreak : a.PhysicalBreak;
+            float skillMult = skill != null ? skill.breakMultiplier : 1f;
+            float elemMult = effect == Effectiveness.Weak ? 1.5f : effect == Effectiveness.Resist ? 0.75f : 1f;
+            return Math.Max(1, (int)Math.Round(baseBreak * skillMult * elemMult));
+        }
+
+        static float Variance(Random rng) => rng == null ? 1f : 0.9f + (float)rng.NextDouble() * 0.2f;
 
         static int Mitigate(Combatant t, float raw)
         {
             raw = Math.Max(1f, raw);
+            if (t.IsBroken) raw *= t.BreakDamageMultiplier;
             if (t.guarding) raw *= GuardMultiplier;
             return Math.Max(1, (int)Math.Round(raw));
         }

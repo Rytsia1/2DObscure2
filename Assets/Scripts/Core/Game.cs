@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, Map, Combat, Reward, Rest, Event, GameOver, Victory }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, Map, Combat, Reward, Rest, Event, GameOver, Victory }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -22,7 +22,12 @@ namespace Obscure
         }
 
         protected abstract void Build();
-        public void Close() => Object.Destroy(Root.gameObject);
+        public void Close()
+        {
+            if (Root == null) return;
+            if (Application.isPlaying) Object.Destroy(Root.gameObject);
+            else Object.DestroyImmediate(Root.gameObject);
+        }
     }
 
     // Boots the game, owns the run and drives screen transitions.
@@ -30,8 +35,10 @@ namespace Obscure
     {
         public static Game I { get; private set; }
         public RunState Run { get; private set; }
+        public CharacterRoster Roster { get; private set; } = new CharacterRoster();
         public GameSettings Settings { get; private set; }
         public GameState State { get; private set; }
+        public GameScreen CurrentScreen => screen;
 
         GameScreen screen;
         SpriteRenderer fader;
@@ -73,11 +80,12 @@ namespace Obscure
             ppc.cropFrame = PixelPerfectCamera.CropFrame.Windowbox;
         }
 
-        // A fresh run: new seed (unless given), new map, new party. The previous run is dropped here.
+        // A fresh run: new seed (unless given), new map, active party from Roster. The previous run is dropped here.
         public void StartRun(int? seed = null)
         {
             int s = seed ?? System.Environment.TickCount;
-            Run = new RunState(MapGenerator.Generate(s), Database.Party.Select(id => Database.Characters[id]), s);
+            var party = Roster != null ? Roster.GetActiveParty() : Database.Party.Select(id => Database.Characters[id]).ToList();
+            Run = new RunState(MapGenerator.Generate(s), party, s);
             Go(GameState.Map);
         }
 
@@ -133,6 +141,8 @@ namespace Obscure
         {
             GameState.MainMenu => new MainMenuScreen(),
             GameState.Settings => new SettingsScreen(),
+            GameState.CharacterCreation => new CharacterCreationScreen(),
+            GameState.CharacterStatus => new CharacterStatusScreen(),
             GameState.Map => new MapScreen(),
             GameState.Combat => new CombatScreen(),
             GameState.Reward => new RewardScreen(),

@@ -7,7 +7,7 @@ namespace Obscure
     public enum Side { Party, Enemy }
 
     // A unit's per-battle wrapper. HP/MP live on the Unit so party damage persists across the run;
-    // statuses, cooldowns and boss phase live here, so they end with the battle.
+    // statuses, cooldowns, break gauge and boss phase live here, so they end with the battle.
     public class Combatant
     {
         public readonly Unit unit;
@@ -22,21 +22,121 @@ namespace Obscure
         public readonly List<StatusEffect> statuses = new List<StatusEffect>();
         public readonly Dictionary<string, int> cooldowns = new Dictionary<string, int>();
 
+        // Break/Stagger System state (PRD Section 9)
+        public int MaxBreakGauge;
+        public int CurrentBreakGauge;
+        public int BreakResistance;
+        public int BreakDuration = 1;
+        public int BreakStunTurns = 1;
+        public float BreakDamageMultiplier = 1.5f;
+
         public Combatant(Unit unit, Side side, int slot, string name, string tag, EnemyDef enemy = null)
         {
-            this.unit = unit; this.side = side; this.slot = slot; this.name = name; this.tag = tag; this.enemy = enemy;
+            this.unit = unit;
+            this.side = side;
+            this.slot = slot;
+            this.name = name;
+            this.tag = tag;
+            this.enemy = enemy;
+
+            if (enemy != null)
+            {
+                MaxBreakGauge = Math.Max(0, enemy.maxBreakGauge);
+                CurrentBreakGauge = MaxBreakGauge;
+                BreakResistance = Math.Max(0, enemy.breakResistance + Math.Max(0, unit.Mod(Ability.VIT)));
+                BreakDuration = Math.Max(1, enemy.breakDuration);
+                BreakStunTurns = Math.Max(0, enemy.breakStunTurns);
+                BreakDamageMultiplier = Math.Max(1f, enemy.breakDamageMultiplier);
+            }
         }
 
         public bool Alive => unit.Alive;
         public bool IsEnemy => side == Side.Enemy;
         public Stats Stats => unit.stats;
+        public DerivedStats BaseDerived => unit.Derived;
         public Affinities Affinities => unit.affinities;
 
-        // Effective stats: base stats modified by statuses. Speed changes apply from the next round.
+        public bool HasBreakGauge => MaxBreakGauge > 0;
+        public bool IsBroken => Has(StatusId.Broken);
+
+        // Effective stats: base/derived stats modified by combat statuses. Speed/Initiative changes apply from the next round.
         public int Atk => Scale(unit.stats.atk, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int RangedAtk => Scale(unit.Derived.rangedPower, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
         public int Magic => Scale(unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int HealPower => Scale(unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int SupportPower => unit.Derived.supportPower;
+
+        // Physical Defense and Magic Defense are separate (PRD Section 8.8).
         public int Def => Scale(unit.stats.def, 1 + Mag(StatusId.DefenseUp) - Mag(StatusId.DefenseDown));
+        public int MagicDef => Scale(
+            unit.Derived.magicDefense > 0 || !IsEnemy ? unit.Derived.magicDefense : unit.stats.def,
+            1 + Mag(StatusId.MagicDefenseUp) - Mag(StatusId.MagicDefenseDown));
+
         public int Speed => Scale(unit.stats.spd, 1 - Mag(StatusId.Slow));
+        public int Initiative => Speed;
+        public int ActionSpeed => Scale(unit.Derived.actionSpeed, 1 - Mag(StatusId.Slow));
+
+        public int ArmorPen => unit.Derived.armorPenetration;
+        public int MagicPen => unit.Derived.magicPenetration;
+        public int CritChance => unit.Derived.criticalChance;
+        public int CritDamage => unit.Derived.criticalDamage;
+        public int PhysicalBreak => Scale(Math.Max(1, unit.Derived.physicalBreakPower), 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int MagicBreak => Scale(Math.Max(1, unit.Derived.magicBreakPower), 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int StaggerRes => unit.Derived.staggerResistance;
+        public int StatusRes => unit.Derived.statusResistance;
+
+        // Returns the full DerivedStats snapshot including active per-battle buffs and debuffs.
+        public DerivedStats EffectiveDerived
+        {
+            get
+            {
+                var d = unit.Derived;
+                d.maxHp = unit.stats.maxHp;
+                d.maxMp = unit.stats.maxMp;
+                d.physicalPower = Atk;
+                d.rangedPower = RangedAtk;
+                d.magicPower = Magic;
+                d.healingPower = HealPower;
+                d.physicalDefense = Def;
+                d.magicDefense = MagicDef;
+                d.initiative = Initiative;
+                d.actionSpeed = ActionSpeed;
+                d.physicalBreakPower = PhysicalBreak;
+                d.magicBreakPower = MagicBreak;
+                if (Has(StatusId.Evasion))
+                    d.evasion = Math.Clamp((int)Math.Round(d.evasion * Get(StatusId.Evasion).magnitude), 0, 75);
+                return d;
+            }
+        }
+
+        // Reduces the Break Gauge on an enemy. Returns true if this hit caused the enemy to enter the Broken state.
+        public bool ApplyBreakDamage(int rawBreakPower, Combatant source, out int gaugeReduced)
+        {
+            gaugeReduced = 0;
+            if (!Alive || !HasBreakGauge || IsBroken || rawBreakPower <= 0) return false;
+
+            int resist = Math.Max(0, BreakResistance);
+            int netBreak = Math.Max(1, rawBreakPower - resist);
+            int before = CurrentBreakGauge;
+            CurrentBreakGauge = Math.Max(0, CurrentBreakGauge - netBreak);
+            gaugeReduced = before - CurrentBreakGauge;
+
+            if (CurrentBreakGauge == 0)
+            {
+                AddStatus(StatusId.Broken, BreakDuration, BreakDamageMultiplier, source);
+                if (BreakStunTurns > 0)
+                    stunTurns = Math.Max(stunTurns, BreakStunTurns);
+                return true;
+            }
+            return false;
+        }
+
+        public void RecoverBreakGauge()
+        {
+            statuses.RemoveAll(s => s.id == StatusId.Broken);
+            if (HasBreakGauge)
+                CurrentBreakGauge = MaxBreakGauge;
+        }
 
         static int Scale(int value, float factor) => (int)Math.Round(value * Math.Max(0f, factor));
         float Mag(StatusId id) => Get(id)?.magnitude ?? 0f;
@@ -64,7 +164,7 @@ namespace Obscure
 
     public static class TurnOrder
     {
-        // Highest Speed first; ties go party before enemies, then by formation slot. No randomness.
+        // Highest Initiative/Speed first; ties go party before enemies, then by formation slot. No randomness.
         public static List<Combatant> Build(IEnumerable<Combatant> combatants) =>
             combatants.Where(c => c.Alive)
                 .OrderByDescending(c => c.Speed)

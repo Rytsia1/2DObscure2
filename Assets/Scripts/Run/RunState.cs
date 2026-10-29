@@ -11,28 +11,320 @@ namespace Obscure
         public readonly string id, name, role;
         public readonly string[] sprite, skills;
         public readonly Affinities affinities;
+        public readonly bool isEnemyUnit;
+
+        public RaceDef race;
+        public ClassDef classDef;
+        public BackgroundDef background;
+        public int level = 1;
+        public int unspentAsiPoints;
+
+        public readonly AbilityScoreSheet abilities = new AbilityScoreSheet();
+        public readonly Dictionary<EquipmentSlot, EquipmentDef> equipped = new Dictionary<EquipmentSlot, EquipmentDef>();
+        public readonly List<PassiveDef> passives = new List<PassiveDef>();
+        public readonly List<StatModifier> permanentModifiers = new List<StatModifier>();
+        public readonly List<StatModifier> temporaryModifiers = new List<StatModifier>();
+
+        Stats permanentLegacyBonuses;
+        public DerivedStats Derived { get; private set; }
         public Stats stats;
-        public int hp, mp;
+        public int hp, mp, shield;
         public bool Alive => hp > 0;
 
-        public Unit(CharacterDef d) : this(d.id, d.name, d.role, d.stats, d.sprite, d.skills, d.affinities) { }
-        public Unit(EnemyDef d) : this(d.id, d.name, d.tier.ToString(), d.stats, d.sprite, Array.Empty<string>(), d.affinities) { }
-
-        Unit(string id, string name, string role, Stats stats, string[] sprite, string[] skills, Affinities affinities)
+        public Unit(CharacterDef d)
         {
-            this.id = id; this.name = name; this.role = role; this.stats = stats; this.sprite = sprite;
-            this.skills = skills; this.affinities = affinities ?? Affinities.None;
-            hp = stats.maxHp; mp = stats.maxMp;
+            id = d.id;
+            name = d.name;
+            role = d.role;
+            sprite = d.sprite;
+            skills = d.skills ?? Array.Empty<string>();
+            affinities = d.affinities ?? Affinities.None;
+            isEnemyUnit = false;
+
+            race = d.raceId != null && Database.Races.TryGetValue(d.raceId, out var r) ? r : Database.Races["human"];
+            classDef = d.classId != null && Database.Classes.TryGetValue(d.classId, out var c) ? c : Database.Classes["knight"];
+            background = d.backgroundId != null && Database.Backgrounds.TryGetValue(d.backgroundId, out var bg) ? bg : Database.Backgrounds["oathsworn"];
+
+            abilities.baseScores = d.baseScores.Equals(default) ? AbilityScores.DefaultBase : d.baseScores;
+            abilities.racialModifiers = race.abilityModifiers;
+
+            if (d.passives != null)
+                foreach (var pid in d.passives)
+                    if (Database.Passives.TryGetValue(pid, out var p)) passives.Add(p);
+
+            if (d.startingEquipment != null)
+                foreach (var eid in d.startingEquipment)
+                    if (Database.Equipment.TryGetValue(eid, out var eq)) equipped[eq.slot] = eq;
+
+            RecalculateStats(fillResources: true);
         }
 
-        public void Heal(int amount) { if (Alive) hp = Math.Min(stats.maxHp, hp + amount); }
+        public Unit(EnemyDef d)
+        {
+            id = d.id;
+            name = d.name;
+            role = d.tier.ToString();
+            sprite = d.sprite;
+            skills = Array.Empty<string>();
+            affinities = d.affinities ?? Affinities.None;
+            isEnemyUnit = true;
+
+            abilities.baseScores = d.abilityScores.Equals(default) ? AbilityScores.Uniform(10) : d.abilityScores;
+            stats = d.stats;
+            var mods = abilities.AbilityModifiers;
+            int mDef = d.magicDef >= 0 ? d.magicDef : d.stats.def;
+            Derived = new DerivedStats
+            {
+                maxHp = d.stats.maxHp,
+                maxMp = d.stats.maxMp,
+                maxShield = 0,
+                physicalPower = d.stats.atk,
+                rangedPower = d.stats.atk,
+                magicPower = d.stats.mag > 0 ? d.stats.mag : d.stats.atk,
+                healingPower = d.stats.mag > 0 ? d.stats.mag : d.stats.atk,
+                supportPower = 10 + mods.cha * 2,
+                criticalChance = Math.Max(0, 5 + mods.dex * 2),
+                criticalDamage = 150,
+                armorPenetration = Math.Max(0, mods.str),
+                magicPenetration = Math.Max(0, mods.intel),
+                physicalDefense = d.stats.def,
+                magicDefense = mDef,
+                evasion = Math.Max(0, 5 + mods.dex * 2),
+                blockPower = 50,
+                statusResistance = Math.Max(0, (mods.vit + mods.wis) * 3),
+                staggerResistance = d.breakResistance + Math.Max(0, mods.vit * 2),
+                initiative = d.stats.spd,
+                actionSpeed = 100 + mods.dex * 5,
+                qteTimingBonus = 0,
+                qteStability = 0,
+                counterPower = 10,
+                physicalBreakPower = 10 + mods.str * 2,
+                magicBreakPower = 10 + mods.intel * 2,
+            };
+            hp = stats.maxHp;
+            mp = stats.maxMp;
+        }
+
+        public AbilityScores BaseScores => abilities.baseScores;
+        public AbilityScores RacialModifiers => abilities.racialModifiers;
+        public AbilityScores PermanentAbilityBonuses => abilities.permanentBonuses;
+        public AbilityScores EquipmentAbilityBonuses => abilities.equipmentBonuses;
+        public AbilityScores TemporaryAbilityModifiers => abilities.temporaryModifiers;
+        public AbilityScores FinalScores => abilities.FinalScores;
+        public AbilityScores AbilityModifiers => abilities.AbilityModifiers;
+
+        public int Score(Ability a) => abilities.Score(a);
+        public int Mod(Ability a) => abilities.Mod(a);
+
+        public List<StatModifier> GatherAllDerivedModifiers()
+        {
+            var list = new List<StatModifier>();
+            if (race?.passiveBonuses != null) list.AddRange(race.passiveBonuses);
+            if (background?.passiveEffects != null) list.AddRange(background.passiveEffects);
+            foreach (var p in passives)
+                if (p.modifiers != null) list.AddRange(p.modifiers);
+            list.AddRange(permanentModifiers);
+            list.AddRange(temporaryModifiers);
+            return list;
+        }
+
+        // Recomputes Equipment Ability Bonuses, Final Ability Scores, Ability Modifiers, and all Derived Stats.
+        public void RecalculateStats(bool fillResources = false)
+        {
+            if (isEnemyUnit)
+            {
+                var mods = abilities.AbilityModifiers;
+                var d = Derived;
+                d.maxHp = stats.maxHp;
+                d.maxMp = stats.maxMp;
+                d.physicalPower = stats.atk;
+                d.physicalDefense = stats.def;
+                d.initiative = stats.spd;
+                if (stats.mag > 0) d.magicPower = stats.mag;
+                d.staggerResistance = Math.Max(0, d.staggerResistance);
+                Derived = d;
+                return;
+            }
+
+            var eqAbil = AbilityScores.Zero;
+            foreach (var eq in equipped.Values)
+                if (eq != null) eqAbil = eqAbil.Plus(eq.abilityBonuses);
+            foreach (var p in passives)
+                if (p != null) eqAbil = eqAbil.Plus(p.abilityBonuses);
+            abilities.equipmentBonuses = eqAbil;
+            abilities.racialModifiers = race != null ? race.abilityModifiers : AbilityScores.Zero;
+
+            int oldMaxHp = Derived.maxHp;
+            int oldMaxMp = Derived.maxMp;
+
+            Derived = StatCalculator.Calculate(
+                abilities,
+                classDef,
+                level,
+                equipped.Values,
+                GatherAllDerivedModifiers(),
+                permanentLegacyBonuses);
+
+            stats = Derived.ToLegacyStats();
+
+            if (fillResources)
+            {
+                hp = stats.maxHp;
+                mp = stats.maxMp;
+            }
+            else
+            {
+                if (Alive && stats.maxHp > oldMaxHp && oldMaxHp > 0)
+                    hp = Math.Min(stats.maxHp, hp + (stats.maxHp - oldMaxHp));
+                else
+                    hp = Math.Min(hp, stats.maxHp);
+
+                if (stats.maxMp > oldMaxMp && oldMaxMp > 0)
+                    mp = Math.Min(stats.maxMp, mp + (stats.maxMp - oldMaxMp));
+                else
+                    mp = Math.Min(mp, stats.maxMp);
+            }
+        }
+
+        public StatBreakdown ExplainStat(DerivedStatId statId, IEnumerable<StatModifier> extraCombatModifiers = null)
+        {
+            var mods = GatherAllDerivedModifiers();
+            if (extraCombatModifiers != null) mods.AddRange(extraCombatModifiers);
+            return StatCalculator.Explain(statId, abilities, classDef, level, equipped.Values, mods, permanentLegacyBonuses);
+        }
+
+        public string ExplainAbility(Ability a)
+        {
+            var def = Database.AbilityDefs[a];
+            int b = abilities.baseScores[a];
+            int r = abilities.racialModifiers[a];
+            int p = abilities.permanentBonuses[a];
+            int eq = abilities.equipmentBonuses[a];
+            int tmp = abilities.temporaryModifiers[a];
+            int fin = abilities.Score(a);
+            int mod = abilities.Mod(a);
+            return $"{def.displayName.ToUpperInvariant()} ({a}): {fin} (MOD {AbilityScores.FormatMod(mod)})\n" +
+                   $"{def.description.ToUpperInvariant()}\n" +
+                   $"SOURCES: BASE {b}  RACE {(r >= 0 ? "+" : "")}{r}  PERM {(p >= 0 ? "+" : "")}{p}  EQP {(eq >= 0 ? "+" : "")}{eq}  BUFF {(tmp >= 0 ? "+" : "")}{tmp}";
+        }
+
+        public void Heal(int amount)
+        {
+            if (Alive) hp = Math.Min(stats.maxHp, hp + amount);
+        }
 
         // Permanent stat gain (relics, upgrades). Max HP/MP gains also fill the new capacity.
         public void Improve(Stats bonus)
         {
-            stats = stats.Plus(bonus);
-            if (Alive) hp = Math.Min(stats.maxHp, hp + bonus.maxHp);
-            mp = Math.Min(stats.maxMp, mp + bonus.maxMp);
+            if (isEnemyUnit)
+            {
+                stats = stats.Plus(bonus);
+                if (Alive) hp = Math.Min(stats.maxHp, hp + bonus.maxHp);
+                mp = Math.Min(stats.maxMp, mp + bonus.maxMp);
+                RecalculateStats();
+                return;
+            }
+            permanentLegacyBonuses = permanentLegacyBonuses.Plus(bonus);
+            RecalculateStats();
+        }
+
+        public void AddPermanentAbilityBonus(Ability a, int delta)
+        {
+            abilities.permanentBonuses = abilities.permanentBonuses.Add(a, delta);
+            RecalculateStats();
+        }
+
+        public void AddPermanentAbilityBonuses(AbilityScores bonus)
+        {
+            abilities.permanentBonuses = abilities.permanentBonuses.Plus(bonus);
+            RecalculateStats();
+        }
+
+        public void SetTemporaryAbilityModifiers(AbilityScores temp)
+        {
+            abilities.temporaryModifiers = temp;
+            RecalculateStats();
+        }
+
+        public void Equip(EquipmentDef item)
+        {
+            if (item == null) throw new ArgumentNullException(nameof(item));
+            equipped[item.slot] = item;
+            RecalculateStats();
+        }
+
+        public bool Unequip(EquipmentSlot slot)
+        {
+            if (!equipped.Remove(slot)) return false;
+            RecalculateStats();
+            return true;
+        }
+
+        public void AddPassive(PassiveDef passive)
+        {
+            if (passive == null || passives.Contains(passive)) return;
+            passives.Add(passive);
+            RecalculateStats();
+        }
+
+        public void AddPermanentModifier(StatModifier mod)
+        {
+            if (mod == null) return;
+            if (mod.isAbilityModifier)
+                abilities.permanentBonuses = abilities.permanentBonuses.Add(mod.ability, (int)Math.Round(mod.value));
+            else
+                permanentModifiers.Add(mod);
+            RecalculateStats();
+        }
+
+        public void AddTemporaryModifier(StatModifier mod)
+        {
+            if (mod == null) return;
+            if (mod.isAbilityModifier)
+                abilities.temporaryModifiers = abilities.temporaryModifiers.Add(mod.ability, (int)Math.Round(mod.value));
+            else
+                temporaryModifiers.Add(mod);
+            RecalculateStats();
+        }
+
+        public void ClearTemporaryModifiers()
+        {
+            abilities.temporaryModifiers = AbilityScores.Zero;
+            temporaryModifiers.Clear();
+            RecalculateStats();
+        }
+
+        // Advances character level and grants Ability Score Improvement points when reaching configured levels.
+        public void LevelUp(AbilityScoreImprovementConfig asiConfig = null)
+        {
+            var cfg = asiConfig ?? Database.AsiConfig;
+            level++;
+            if (cfg.GrantsAtLevel(level))
+                unspentAsiPoints += cfg.pointsGranted;
+            RecalculateStats();
+        }
+
+        // Spends an ASI point to permanently raise an Ability Score (up to MaxAbilityScore, default 20).
+        public bool TrySpendAsiPoint(Ability ability, AbilityScoreImprovementConfig asiConfig = null)
+        {
+            var cfg = asiConfig ?? Database.AsiConfig;
+            if (unspentAsiPoints <= 0) return false;
+            int currentUnbuffed = abilities.baseScores[ability] + abilities.racialModifiers[ability] + abilities.permanentBonuses[ability];
+            if (currentUnbuffed >= cfg.maxAbilityScore) return false;
+            unspentAsiPoints--;
+            abilities.permanentBonuses = abilities.permanentBonuses.Add(ability, 1);
+            RecalculateStats();
+            return true;
+        }
+
+        // Respecs Point Buy base scores while preserving Race, Class, Background, equipment, and permanent rewards.
+        public void Respec(AbilityScores newBaseScores, PointBuyConfig config = null)
+        {
+            var cfg = config ?? PointBuyConfig.Standard;
+            var err = cfg.Validate(newBaseScores);
+            if (err != null) throw new InvalidOperationException(err);
+            abilities.baseScores = newBaseScores;
+            RecalculateStats();
         }
     }
 
@@ -180,10 +472,34 @@ namespace Obscure
         {
             if (Relics.Contains(id)) return;
             Relics.Add(id);
-            foreach (var u in Party) u.Improve(Database.Relics[id].bonus);
+            var relic = Database.Relics[id];
+            foreach (var u in Party)
+            {
+                if (!relic.abilityBonus.IsZero) u.AddPermanentAbilityBonuses(relic.abilityBonus);
+                if (relic.modifiers != null)
+                    foreach (var m in relic.modifiers) u.AddPermanentModifier(m);
+                u.Improve(relic.bonus);
+            }
         }
 
-        void Upgrade(string character) => Party.First(u => u.id == character).Improve(Database.Upgrades[character].bonus);
+        public static UpgradeDef GetUpgradeFor(Unit u)
+        {
+            if (u != null && Database.Upgrades.TryGetValue(u.id, out var up)) return up;
+            if (u?.classDef != null && Database.Upgrades.TryGetValue(u.classDef.id, out var cup)) return cup;
+            return Database.Upgrades["knight"];
+        }
+
+        void Upgrade(string character)
+        {
+            var u = Party.FirstOrDefault(p => p.id == character)
+                    ?? Party.FirstOrDefault(p => p.classDef?.id == character)
+                    ?? Party[0];
+            var up = Database.Upgrades.TryGetValue(character, out var def) ? def : GetUpgradeFor(u);
+            if (!up.abilityBonus.IsZero) u.AddPermanentAbilityBonuses(up.abilityBonus);
+            if (up.modifiers != null)
+                foreach (var m in up.modifiers) u.AddPermanentModifier(m);
+            u.Improve(up.bonus);
+        }
 
         // ---- rest ----
 
@@ -204,7 +520,9 @@ namespace Obscure
         public void RestImprove(string character)
         {
             if (!Pending(NodeType.Rest)) throw new InvalidOperationException("Not at an unused rest site");
-            if (!Database.Upgrades.ContainsKey(character)) throw new ArgumentException(character);
+            bool knownUpgrade = Database.Upgrades.ContainsKey(character);
+            bool inParty = Party.Any(p => p.id == character || p.classDef?.id == character);
+            if (!knownUpgrade && !inParty) throw new ArgumentException(character);
             Upgrade(character);
             Complete();
         }

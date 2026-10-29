@@ -63,7 +63,7 @@ namespace Obscure
             var m = NewMenu();
             foreach (var u in Run.Party)
             {
-                var up = Database.Upgrades[u.id];
+                var up = RunState.GetUpgradeFor(u);
                 Option(m, u.name.ToUpper(), () => Confirm(u), $"{up.name.ToUpper()}: {u.stats.Preview(up.bonus)}");
             }
             Option(m, "BACK", ShowMain, "");
@@ -73,7 +73,7 @@ namespace Obscure
         // Shows exactly what changes before it is applied.
         void Confirm(Unit u)
         {
-            var up = Database.Upgrades[u.id];
+            var up = RunState.GetUpgradeFor(u);
             string preview = $"{up.name.ToUpper()}: {u.stats.Preview(up.bonus)}";
             var m = NewMenu();
             Option(m, $"CONFIRM {u.name.ToUpper()}", () => { Run.RestImprove(u.id); Done($"{u.name.ToUpper()} LEARNS {up.name.ToUpper()}."); }, preview);
