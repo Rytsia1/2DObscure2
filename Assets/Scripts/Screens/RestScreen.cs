@@ -20,7 +20,7 @@ namespace Obscure
             Ui.Panel(Root, 16, 72, 128, 66);
             for (int i = 0; i < hpRows.Length; i++)
             {
-                Ui.Label(Root, Run.Party[i].name.ToUpper(), 24, 79 + i * 14, Palette.Bone);
+                Ui.Label(Root, PixelFont.FitName(Run.Party[i].name.ToUpper(), 64), 24, 79 + i * 14, Palette.Bone);
                 hpRows[i] = Ui.Label(Root, "", 136, 79 + i * 14, Palette.Parchment, Align.Right);
             }
             hint = Ui.Label(Root, "", 160, 150, Palette.Ash, Align.Center);

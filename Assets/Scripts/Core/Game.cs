@@ -59,8 +59,9 @@ namespace Obscure
             transform.position = new Vector3(-Ui.Width / 2, Ui.Height / 2, 0);
             SetupCamera();
             Settings = GameSettings.Load();
-            Settings.Apply();
             Sfx.Init(gameObject);
+            MusicManager.Create(gameObject);
+            Settings.Apply();
             fader = Ui.Image(transform, PixelArt.Pixel, 0, 0, Ui.Overlay, Palette.Void);
             fader.transform.localScale = new Vector3(Ui.Width, Ui.Height, 1);
             Go(GameState.MainMenu);
@@ -167,6 +168,7 @@ namespace Obscure
             if (transitioning) return;
             transitioning = true;
             Controls.Locked = true;
+            MusicManager.I?.PlayFor(next, Run); // music fades alongside the screen fade
             StartCoroutine(Transition(next));
         }
 

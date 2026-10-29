@@ -55,6 +55,7 @@ namespace Obscure
             ['?'] = ".###.|#...#|....#|...#.|..#..|.....|..#..",
             ['\''] = "#|#|.|.|.|.|.",
             ['-'] = "...|...|...|###|...|...|...",
+            ['_'] = "....|....|....|....|....|....|####",
             ['+'] = ".....|..#..|..#..|#####|..#..|..#..|.....",
             ['='] = ".....|.....|#####|.....|#####|.....|.....",
             ['/'] = "....#|....#|...#.|..#..|.#...|#....|#....",
@@ -87,8 +88,25 @@ namespace Obscure
             return Mathf.Max(0, w - 1);
         }
 
+        // Trims text to fit maxWidth pixels, ending in '.' when cut.
+        public static string Fit(string text, int maxWidth)
+        {
+            if (Measure(text) <= maxWidth) return text;
+            while (text.Length > 1 && Measure(text + ".") > maxWidth) text = text.Substring(0, text.Length - 1);
+            return text.TrimEnd() + ".";
+        }
+
+        // Names: "MARTIAL ARTIST" -> "MARTIAL" when the full name does not fit, then trimmed if still too wide.
+        public static string FitName(string name, int maxWidth)
+        {
+            if (Measure(name) > maxWidth && name.Contains(' ')) name = name.Substring(0, name.IndexOf(' '));
+            return Fit(name, maxWidth);
+        }
+
         public static string Wrap(string text, int maxWidth)
         {
+            if (text.Contains('\n')) // keep explicit line breaks, wrap each paragraph
+                return string.Join("\n", System.Array.ConvertAll(text.Split('\n'), p => Wrap(p, maxWidth)));
             var sb = new StringBuilder();
             var line = "";
             foreach (var word in text.Split(' '))

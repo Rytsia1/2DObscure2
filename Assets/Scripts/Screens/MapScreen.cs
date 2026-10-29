@@ -54,9 +54,9 @@ namespace Obscure
             for (int i = 0; i < Run.Party.Count; i++)
             {
                 var u = Run.Party[i];
-                Ui.Label(Root, u.name.ToUpper(), 6 + i * 66, 157, Palette.Bone);
+                Ui.Label(Root, PixelFont.FitName(u.name.ToUpper(), 60), 6 + i * 66, 157, Palette.Bone);
                 Ui.Label(Root, $"{u.hp}/{u.stats.maxHp}", 6 + i * 66, 167, u.Alive ? Palette.Parchment : Palette.Crimson);
-                Ui.Label(Root, $"MP{u.mp}", 44 + i * 66, 167, Palette.Lilac);
+                Ui.Label(Root, u.mp.ToString(), 50 + i * 66, 167, Palette.Lilac);
             }
 
             var statusBtn = Ui.Button(Root, "STATUS", 270, 159, 44, () => Game.Go(GameState.CharacterStatus), 14);

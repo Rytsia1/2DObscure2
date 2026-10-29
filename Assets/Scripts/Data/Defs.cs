@@ -168,6 +168,7 @@ namespace Obscure
         public Tier tier;
         public string[] enemies;
         public int minFloor; // earliest floor this encounter can be rolled on
+        public string music;  // MusicIds battle theme; null = the MusicLibrary's default (or random) battle theme
     }
 
     // Passive run-long bonus: stats added to every party member, plus optional after-battle healing.

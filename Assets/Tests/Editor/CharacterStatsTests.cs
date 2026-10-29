@@ -415,32 +415,32 @@ namespace Obscure.Tests
                 Assert.Greater(creation.Session.PreviewDerivedStats.maxHp, hpBefore);
                 StringAssert.Contains(creation.Session.PreviewDerivedStats.maxHp.ToString(), creation.PreviewStatLabels[DerivedStatId.MaxHP].Text);
 
-                // Verify UI labels never overflow 160px buttons (<=26 chars) or 320px bottom bar (<=50 chars)
+                // Verify UI labels never overflow their boxes, measured in pixels
                 for (int r = 0; r < Database.PlayableRaceIds.Length; r++)
                 {
                     creation.CycleRace(1);
-                    Assert.LessOrEqual(creation.RaceLabel.Text.Length, 26, $"RaceLabel overflow: {creation.RaceLabel.Text}");
-                    Assert.LessOrEqual(creation.RaceFeatLabel.Text.Length, 18, $"RaceFeatLabel overflow: {creation.RaceFeatLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(creation.RaceLabel.Text), 154, $"RaceLabel overflow: {creation.RaceLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(creation.RaceFeatLabel.Text), 112, $"RaceFeatLabel overflow: {creation.RaceFeatLabel.Text}");
                 }
                 for (int c = 0; c < Database.PlayableClassIds.Length; c++)
                 {
                     creation.CycleClass(1);
-                    Assert.LessOrEqual(creation.ClassLabel.Text.Length, 26, $"ClassLabel overflow: {creation.ClassLabel.Text}");
-                    Assert.LessOrEqual(creation.ClassIdentityLabel.Text.Length, 18, $"ClassIdentityLabel overflow: {creation.ClassIdentityLabel.Text}");
-                    Assert.LessOrEqual(creation.StarterPassiveLabel.Text.Length, 26, $"StarterPassiveLabel overflow: {creation.StarterPassiveLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(creation.ClassLabel.Text), 154, $"ClassLabel overflow: {creation.ClassLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(creation.ClassIdentityLabel.Text), 112, $"ClassIdentityLabel overflow: {creation.ClassIdentityLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(creation.StarterPassiveLabel.Text), 131, $"StarterPassiveLabel overflow: {creation.StarterPassiveLabel.Text}");
                     for (int s = 0; s < EquipmentSlots.All.Length; s++)
                     {
                         creation.CycleEquipmentSlot(1);
-                        Assert.LessOrEqual(creation.EquipmentSlotLabel.Text.Length, 26, $"EquipmentSlotLabel overflow: {creation.EquipmentSlotLabel.Text}");
+                        Assert.LessOrEqual(PixelFont.Measure(creation.EquipmentSlotLabel.Text), 154, $"EquipmentSlotLabel overflow: {creation.EquipmentSlotLabel.Text}");
                     }
                 }
                 for (int m = 0; m < Database.TemplateIds.Length + 3; m++)
                 {
                     creation.CycleCreationMethodOrTemplate(1);
-                    Assert.LessOrEqual(creation.MethodLabel.Text.Length, 26, $"MethodLabel overflow: {creation.MethodLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(creation.MethodLabel.Text), 154, $"MethodLabel overflow: {creation.MethodLabel.Text}");
                 }
-                Assert.LessOrEqual(creation.HintLabel.Text.Length, 50);
-                Assert.LessOrEqual(creation.PartySummaryLabel.Text.Length, 50);
+                Assert.LessOrEqual(PixelFont.Measure(creation.HintLabel.Text), 308);
+                Assert.LessOrEqual(PixelFont.Measure(creation.PartySummaryLabel.Text), 308);
                 creation.Close();
 
                 // 2. Character Status Screen & Tooltips

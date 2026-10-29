@@ -21,6 +21,7 @@ namespace Obscure
         public readonly Dictionary<DerivedStatId, Label> DerivedStatLabels = new Dictionary<DerivedStatId, Label>();
 
         SpriteRenderer portrait;
+        Label vitals;
 
         // The 15 Derived Stats required on the Character Status Screen (Prompt Section 9 / PRD Section 12.3), plus Magic Break.
         public static readonly DerivedStatId[] DisplayedDerivedStats =
@@ -72,7 +73,8 @@ namespace Obscure
 
             // Right panel: 16 Derived Stats in two columns
             Ui.Panel(Root, 112, 19, 206, 108);
-            Ui.Label(Root, "DERIVED STATS (SELECT FOR TOOLTIP)", 120, 23, Palette.Gold);
+            Ui.Label(Root, "DERIVED STATS", 120, 23, Palette.Gold);
+            vitals = Ui.Label(Root, "", 312, 23, Palette.Parchment, Align.Right);
 
             // Bottom panel: Portrait + 4-line Stat Detail Tooltip
             Ui.Panel(Root, 0, 128, Ui.Width, 52);
@@ -147,11 +149,11 @@ namespace Obscure
             var u = CurrentUnit;
             u.RecalculateStats();
 
-            string heroName = u.name != null && u.name.Length > 12 ? u.name.Substring(0, 12) : (u.name ?? "HERO");
-            HeaderLabel.Set($"{heroName.ToUpperInvariant()} HP {u.hp}/{u.stats.maxHp} MP {u.mp}/{u.stats.maxMp}");
+            HeaderLabel.Set(PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 140));
+            vitals.Set($"HP {u.hp}/{u.stats.maxHp}  MP {u.mp}/{u.stats.maxMp}");
             string raceName = u.race?.name ?? "Human";
             string className = u.classDef?.name ?? u.role;
-            IdentityLabel.Set($"LV{u.level} {raceName.ToUpperInvariant()} {className.ToUpperInvariant()}");
+            IdentityLabel.Set(PixelFont.Fit($"{raceName} {className}".ToUpperInvariant(), 160));
 
             if (portrait != null && u.sprite != null)
                 portrait.sprite = PixelArt.FromRows(u.sprite);

@@ -32,6 +32,12 @@ namespace Obscure
 
         public readonly Dictionary<Ability, Label> AbilityRowLabels = new Dictionary<Ability, Label>();
         public readonly Dictionary<DerivedStatId, Label> PreviewStatLabels = new Dictionary<DerivedStatId, Label>();
+        readonly Dictionary<Ability, Label[]> abilityColumns = new Dictionary<Ability, Label[]>();
+        Label classTitle;
+
+        // Ability table columns (centers) inside the 160px rows at x=11: BASE, RACE, TOTAL, MOD, COST.
+        static readonly int[] AbilityColumnX = { 39, 65, 93, 120, 146 };
+        const int RightTextWidth = 112, HintWidth = 308;
 
         public EquipmentSlot SelectedEquipmentSlot { get; private set; } = EquipmentSlot.MainHand;
 
@@ -106,7 +112,7 @@ namespace Obscure
             // 1. Creation Method / Template / Random Selector (Section 4)
             var methodBtn = Ui.Button(Root, "", 11, 19, 160, OnActivateCreationMethodButton, 9);
             methodBtn.onAdjust = CycleCreationMethodOrTemplate;
-            methodBtn.tooltip = "METHOD: L/R MANUAL/TEMPLATES/RANDOM (ENTER REROLLS)";
+            methodBtn.tooltip = "L/R: MANUAL, TEMPLATE OR RANDOM. ENTER: REROLL";
             MethodLabel = methodBtn.label;
             menu.Add(methodBtn);
 
@@ -133,8 +139,11 @@ namespace Obscure
 
             BackgroundLabel = Ui.Label(Root, "", 11, 49, Color.clear); // retained for compatibility
 
-            // Centered column header aligned with 25-char ability rows inside x=11..171 (center=91)
-            Ui.Label(Root, "STAT BS  RAC FIN  MOD CST", 91, 59, Palette.Ash, Align.Center);
+            // Ability table: one label per column so the proportional font still lines up.
+            Ui.Label(Root, "STAT", 17, 59, Palette.Ash);
+            string[] headers = { "BASE", "RACE", "TOTAL", "MOD", "COST" };
+            for (int c = 0; c < headers.Length; c++)
+                Ui.Label(Root, headers[c], 11 + AbilityColumnX[c], 59, Palette.Ash, Align.Center);
 
             // 5. Six Primary Ability Score Point-Buy rows
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
@@ -144,7 +153,8 @@ namespace Obscure
                 var btn = Ui.Button(Root, "", 11, y, 160, () => AdjustAbility(ability, 1), 10);
                 btn.onAdjust = d => AdjustAbility(ability, d);
                 btn.tooltip = GetAbilityShortTooltip(ability);
-                AbilityRowLabels[ability] = btn.label;
+                AbilityRowLabels[ability] = Ui.Label(btn.transform, ability.ToString(), 6, 2, Palette.Bone, order: Ui.Widget + 1);
+                abilityColumns[ability] = AbilityColumnX.Select(x => Ui.Label(btn.transform, "", x, 2, Palette.Parchment, Align.Center, order: Ui.Widget + 1)).ToArray();
                 menu.Add(btn);
             }
 
@@ -169,10 +179,10 @@ namespace Obscure
 
             // Right Panel: Portrait (16x24 at y=19..43) + Identity/Feat/Passive header + Live Derived Stats (y=55..124)
             portrait = Ui.Image(Root, PixelArt.FromRows(Session.Class.sprite), 182, 19, Ui.Widget);
-            Ui.Label(Root, "DERIVED PREVIEW", 202, 19, Palette.Gold);
+            classTitle = Ui.Label(Root, "", 202, 19, Palette.Gold);
             ClassIdentityLabel = Ui.Label(Root, "", 202, 28, Palette.Parchment);
             RaceFeatLabel = Ui.Label(Root, "", 202, 37, Palette.Ash);
-            StarterPassiveLabel = Ui.Label(Root, "", 183, 45, Palette.Moss);
+            StarterPassiveLabel = Ui.Label(Root, "", 183, 46, Palette.Moss);
 
             for (int i = 0; i < PreviewedStats.Length; i++)
             {
@@ -180,7 +190,7 @@ namespace Obscure
                 int col = i / 8;
                 int row = i % 8;
                 int x = 183 + col * 68;
-                int y = 55 + row * 9;
+                int y = 56 + row * 9;
                 PreviewStatLabels[st] = Ui.Label(Root, "", x, y, Palette.Bone);
             }
 
@@ -207,6 +217,13 @@ namespace Obscure
             _ => ability.ToString(),
         };
 
+        // "RACE < HUMAN >", with the value trimmed so the whole row fits a 160px selector.
+        static string Selector(string prefix, string value)
+        {
+            prefix = prefix.ToUpperInvariant();
+            return $"{prefix} < {PixelFont.Fit(value.ToUpperInvariant(), 150 - PixelFont.Measure(prefix + " <  >"))} >";
+        }
+
         static string Truncate(string s, int maxChars)
         {
             if (string.IsNullOrEmpty(s)) return "";
@@ -215,7 +232,7 @@ namespace Obscure
 
         void SetHint(string text)
         {
-            HintLabel?.Set(Truncate((text ?? "").ToUpperInvariant(), 50));
+            HintLabel?.Set(PixelFont.Fit((text ?? "").ToUpperInvariant(), HintWidth));
         }
 
         // Cycles between Manual -> Predefined Templates (0..N-1) -> Random creation methods (Section 4).
@@ -492,29 +509,30 @@ namespace Obscure
                 if (Session.Method == CreationMethod.Template && !string.IsNullOrEmpty(Session.ActiveTemplateId) &&
                     Database.Templates.TryGetValue(Session.ActiveTemplateId, out var tpl))
                 {
-                    MethodLabel.Set($"TPL < {Truncate(tpl.name.ToUpperInvariant(), 17)} >");
+                    MethodLabel.Set(Selector("TEMPLATE", tpl.name));
                 }
                 else
                 {
-                    MethodLabel.Set($"MODE < {Session.Method.ToString().ToUpperInvariant()} >");
+                    MethodLabel.Set(Selector("MODE", Session.Method.ToString()));
                 }
             }
 
             string featName = Session.Race?.racialFeat?.name ?? "NONE";
-            RaceLabel.Set($"RACE < {Truncate(Session.Race.name.ToUpperInvariant(), 16)} >");
+            RaceLabel.Set(Selector("RACE", Session.Race.name));
             string identity = Session.Class?.gameplayIdentity ?? Session.Class?.role ?? "";
-            ClassLabel.Set($"CLASS < {Truncate(Session.Class.name.ToUpperInvariant(), 15)} >");
+            ClassLabel.Set(Selector("CLASS", Session.Class.name));
             BackgroundLabel?.Set($"BG < {Session.Background.name.ToUpperInvariant()} >");
 
-            ClassIdentityLabel?.Set(Truncate($"ID:{identity.ToUpperInvariant()}", 18));
-            RaceFeatLabel?.Set(Truncate($"FT:{featName.ToUpperInvariant()}", 18));
+            classTitle?.Set(PixelFont.Fit($"{Session.Race.name} {Session.Class.name}".ToUpperInvariant(), RightTextWidth));
+            ClassIdentityLabel?.Set(PixelFont.Fit(identity.ToUpperInvariant(), RightTextWidth));
+            RaceFeatLabel?.Set(PixelFont.Fit($"FEAT {featName.ToUpperInvariant()}", RightTextWidth));
 
             var sp = Session.StarterPassive;
-            StarterPassiveLabel?.Set(Truncate($"PSV:{(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 22));
+            StarterPassiveLabel?.Set(PixelFont.Fit($"PASSIVE {(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 131));
 
             var eq = Session.GetEquipped(SelectedEquipmentSlot);
             string eqName = eq != null ? eq.name.ToUpperInvariant() : "EMPTY";
-            EquipmentSlotLabel?.Set($"[{EquipmentSlots.ShortName(SelectedEquipmentSlot)}] < {Truncate(eqName, 15)} >");
+            EquipmentSlotLabel?.Set(Selector(EquipmentSlots.ShortName(SelectedEquipmentSlot), eqName));
 
             if (portrait != null && Session.Class?.sprite != null)
                 portrait.sprite = PixelArt.FromRows(Session.Class.sprite);
@@ -531,9 +549,16 @@ namespace Obscure
                 int fin = finalScores[a];
                 int mod = abilMods[a];
                 int cost = Session.PointBuy.GetCost(a);
-                string rStr = r > 0 ? $"+{r}" : r < 0 ? r.ToString() : "+0";
-                string mStr = AbilityScores.FormatMod(mod);
-                AbilityRowLabels[a].Set($"{a,-3} {b,2} {rStr,3} ={fin,2} ({mStr,2}) C:{cost}");
+                var cols = abilityColumns[a];
+                cols[0].Set(b.ToString());
+                cols[1].Set(r > 0 ? $"+{r}" : r < 0 ? r.ToString() : "-");
+                cols[1].Color = r > 0 ? Palette.Moss : r < 0 ? Palette.Crimson : Palette.Ash;
+                cols[2].Set(fin.ToString());
+                cols[2].Color = Palette.Bone;
+                cols[3].Set(AbilityScores.FormatMod(mod));
+                cols[3].Color = mod > 0 ? Palette.Moss : mod < 0 ? Palette.Crimson : Palette.Parchment;
+                cols[4].Set(cost.ToString());
+                cols[4].Color = Palette.Gold;
             }
 
             var preview = Session.PreviewDerivedStats;
@@ -566,7 +591,7 @@ namespace Obscure
                         string mark = inReview && i == Builder.SelectedReviewIndex ? "*" : "";
                         return $"{i + 1}{mark}:{Truncate(c.name.ToUpperInvariant(), 7)}";
                     });
-                    PartySummaryLabel.Set(Truncate($"PARTY ({Builder.PendingParty.Count}/{CharacterRoster.PartySize}): " + string.Join(" ", members), 50));
+                    PartySummaryLabel.Set(PixelFont.Fit($"PARTY ({Builder.PendingParty.Count}/{CharacterRoster.PartySize}): " + string.Join(" ", members), HintWidth));
                 }
                 else
                 {

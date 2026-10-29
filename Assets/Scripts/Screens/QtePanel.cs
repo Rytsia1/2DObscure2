@@ -7,7 +7,7 @@ namespace Obscure
     // Draws a running Qte in the combat command panel and feeds it input. Owns no rules.
     public class QtePanel : MonoBehaviour
     {
-        const int X = 160, W = 150, CenterX = 235, TrackY = 138, TrackH = 9;
+        const int X = 172, W = 140, CenterX = 242, TrackY = 138, TrackH = 9;
         const float Impact = 0.82f; // defense track: where hits land, as a fraction of the bar
 
         Qte qte;

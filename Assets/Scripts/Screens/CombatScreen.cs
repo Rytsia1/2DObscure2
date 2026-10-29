@@ -25,9 +25,10 @@ namespace Obscure
     // Renders a Battle and feeds it player choices and enemy AI decisions. All rules live in Battle.
     public class CombatView : MonoBehaviour
     {
-        const float EnemyThink = 0.5f, AfterAction = 0.6f, LogWidth = 158;
+        const float EnemyThink = 0.5f, AfterAction = 0.6f, LogWidth = 148;
+        const int LogX = 162, NameWidth = 52; // party panel 0..160, log/command panel 162..320
         const int LogLines = 6;
-        static readonly Vector2Int[] PartySlots = { new Vector2Int(80, 28), new Vector2Int(80, 66), new Vector2Int(52, 44), new Vector2Int(52, 82) };
+        static readonly Vector2Int[] PartySlots = { new Vector2Int(80, 34), new Vector2Int(80, 72), new Vector2Int(52, 50), new Vector2Int(52, 88) };
 
         public Battle Battle { get; private set; }
 
@@ -52,9 +53,9 @@ namespace Obscure
 
         static Vector2Int[] EnemySlots(int count) => count switch
         {
-            1 => new[] { new Vector2Int(230, 30) },
-            2 => new[] { new Vector2Int(212, 28), new Vector2Int(256, 46) },
-            _ => new[] { new Vector2Int(200, 26), new Vector2Int(240, 46), new Vector2Int(278, 26) },
+            1 => new[] { new Vector2Int(230, 34) },
+            2 => new[] { new Vector2Int(212, 32), new Vector2Int(256, 50) },
+            _ => new[] { new Vector2Int(200, 30), new Vector2Int(240, 50), new Vector2Int(278, 30) },
         };
 
         public void Init(Battle battle, EncounterDef encounter)
@@ -65,16 +66,18 @@ namespace Obscure
             Ui.Panel(t, 0, 0, Ui.Width, 14);
             roundLabel = Ui.Label(t, "", 5, 4, Palette.Parchment);
             turnBar = Child("TurnBar");
-            hint = Ui.Label(t, "", 150, 17, Palette.Bone, Align.Center, order: Ui.Widget + 2);
+            // Hint strip under the turn bar: telegraphs, tooltips and target info never cover the battlefield.
+            Ui.Panel(t, 0, 13, Ui.Width, 12, Palette.Void, Palette.Shade);
+            hint = Ui.Label(t, "", 160, 16, Palette.Bone, Align.Center, order: Ui.Widget + 2);
 
             for (int i = 0; i < battle.Party.Count; i++) AddCombatant(battle.Party[i], PartySlots[i]);
             var slots = EnemySlots(battle.Enemies.Count);
             for (int i = 0; i < battle.Enemies.Count; i++) AddCombatant(battle.Enemies[i], slots[i]);
             marker = Ui.Image(t, PixelArt.FromRows(Art.Marker), 0, 0, Ui.Widget + 5);
 
-            Ui.Panel(t, 0, 112, 148, 68);
-            Ui.Panel(t, 150, 112, 170, 68);
-            for (int i = 0; i < LogLines; i++) logLabels.Add(Ui.Label(t, "", 156, 117 + i * 10, Palette.Parchment));
+            Ui.Panel(t, 0, 112, LogX - 2, 68);
+            Ui.Panel(t, LogX, 112, Ui.Width - LogX, 68);
+            for (int i = 0; i < LogLines; i++) logLabels.Add(Ui.Label(t, "", LogX + 5, 117 + i * 10, Palette.Parchment));
 
             battle.Logged += AddLog;
             AddLog(encounter.tier == Tier.Boss ? "The Warden's eye opens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
@@ -108,14 +111,14 @@ namespace Obscure
                 return;
             }
             int y = 117 + c.slot * 15;
-            h.name = Ui.Label(transform, c.name.ToUpperInvariant(), 6, y, Palette.Bone);
-            h.hp = Ui.Label(transform, "", 47, y, Palette.Bone);
-            h.mp = Ui.Label(transform, "", 94, y, Palette.Lilac);
-            h.status = Ui.Label(transform, "", 124, y, Palette.Frost);
-            Bar(47, y + 9, 41, Palette.Void, 0);
-            h.hpBar = Bar(47, y + 9, 41, Palette.Moss, 1);
-            Bar(94, y + 9, 27, Palette.Void, 0);
-            h.mpBar = Bar(94, y + 9, 27, Palette.Arcane, 1);
+            h.name = Ui.Label(transform, PixelFont.FitName(c.name.ToUpperInvariant(), NameWidth), 5, y, Palette.Bone);
+            h.hp = Ui.Label(transform, "", 62, y, Palette.Bone);
+            h.mp = Ui.Label(transform, "", 106, y, Palette.Lilac);
+            h.status = Ui.Label(transform, "", 141, y, Palette.Frost);
+            Bar(62, y + 9, 40, Palette.Void, 0);
+            h.hpBar = Bar(62, y + 9, 40, Palette.Moss, 1);
+            Bar(106, y + 9, 30, Palette.Void, 0);
+            h.mpBar = Bar(106, y + 9, 30, Palette.Arcane, 1);
         }
 
         SpriteRenderer Bar(int x, int y, int w, Color color, int layer)
@@ -153,7 +156,7 @@ namespace Obscure
                     if (c.phase != h.phase)
                     {
                         h.phase = c.phase;
-                        hint.Set($"{c.name.ToUpperInvariant()} ENTERS PHASE {c.phase}!");
+                        Hint($"{c.name.ToUpperInvariant()} ENTERS PHASE {c.phase}!");
                         StartCoroutine(Flash(h, c));
                     }
                     continue;
@@ -163,11 +166,10 @@ namespace Obscure
                 h.hp.Set($"{c.unit.hp}/{c.Stats.maxHp}");
                 h.mp.Set(c.Alive ? $"MP {c.unit.mp}" : "DOWN");
                 h.mp.Color = c.Alive ? Palette.Lilac : Palette.Crimson;
-                var tags = c.Alive ? c.StatusTags : "";
-                h.status.Set(tags.Length > 4 ? tags.Substring(0, 4) : tags); // two tags fit the column
+                h.status.Set(c.Alive ? PixelFont.Fit(c.StatusTags, 17) : "");
                 h.status.Color = c.HasDebuff ? Palette.Crimson : Palette.Frost;
-                SetBar(h.hpBar, 41, c.unit.hp, c.Stats.maxHp);
-                SetBar(h.mpBar, 27, c.unit.mp, c.Stats.maxMp);
+                SetBar(h.hpBar, 40, c.unit.hp, c.Stats.maxHp);
+                SetBar(h.mpBar, 30, c.unit.mp, c.Stats.maxMp);
             }
             marker.enabled = Battle.Active != null;
             BuildTurnBar();
@@ -201,6 +203,8 @@ namespace Obscure
             marker.transform.localPosition = new Vector3(h.pos.x + h.size.x / 2 - 2, -(h.pos.y - 6 + bob), 0);
         }
 
+        void Hint(string text) => hint.Set(PixelFont.Fit(text ?? "", Ui.Width - 8));
+
         void AddLog(string line)
         {
             logLines.AddRange(PixelFont.Wrap(line.ToUpperInvariant(), (int)LogWidth).Split('\n'));
@@ -220,7 +224,7 @@ namespace Obscure
 
                 if (c.IsEnemy)
                 {
-                    hint.Set($"{c.name.ToUpperInvariant()} ACTS");
+                    Hint($"{c.name.ToUpperInvariant()} ACTS");
                     yield return new WaitForSeconds(EnemyThink);
                     var act = EnemyAI.Choose(Battle, c);
                     var qte = QteFactory.Defense(act, Assist);
@@ -259,7 +263,7 @@ namespace Obscure
         IEnumerator Resolve(BattleAction action, float power = 1f, IReadOnlyList<QteResult> defense = null)
         {
             ClearPhase();
-            hint.Set("");
+            Hint("");
             foreach (var h in Battle.Perform(action, power, defense)) Feedback(h);
             Refresh();
             yield return new WaitForSeconds(AfterAction);
@@ -279,13 +283,13 @@ namespace Obscure
             var move = a.attack;
             if (move != null && move.self)
             {
-                hint.Set($"{move.name.ToUpperInvariant()}: " + string.Join(", ", move.apply.Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant())));
+                Hint($"{move.name.ToUpperInvariant()}: " + string.Join(", ", move.apply.Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant())));
                 return null;
             }
             string who = move != null && move.allTargets ? "ALL" : a.target.name.ToUpperInvariant();
             string element = move != null && move.element != Element.Physical ? " " + move.element.ToString().ToUpperInvariant() : "";
             // Telegraph: move, hit count, target, severity and element all spelled out.
-            hint.Set(move == null ? $"{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
+            Hint(move == null ? $"{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
                 : $"{move.name.ToUpperInvariant()}{(move.hits > 1 ? $" X{move.hits}" : "")} > {who}  {EnemyAI.Severity(move)}{element}");
             return $"GUARD {who}!";
         }
@@ -358,13 +362,13 @@ namespace Obscure
             ClearPhase();
             ShowLog(false);
             var m = phase.gameObject.AddComponent<Menu>();
-            m.onFocus = s => hint.Set(s.tooltip ?? turnText);
+            m.onFocus = s => Hint(s.tooltip ?? turnText);
             return m;
         }
 
         void Option(Menu m, string text, Action onClick, bool enabled = true, string tooltip = null)
         {
-            var s = Ui.Button(phase, text, 164, 116 + m.items.Count * 14, 148, onClick, 12, enabled);
+            var s = Ui.Button(phase, PixelFont.Fit(text, 128), LogX + 14, 116 + m.items.Count * 14, Ui.Width - LogX - 22, onClick, 12, enabled);
             s.tooltip = tooltip;
             m.Add(s);
         }
@@ -424,7 +428,7 @@ namespace Obscure
         {
             ClearPhase();
             var m = phase.gameObject.AddComponent<Menu>();
-            m.onFocus = s => hint.Set(s.tooltip);
+            m.onFocus = s => Hint(s.tooltip);
             m.onBack = back;
             foreach (var t in candidates.Where(c => c.Alive))
             {
@@ -450,7 +454,7 @@ namespace Obscure
             if (error != null)
             {
                 Sfx.Play(Sound.Deny);
-                hint.Set(error.ToUpperInvariant());
+                Hint(error.ToUpperInvariant());
                 return;
             }
             ClearPhase();
@@ -462,7 +466,7 @@ namespace Obscure
             bool won = Battle.Outcome == Outcome.Victory;
             ClearPhase();
             foreach (Transform child in turnBar) Destroy(child.gameObject);
-            hint.Set("");
+            Hint("");
             Ui.Panel(phase, 100, 40, 120, 52, Palette.Night, won ? Palette.Gold : Palette.Crimson).sortingOrder = Ui.Widget - 1;
             Ui.Label(phase, won ? "VICTORY" : "DEFEAT", 160, 48, won ? Palette.Gold : Palette.Crimson, Align.Center, 2, Ui.Widget + 1);
             var m = phase.gameObject.AddComponent<Menu>();

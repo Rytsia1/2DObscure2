@@ -46,32 +46,37 @@ namespace Obscure
         {
             Backdrop.Create(Root, true, 12, Palette.Void, Palette.Night, Palette.Dusk, Palette.Arcane);
 
-            Ui.Panel(Root, 16, 12, 288, 128);
-            Ui.Label(Root, "PROLOGUE: THE SEALED ABYSS", 160, 20, Palette.Gold, Align.Center);
+            Ui.Panel(Root, 8, 6, 304, 138);
+            Ui.Label(Root, "PROLOGUE: THE SEALED ABYSS", 160, 12, Palette.Gold, Align.Center);
 
             string story =
-                "BENEATH THE ASHEN CITADEL, THE ANCIENT SEAL WEAKENS.\n" +
-                "FOUR SOULS BOUND BY OATH STEP BEYOND THE IRON GATE\n" +
+                "BENEATH THE ASHEN CITADEL, THE ANCIENT SEAL WEAKENS. " +
+                "FOUR SOULS BOUND BY OATH STEP BEYOND THE IRON GATE " +
                 "TO DESCEND INTO THE SHIFTING CORRIDORS OF THE ABYSS.";
-            StoryLabel = Ui.Label(Root, StoryText(story), 26, 36, Palette.Parchment);
+            StoryLabel = Ui.Label(Root, StoryText(story), 16, 26, Palette.Parchment);
 
+            // 2x2 hero cards: sprite on the left, name / race / class stacked beside it.
             var party = Game?.Roster != null ? Game.Roster.GetActiveParty() : Database.Party.Select(id => Database.Characters[id]).ToList();
-            for (int i = 0; i < party.Count; i++)
+            for (int i = 0; i < party.Count && i < 4; i++)
             {
                 var hero = party[i];
-                int hx = 30 + i * 68;
+                int cx = 14 + i % 2 * 148, cy = 70 + i / 2 * 36;
+                Ui.Image(Root, PixelArt.Box(144, 34, Palette.Void, Palette.Dusk), cx, cy, Ui.Panels + 1);
                 if (hero.sprite != null)
-                    Ui.Image(Root, PixelArt.FromRows(hero.sprite), hx + 18, 76, Ui.Widget);
-                string hName = hero.name != null && hero.name.Length > 10 ? hero.name.Substring(0, 10) : (hero.name ?? "HERO");
-                Ui.Label(Root, hName.ToUpperInvariant(), hx + 26, 104, Palette.Bone, Align.Center);
-                Ui.Label(Root, $"{(hero.raceId ?? "").ToUpperInvariant()}", hx + 26, 114, Palette.Ash, Align.Center);
-                Ui.Label(Root, $"{(hero.classId ?? "").ToUpperInvariant()}", hx + 26, 124, Palette.Gold, Align.Center);
+                    Ui.Image(Root, PixelArt.FromRows(hero.sprite), cx + 6, cy + 34 - 2 - hero.sprite.Length, Ui.Widget);
+                int tx = cx + 28, tw = 112;
+                Ui.Label(Root, PixelFont.Fit((hero.name ?? "HERO").ToUpperInvariant(), tw), tx, cy + 4, Palette.Bone);
+                Ui.Label(Root, PixelFont.Fit(RaceName(hero.raceId), tw), tx, cy + 14, Palette.Ash);
+                Ui.Label(Root, PixelFont.Fit(ClassName(hero.classId), tw), tx, cy + 23, Palette.Gold);
             }
 
             var menu = Root.gameObject.AddComponent<Menu>();
-            BeginExpeditionButton = menu.Add(Ui.Button(Root, "BEGIN EXPEDITION", 100, 148, 120, () => Game?.BeginFirstExpedition(), 14));
+            BeginExpeditionButton = menu.Add(Ui.Button(Root, "BEGIN EXPEDITION", 100, 154, 120, () => Game?.BeginFirstExpedition(), 14));
         }
 
-        static string StoryText(string s) => PixelFont.Wrap(s, 268);
+        static string StoryText(string s) => PixelFont.Wrap(s, 288);
+
+        static string RaceName(string id) => (id != null && Database.Races.TryGetValue(id, out var r) ? r.name : id ?? "").ToUpperInvariant();
+        static string ClassName(string id) => (id != null && Database.Classes.TryGetValue(id, out var c) ? c.name : id ?? "").ToUpperInvariant();
     }
 }
