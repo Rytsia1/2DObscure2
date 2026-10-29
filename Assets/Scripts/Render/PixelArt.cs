@@ -27,7 +27,7 @@ namespace Obscure
         {
             var p = pivot ?? TopLeft;
             var key = (rows, p);
-            if (Cache.TryGetValue(key, out var s)) return s;
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
             int w = 0, h = rows.Length;
             foreach (var r in rows) w = Mathf.Max(w, r.Length);
             var px = new Color32[w * h];
@@ -41,7 +41,7 @@ namespace Obscure
         public static Sprite Box(int w, int h, Color fill, Color border)
         {
             var key = ("box", w, h, fill, border);
-            if (Cache.TryGetValue(key, out var s)) return s;
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var px = new Color32[w * h];
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
@@ -59,7 +59,7 @@ namespace Obscure
         public static Sprite Gradient(int w, int h, params Color[] stops)
         {
             var key = ("grad", w, h, string.Join(",", stops));
-            if (Cache.TryGetValue(key, out var s)) return s;
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var px = new Color32[w * h];
             int bands = stops.Length - 1;
             for (int y = 0; y < h; y++)
@@ -80,7 +80,7 @@ namespace Obscure
         public static Sprite Ridge(int w, int h, Color color, int seed)
         {
             var key = ("ridge", w, h, color, seed);
-            if (Cache.TryGetValue(key, out var s)) return s;
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var rng = new System.Random(seed);
             var px = new Color32[w * h];
             int top = h / 2;
@@ -95,7 +95,7 @@ namespace Obscure
         public static Sprite Disc(int r, Color color)
         {
             var key = ("disc", r, color);
-            if (Cache.TryGetValue(key, out var s)) return s;
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
             int d = r * 2 + 1;
             var px = new Color32[d * d];
             for (int y = 0; y < d; y++)

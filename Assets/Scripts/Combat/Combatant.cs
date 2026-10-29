@@ -152,11 +152,11 @@ namespace Obscure
         public bool ActivateDraconicOverdrive()
         {
             var feat = unit?.race?.racialFeat;
-            if (!Alive || feat == null || feat.temporaryPowerMultiplier <= 0f || UsedDraconicOverdrive)
+            if (!Alive || feat == null || feat.overdrivePowerBonus <= 0f || UsedDraconicOverdrive)
                 return false;
             UsedDraconicOverdrive = true;
-            OverdriveExhaustPending = feat.appliesExhaustedAfterward;
-            AddStatus(StatusId.AttackUp, Math.Max(1, feat.overdriveDurationTurns), feat.temporaryPowerMultiplier, this);
+            OverdriveExhaustPending = feat.exhaustDurationTurns > 0;
+            AddStatus(StatusId.AttackUp, Math.Max(1, feat.overdriveDurationTurns), feat.overdrivePowerBonus, this);
             return true;
         }
 
@@ -164,7 +164,8 @@ namespace Obscure
         {
             if (!OverdriveExhaustPending) return;
             OverdriveExhaustPending = false;
-            AddStatus(StatusId.Exhausted, 2, 0.25f, this);
+            int dur = Math.Max(1, unit?.race?.racialFeat?.exhaustDurationTurns ?? 1);
+            AddStatus(StatusId.Exhausted, dur, 0.25f, this);
         }
 
         // Merfolk Racial Feat — Ocean's Embrace: provides protection/shield effect to an ally.

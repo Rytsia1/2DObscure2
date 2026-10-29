@@ -62,7 +62,7 @@ namespace Obscure
         public CharacterCreationScreen(CharacterCreationSession session = null, CharacterRoster roster = null)
         {
             Session = session ?? new CharacterCreationSession();
-            Roster = roster ?? (Game != null ? Game.Roster : new CharacterRoster(preloadDefaultParty: false));
+            Roster = roster ?? (Game != null ? Game.Roster : new CharacterRoster(startWithEmptyParty: true));
         }
 
         protected override void Build()

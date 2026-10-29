@@ -103,7 +103,7 @@ namespace Obscure
         // ponytail: one texture per distinct string, never evicted. Fine for menu text; add LRU if dynamic text explodes.
         public static Sprite Render(string text)
         {
-            if (Cache.TryGetValue(text, out var cached)) return cached;
+            if (Cache.TryGetValue(text, out var cached) && cached != null) return cached;
             var lines = text.Split('\n');
             int w = 1, h = (lines.Length - 1) * LineHeight + GlyphHeight + 1;
             foreach (var l in lines) w = Mathf.Max(w, Measure(l) + 1);

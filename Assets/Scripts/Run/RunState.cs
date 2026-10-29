@@ -80,9 +80,19 @@ namespace Obscure
                     passives.Add(sp);
             }
 
-            foreach (var pid in skillLoadout.GetEquippedPassives())
-                if (Database.Passives.TryGetValue(pid, out var lp) && !passives.Contains(lp))
-                    passives.Add(lp);
+            bool includeLoadoutPassives = (classDef != null && classDef.isPlayable) ||
+                                          !string.IsNullOrEmpty(d.starterPassiveId) ||
+                                          (d.passiveSkillLoadout != null && d.passiveSkillLoadout.Length > 0);
+            if (includeLoadoutPassives)
+            {
+                foreach (var pid in skillLoadout.GetEquippedPassives())
+                    if (Database.Passives.TryGetValue(pid, out var lp) && !passives.Contains(lp))
+                        passives.Add(lp);
+            }
+            else
+            {
+                Array.Clear(skillLoadout.passiveSlots, 0, skillLoadout.passiveSlots.Length);
+            }
 
             if (d.passives != null)
                 foreach (var pid in d.passives)

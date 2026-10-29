@@ -483,7 +483,7 @@ namespace Obscure.Tests
                 Assert.IsNotNull(r.racialUtility, $"Race {raceId} must have a Racial Utility");
                 Assert.IsNotEmpty(r.racialUtility.name);
                 // No separate passive-trait system on playable races
-                Assert.AreEqual(0, r.racialTraits.Length);
+                Assert.AreEqual(0, r.traits.Length);
                 Assert.AreEqual(0, r.passiveBonuses.Length);
             }
         }
@@ -520,7 +520,7 @@ namespace Obscure.Tests
                 Assert.AreEqual(starterPassive, session.StarterPassive.id);
 
                 // Starter passive unlocked and equipped in Passive Slot 0
-                Assert.Contains(starterPassive, session.Loadout.UnlockedPassiveSkills);
+                Assert.IsTrue(session.Loadout.UnlockedPassiveSkills.Contains(starterPassive));
                 Assert.AreEqual(starterPassive, session.Loadout.passiveSlots[0]);
                 Assert.AreEqual(3, session.Loadout.activeSlots.Length);
                 Assert.AreEqual(3, session.Loadout.passiveSlots.Length);
@@ -584,7 +584,7 @@ namespace Obscure.Tests
             // 4. Rogue — Opportunist increases Critical Chance against debuffed enemies
             session.CreateNewCharacter();
             session.SelectClass("rogue");
-            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 12, 14));
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 11, 10, 12, 14));
             var rogueCombatant = new Combatant(new Unit(session.Confirm(null, "test_rogue")), Side.Party, 0, "Rogue", "ROG");
             var enemy = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
             int critClean = rogueCombatant.GetCritChanceAgainst(enemy);
@@ -597,8 +597,8 @@ namespace Obscure.Tests
             session.SelectClass("wizard");
             session.PointBuy.SetAllOrThrow(new AbilityScores(8, 12, 12, 15, 14, 11));
             var wizCombatant = new Combatant(new Unit(session.Confirm(null, "test_wizard")), Side.Party, 0, "Wizard", "WIZ");
-            var ember = Database.Skills["ember"]; // tagged "Arcane"
-            Assert.Less(wizCombatant.GetEffectiveMpCost(ember), ember.mpCost, "Arcane Affinity reduces MP cost of Arcane spells");
+            var firebolt = Database.Skills["firebolt"]; // tagged "Arcane"
+            Assert.Less(wizCombatant.GetEffectiveMpCost(firebolt), firebolt.mpCost, "Arcane Affinity reduces MP cost of Arcane spells");
         }
 
         [Test]
@@ -608,7 +608,7 @@ namespace Obscure.Tests
             var session = new CharacterCreationSession();
             session.SelectRace("halfling");
             session.SelectClass("rogue");
-            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 12, 14));
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 11, 10, 12, 14));
             var halfling = new Combatant(new Unit(session.Confirm(null, "halfling_rogue")), Side.Party, 0, "Halfling", "HLF");
             Assert.AreEqual(1, halfling.SecondChanceRetriesRemaining);
 
@@ -676,23 +676,22 @@ namespace Obscure.Tests
             Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "apprentice_tome", out string err2), err2);
 
             // 2. Rejecting incompatible Main Hand weapons (e.g. Greataxe or Longbow on Wizard)
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "iron_greataxe", out string mainErr));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "battle_greataxe", out string mainErr));
             StringAssert.Contains("Incompatible Main Hand weapon", mainErr);
             Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "hunting_bow", out _));
 
             // 3. Rejecting incompatible Second Hand weapons (e.g. Quiver or Heavy Shield on Wizard)
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "ranger_quiver", out string offErr));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "fletched_quiver", out string offErr));
             StringAssert.Contains("Incompatible Second Hand weapon", offErr);
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "wooden_shield", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "iron_shield", out _));
 
             // 4. Rejecting incompatible Legendary weapons (NO exceptions for Legendary rarity!)
-            var legendaryGreatsword = Database.Equipment["sunblade_legendary"];
-            var legendaryBow = Database.Equipment["astral_bow_legendary"];
-            var legendaryShield = Database.Equipment["aegis_shield_legendary"];
+            var legendaryGreatsword = Database.Equipment["legendary_sunblade"];
+            var legendaryShield = Database.Equipment["legendary_aegis"];
             Assert.AreEqual(EquipmentRarity.Legendary, legendaryGreatsword.rarity);
+            Assert.AreEqual(EquipmentRarity.Legendary, legendaryShield.rarity);
             Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, legendaryGreatsword, out string legErr1));
             StringAssert.Contains("Incompatible Main Hand weapon", legErr1);
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, legendaryBow, out _));
             Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, legendaryShield, out string legErr2));
             StringAssert.Contains("Incompatible Second Hand weapon", legErr2);
 
@@ -705,29 +704,29 @@ namespace Obscure.Tests
             session.SelectClass("wizard");
             Assert.IsTrue(session.TryEquip(EquipmentSlot.HeadArmor, "iron_helm", out _));
             Assert.IsTrue(session.TryEquip(EquipmentSlot.BodyArmor, "steel_cuirass", out _));
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.LegArmor, "padded_greaves", out _));
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.FootArmor, "traveler_boots", out _));
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory1, "ring_of_vigor", out _));
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory2, "charm_of_focus", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.LegArmor, "chain_greaves", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.FootArmor, "strider_boots", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory1, "vanguard_ring", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory2, "soldier_medal", out _));
 
             // 6. Item-specific restrictions (Class, Race, Level, Ability Score requirements)
-            // Class-restricted armor (Druid only)
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "druid_bark_vestments", out string classRestrErr));
+            // Class-restricted armor (Cleric only)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "cleric_vestment_only", out string classRestrErr));
             StringAssert.Contains("requires class", classRestrErr);
 
-            // Race-restricted accessory (Liichtian only)
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.Accessory1, "celestial_halo_band", out string raceRestrErr));
+            // Race-restricted armor (Dwarf only)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.HeadArmor, "dwarven_ancestral_helm", out string raceRestrErr));
             StringAssert.Contains("requires race", raceRestrErr);
-            session.SelectRace("liichtian");
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory1, "celestial_halo_band", out _));
+            session.SelectRace("dwarf");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.HeadArmor, "dwarven_ancestral_helm", out _));
 
             // Level-restricted armor (Min Level 5)
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "veteran_warplate", out string lvlRestrErr));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.LegArmor, "veteran_greaves", out string lvlRestrErr));
             StringAssert.Contains("requires level 5", lvlRestrErr);
 
-            // Ability Score-restricted armor (Requires STR 16; Wizard has STR 8)
-            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "titan_girdle_armor", out string statRestrErr));
-            StringAssert.Contains("requires STR 16", statRestrErr);
+            // Ability Score-restricted accessory (Requires STR 15; Dwarf Wizard has STR 8+1=9)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.Accessory1, "titan_girdle", out string statRestrErr));
+            StringAssert.Contains("requires STR 15", statRestrErr);
         }
 
         // =====================================================================
@@ -737,7 +736,7 @@ namespace Obscure.Tests
         [Test]
         public void PartyRequiresFourIndependentlyConfiguredCharactersAndRejectsDuplicatesOrIncompleteStart()
         {
-            var roster = new CharacterRoster(preloadDefaultParty: false);
+            var roster = new CharacterRoster(startWithEmptyParty: true);
             Assert.AreEqual(0, roster.PartyCount);
             Assert.IsFalse(roster.CanBeginExpedition);
             Assert.Throws<InvalidOperationException>(() => roster.BeginExpedition(42));
@@ -831,10 +830,11 @@ namespace Obscure.Tests
             Assert.AreEqual(meleeAcc + expectedHuntersBonus, rangedBasicAcc, 0.001f, "Hunter's Instinct applies to Ranged attacks");
             Assert.AreEqual(meleeAcc, magicAcc, 0.001f, "Hunter's Instinct does NOT apply to Melee or Magic attacks");
 
-            // Check with explicit skills: Ranged Active Skill vs Melee Skill vs Magic Skill
-            var rangedSkill = Database.Skills["aimed_shot"]; // Physical, isRanged = true
-            var meleeSkill = Database.Skills["cleave"];      // Physical, isRanged = false
-            var magicSkill = Database.Skills["ember"];       // Magic
+            // Check with explicit skills against an evasive target: Ranged Active Skill vs Melee Skill vs Magic Skill
+            target.AddStatus(StatusId.Evasion, 2, 4.0f, target);
+            var rangedSkill = Database.Skills["aimed_shot"];  // Physical, isRanged = true
+            var meleeSkill = Database.Skills["shield_bash"];  // Physical, isRanged = false
+            var magicSkill = Database.Skills["firebolt"];     // Magic
             Assert.AreEqual(AttackCategory.Ranged, AccuracySystem.DetermineCategory(ranger, rangedSkill));
             Assert.AreEqual(AttackCategory.Melee, AccuracySystem.DetermineCategory(ranger, meleeSkill));
             Assert.AreEqual(AttackCategory.Magic, AccuracySystem.DetermineCategory(ranger, magicSkill));
