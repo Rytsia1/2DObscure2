@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 // Static gameplay definitions. Runtime state lives in Run/, never here.
@@ -16,6 +17,18 @@ namespace Obscure
         public Stats(int maxHp, int maxMp, int atk, int def, int spd, int mag)
         {
             this.maxHp = maxHp; this.maxMp = maxMp; this.atk = atk; this.def = def; this.spd = spd; this.mag = mag;
+        }
+
+        public Stats Plus(Stats b) => new Stats(maxHp + b.maxHp, maxMp + b.maxMp, atk + b.atk, def + b.def, spd + b.spd, mag + b.mag);
+
+        // "MAX HP 125>140, DEF 13>15": what changes when b is added.
+        public string Preview(Stats b)
+        {
+            var parts = new List<string>();
+            void Add(string label, int from, int delta) { if (delta != 0) parts.Add($"{label} {from}>{from + delta}"); }
+            Add("MAX HP", maxHp, b.maxHp); Add("MAX MP", maxMp, b.maxMp); Add("ATK", atk, b.atk);
+            Add("DEF", def, b.def); Add("SPD", spd, b.spd); Add("MAG", mag, b.mag);
+            return string.Join(", ", parts);
         }
     }
 
@@ -88,13 +101,57 @@ namespace Obscure
         public string id;
         public Tier tier;
         public string[] enemies;
+        public int minFloor; // earliest floor this encounter can be rolled on
     }
 
-    public class RewardDef
+    // Passive run-long bonus: stats added to every party member, plus optional after-battle healing.
+    public class RelicDef
+    {
+        public string id, name, description;
+        public Stats bonus;
+        public float victoryHeal; // fraction of max HP restored after each won battle
+    }
+
+    // A permanent improvement for one character (rest sites, elite rewards).
+    public class UpgradeDef
+    {
+        public string character, name;
+        public Stats bonus;
+    }
+
+    public enum RewardKind { Item, Relic, Upgrade, Gold }
+
+    public class RewardOption
+    {
+        public RewardKind kind;
+        public string id;   // item / relic / character id
+        public int amount;  // gold
+    }
+
+    // Gold is always granted; the player picks at most one of the choices.
+    public class RewardOffer
     {
         public string title, text;
-        public int gold, healPercent;
-        public string[] items = Array.Empty<string>();
+        public int gold;
+        public List<RewardOption> choices = new List<RewardOption>();
+    }
+
+    public class EventChoice
+    {
+        public string label, outcome;
+        public int goldCost;        // requirement and price
+        public int gold;            // gained
+        public int healPercent;     // of max HP, living members
+        public int hurtPercent;     // of max HP, never below 1 HP
+        public string item;
+        public bool relic;          // grants the relic rolled for this event
+        public StatusApply battleBuff; // applied to the party at the start of the next battle
+    }
+
+    public class EventDef
+    {
+        public string id, title, text;
+        public EventChoice[] choices;
     }
 
     public class NodeDef
@@ -104,13 +161,14 @@ namespace Obscure
         public int floor, lane;
         public string[] next = Array.Empty<string>();
         public string encounter;   // combat nodes
-        public RewardDef reward;   // non-combat nodes
+        public string eventId;     // event nodes
         public bool IsCombat => type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss;
     }
 
     public class MapDef
     {
         public string name;
+        public int act = 1;
         public NodeDef[] nodes;
         public NodeDef Get(string id) => nodes.First(n => n.id == id);
         public int Floors => nodes.Max(n => n.floor) + 1;

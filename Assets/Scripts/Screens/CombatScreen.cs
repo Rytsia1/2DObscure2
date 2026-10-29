@@ -16,6 +16,8 @@ namespace Obscure
             Ui.Image(Root, PixelArt.Gradient(Ui.Width, 80, Palette.Dusk, Palette.Night, Palette.Void), 0, 82, Ui.Back + 6);
 
             var battle = new Battle(Run.Party, enc.enemies.Select(id => Database.Enemies[id]), Run.Items, Run.Rng);
+            foreach (var buff in Run.TakeBattleBuffs()) // event blessings last one battle
+                foreach (var p in battle.Party.Where(p => p.Alive)) p.AddStatus(buff.id, buff.turns, buff.magnitude, p);
             Root.gameObject.AddComponent<CombatView>().Init(battle, enc);
         }
     }
@@ -459,7 +461,11 @@ namespace Obscure
                     Game.I.Run.WinCombat();
                     Game.I.Go(GameState.Reward);
                 }
-                else Game.I.Go(GameState.GameOver);
+                else
+                {
+                    Game.I.Run.LoseCombat();
+                    Game.I.Go(GameState.GameOver);
+                }
             }));
         }
     }

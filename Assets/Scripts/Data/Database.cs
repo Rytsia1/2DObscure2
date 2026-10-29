@@ -104,40 +104,79 @@ namespace Obscure
                 description = "Jailer of the deep. Enrages at half health." },
         }, e => e.id);
 
+        // Encounter pools: map generation rolls from these by tier and floor.
         public static readonly Dictionary<string, EncounterDef> Encounters = Index(new[]
         {
             new EncounterDef { id = "skel2", tier = Tier.Normal, enemies = new[] { "skeleton", "skeleton" } },
-            new EncounterDef { id = "skel3", tier = Tier.Normal, enemies = new[] { "skeleton", "skeleton", "skeleton" } },
+            new EncounterDef { id = "skel3", tier = Tier.Normal, enemies = new[] { "skeleton", "skeleton", "skeleton" }, minFloor = 2 },
             new EncounterDef { id = "elite1", tier = Tier.Elite, enemies = new[] { "cursed_knight" } },
-            new EncounterDef { id = "elite2", tier = Tier.Elite, enemies = new[] { "skeleton", "cursed_knight" } },
+            new EncounterDef { id = "elite2", tier = Tier.Elite, enemies = new[] { "skeleton", "cursed_knight" }, minFloor = 4 },
             new EncounterDef { id = "boss", tier = Tier.Boss, enemies = new[] { "warden" } },
         }, e => e.id);
 
-        static RewardDef Rest => new RewardDef { title = "Campfire", text = "Embers crackle against the dark. The party rests.", healPercent = 30 };
-
-        // Hand-authored branching map, floor 0 (left) to boss (right).
-        public static readonly MapDef Map = new MapDef
+        public static readonly Dictionary<string, RelicDef> Relics = Index(new[]
         {
-            name = "The Sunken Crypt",
-            nodes = new[]
+            new RelicDef { id = "iron_locket", name = "Iron Locket", bonus = new Stats(12, 0, 0, 0, 0, 0), description = "+12 max HP to the party." },
+            new RelicDef { id = "whetstone", name = "Whetstone", bonus = new Stats(0, 0, 2, 0, 0, 0), description = "+2 ATK to the party." },
+            new RelicDef { id = "moon_sigil", name = "Moon Sigil", bonus = new Stats(0, 6, 0, 0, 0, 3), description = "+3 MAG and +6 max MP to the party." },
+            new RelicDef { id = "warding_charm", name = "Warding Charm", bonus = new Stats(0, 0, 0, 2, 0, 0), description = "+2 DEF to the party." },
+            new RelicDef { id = "ashen_boots", name = "Ashen Boots", bonus = new Stats(0, 0, 0, 0, 1, 0), description = "+1 SPD to the party." },
+            new RelicDef { id = "ember_heart", name = "Ember Heart", victoryHeal = 0.08f, description = "Heal 8% max HP after each victory." },
+            new RelicDef { id = "warden_eye", name = "Warden's Eye", bonus = new Stats(10, 5, 1, 1, 0, 1), description = "Trophy of the Abyssal Warden." },
+        }, r => r.id);
+
+        public const string BossRelic = "warden_eye"; // never rolled from pools
+
+        public static readonly Dictionary<string, UpgradeDef> Upgrades = Index(new[]
+        {
+            new UpgradeDef { character = "knight", name = "Bulwark Drill", bonus = new Stats(15, 0, 0, 2, 0, 0) },
+            new UpgradeDef { character = "rogue", name = "Honed Blades", bonus = new Stats(0, 0, 3, 0, 1, 0) },
+            new UpgradeDef { character = "mage", name = "Deeper Focus", bonus = new Stats(0, 10, 0, 0, 0, 3) },
+            new UpgradeDef { character = "healer", name = "Litany of Light", bonus = new Stats(10, 8, 0, 0, 0, 2) },
+        }, u => u.character);
+
+        // The last choice of every event is always available, so an event can never trap the player.
+        public static readonly Dictionary<string, EventDef> Events = Index(new[]
+        {
+            new EventDef
             {
-                new NodeDef { id = "a", type = NodeType.Battle, floor = 0, lane = 0, encounter = "skel2", next = new[] { "c", "d" } },
-                new NodeDef { id = "b", type = NodeType.Battle, floor = 0, lane = 1, encounter = "skel2", next = new[] { "d", "e" } },
-                new NodeDef { id = "c", type = NodeType.Event, floor = 1, lane = 0, next = new[] { "f", "g" }, reward = new RewardDef { title = "Whispering Shrine", text = "A ghost presses a coin into your palm and fades.", gold = 15 } },
-                new NodeDef { id = "d", type = NodeType.Battle, floor = 1, lane = 1, encounter = "skel3", next = new[] { "g" } },
-                new NodeDef { id = "e", type = NodeType.Treasure, floor = 1, lane = 2, next = new[] { "g", "h" }, reward = new RewardDef { title = "Ossuary Chest", text = "Beneath the bones, a cache of supplies.", gold = 25, items = new[] { "draught" } } },
-                new NodeDef { id = "f", type = NodeType.Elite, floor = 2, lane = 0, encounter = "elite1", next = new[] { "i" } },
-                new NodeDef { id = "g", type = NodeType.Battle, floor = 2, lane = 1, encounter = "skel3", next = new[] { "i", "j" } },
-                new NodeDef { id = "h", type = NodeType.Rest, floor = 2, lane = 2, next = new[] { "j", "k" }, reward = Rest },
-                new NodeDef { id = "i", type = NodeType.Battle, floor = 3, lane = 0, encounter = "skel3", next = new[] { "l" } },
-                new NodeDef { id = "j", type = NodeType.Event, floor = 3, lane = 1, next = new[] { "l", "m" }, reward = new RewardDef { title = "Drowned Altar", text = "Black water recedes, revealing an offering.", gold = 10, items = new[] { "ether" } } },
-                new NodeDef { id = "k", type = NodeType.Treasure, floor = 3, lane = 2, next = new[] { "m" }, reward = new RewardDef { title = "Reliquary", text = "A sealed reliquary yields to the knight's blade.", gold = 40, items = new[] { "elixir" } } },
-                new NodeDef { id = "l", type = NodeType.Elite, floor = 4, lane = 0, encounter = "elite2", next = new[] { "n" } },
-                new NodeDef { id = "m", type = NodeType.Rest, floor = 4, lane = 1, next = new[] { "n" }, reward = Rest },
-                new NodeDef { id = "n", type = NodeType.Rest, floor = 5, lane = 0, next = new[] { "boss" }, reward = Rest },
-                new NodeDef { id = "boss", type = NodeType.Boss, floor = 6, lane = 0, encounter = "boss" },
+                id = "shrine", title = "Whispering Shrine", text = "A cracked shrine hums. Candles relight as you approach.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Offer 30 gold", goldCost = 30, relic = true, outcome = "The coins vanish. Something is left in their place." },
+                    new EventChoice { label = "Anoint weapons", battleBuff = new StatusApply { id = StatusId.AttackUp, turns = 3, magnitude = 0.3f }, outcome = "Your blades drink the candlelight." },
+                    new EventChoice { label = "Pray", healPercent = 25, outcome = "Warmth settles over the party." },
+                },
             },
-        };
+            new EventDef
+            {
+                id = "merchant", title = "Hooded Peddler", text = "A figure with too many pockets offers a trade.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Buy a Draught (15g)", goldCost = 15, item = "draught", outcome = "\"Pleasure doing business.\"" },
+                    new EventChoice { label = "Buy a relic (45g)", goldCost = 45, relic = true, outcome = "The peddler grins and vanishes." },
+                    new EventChoice { label = "Leave", outcome = "You keep your coin and your distance." },
+                },
+            },
+            new EventDef
+            {
+                id = "altar", title = "Drowned Altar", text = "Black water fills a stone basin. It whispers of power.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Drink", hurtPercent = 20, relic = true, outcome = "It burns going down. Something stays with you." },
+                    new EventChoice { label = "Refuse", outcome = "You walk away. The whispers fade." },
+                },
+            },
+            new EventDef
+            {
+                id = "fallen", title = "Fallen Adventurer", text = "A skeleton in rotted leathers still clutches its pack.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Take the coin purse", gold = 25, outcome = "25 gold. They won't need it." },
+                    new EventChoice { label = "Take the vial", item = "ether", outcome = "An Ether, still sealed." },
+                },
+            },
+        }, e => e.id);
 
         static Dictionary<string, T> Index<T>(T[] items, System.Func<T, string> key)
         {

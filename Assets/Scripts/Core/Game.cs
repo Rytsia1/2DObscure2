@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, Map, Combat, Reward, GameOver, Victory }
+    public enum GameState { MainMenu, Settings, Map, Combat, Reward, Rest, Event, GameOver, Victory }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -73,11 +73,22 @@ namespace Obscure
             ppc.cropFrame = PixelPerfectCamera.CropFrame.Windowbox;
         }
 
+        // A fresh run: new seed (unless given), new map, new party. The previous run is dropped here.
         public void StartRun(int? seed = null)
         {
-            Run = new RunState(Database.Map, Database.Party.Select(id => Database.Characters[id]), seed ?? System.Environment.TickCount);
+            int s = seed ?? System.Environment.TickCount;
+            Run = new RunState(MapGenerator.Generate(s), Database.Party.Select(id => Database.Characters[id]), s);
             Go(GameState.Map);
         }
+
+        // Which screen resolves a node.
+        public static GameState StateFor(NodeDef n) => n.type switch
+        {
+            NodeType.Treasure => GameState.Reward,
+            NodeType.Rest => GameState.Rest,
+            NodeType.Event => GameState.Event,
+            _ => GameState.Combat,
+        };
 
         public void EndRun()
         {
@@ -125,6 +136,8 @@ namespace Obscure
             GameState.Map => new MapScreen(),
             GameState.Combat => new CombatScreen(),
             GameState.Reward => new RewardScreen(),
+            GameState.Rest => new RestScreen(),
+            GameState.Event => new EventScreen(),
             GameState.GameOver => new EndScreen(false),
             _ => new EndScreen(true),
         };

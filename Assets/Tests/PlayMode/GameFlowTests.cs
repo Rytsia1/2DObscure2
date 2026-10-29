@@ -109,12 +109,10 @@ namespace Obscure.Tests
         {
             yield return Begin();
             Assert.AreEqual("START RUN", Focus);
-
             yield return Tap(Key.DownArrow);
             Assert.AreEqual("SETTINGS", Focus);
             yield return TapAndSettle(Key.Enter);
             Assert.AreEqual(GameState.Settings, State);
-
             int volume = Game.I.Settings.volume;
             yield return Tap(Key.LeftArrow);
             Assert.AreEqual(Mathf.Max(0, volume - 1), Game.I.Settings.volume);
@@ -123,36 +121,41 @@ namespace Obscure.Tests
 
             yield return TapAndSettle(Key.Enter);
             Assert.AreEqual(GameState.Map, State);
-            Assert.AreEqual("Node:a", Focus);
-            yield return Tap(Key.RightArrow);
-            Assert.AreEqual("Node:b", Focus);
-            yield return Tap(Key.LeftArrow);
+            var run = Run;
+            Assert.AreEqual(MapGenerator.StartLanes, run.Available.Count());
 
-            yield return TapAndSettle(Key.Enter);
-            Assert.AreEqual(GameState.Combat, State);
-            Assert.AreEqual("a", Run.Current.id);
-            yield return WinBattle();
-            Assert.AreEqual(GameState.Reward, State);
-            yield return TapAndSettle(Key.Enter);
-            Assert.AreEqual(GameState.Map, State);
-            CollectionAssert.Contains(Run.Cleared, "a");
-            Assert.AreEqual(16, Run.Gold);
-
-            // a -> c -> g -> j -> m -> n -> boss, always taking the first focused node or stepping right.
-            foreach (var id in new[] { "c", "g", "j", "m", "n", "boss" })
+            // Walk the generated map by keyboard, always taking the first open node, until the boss falls.
+            for (int step = 0; step < 60 && State != GameState.Victory; step++)
             {
-                for (int i = 0; i < 3 && Focus != "Node:" + id; i++) yield return Tap(Key.RightArrow);
-                Assert.AreEqual("Node:" + id, Focus);
-                yield return TapAndSettle(Key.Enter);
-                if (State == GameState.Combat) yield return WinBattle();
-                Assert.AreEqual(GameState.Reward, State);
-                yield return TapAndSettle(Key.Enter);
+                switch (State)
+                {
+                    case GameState.Map: yield return TapAndSettle(Key.Enter); break;
+                    case GameState.Combat: yield return WinBattle(); break;
+                    case GameState.Reward: yield return TapAndSettle(Key.Enter); break; // first prize
+                    case GameState.Rest:                                                  // recover, continue
+                        yield return TapAndSettle(Key.Enter);
+                        yield return TapAndSettle(Key.Enter);
+                        break;
+                    case GameState.Event:                                                 // last choice is always open
+                        yield return Tap(Key.UpArrow);
+                        yield return TapAndSettle(Key.Enter);
+                        yield return TapAndSettle(Key.Enter);
+                        break;
+                    default: Assert.Fail("unexpected state " + State); break;
+                }
             }
-
             Assert.AreEqual(GameState.Victory, State);
-            yield return TapAndSettle(Key.Enter);
-            Assert.AreEqual(GameState.MainMenu, State);
-            Assert.IsNull(Run);
+            Assert.AreEqual(RunStatus.Victory, run.Status);
+            Assert.AreEqual(run.Map.Floors, run.Stats.nodesCompleted);
+            Assert.IsTrue(run.Stats.bossDefeated);
+            CollectionAssert.Contains(run.Relics, Database.BossRelic);
+
+            yield return TapAndSettle(Key.Enter); // NEW RUN from the summary
+            Assert.AreEqual(GameState.Map, State);
+            Assert.AreNotSame(run, Run);
+            Assert.AreEqual(0, Run.Gold);
+            Assert.IsEmpty(Run.Cleared);
+            Assert.AreEqual(RunStatus.Active, Run.Status);
         }
 
         [UnityTest]
@@ -168,6 +171,9 @@ namespace Obscure.Tests
             yield return MashEnterUntilLeaving(GameState.Combat);
             Assert.AreEqual(Outcome.Defeat, battle.Outcome);
             Assert.AreEqual(GameState.GameOver, State);
+            Assert.AreEqual(RunStatus.Defeat, Run.Status);
+            CollectionAssert.IsEmpty(Run.Available, "no node selection after defeat");
+            yield return Tap(Key.RightArrow); // TITLE
             yield return TapAndSettle(Key.Enter);
             Assert.AreEqual(GameState.MainMenu, State);
         }
