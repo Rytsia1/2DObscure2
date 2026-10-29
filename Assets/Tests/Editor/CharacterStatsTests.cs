@@ -456,5 +456,406 @@ namespace Obscure.Tests
             Assert.AreEqual(27, parsed.pointBuy.budget);
             Assert.AreEqual(20, parsed.asi.maxAbilityScore);
         }
+
+        // =====================================================================
+        // 7. Character Creation System — 7 Races, 9 Classes, Step Navigation & Starter Passives
+        // =====================================================================
+
+        [Test]
+        public void AllSevenPlayableRacesHaveThreeComponentsAndSelectCleanly()
+        {
+            var expectedRaces = new[] { "human", "elf", "dwarf", "halfling", "dragonborn", "liichtian", "merfolk" };
+            CollectionAssert.AreEqual(expectedRaces, Database.PlayableRaceIds);
+
+            var session = new CharacterCreationSession();
+            foreach (var raceId in expectedRaces)
+            {
+                session.SelectRace(raceId);
+                var r = session.Race;
+                Assert.AreEqual(raceId, r.id);
+                Assert.IsTrue(r.isPlayable);
+                Assert.IsNotEmpty(r.name);
+                Assert.IsNotEmpty(r.description);
+                // 3 Conceptual Components: Racial Ability Bonus, Racial Feat, Racial Utility
+                Assert.IsFalse(r.abilityModifiers.IsZero, $"Race {raceId} should have Racial Ability Bonuses");
+                Assert.IsNotNull(r.racialFeat, $"Race {raceId} must have a Racial Feat");
+                Assert.IsNotEmpty(r.racialFeat.name);
+                Assert.IsNotNull(r.racialUtility, $"Race {raceId} must have a Racial Utility");
+                Assert.IsNotEmpty(r.racialUtility.name);
+                // No separate passive-trait system on playable races
+                Assert.AreEqual(0, r.racialTraits.Length);
+                Assert.AreEqual(0, r.passiveBonuses.Length);
+            }
+        }
+
+        [Test]
+        public void AllNinePlayableClassesHaveIdentityStarterPassiveSkillLoadoutAndCompatibleWeapons()
+        {
+            var expectedClasses = new (string id, string identity, string starterPassive)[]
+            {
+                ("fighter", "Weapon Techniques", "weapon_proficiency"),
+                ("barbarian", "Berserk State", "savage_instinct"),
+                ("martial_artist", "Combo Flow", "martial_discipline"),
+                ("rogue", "Exploit", "opportunist"),
+                ("ranger", "Hunt Mark", "hunters_instinct"),
+                ("cleric", "Divine Protection", "divine_grace"),
+                ("wizard", "Spell Specialization", "arcane_affinity"),
+                ("warlock", "Pact Effects", "pact_affinity"),
+                ("druid", "Nature Forms", "natures_attunement"),
+            };
+
+            CollectionAssert.AreEqual(expectedClasses.Select(x => x.id).ToArray(), Database.PlayableClassIds);
+
+            var session = new CharacterCreationSession();
+            foreach (var (id, identity, starterPassive) in expectedClasses)
+            {
+                session.CreateNewCharacter();
+                session.SelectClass(id);
+                var c = session.Class;
+                Assert.AreEqual(id, c.id);
+                Assert.IsTrue(c.isPlayable);
+                Assert.AreEqual(identity, c.gameplayIdentity);
+                Assert.AreEqual(starterPassive, c.starterPassiveId);
+                Assert.IsNotNull(session.StarterPassive);
+                Assert.AreEqual(starterPassive, session.StarterPassive.id);
+
+                // Starter passive unlocked and equipped in Passive Slot 0
+                Assert.Contains(starterPassive, session.Loadout.UnlockedPassiveSkills);
+                Assert.AreEqual(starterPassive, session.Loadout.passiveSlots[0]);
+                Assert.AreEqual(3, session.Loadout.activeSlots.Length);
+                Assert.AreEqual(3, session.Loadout.passiveSlots.Length);
+
+                // Every class has Main Hand and at least one compatible Second Hand weapon option
+                Assert.IsNotEmpty(c.mainHandWeapons, $"{c.name} must define compatible Main Hand weapons");
+                Assert.IsNotEmpty(c.secondHandWeapons, $"{c.name} must have at least one compatible Second Hand weapon");
+
+                // All 8 equipment slots are initialized with valid compatible starting equipment
+                Assert.AreEqual(8, session.Equipped.Count, $"{c.name} should have 8 starting equipment slots configured");
+                foreach (var slot in EquipmentSlots.All)
+                {
+                    var item = session.GetEquipped(slot);
+                    Assert.IsNotNull(item, $"{c.name} missing starting equipment in {slot}");
+                    Assert.IsNull(EquipmentValidator.Validate(item, slot, c, session.Race, 1, session.FinalScores));
+                }
+            }
+        }
+
+        [Test]
+        public void CharacterCreationStepNavigationAndStarterPassiveEffectsWorkAcrossClasses()
+        {
+            var session = new CharacterCreationSession();
+            Assert.AreEqual(CreationStep.SelectRace, session.CurrentStep);
+            Assert.IsTrue(session.NextStep());
+            Assert.AreEqual(CreationStep.SelectClass, session.CurrentStep);
+            Assert.IsTrue(session.NextStep());
+            Assert.AreEqual(CreationStep.AllocateAbilityScores, session.CurrentStep);
+            Assert.IsTrue(session.PreviousStep(), "Can return to previous steps before confirming");
+            Assert.AreEqual(CreationStep.SelectClass, session.CurrentStep);
+            Assert.IsTrue(session.GoToStep(CreationStep.ReviewStarterPassive));
+            Assert.AreEqual(CreationStep.ReviewStarterPassive, session.CurrentStep);
+
+            // 1. Fighter — Weapon Proficiency increases Physical Power when a weapon is equipped
+            session.SelectClass("fighter");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
+            var fighterDef = session.Confirm(null, "test_fighter");
+            var fighterUnit = new Unit(fighterDef);
+            int powerWithWeapon = fighterUnit.Derived.physicalPower;
+            fighterUnit.Unequip(EquipmentSlot.MainHand);
+            Assert.Greater(powerWithWeapon, fighterUnit.Derived.physicalPower);
+
+            // 2. Barbarian — Savage Instinct grants Physical Power bonus when HP is below 50%
+            session.CreateNewCharacter();
+            session.SelectClass("barbarian");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
+            var barbUnit = new Unit(session.Confirm(null, "test_barbarian"));
+            var barbCombatant = new Combatant(barbUnit, Side.Party, 0, "Barbarian", "BRB");
+            int atkFullHp = barbCombatant.Atk;
+            barbUnit.hp = barbUnit.stats.maxHp / 2 - 1; // below 50% HP
+            Assert.Greater(barbCombatant.Atk, atkFullHp, "Savage Instinct boosts Physical Power below 50% HP");
+
+            // 3. Martial Artist — Martial Discipline increases Physical Break Power from unarmed attacks
+            session.CreateNewCharacter();
+            session.SelectClass("martial_artist");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 14, 13, 8, 12, 10));
+            var monkUnit = new Unit(session.Confirm(null, "test_monk"));
+            Assert.IsTrue(monkUnit.equipped[EquipmentSlot.MainHand].isUnarmed);
+            Assert.Greater(monkUnit.Derived.physicalBreakPower, monkUnit.classDef.baseBreakPower);
+
+            // 4. Rogue — Opportunist increases Critical Chance against debuffed enemies
+            session.CreateNewCharacter();
+            session.SelectClass("rogue");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 12, 14));
+            var rogueCombatant = new Combatant(new Unit(session.Confirm(null, "test_rogue")), Side.Party, 0, "Rogue", "ROG");
+            var enemy = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
+            int critClean = rogueCombatant.GetCritChanceAgainst(enemy);
+            enemy.AddStatus(StatusId.DefenseDown, 2, 0.25f, rogueCombatant);
+            int critDebuffed = rogueCombatant.GetCritChanceAgainst(enemy);
+            Assert.Greater(critDebuffed, critClean, "Opportunist increases Crit Chance against debuffed targets");
+
+            // 5. Wizard — Arcane Affinity reduces MP cost of Arcane Spells
+            session.CreateNewCharacter();
+            session.SelectClass("wizard");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(8, 12, 12, 15, 14, 11));
+            var wizCombatant = new Combatant(new Unit(session.Confirm(null, "test_wizard")), Side.Party, 0, "Wizard", "WIZ");
+            var ember = Database.Skills["ember"]; // tagged "Arcane"
+            Assert.Less(wizCombatant.GetEffectiveMpCost(ember), ember.mpCost, "Arcane Affinity reduces MP cost of Arcane spells");
+        }
+
+        [Test]
+        public void RacialFeatConceptsSecondChanceDraconicOverdriveAndOceansEmbraceWorkProperly()
+        {
+            // 1. Halfling — Second Chance: retry a failed QTE once; does NOT auto-succeed!
+            var session = new CharacterCreationSession();
+            session.SelectRace("halfling");
+            session.SelectClass("rogue");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 12, 14));
+            var halfling = new Combatant(new Unit(session.Confirm(null, "halfling_rogue")), Side.Party, 0, "Halfling", "HLF");
+            Assert.AreEqual(1, halfling.SecondChanceRetriesRemaining);
+
+            var profile = QteConfig.Profiles[Tier.Normal];
+            var qte1 = new TimingQte(profile, 0.5f); // target = sweep * 0.5
+            qte1.Tick(0.05f);
+            qte1.Press(); // way too early -> Miss
+            Assert.AreEqual(QteResult.Miss, qte1.Result);
+
+            // Retry with a STILL bad timing -> retry is consumed, and it STILL misses (does NOT auto-succeed!)
+            Assert.IsTrue(qte1.TrySecondChanceRetry(halfling, 0.05f));
+            Assert.AreEqual(QteResult.Miss, qte1.Result, "Second Chance retry must not automatically succeed");
+            Assert.AreEqual(0, halfling.SecondChanceRetriesRemaining);
+            Assert.IsFalse(qte1.TrySecondChanceRetry(halfling, qte1.target), "Cannot retry a second time");
+
+            // In a new battle, retrying at the target window succeeds
+            var halfling2 = new Combatant(halfling.unit, Side.Party, 0, "Halfling", "HLF");
+            var qte2 = new TimingQte(profile, 0.5f);
+            qte2.Tick(0.05f);
+            qte2.Press();
+            Assert.AreEqual(QteResult.Miss, qte2.Result);
+            Assert.IsTrue(qte2.TrySecondChanceRetry(halfling2, qte2.target));
+            Assert.AreEqual(QteResult.Perfect, qte2.Result);
+
+            // 2. Dragonborn — Draconic Overdrive: temporary power boost followed by Exhausted consequence
+            session.CreateNewCharacter();
+            session.SelectRace("dragonborn");
+            session.SelectClass("fighter");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
+            var dragonborn = new Combatant(new Unit(session.Confirm(null, "dragon_fighter")), Side.Party, 0, "Dragonborn", "DRG");
+            int baseAtk = dragonborn.Atk;
+            Assert.IsTrue(dragonborn.ActivateDraconicOverdrive());
+            Assert.Greater(dragonborn.Atk, baseAtk, "Draconic Overdrive boosts power");
+            dragonborn.statuses.RemoveAll(s => s.id == StatusId.AttackUp);
+            dragonborn.TriggerDraconicExhaustion();
+            Assert.IsTrue(dragonborn.Has(StatusId.Exhausted), "Applies Exhausted afterward");
+            Assert.Less(dragonborn.Atk, baseAtk, "Exhausted reduces power");
+
+            // 3. Merfolk — Ocean's Embrace: grants shield and protection to an ally
+            session.CreateNewCharacter();
+            session.SelectRace("merfolk");
+            session.SelectClass("cleric");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 10, 14, 10, 15, 13));
+            var merfolk = new Combatant(new Unit(session.Confirm(null, "merfolk_cleric")), Side.Party, 1, "Merfolk", "MER");
+            int shieldBefore = dragonborn.unit.shield;
+            Assert.IsTrue(merfolk.ActivateOceansEmbrace(dragonborn));
+            Assert.Greater(dragonborn.unit.shield, shieldBefore);
+            Assert.IsTrue(dragonborn.Has(StatusId.DefenseUp));
+        }
+
+        // =====================================================================
+        // 8. Equipment Compatibility, Legendary Strictness & Item Restrictions
+        // =====================================================================
+
+        [Test]
+        public void StrictWeaponCompatibilityAndItemRestrictionsAreEnforcedWithNoLegendaryExceptions()
+        {
+            var session = new CharacterCreationSession();
+            session.SelectRace("elf");
+            session.SelectClass("wizard"); // MainHand: Staff, Wand, Dagger | SecondHand: ArcaneTome, Buckler
+            session.PointBuy.SetAllOrThrow(new AbilityScores(8, 12, 12, 15, 14, 11));
+
+            // 1. Equipping compatible Main Hand & Second Hand weapons succeeds
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "oak_staff", out string err1), err1);
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "apprentice_tome", out string err2), err2);
+
+            // 2. Rejecting incompatible Main Hand weapons (e.g. Greataxe or Longbow on Wizard)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "iron_greataxe", out string mainErr));
+            StringAssert.Contains("Incompatible Main Hand weapon", mainErr);
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "hunting_bow", out _));
+
+            // 3. Rejecting incompatible Second Hand weapons (e.g. Quiver or Heavy Shield on Wizard)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "ranger_quiver", out string offErr));
+            StringAssert.Contains("Incompatible Second Hand weapon", offErr);
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "wooden_shield", out _));
+
+            // 4. Rejecting incompatible Legendary weapons (NO exceptions for Legendary rarity!)
+            var legendaryGreatsword = Database.Equipment["sunblade_legendary"];
+            var legendaryBow = Database.Equipment["astral_bow_legendary"];
+            var legendaryShield = Database.Equipment["aegis_shield_legendary"];
+            Assert.AreEqual(EquipmentRarity.Legendary, legendaryGreatsword.rarity);
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, legendaryGreatsword, out string legErr1));
+            StringAssert.Contains("Incompatible Main Hand weapon", legErr1);
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, legendaryBow, out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, legendaryShield, out string legErr2));
+            StringAssert.Contains("Incompatible Second Hand weapon", legErr2);
+
+            // Meanwhile, a Fighter CAN equip the Legendary Greatsword and Legendary Shield
+            session.SelectClass("fighter");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, legendaryGreatsword, out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, legendaryShield, out _));
+
+            // 5. Cross-class Armor & Accessories work across classes when unrestricted
+            session.SelectClass("wizard");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.HeadArmor, "iron_helm", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.BodyArmor, "steel_cuirass", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.LegArmor, "padded_greaves", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.FootArmor, "traveler_boots", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory1, "ring_of_vigor", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory2, "charm_of_focus", out _));
+
+            // 6. Item-specific restrictions (Class, Race, Level, Ability Score requirements)
+            // Class-restricted armor (Druid only)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "druid_bark_vestments", out string classRestrErr));
+            StringAssert.Contains("requires class", classRestrErr);
+
+            // Race-restricted accessory (Liichtian only)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.Accessory1, "celestial_halo_band", out string raceRestrErr));
+            StringAssert.Contains("requires race", raceRestrErr);
+            session.SelectRace("liichtian");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.Accessory1, "celestial_halo_band", out _));
+
+            // Level-restricted armor (Min Level 5)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "veteran_warplate", out string lvlRestrErr));
+            StringAssert.Contains("requires level 5", lvlRestrErr);
+
+            // Ability Score-restricted armor (Requires STR 16; Wizard has STR 8)
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.BodyArmor, "titan_girdle_armor", out string statRestrErr));
+            StringAssert.Contains("requires STR 16", statRestrErr);
+        }
+
+        // =====================================================================
+        // 9. Party Assembly (4 Characters) & Expedition Gate
+        // =====================================================================
+
+        [Test]
+        public void PartyRequiresFourIndependentlyConfiguredCharactersAndRejectsDuplicatesOrIncompleteStart()
+        {
+            var roster = new CharacterRoster(preloadDefaultParty: false);
+            Assert.AreEqual(0, roster.PartyCount);
+            Assert.IsFalse(roster.CanBeginExpedition);
+            Assert.Throws<InvalidOperationException>(() => roster.BeginExpedition(42));
+
+            var builds = new (string id, string race, string cls, AbilityScores scores)[]
+            {
+                ("hero_1", "human", "fighter", new AbilityScores(15, 12, 15, 8, 10, 11)),
+                ("hero_2", "halfling", "ranger", new AbilityScores(10, 15, 13, 10, 14, 9)),
+                ("hero_3", "liichtian", "wizard", new AbilityScores(8, 12, 12, 15, 14, 10)),
+                ("hero_4", "merfolk", "cleric", new AbilityScores(10, 10, 14, 10, 15, 12)),
+            };
+
+            var session = new CharacterCreationSession();
+            for (int i = 0; i < builds.Length; i++)
+            {
+                var b = builds[i];
+                session.CreateNewCharacter();
+                session.SelectRace(b.race);
+                session.SelectClass(b.cls);
+                session.PointBuy.SetAllOrThrow(b.scores);
+
+                var hero = session.Confirm(null, b.id);
+                Assert.IsTrue(roster.TryAddToParty(hero, out string addErr), addErr);
+                Assert.AreEqual(i + 1, roster.PartyCount);
+
+                // Duplicate character instance or ID is strictly rejected
+                Assert.IsFalse(roster.TryAddToParty(hero, out string dupErr));
+                StringAssert.Contains("already in the party", dupErr);
+
+                if (i < 3)
+                {
+                    Assert.IsFalse(roster.IsPartyComplete, $"Party with {i + 1}/4 heroes must be incomplete");
+                    Assert.IsFalse(roster.CanBeginExpedition);
+                    Assert.Throws<InvalidOperationException>(() => roster.BeginExpedition(42));
+                }
+            }
+
+            // Party now has 4 distinct characters
+            Assert.AreEqual(4, roster.PartyCount);
+            Assert.IsTrue(roster.IsPartyComplete);
+            Assert.IsTrue(roster.CanBeginExpedition);
+
+            // Cannot add a 5th character
+            session.CreateNewCharacter();
+            session.SelectRace("dwarf");
+            session.SelectClass("barbarian");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
+            var fifth = session.Confirm(null, "hero_5");
+            Assert.IsFalse(roster.TryAddToParty(fifth, out string fullErr));
+            StringAssert.Contains("Party is already full", fullErr);
+
+            // Start expedition and verify all 4 independent characters are initialized in RunState.Party
+            var run = roster.BeginExpedition(42);
+            Assert.IsNotNull(run);
+            Assert.AreEqual(4, run.Party.Count);
+            Assert.AreEqual("fighter", run.Party[0].classDef.id);
+            Assert.AreEqual("ranger", run.Party[1].classDef.id);
+            Assert.AreEqual("wizard", run.Party[2].classDef.id);
+            Assert.AreEqual("cleric", run.Party[3].classDef.id);
+            Assert.AreEqual(8, run.Party[0].equipped.Count);
+            Assert.AreEqual("weapon_proficiency", run.Party[0].starterPassiveId);
+            Assert.AreEqual("hunters_instinct", run.Party[1].starterPassiveId);
+            Assert.AreEqual("arcane_affinity", run.Party[2].starterPassiveId);
+            Assert.AreEqual("divine_grace", run.Party[3].starterPassiveId);
+        }
+
+        // =====================================================================
+        // 10. Accuracy, QTE Independence & Ranger Hunter's Instinct
+        // =====================================================================
+
+        [Test]
+        public void AccuracyAndQteAreCalculatedIndependentlyAndRangerHuntersInstinctIsRangedOnly()
+        {
+            var session = new CharacterCreationSession();
+            session.SelectRace("elf");
+            session.SelectClass("ranger"); // Starter Passive: Hunter's Instinct (+10 Ranged Accuracy)
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 14, 10));
+            var rangerUnit = new Unit(session.Confirm(null, "test_ranger"));
+            var ranger = new Combatant(rangerUnit, Side.Party, 0, "Ranger", "RNG");
+            var target = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
+
+            // 1. Hunter's Instinct applies ONLY to Ranged Basic Attacks and Ranged Active Skills
+            // Ranger's starting MainHand is hunting_bow (AttackRangeType.Ranged)
+            Assert.AreEqual(AttackCategory.Ranged, AccuracySystem.DetermineCategory(ranger, null));
+            float rangedBasicAcc = AccuracySystem.CalculateAttackerAccuracy(ranger, AttackCategory.Ranged);
+            float meleeAcc = AccuracySystem.CalculateAttackerAccuracy(ranger, AttackCategory.Melee);
+            float magicAcc = AccuracySystem.CalculateAttackerAccuracy(ranger, AttackCategory.Magic);
+
+            int expectedHuntersBonus = Database.Passives["hunters_instinct"].rangedAccuracyBonus;
+            Assert.Greater(expectedHuntersBonus, 0);
+            Assert.AreEqual(meleeAcc + expectedHuntersBonus, rangedBasicAcc, 0.001f, "Hunter's Instinct applies to Ranged attacks");
+            Assert.AreEqual(meleeAcc, magicAcc, 0.001f, "Hunter's Instinct does NOT apply to Melee or Magic attacks");
+
+            // Check with explicit skills: Ranged Active Skill vs Melee Skill vs Magic Skill
+            var rangedSkill = Database.Skills["aimed_shot"]; // Physical, isRanged = true
+            var meleeSkill = Database.Skills["cleave"];      // Physical, isRanged = false
+            var magicSkill = Database.Skills["ember"];       // Magic
+            Assert.AreEqual(AttackCategory.Ranged, AccuracySystem.DetermineCategory(ranger, rangedSkill));
+            Assert.AreEqual(AttackCategory.Melee, AccuracySystem.DetermineCategory(ranger, meleeSkill));
+            Assert.AreEqual(AttackCategory.Magic, AccuracySystem.DetermineCategory(ranger, magicSkill));
+
+            float hitRangedSkill = AccuracySystem.CalculateHitChance(ranger, target, AttackCategory.Ranged, null, rangedSkill);
+            float hitMeleeSkill = AccuracySystem.CalculateHitChance(ranger, target, AttackCategory.Melee, null, meleeSkill);
+            float hitMagicSkill = AccuracySystem.CalculateHitChance(ranger, target, AttackCategory.Magic, null, magicSkill);
+            Assert.Greater(hitRangedSkill, hitMeleeSkill, "Ranged skill gets Hunter's Instinct accuracy bonus");
+            Assert.AreEqual(hitMeleeSkill, hitMagicSkill, 0.001f, "Melee and Magic skills do not get Hunter's Instinct bonus");
+
+            // 2. Accuracy and QTE Performance are calculated independently; Perfect QTE NEVER guarantees a hit
+            var evalPerfectHit = AccuracySystem.EvaluateAttack(ranger, target, rangedSkill, QteResult.Perfect, rollPercent: 50f);
+            var evalPerfectMiss = AccuracySystem.EvaluateAttack(ranger, target, rangedSkill, QteResult.Perfect, rollPercent: 99f);
+            var evalMissHit = AccuracySystem.EvaluateAttack(ranger, target, rangedSkill, QteResult.Miss, rollPercent: 50f);
+
+            // Hit chance is capped at maxHitChance (95%), so a roll of 99% misses even on a Perfect QTE!
+            Assert.LessOrEqual(evalPerfectHit.hitChance, AccuracyConfig.Default.maxHitChance);
+            Assert.IsTrue(evalPerfectHit.isHit);
+            Assert.IsFalse(evalPerfectMiss.isHit, "A successful/Perfect QTE never guarantees a 100% hit");
+            Assert.IsTrue(evalMissHit.isHit, "An attack with a failed QTE can still hit based on Accuracy");
+            Assert.Greater(evalPerfectHit.qteDamageMultiplier, evalMissHit.qteDamageMultiplier, "QTE independently controls action performance");
+        }
     }
 }

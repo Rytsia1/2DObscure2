@@ -34,13 +34,31 @@ namespace Obscure
 
     public enum AiKind { Basic, Tactical, Boss }
 
-    // Resource is MP for every character for now; skills spend it, items restore it.
+    [Serializable]
+    public struct EquipmentSlotAssignment
+    {
+        public EquipmentSlot slot;
+        public string equipmentId;
+
+        public EquipmentSlotAssignment(EquipmentSlot slot, string equipmentId)
+        {
+            this.slot = slot;
+            this.equipmentId = equipmentId;
+        }
+    }
+
+    // Combat uses only HP and MP resource pools (Section 5).
     public class CharacterDef
     {
         public string id, name, role, description;
         public string raceId = "human", classId = "knight", backgroundId = "oathsworn";
         public AbilityScores baseScores = AbilityScores.DefaultBase;
+        public string starterPassiveId;
+        public string[] activeSkillLoadout = Array.Empty<string>();
+        public string[] passiveSkillLoadout = Array.Empty<string>();
+        public string[] unlockedSkills = Array.Empty<string>();
         public string[] startingEquipment = Array.Empty<string>();
+        public EquipmentSlotAssignment[] equipmentLoadout = Array.Empty<EquipmentSlotAssignment>();
         public string[] passives = Array.Empty<string>();
         public Affinities affinities = Affinities.None;
         public Stats stats;
@@ -96,7 +114,10 @@ namespace Obscure
         public int hits = 1;
         public Element element = Element.Physical;
         public Ability? scalingAbility;    // optional override; defaults by SkillKind (STR/INT/WIS/CHA)
-        public bool isRanged;              // uses RangedPower (DEX) for physical ranged skills
+        public bool isRanged;              // uses RangedPower (DEX) and Ranged Accuracy (Hunter's Instinct)
+        public int tier = 1;               // skill tier unlocked by character level
+        public int maxRank = 3;            // max upgrade rank
+        public string[] tags = Array.Empty<string>(); // e.g. "Arcane", "Pact", "Nature", "Cleric"
         public float breakMultiplier = 1f; // multiplier applied to Break Gauge reduction
         public float bonusVsBroken = 0f;   // extra damage multiplier against Broken targets
         public string word; // typing QTE word for spells, null for physical skills
@@ -104,6 +125,9 @@ namespace Obscure
         public int cooldown;      // own turns before reuse (0 = none)
         public float perfectPower; // overrides the Perfect QTE multiplier (critical hits), 0 = default
         public StatusApply[] apply;
+
+        public bool HasTag(string tag) =>
+            tags != null && tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
     }
 
     public class ItemDef

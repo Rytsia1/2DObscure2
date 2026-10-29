@@ -129,6 +129,17 @@ namespace Obscure
         public string GetStatTooltip(DerivedStatId st) =>
             CurrentUnit.ExplainStat(st).FormatTooltip();
 
+        public string GetEquipmentSummary()
+        {
+            var u = CurrentUnit;
+            var parts = EquipmentSlots.All.Select(slot =>
+            {
+                string itemName = u.equipped.TryGetValue(slot, out var eq) && eq != null ? eq.name : "Empty";
+                return $"{EquipmentSlots.ShortName(slot)}:{itemName}";
+            });
+            return string.Join(" | ", parts);
+        }
+
         void ShowStatTooltip(DerivedStatId st) =>
             TooltipLabel.Set(PixelFont.Wrap(GetStatTooltip(st), 306));
 

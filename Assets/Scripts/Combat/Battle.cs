@@ -109,6 +109,8 @@ namespace Obscure
                     c.statuses.Remove(s);
                     if (s.id == StatusId.Broken && c.HasBreakGauge)
                         c.CurrentBreakGauge = c.MaxBreakGauge;
+                    if (s.id == StatusId.AttackUp && c.OverdriveExhaustPending)
+                        c.TriggerDraconicExhaustion();
                     Say($"{c.name}'s {StatusInfo.Name(s.id)} wears off.");
                 }
         }
@@ -127,9 +129,9 @@ namespace Obscure
                 case ActionKind.Guard:
                     return null;
                 case ActionKind.Skill:
-                    if (a.skill == null || !a.actor.unit.skills.Contains(a.skill.id)) return "Unknown skill.";
+                    if (a.skill == null || !a.actor.unit.HasActiveSkill(a.skill.id)) return "Unknown skill.";
                     if (a.actor.Cooldown(a.skill.id) > 0) return "On cooldown.";
-                    if (a.actor.unit.mp < a.skill.mpCost) return "Not enough MP.";
+                    if (a.actor.unit.mp < a.actor.GetEffectiveMpCost(a.skill)) return "Not enough MP.";
                     return a.skill.target switch
                     {
                         TargetType.Enemy => IsFoe(a.actor, a.target) ? null : "Invalid target.",
@@ -204,7 +206,7 @@ namespace Obscure
 
                 case ActionKind.Skill:
                     var s = a.skill;
-                    actor.unit.mp -= s.mpCost;
+                    actor.unit.mp -= actor.GetEffectiveMpCost(s);
                     if (s.cooldown > 0) actor.cooldowns[s.id] = s.cooldown;
                     Say($"{actor.name} uses {s.name}.{(power > QteConfig.PerfectPower ? " Critical!" : "")}");
                     foreach (var t in Targets(actor, s.target, a.target))

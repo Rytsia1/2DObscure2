@@ -14,6 +14,7 @@ namespace Obscure
         public QteResult Result { get; protected set; } = QteResult.Miss;
         public QteOutcomeCategory Category { get; protected set; } = QteOutcomeCategory.Failure;
         public float TimingBonusFraction { get; set; }  // small window bonus from DEX / WIS
+        public bool RetriedWithSecondChance { get; protected set; }
 
         public virtual void Tick(float dt) { if (!Done) T += dt; }
         public virtual void Press() { }
@@ -67,6 +68,23 @@ namespace Obscure
             var res = QteConfig.Judge(error, profile, TimingBonusFraction);
             var cat = QteConfig.JudgeCategory(error, profile, TimingBonusFraction);
             Finish(res, cat);
+        }
+
+        // Halfling Racial Feat — Second Chance: allows a failed QTE (Result == Miss) to be retried once
+        // if the actor has Second Chance available. Re-judges the new press time through QteConfig.Judge
+        // so a retry NEVER automatically becomes a success.
+        public bool TrySecondChanceRetry(Combatant actor, float retryPressTime)
+        {
+            if (!Done || Cancelled || Result != QteResult.Miss || RetriedWithSecondChance) return false;
+            if (actor == null || !actor.ConsumeSecondChanceRetry()) return false;
+
+            RetriedWithSecondChance = true;
+            T = retryPressTime;
+            float error = retryPressTime - target;
+            var res = QteConfig.Judge(error, profile, TimingBonusFraction);
+            var cat = QteConfig.JudgeCategory(error, profile, TimingBonusFraction);
+            Finish(res, cat);
+            return true;
         }
     }
 

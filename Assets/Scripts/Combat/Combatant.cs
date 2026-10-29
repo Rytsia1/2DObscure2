@@ -30,6 +30,12 @@ namespace Obscure
         public int BreakStunTurns = 1;
         public float BreakDamageMultiplier = 1.5f;
 
+        // Racial Feat per-battle state (Character Creation Section 4)
+        public int SecondChanceRetriesRemaining;
+        public bool UsedDraconicOverdrive;
+        public bool OverdriveExhaustPending;
+        public bool UsedOceansEmbrace;
+
         public Combatant(Unit unit, Side side, int slot, string name, string tag, EnemyDef enemy = null)
         {
             this.unit = unit;
@@ -38,6 +44,9 @@ namespace Obscure
             this.name = name;
             this.tag = tag;
             this.enemy = enemy;
+
+            if (unit?.race?.racialFeat != null && unit.race.racialFeat.canRetryFailedQte)
+                SecondChanceRetriesRemaining = Math.Max(0, unit.race.racialFeat.maxQteRetriesPerBattle);
 
             if (enemy != null)
             {
@@ -59,10 +68,27 @@ namespace Obscure
         public bool HasBreakGauge => MaxBreakGauge > 0;
         public bool IsBroken => Has(StatusId.Broken);
 
+        // Barbarian Starter Passive — Savage Instinct: grants Physical Power bonus when HP is below 50%.
+        public int LowHpPhysicalPowerBonus
+        {
+            get
+            {
+                if (unit?.passives == null || unit.stats.maxHp <= 0) return 0;
+                int bonus = 0;
+                float hpRatio = (float)unit.hp / unit.stats.maxHp;
+                foreach (var p in unit.passives)
+                {
+                    if (p != null && p.lowHpPhysicalPowerBonus != 0 && hpRatio < p.lowHpThreshold)
+                        bonus += p.lowHpPhysicalPowerBonus;
+                }
+                return bonus;
+            }
+        }
+
         // Effective stats: base/derived stats modified by combat statuses. Speed/Initiative changes apply from the next round.
-        public int Atk => Scale(unit.stats.atk, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
-        public int RangedAtk => Scale(unit.Derived.rangedPower, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
-        public int Magic => Scale(unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int Atk => Scale(unit.stats.atk + LowHpPhysicalPowerBonus, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted));
+        public int RangedAtk => Scale(unit.Derived.rangedPower, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted));
+        public int Magic => Scale(unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted));
         public int HealPower => Scale(unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
         public int SupportPower => unit.Derived.supportPower;
 
@@ -84,6 +110,76 @@ namespace Obscure
         public int MagicBreak => Scale(Math.Max(1, unit.Derived.magicBreakPower), 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
         public int StaggerRes => unit.Derived.staggerResistance;
         public int StatusRes => unit.Derived.statusResistance;
+
+        // Rogue Starter Passive — Opportunist: increases Critical Chance against enemies with debuffs.
+        public int GetCritChanceAgainst(Combatant target)
+        {
+            int crit = CritChance;
+            if (target != null && target.HasDebuff && unit?.passives != null)
+            {
+                foreach (var p in unit.passives)
+                    if (p != null && p.critChanceVsDebuffedBonus != 0)
+                        crit += p.critChanceVsDebuffedBonus;
+            }
+            return Math.Clamp(crit, 0, 100);
+        }
+
+        // Wizard Starter Passive — Arcane Affinity: reduces the MP cost of Arcane Spells.
+        public int GetEffectiveMpCost(SkillDef skill)
+        {
+            if (skill == null) return 0;
+            int cost = skill.mpCost;
+            if (skill.HasTag("Arcane") && unit?.passives != null)
+            {
+                foreach (var p in unit.passives)
+                    if (p != null && p.arcaneMpCostReduction != 0)
+                        cost -= p.arcaneMpCostReduction;
+            }
+            return Math.Max(0, cost);
+        }
+
+        // Halfling Racial Feat — Second Chance
+        public bool CanUseSecondChanceRetry => Alive && SecondChanceRetriesRemaining > 0;
+
+        public bool ConsumeSecondChanceRetry()
+        {
+            if (!CanUseSecondChanceRetry) return false;
+            SecondChanceRetriesRemaining--;
+            return true;
+        }
+
+        // Dragonborn Racial Feat — Draconic Overdrive: temporarily increases power with an Exhausted consequence.
+        public bool ActivateDraconicOverdrive()
+        {
+            var feat = unit?.race?.racialFeat;
+            if (!Alive || feat == null || feat.temporaryPowerMultiplier <= 0f || UsedDraconicOverdrive)
+                return false;
+            UsedDraconicOverdrive = true;
+            OverdriveExhaustPending = feat.appliesExhaustedAfterward;
+            AddStatus(StatusId.AttackUp, Math.Max(1, feat.overdriveDurationTurns), feat.temporaryPowerMultiplier, this);
+            return true;
+        }
+
+        public void TriggerDraconicExhaustion()
+        {
+            if (!OverdriveExhaustPending) return;
+            OverdriveExhaustPending = false;
+            AddStatus(StatusId.Exhausted, 2, 0.25f, this);
+        }
+
+        // Merfolk Racial Feat — Ocean's Embrace: provides protection/shield effect to an ally.
+        public bool ActivateOceansEmbrace(Combatant ally)
+        {
+            var feat = unit?.race?.racialFeat;
+            if (!Alive || feat == null || feat.allyShieldAmount <= 0 || UsedOceansEmbrace)
+                return false;
+            if (ally == null || !ally.Alive || ally.side != side)
+                return false;
+            UsedOceansEmbrace = true;
+            ally.unit.shield += feat.allyShieldAmount;
+            ally.AddStatus(StatusId.DefenseUp, 2, 0.20f, this);
+            return true;
+        }
 
         // Returns the full DerivedStats snapshot including active per-battle buffs and debuffs.
         public DerivedStats EffectiveDerived

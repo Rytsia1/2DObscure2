@@ -15,7 +15,8 @@ namespace Obscure
         Evasion,
         MagicDefenseUp,
         MagicDefenseDown,
-        Broken
+        Broken,
+        Exhausted
     }
 
     // What a skill or enemy move applies. Duration counts the bearer's turns: it ticks down at the
@@ -53,6 +54,7 @@ namespace Obscure
             StatusId.MagicDefenseUp => "M+",
             StatusId.MagicDefenseDown => "M-",
             StatusId.Broken => "BK",
+            StatusId.Exhausted => "EX",
             _ => "EV",
         };
 
@@ -69,6 +71,7 @@ namespace Obscure
             StatusId.MagicDefenseUp => "Magic Defense Up",
             StatusId.MagicDefenseDown => "Magic Defense Down",
             StatusId.Broken => "Broken",
+            StatusId.Exhausted => "Exhausted",
             _ => "Evasion",
         };
 

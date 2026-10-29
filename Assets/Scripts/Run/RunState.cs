@@ -16,10 +16,12 @@ namespace Obscure
         public RaceDef race;
         public ClassDef classDef;
         public BackgroundDef background;
+        public string starterPassiveId;
         public int level = 1;
         public int unspentAsiPoints;
 
         public readonly AbilityScoreSheet abilities = new AbilityScoreSheet();
+        public readonly SkillLoadout skillLoadout = new SkillLoadout();
         public readonly Dictionary<EquipmentSlot, EquipmentDef> equipped = new Dictionary<EquipmentSlot, EquipmentDef>();
         public readonly List<PassiveDef> passives = new List<PassiveDef>();
         public readonly List<StatModifier> permanentModifiers = new List<StatModifier>();
@@ -48,13 +50,52 @@ namespace Obscure
             abilities.baseScores = d.baseScores.Equals(default) ? AbilityScores.DefaultBase : d.baseScores;
             abilities.racialModifiers = race.abilityModifiers;
 
+            skillLoadout.InitializeForClass(classDef, level);
+            if (d.unlockedSkills != null)
+            {
+                foreach (var sid in d.unlockedSkills)
+                {
+                    if (Database.Skills.ContainsKey(sid)) skillLoadout.UnlockActive(sid);
+                    if (Database.Passives.ContainsKey(sid)) skillLoadout.UnlockPassive(sid);
+                }
+            }
+            if (d.activeSkillLoadout != null)
+            {
+                for (int i = 0; i < Math.Min(SkillLoadout.ActiveSlotCount, d.activeSkillLoadout.Length); i++)
+                    skillLoadout.activeSlots[i] = d.activeSkillLoadout[i];
+            }
+            if (d.passiveSkillLoadout != null)
+            {
+                for (int i = 0; i < Math.Min(SkillLoadout.PassiveSlotCount, d.passiveSkillLoadout.Length); i++)
+                    skillLoadout.passiveSlots[i] = d.passiveSkillLoadout[i];
+            }
+
+            starterPassiveId = d.starterPassiveId ?? (classDef != null && classDef.isPlayable ? classDef.starterPassiveId : null);
+            if (!string.IsNullOrEmpty(starterPassiveId))
+            {
+                skillLoadout.UnlockPassive(starterPassiveId);
+                if (!skillLoadout.passiveSlots.Contains(starterPassiveId) && string.IsNullOrEmpty(skillLoadout.passiveSlots[0]))
+                    skillLoadout.passiveSlots[0] = starterPassiveId;
+                if (Database.Passives.TryGetValue(starterPassiveId, out var sp) && !passives.Contains(sp))
+                    passives.Add(sp);
+            }
+
+            foreach (var pid in skillLoadout.GetEquippedPassives())
+                if (Database.Passives.TryGetValue(pid, out var lp) && !passives.Contains(lp))
+                    passives.Add(lp);
+
             if (d.passives != null)
                 foreach (var pid in d.passives)
-                    if (Database.Passives.TryGetValue(pid, out var p)) passives.Add(p);
+                    if (Database.Passives.TryGetValue(pid, out var p) && !passives.Contains(p)) passives.Add(p);
 
             if (d.startingEquipment != null)
                 foreach (var eid in d.startingEquipment)
                     if (Database.Equipment.TryGetValue(eid, out var eq)) equipped[eq.slot] = eq;
+
+            if (d.equipmentLoadout != null)
+                foreach (var assign in d.equipmentLoadout)
+                    if (!string.IsNullOrEmpty(assign.equipmentId) && Database.Equipment.TryGetValue(assign.equipmentId, out var eq))
+                        equipped[assign.slot] = eq;
 
             RecalculateStats(fillResources: true);
         }
@@ -163,7 +204,8 @@ namespace Obscure
                 level,
                 equipped.Values,
                 GatherAllDerivedModifiers(),
-                permanentLegacyBonuses);
+                permanentLegacyBonuses,
+                passives);
 
             stats = Derived.ToLegacyStats();
 
@@ -190,8 +232,12 @@ namespace Obscure
         {
             var mods = GatherAllDerivedModifiers();
             if (extraCombatModifiers != null) mods.AddRange(extraCombatModifiers);
-            return StatCalculator.Explain(statId, abilities, classDef, level, equipped.Values, mods, permanentLegacyBonuses);
+            return StatCalculator.Explain(statId, abilities, classDef, level, equipped.Values, mods, permanentLegacyBonuses, passives);
         }
+
+        public bool HasActiveSkill(string skillId) =>
+            !string.IsNullOrEmpty(skillId) &&
+            ((skills != null && skills.Contains(skillId)) || skillLoadout.activeSlots.Contains(skillId));
 
         public string ExplainAbility(Ability a)
         {
@@ -253,6 +299,26 @@ namespace Obscure
             RecalculateStats();
         }
 
+        // Validated equip that enforces Strict Weapon Compatibility and item restrictions for any of the 8 slots.
+        public bool TryEquip(EquipmentSlot slot, EquipmentDef item, out string error)
+        {
+            error = EquipmentValidator.Validate(item, slot, classDef, race, level, FinalScores);
+            if (error != null) return false;
+            equipped[slot] = item;
+            RecalculateStats();
+            return true;
+        }
+
+        public bool TryEquip(EquipmentDef item, out string error)
+        {
+            if (item == null)
+            {
+                error = "Equipment item is null.";
+                return false;
+            }
+            return TryEquip(item.slot, item, out error);
+        }
+
         public bool Unequip(EquipmentSlot slot)
         {
             if (!equipped.Remove(slot)) return false;
@@ -299,6 +365,7 @@ namespace Obscure
         {
             var cfg = asiConfig ?? Database.AsiConfig;
             level++;
+            skillLoadout.SyncLevelUnlocks(classDef, level);
             if (cfg.GrantsAtLevel(level))
                 unspentAsiPoints += cfg.pointsGranted;
             RecalculateStats();

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // The six Primary Ability Scores defined in the Character Stats PRD.
+    // The six Primary Ability Scores defined in the Character Stats & Character Creation PRDs.
     public enum Ability
     {
         STR,
@@ -79,11 +79,118 @@ namespace Obscure
         Debuff
     }
 
+    // The 8 Equipment Slots defined in the Character Creation System specification.
+    // Includes legacy aliases (Weapon, Armor, Accessory) for backward compatibility.
     public enum EquipmentSlot
     {
-        Weapon,
-        Armor,
-        Accessory
+        MainHand = 0,
+        SecondHand = 1,
+        HeadArmor = 2,
+        BodyArmor = 3,
+        LegArmor = 4,
+        FootArmor = 5,
+        Accessory1 = 6,
+        Accessory2 = 7,
+
+        // Legacy aliases mapping to their primary slot counterparts
+        Weapon = MainHand,
+        Armor = BodyArmor,
+        Accessory = Accessory1
+    }
+
+    public static class EquipmentSlots
+    {
+        public static readonly EquipmentSlot[] All =
+        {
+            EquipmentSlot.MainHand,
+            EquipmentSlot.SecondHand,
+            EquipmentSlot.HeadArmor,
+            EquipmentSlot.BodyArmor,
+            EquipmentSlot.LegArmor,
+            EquipmentSlot.FootArmor,
+            EquipmentSlot.Accessory1,
+            EquipmentSlot.Accessory2
+        };
+
+        public static string DisplayName(EquipmentSlot slot) => slot switch
+        {
+            EquipmentSlot.MainHand => "Main Hand",
+            EquipmentSlot.SecondHand => "Second Hand",
+            EquipmentSlot.HeadArmor => "Head Armor",
+            EquipmentSlot.BodyArmor => "Body Armor",
+            EquipmentSlot.LegArmor => "Leg Armor",
+            EquipmentSlot.FootArmor => "Foot Armor",
+            EquipmentSlot.Accessory1 => "Accessory 1",
+            EquipmentSlot.Accessory2 => "Accessory 2",
+            _ => slot.ToString()
+        };
+
+        public static string ShortName(EquipmentSlot slot) => slot switch
+        {
+            EquipmentSlot.MainHand => "MAIN",
+            EquipmentSlot.SecondHand => "OFF",
+            EquipmentSlot.HeadArmor => "HEAD",
+            EquipmentSlot.BodyArmor => "BODY",
+            EquipmentSlot.LegArmor => "LEGS",
+            EquipmentSlot.FootArmor => "FEET",
+            EquipmentSlot.Accessory1 => "ACC1",
+            EquipmentSlot.Accessory2 => "ACC2",
+            _ => slot.ToString()
+        };
+    }
+
+    // Weapon Types for strict Main Hand and Second Hand class compatibility.
+    public enum WeaponType
+    {
+        None = 0,
+        // Main Hand Weapon Types
+        Sword,
+        Greatsword,
+        Axe,
+        Greataxe,
+        Mace,
+        Fist,
+        Dagger,
+        Bow,
+        Crossbow,
+        Staff,
+        Wand,
+        Rod,
+        Spear,
+        // Second Hand Weapon / Off-Hand Types
+        Shield,
+        Buckler,
+        ParryingDagger,
+        Warhorn,
+        MartialFocus,
+        Quiver,
+        RelicSymbol,
+        ArcaneTome,
+        PactGrimoire,
+        NatureTotem
+    }
+
+    public enum AttackRangeType
+    {
+        Melee = 0,
+        Ranged = 1
+    }
+
+    public enum AttackCategory
+    {
+        Melee = 0,
+        Ranged = 1,
+        Magic = 2
+    }
+
+    // Draft equipment rarity tiers (never bypasses Strict Weapon Compatibility).
+    public enum EquipmentRarity
+    {
+        Common = 0,
+        Uncommon = 1,
+        Rare = 2,
+        Epic = 3,
+        Legendary = 4
     }
 
     // Holds the six Primary Ability Scores (or modifiers/bonuses for each of the six).
@@ -593,7 +700,7 @@ namespace Obscure
         public ModifierOrder modifierOrder = ModifierOrder.FlatBeforePercent;
     }
 
-    // Configurable Ability Score Improvement progression rules (Section 8 / PRD 11.2).
+    // Configurable Ability Score Improvement progression rules.
     [Serializable]
     public class AbilityScoreImprovementConfig
     {
@@ -605,28 +712,299 @@ namespace Obscure
             availableAtLevels != null && Array.IndexOf(availableAtLevels, level) >= 0;
     }
 
-    // Data-driven Equipment definition supporting primary & derived stat bonuses, weapon power, and defense.
+    // Reusable restriction definition for Equipment (Armor, Accessories, and restricted items).
+    [Serializable]
+    public class EquipmentRestriction
+    {
+        public string[] allowedClasses = Array.Empty<string>(); // empty = cross-class
+        public string[] allowedRaces = Array.Empty<string>();   // empty = all races
+        public int minLevel = 1;
+        public AbilityScores minAbilityScores = AbilityScores.Zero;
+    }
+
+    // Data-driven Equipment definition supporting 8 slots, Strict Weapon Compatibility, Weapon Properties, and Restrictions.
     [Serializable]
     public class EquipmentDef
     {
         public string id, name, description;
-        public EquipmentSlot slot;
+        public EquipmentSlot slot = EquipmentSlot.MainHand;
+        public WeaponType weaponType = WeaponType.None;
+        public AttackRangeType attackRangeType = AttackRangeType.Melee;
+        public bool isUnarmed;
+        public EquipmentRarity rarity = EquipmentRarity.Common;
         public string requiredProficiency;
-        public int weaponPower;
+
+        // Weapon & Armor properties
+        public int weaponPower;            // Base Damage
         public float weaponScaling;
+        public int accuracyModifier;       // Weapon Accuracy modifier
+        public int breakPowerModifier;     // Weapon Break Power modifier
+        public string[] weaponProperties = Array.Empty<string>();
+        public string[] weaponEffects = Array.Empty<string>();
+
         public int physicalDefense;
         public int magicDefense;
         public AbilityScores abilityBonuses;
         public StatModifier[] modifiers = Array.Empty<StatModifier>();
+        public EquipmentRestriction restrictions;
     }
 
-    // Data-driven Passive Skill definition.
+    // Reusable validator enforcing Strict Weapon Compatibility and Equipment Restrictions.
+    public static class EquipmentValidator
+    {
+        public static bool IsAccessorySlot(EquipmentSlot slot) =>
+            slot == EquipmentSlot.Accessory1 || slot == EquipmentSlot.Accessory2;
+
+        public static bool SlotMatches(EquipmentDef item, EquipmentSlot targetSlot)
+        {
+            if (item == null) return false;
+            if (IsAccessorySlot(targetSlot) && IsAccessorySlot(item.slot)) return true;
+            return item.slot == targetSlot;
+        }
+
+        // Returns null when the item can be equipped in targetSlot by the character; otherwise a descriptive error.
+        // Enforces Strict Compatibility on MainHand and SecondHand with zero exceptions (even for Legendary items).
+        public static string Validate(
+            EquipmentDef item,
+            EquipmentSlot targetSlot,
+            ClassDef classDef,
+            RaceDef raceDef = null,
+            int level = 1,
+            AbilityScores? finalScores = null)
+        {
+            if (item == null) return "Equipment item is null.";
+            if (!SlotMatches(item, targetSlot))
+                return $"{item.name} ({EquipmentSlots.DisplayName(item.slot)}) cannot be equipped in {EquipmentSlots.DisplayName(targetSlot)}.";
+
+            // 1. Strict Weapon Compatibility for Main Hand and Second Hand (No exceptions, including Legendary)
+            if (targetSlot == EquipmentSlot.MainHand)
+            {
+                if (classDef != null && classDef.mainHandWeapons != null && classDef.mainHandWeapons.Length > 0)
+                {
+                    if (item.weaponType == WeaponType.None || !classDef.mainHandWeapons.Contains(item.weaponType))
+                        return $"Incompatible Main Hand weapon ({item.weaponType}) for {classDef.name}.";
+                }
+            }
+            else if (targetSlot == EquipmentSlot.SecondHand)
+            {
+                if (classDef != null && classDef.secondHandWeapons != null && classDef.secondHandWeapons.Length > 0)
+                {
+                    if (item.weaponType == WeaponType.None || !classDef.secondHandWeapons.Contains(item.weaponType))
+                        return $"Incompatible Second Hand weapon ({item.weaponType}) for {classDef.name}.";
+                }
+            }
+
+            // 2. Item-specific restrictions (Class, Race, Level, Ability Score requirements)
+            var r = item.restrictions;
+            if (r != null)
+            {
+                if (r.allowedClasses != null && r.allowedInterpolationClassesCount(r.allowedClasses) > 0)
+                {
+                    if (classDef == null || !r.allowedClasses.Contains(classDef.id))
+                        return $"{item.name} requires class: {string.Join("/", r.allowedClasses)}.";
+                }
+                if (r.allowedRaces != null && r.allowedRaces.Length > 0)
+                {
+                    if (raceDef == null || !r.allowedRaces.Contains(raceDef.id))
+                        return $"{item.name} requires race: {string.Join("/", r.allowedRaces)}.";
+                }
+                if (level < r.minLevel)
+                    return $"{item.name} requires level {r.minLevel} (current: {level}).";
+
+                if (finalScores.HasValue)
+                {
+                    var scores = finalScores.Value;
+                    foreach (var a in AbilityScores.AllAbilities)
+                    {
+                        int req = r.minAbilityScores[a];
+                        if (req > 0 && scores[a] < req)
+                            return $"{item.name} requires {a} {req} (current: {scores[a]}).";
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        static int allowedInterpolationClassesCount(this EquipmentRestriction _, string[] arr) => arr?.Length ?? 0;
+    }
+
+    // Data-driven Passive Skill definition supporting Starter Passives and conditional class effects.
     [Serializable]
     public class PassiveDef
     {
         public string id, name, description;
+        public string classId;
+        public bool isStarterPassive;
+        public int tier = 1;
+        public int maxRank = 3;
         public AbilityScores abilityBonuses;
         public StatModifier[] modifiers = Array.Empty<StatModifier>();
+
+        // Configurable Starter Passive effect parameters (Section 5 & Section 9)
+        public int weaponAttackPowerBonus;         // Fighter — Weapon Proficiency
+        public int lowHpPhysicalPowerBonus;        // Barbarian — Savage Instinct
+        public float lowHpThreshold = 0.5f;        // 50% HP threshold for Savage Instinct
+        public int unarmedBreakPowerBonus;         // Martial Artist — Martial Discipline
+        public int critChanceVsDebuffedBonus;      // Rogue — Opportunist
+        public int rangedAccuracyBonus;            // Ranger — Hunter's Instinct (Ranged basic attacks & ranged active skills only)
+        public int clericHealingBonus;             // Cleric — Divine Grace
+        public int arcaneMpCostReduction;          // Wizard — Arcane Affinity
+        public int pactMagicPowerBonus;            // Warlock — Pact Affinity
+        public int natureMagicAndHealBonus;        // Druid — Nature's Attunement
+    }
+
+    // Configurable Accuracy & Hit Chance system (Section 9).
+    // Hit Chance = Base Hit Chance + Attacker Accuracy - Target Evasion, clamped to [minHitChance, maxHitChance].
+    // Accuracy and QTE Performance are calculated independently; a successful QTE never guarantees a 100% hit.
+    [Serializable]
+    public class AccuracyConfig
+    {
+        public float baseHitChance = 85f;
+        public float minHitChance = 5f;
+        public float maxHitChance = 95f;
+        public float dexAccuracyScaling = 2f;
+        public float perfectQteHitBonus = 5f;
+        public float goodQteHitBonus = 2f;
+        public float partialQteHitBonus = -3f;
+        public float missQteHitBonus = -10f;
+
+        public static readonly AccuracyConfig Default = new AccuracyConfig();
+    }
+
+    public struct AttackExecutionEvaluation
+    {
+        public AttackCategory category;
+        public float attackerAccuracy;
+        public float targetEvasion;
+        public float qteHitBonus;
+        public float hitChance;          // clamped to [minHitChance, maxHitChance], e.g. [5%, 95%]
+        public float qteDamageMultiplier;
+        public bool isHit;
+    }
+
+    public static class AccuracySystem
+    {
+        // Determines whether an action is Melee, Ranged, or Magic.
+        public static AttackCategory DetermineCategory(Unit attackerUnit, SkillDef skill = null)
+        {
+            if (skill != null)
+            {
+                if (skill.kind == SkillKind.Magic) return AttackCategory.Magic;
+                if (skill.isRanged) return AttackCategory.Ranged;
+                return AttackCategory.Melee;
+            }
+            if (attackerUnit != null && attackerUnit.equipped.TryGetValue(EquipmentSlot.MainHand, out var mainHand) && mainHand != null)
+            {
+                if (mainHand.attackRangeType == AttackRangeType.Ranged)
+                    return AttackCategory.Ranged;
+            }
+            return AttackCategory.Melee;
+        }
+
+        public static AttackCategory DetermineCategory(Combatant attacker, SkillDef skill = null) =>
+            DetermineCategory(attacker?.unit, skill);
+
+        // Calculates Attacker Accuracy for the given AttackCategory.
+        // Ranger's Hunter's Instinct applies ONLY to AttackCategory.Ranged (ranged basic attacks & ranged active skills),
+        // and never to AttackCategory.Melee or AttackCategory.Magic.
+        public static float CalculateAttackerAccuracy(Unit attackerUnit, AttackCategory category, SkillDef skill = null, AccuracyConfig config = null)
+        {
+            if (attackerUnit == null) return 0f;
+            var cfg = config ?? AccuracyConfig.Default;
+            float acc = attackerUnit.Mod(Ability.DEX) * cfg.dexAccuracyScaling;
+
+            foreach (var eq in attackerUnit.equipped.Values)
+            {
+                if (eq != null) acc += eq.accuracyModifier;
+            }
+
+            foreach (var p in attackerUnit.passives)
+            {
+                if (p == null) continue;
+                // Hunter's Instinct: Ranged Accuracy bonus applies strictly to Ranged attacks/skills
+                if (p.rangedAccuracyBonus != 0 && category == AttackCategory.Ranged)
+                    acc += p.rangedAccuracyBonus;
+            }
+
+            return acc;
+        }
+
+        public static float CalculateAttackerAccuracy(Combatant attacker, AttackCategory category, SkillDef skill = null, AccuracyConfig config = null) =>
+            CalculateAttackerAccuracy(attacker?.unit, category, skill, config);
+
+        public static float GetQteHitBonus(QteResult? qteResult, AccuracyConfig config = null)
+        {
+            if (!qteResult.HasValue) return 0f;
+            var cfg = config ?? AccuracyConfig.Default;
+            return qteResult.Value switch
+            {
+                QteResult.Perfect => cfg.perfectQteHitBonus,
+                QteResult.Good => cfg.goodQteHitBonus,
+                _ => cfg.missQteHitBonus
+            };
+        }
+
+        // Conceptual formula: Hit Chance = Base Hit Chance + Attacker Accuracy (+ optional QTE bonus) - Target Evasion
+        // Always clamped to [minHitChance, maxHitChance] so a successful QTE never guarantees a hit.
+        public static float CalculateHitChance(
+            Unit attackerUnit,
+            int targetEvasion,
+            AttackCategory category,
+            QteResult? qteResult = null,
+            SkillDef skill = null,
+            AccuracyConfig config = null)
+        {
+            var cfg = config ?? AccuracyConfig.Default;
+            float attackerAcc = CalculateAttackerAccuracy(attackerUnit, category, skill, cfg);
+            float qteBonus = GetQteHitBonus(qteResult, cfg);
+            float raw = cfg.baseHitChance + attackerAcc + qteBonus - targetEvasion;
+            return Math.Clamp(raw, cfg.minHitChance, cfg.maxHitChance);
+        }
+
+        public static float CalculateHitChance(
+            Combatant attacker,
+            Combatant target,
+            AttackCategory category,
+            QteResult? qteResult = null,
+            SkillDef skill = null,
+            AccuracyConfig config = null)
+        {
+            int targetEva = target != null ? target.EffectiveDerived.evasion : 0;
+            return CalculateHitChance(attacker?.unit, targetEva, category, qteResult, skill, config);
+        }
+
+        // Evaluates Accuracy (Hit Chance & hit roll) and QTE Performance (damage multiplier) independently.
+        // rollPercent is in [0, 100]: an attack hits if rollPercent <= hitChance.
+        // Because hitChance <= maxHitChance (default 95%), rolls above maxHitChance miss even on a Perfect QTE.
+        public static AttackExecutionEvaluation EvaluateAttack(
+            Combatant attacker,
+            Combatant target,
+            SkillDef skill,
+            QteResult? qteResult,
+            float rollPercent,
+            AccuracyConfig config = null)
+        {
+            var cfg = config ?? AccuracyConfig.Default;
+            var category = DetermineCategory(attacker, skill);
+            float attackerAcc = CalculateAttackerAccuracy(attacker, category, skill, cfg);
+            float targetEva = target != null ? target.EffectiveDerived.evasion : 0f;
+            float qteHitBonus = GetQteHitBonus(qteResult, cfg);
+            float hitChance = Math.Clamp(cfg.baseHitChance + attackerAcc + qteHitBonus - targetEva, cfg.minHitChance, cfg.maxHitChance);
+            float qteDamageMult = qteResult.HasValue ? QteConfig.Offense(qteResult.Value) : 1f;
+            bool isHit = rollPercent <= hitChance;
+
+            return new AttackExecutionEvaluation
+            {
+                category = category,
+                attackerAccuracy = attackerAcc,
+                targetEvasion = targetEva,
+                qteHitBonus = qteHitBonus,
+                hitChance = hitChance,
+                qteDamageMultiplier = qteDamageMult,
+                isHit = isHit
+            };
+        }
     }
 
     // Detailed breakdown of how a Derived Stat was calculated, used by UI tooltips and tests.
@@ -710,19 +1088,43 @@ namespace Obscure
             int level = 1,
             IEnumerable<EquipmentDef> equipment = null,
             IEnumerable<StatModifier> modifiers = null,
-            Stats permanentLegacyBonuses = default)
+            Stats permanentLegacyBonuses = default,
+            IEnumerable<PassiveDef> passives = null)
         {
             var mods = abilities.AbilityModifiers;
             var c = classDef ?? Database.Classes["knight"];
             int lvl = Math.Max(1, level);
             var eqList = equipment?.Where(e => e != null).ToList() ?? new List<EquipmentDef>();
+            var passiveList = passives?.Where(p => p != null).ToList() ?? new List<PassiveDef>();
             var allMods = new List<StatModifier>();
             if (modifiers != null) allMods.AddRange(modifiers);
             foreach (var eq in eqList)
                 if (eq.modifiers != null) allMods.AddRange(eq.modifiers);
 
+            var mainHand = eqList.FirstOrDefault(e => e.slot == EquipmentSlot.MainHand);
+            bool hasWeapon = mainHand != null && !mainHand.isUnarmed && mainHand.weaponType != WeaponType.None;
+            bool isUnarmed = mainHand == null || mainHand.isUnarmed || mainHand.weaponType == WeaponType.Fist;
+
+            foreach (var p in passiveList)
+            {
+                if (p.weaponAttackPowerBonus != 0 && hasWeapon)
+                    allMods.Add(StatModifier.ForDerived(DerivedStatId.PhysicalPower, p.weaponAttackPowerBonus, ModifierKind.Flat, ModifierSource.Passive, p.name));
+                if (p.unarmedBreakPowerBonus != 0 && isUnarmed)
+                    allMods.Add(StatModifier.ForDerived(DerivedStatId.PhysicalBreakPower, p.unarmedBreakPowerBonus, ModifierKind.Flat, ModifierSource.Passive, p.name));
+                if (p.clericHealingBonus != 0)
+                    allMods.Add(StatModifier.ForDerived(DerivedStatId.HealingPower, p.clericHealingBonus, ModifierKind.Flat, ModifierSource.Passive, p.name));
+                if (p.pactMagicPowerBonus != 0)
+                    allMods.Add(StatModifier.ForDerived(DerivedStatId.MagicPower, p.pactMagicPowerBonus, ModifierKind.Flat, ModifierSource.Passive, p.name));
+                if (p.natureMagicAndHealBonus != 0)
+                {
+                    allMods.Add(StatModifier.ForDerived(DerivedStatId.MagicPower, p.natureMagicAndHealBonus, ModifierKind.Flat, ModifierSource.Passive, p.name));
+                    allMods.Add(StatModifier.ForDerived(DerivedStatId.HealingPower, p.natureMagicAndHealBonus, ModifierKind.Flat, ModifierSource.Passive, p.name));
+                }
+            }
+
             int eqWeaponPower = eqList.Sum(e => e.weaponPower);
             float eqWeaponScaling = eqList.Sum(e => e.weaponScaling);
+            int eqBreakBonus = eqList.Sum(e => e.breakPowerModifier);
             int eqPhysDef = eqList.Sum(e => e.physicalDefense);
             int eqMagDef = eqList.Sum(e => e.magicDefense);
 
@@ -736,29 +1138,18 @@ namespace Obscure
             }
 
             // 1. Resource Stats
-            // MaxHP = BaseHP + (VITModifier * HPGrowth) + Level growth + bonuses
             float rawHp = c.baseHp + (lvl - 1) * c.levelHpGrowth + (mods.vit * c.hpGrowth) + permanentLegacyBonuses.maxHp;
-            // MaxMP = BaseMP + (WISModifier * MPGrowth) + Level growth + bonuses
             float rawMp = c.baseMp + (lvl - 1) * c.levelMpGrowth + (mods.wis * c.mpGrowth) + permanentLegacyBonuses.maxMp;
             float rawShield = c.baseShield + Math.Max(0, mods.vit * c.shieldGrowth);
 
             // 2. Offensive Stats
-            // PhysicalDamage/Power = WeaponPower + (STRModifier * WeaponScaling)
             float weaponPower = c.baseWeaponPower + eqWeaponPower + permanentLegacyBonuses.atk;
             float weaponScaling = c.weaponScaling + eqWeaponScaling;
             float rawPhysPower = weaponPower + (mods.str * weaponScaling);
-
-            // RangedPower = RangedWeaponPower + (DEXModifier * RangedScaling)
             float rawRangedPower = c.baseRangedPower + eqWeaponPower + (mods.dex * c.rangedScaling);
-
-            // MagicDamage/Power = SpellPower + (INTModifier * SpellScaling)
             float spellPower = c.baseSpellPower + permanentLegacyBonuses.mag;
             float rawMagPower = spellPower + (mods.intel * c.spellScaling);
-
-            // HealingAmount/Power = BaseHealing + (WISModifier * HealingScaling)
             float rawHealPower = c.baseHealing + permanentLegacyBonuses.mag + (mods.wis * c.healingScaling);
-
-            // SupportPower = BaseSupport + (CHAModifier * SupportScaling)
             float rawSupportPower = c.baseSupportPower + (mods.cha * c.supportScaling);
 
             float rawCritChance = c.baseCritChance + (mods.dex * c.critChanceScaling);
@@ -767,9 +1158,7 @@ namespace Obscure
             float rawMagicPen = c.baseMagicPen + Math.Max(0, mods.intel * c.magicPenScaling);
 
             // 3. Defensive Stats
-            // PhysicalDefense = BaseDef + Armor + (VITModifier * DefScaling)
             float rawPhysDef = c.basePhysicalDefense + eqPhysDef + permanentLegacyBonuses.def + (mods.vit * c.physicalDefenseScaling);
-            // MagicDefense = BaseMagDef + Equipment + (WISModifier * MagDefScaling)
             float rawMagDef = c.baseMagicDefense + eqMagDef + (mods.wis * c.magicDefenseScaling);
             float rawEvasion = c.baseEvasion + (mods.dex * c.evasionScaling);
             float rawBlock = c.baseBlockPower + (mods.str * c.blockScaling);
@@ -777,7 +1166,6 @@ namespace Obscure
             float rawStaggerRes = c.baseStaggerResistance + (mods.vit * c.staggerResistanceScaling);
 
             // 4. Turn Stats
-            // Initiative = BaseInitiative + DEXModifier + InitiativeBonuses
             float rawInitiative = c.baseInitiative + mods.dex + permanentLegacyBonuses.spd;
             float rawActionSpeed = c.baseActionSpeed + (mods.dex * c.actionSpeedScaling);
 
@@ -787,9 +1175,8 @@ namespace Obscure
             float rawCounterPower = c.baseCounterPower + ((mods.str + mods.dex) * c.counterPowerScaling);
 
             // 6. Break Stats
-            // Physical Break Power -> STR, Magic Break Power -> INT
-            float rawPhysBreak = c.baseBreakPower + (mods.str * c.breakPowerScaling);
-            float rawMagBreak = c.baseBreakPower + (mods.intel * c.breakPowerScaling);
+            float rawPhysBreak = c.baseBreakPower + eqBreakBonus + (mods.str * c.breakPowerScaling);
+            float rawMagBreak = c.baseBreakPower + eqBreakBonus + (mods.intel * c.breakPowerScaling);
 
             return new DerivedStats
             {
@@ -829,7 +1216,8 @@ namespace Obscure
             int level = 1,
             IEnumerable<EquipmentDef> equipment = null,
             IEnumerable<StatModifier> modifiers = null,
-            Stats permanentLegacyBonuses = default)
+            Stats permanentLegacyBonuses = default,
+            IEnumerable<PassiveDef> passives = null)
         {
             var def = Database.DerivedStatDefs[statId];
             var formula = Database.Formulas[def.formulaId];
@@ -842,7 +1230,7 @@ namespace Obscure
             foreach (var eq in eqList)
                 if (eq.modifiers != null) allMods.AddRange(eq.modifiers);
 
-            var derived = Calculate(abilities, c, lvl, eqList, modifiers, permanentLegacyBonuses);
+            var derived = Calculate(abilities, c, lvl, eqList, modifiers, permanentLegacyBonuses, passives);
 
             int baseVal = 0;
             int abilityContrib = 0;
@@ -955,10 +1343,12 @@ namespace Obscure
                     break;
                 case DerivedStatId.PhysicalBreakPower:
                     baseVal = c.baseBreakPower;
+                    eqContrib = eqList.Sum(e => e.breakPowerModifier);
                     abilityContrib = (int)Math.Round(mods.str * c.breakPowerScaling);
                     break;
                 case DerivedStatId.MagicBreakPower:
                     baseVal = c.baseBreakPower;
+                    eqContrib = eqList.Sum(e => e.breakPowerModifier);
                     abilityContrib = (int)Math.Round(mods.intel * c.breakPowerScaling);
                     break;
             }
@@ -995,4 +1385,3 @@ namespace Obscure
         }
     }
 }
-
