@@ -13,11 +13,13 @@ namespace Obscure
     // -> 9. Add Character to Party -> 10. Repeat until Party has 4 Heroes -> 11. Begin Expedition.
     public class CharacterCreationScreen : GameScreen
     {
-        public CharacterCreationSession Session { get; private set; }
+        public NewGamePartyBuilder Builder { get; private set; }
+        public CharacterCreationSession Session => Builder.CurrentSession;
         public CharacterRoster Roster { get; private set; }
 
         public Label RemainingPointsLabel { get; private set; }
         public Label StepLabel { get; private set; }
+        public Label MethodLabel { get; private set; }
         public Label RaceLabel { get; private set; }
         public Label ClassLabel { get; private set; }
         public Label ClassIdentityLabel { get; private set; }
@@ -33,14 +35,18 @@ namespace Obscure
 
         public EquipmentSlot SelectedEquipmentSlot { get; private set; } = EquipmentSlot.MainHand;
 
+        Selectable resetOrEditBtn;
+        Selectable randOrRerollBtn;
         Selectable confirmBtn;
+        Selectable randAllBtn;
         Selectable startBtn;
         SpriteRenderer portrait;
-        int editingPartySlot;
+        int templateIndex = -1;
 
         static readonly string[] RaceIds = Database.PlayableRaceIds;
         static readonly string[] ClassIds = Database.PlayableClassIds;
         static readonly string[] BackgroundIds = Database.Backgrounds.Keys.ToArray();
+        static readonly string[] TemplateIds = Database.TemplateIds;
 
         static readonly DerivedStatId[] PreviewedStats =
         {
@@ -61,9 +67,17 @@ namespace Obscure
             DerivedStatId.QteTimingBonus,
         };
 
-        public CharacterCreationScreen(CharacterCreationSession session = null, CharacterRoster roster = null)
+        public CharacterCreationScreen(CharacterCreationSession session = null, CharacterRoster roster = null, NewGamePartyBuilder builder = null)
         {
-            Session = session ?? new CharacterCreationSession();
+            if (builder != null)
+                Builder = builder;
+            else if (session != null)
+                Builder = new NewGamePartyBuilder(session);
+            else if (Game?.NewGameBuilder != null)
+                Builder = Game.NewGameBuilder;
+            else
+                Builder = new NewGamePartyBuilder();
+
             Roster = roster ?? (Game != null ? Game.Roster : new CharacterRoster(startWithEmptyParty: true));
         }
 
@@ -77,9 +91,9 @@ namespace Obscure
             StepLabel = Ui.Label(Root, "", 162, 4, Palette.Parchment, Align.Center);
             RemainingPointsLabel = Ui.Label(Root, "", 314, 4, Palette.Gold, Align.Right);
 
-            // Left panel: Race, Class, Starter Passive, Equipment (8 slots), and 6 Point Buy Ability Rows
+            // Left panel: Creation Method, Race, Class, Equipment (8 slots), and 6 Point Buy Ability Rows
             Ui.Panel(Root, 2, 17, 174, 134);
-            // Right panel: Live Character & Derived Stats Preview
+            // Right panel: Live Character, Starter Passive & Derived Stats Preview
             Ui.Panel(Root, 178, 17, 140, 134);
             // Bottom panel: Validation Feedback / Party Bar (X/4) & Action buttons
             Ui.Panel(Root, 0, 152, Ui.Width, 28);
@@ -89,30 +103,35 @@ namespace Obscure
             PartySummaryLabel = Ui.Label(Root, "", 6, 165, Palette.Ash);
             menu.onFocus = s => SetHint(s?.tooltip ?? "LEFT/RIGHT: ADJUST   ENTER: SELECT");
 
-            // 1. Race Selector (7 Playable Races) — x=11 keeps '>' cursor at x=4 inside left panel border
-            var raceBtn = Ui.Button(Root, "", 11, 19, 160, () => CycleRace(1), 10);
+            // 1. Creation Method / Template / Random Selector (Section 4)
+            var methodBtn = Ui.Button(Root, "", 11, 19, 160, OnActivateCreationMethodButton, 9);
+            methodBtn.onAdjust = CycleCreationMethodOrTemplate;
+            methodBtn.tooltip = "METHOD: L/R MANUAL/TEMPLATES/RANDOM (ENTER REROLLS)";
+            MethodLabel = methodBtn.label;
+            menu.Add(methodBtn);
+
+            // 2. Race Selector (7 Playable Races) — x=11 keeps '>' cursor at x=4 inside left panel border
+            var raceBtn = Ui.Button(Root, "", 11, 29, 160, () => CycleRace(1), 9);
             raceBtn.onAdjust = CycleRace;
             raceBtn.tooltip = "STEP 2: LEFT/RIGHT SELECT RACE (BONUS+FEAT+UTIL)";
             RaceLabel = raceBtn.label;
             menu.Add(raceBtn);
 
-            // 2. Class Selector (9 Playable Classes)
-            var classBtn = Ui.Button(Root, "", 11, 29, 160, () => CycleClass(1), 10);
+            // 3. Class Selector (9 Playable Classes)
+            var classBtn = Ui.Button(Root, "", 11, 39, 160, () => CycleClass(1), 9);
             classBtn.onAdjust = CycleClass;
             classBtn.tooltip = "STEP 3: LEFT/RIGHT SELECT CLASS & STARTER PASSIVE";
             ClassLabel = classBtn.label;
             menu.Add(classBtn);
 
-            // 3. Starter Passive & Background Display
-            StarterPassiveLabel = Ui.Label(Root, "", 11, 40, Palette.Moss);
-            BackgroundLabel = Ui.Label(Root, "", 11, 40, Color.clear); // retained for compatibility
-
             // 4. Equipment Slot Configurator (8 Slots with Strict Weapon Compatibility)
-            var eqBtn = Ui.Button(Root, "", 11, 48, 160, () => CycleEquipmentSlot(1), 10);
+            var eqBtn = Ui.Button(Root, "", 11, 49, 160, () => CycleEquipmentSlot(1), 9);
             eqBtn.onAdjust = CycleEquipmentItem;
             eqBtn.tooltip = "STEP 7: ENTER NEXT SLOT (1-8), L/R EQUIP ITEM";
             EquipmentSlotLabel = eqBtn.label;
             menu.Add(eqBtn);
+
+            BackgroundLabel = Ui.Label(Root, "", 11, 49, Color.clear); // retained for compatibility
 
             // Centered column header aligned with 25-char ability rows inside x=11..171 (center=91)
             Ui.Label(Root, "STAT BS  RAC FIN  MOD CST", 91, 59, Palette.Ash, Align.Center);
@@ -130,28 +149,30 @@ namespace Obscure
             }
 
             // 6. Action Buttons spaced with >=8px gaps so the '>' focus cursor never overlaps adjacent buttons
-            var resetBtn = Ui.Button(Root, "RESET", 10, 135, 34, () => { Session.ResetPointBuy(); Refresh(); }, 12);
-            resetBtn.tooltip = "RESET ALL ABILITY SCORES TO 8 (27 POINTS LEFT)";
-            menu.Add(resetBtn);
+            resetOrEditBtn = Ui.Button(Root, "RESET", 10, 135, 34, OnResetOrEditClicked, 12);
+            resetOrEditBtn.tooltip = "RESET ABILITY SCORES TO 8 (OR EDIT SELECTED HERO)";
+            menu.Add(resetOrEditBtn);
 
-            var newBtn = Ui.Button(Root, "NEW", 52, 135, 26, () => { Session.CreateNewCharacter(); Refresh(); }, 12);
-            newBtn.tooltip = "CREATE A NEW CHARACTER BUILD FROM STEP 1";
-            menu.Add(newBtn);
+            randOrRerollBtn = Ui.Button(Root, "RND 1", 52, 135, 34, () => OnRandomOrRerollSelected(), 12);
+            randOrRerollBtn.tooltip = "RANDOMIZE CURRENT HERO OR REROLL SELECTED PARTY HERO";
+            menu.Add(randOrRerollBtn);
 
-            confirmBtn = Ui.Button(Root, "ADD HERO", 86, 135, 52, ConfirmAndAddToParty, 12);
-            confirmBtn.tooltip = "CONFIRM HERO AND ADD TO EXPEDITION PARTY (4 REQ)";
+            confirmBtn = Ui.Button(Root, "ADD HERO", 94, 135, 48, ConfirmAndAddToParty, 12);
+            confirmBtn.onAdjust = d => CycleReviewSlot(d);
+            confirmBtn.tooltip = "CONFIRM HERO (1-4) OR SELECT PARTY MEMBER IN REVIEW";
             menu.Add(confirmBtn);
 
-            var backBtn = Ui.Button(Root, "BACK", 146, 135, 28, () => Game?.Go(GameState.MainMenu), 12);
-            backBtn.tooltip = "RETURN TO TITLE SCREEN";
+            var backBtn = Ui.Button(Root, "BACK", 150, 135, 24, OnBackPressed, 12);
+            backBtn.tooltip = "PREVIOUS STEP OR RETURN TO TITLE SCREEN";
             menu.Add(backBtn);
-            menu.onBack = () => Game?.Go(GameState.MainMenu);
+            menu.onBack = OnBackPressed;
 
-            // Right Panel: Portrait (16x24 at y=19..43) + Identity/Feat header + Live Derived Stats (y=46..123)
+            // Right Panel: Portrait (16x24 at y=19..43) + Identity/Feat/Passive header + Live Derived Stats (y=55..124)
             portrait = Ui.Image(Root, PixelArt.FromRows(Session.Class.sprite), 182, 19, Ui.Widget);
             Ui.Label(Root, "DERIVED PREVIEW", 202, 19, Palette.Gold);
             ClassIdentityLabel = Ui.Label(Root, "", 202, 28, Palette.Parchment);
             RaceFeatLabel = Ui.Label(Root, "", 202, 37, Palette.Ash);
+            StarterPassiveLabel = Ui.Label(Root, "", 183, 45, Palette.Moss);
 
             for (int i = 0; i < PreviewedStats.Length; i++)
             {
@@ -159,19 +180,19 @@ namespace Obscure
                 int col = i / 8;
                 int row = i % 8;
                 int x = 183 + col * 68;
-                int y = 46 + row * 10;
+                int y = 55 + row * 9;
                 PreviewStatLabels[st] = Ui.Label(Root, "", x, y, Palette.Bone);
             }
 
-            var statusBtn = Ui.Button(Root, "STATUS", 188, 135, 52, () => Game?.Go(GameState.CharacterStatus), 12);
-            statusBtn.tooltip = "INSPECT FULL CHARACTER STATUS & STAT FORMULAS";
-            menu.Add(statusBtn);
+            randAllBtn = Ui.Button(Root, "RND ALL", 188, 135, 48, () => RandomizeAll(), 12);
+            randAllBtn.tooltip = "RANDOMIZE ALL 4 PENDING PARTY HEROES FOR REVIEW";
+            menu.Add(randAllBtn);
 
-            startBtn = Ui.Button(Root, "EXPEDITION", 249, 135, 66, () => TryBeginExpedition(out _), 12);
-            startBtn.tooltip = "BEGIN EXPEDITION (REQUIRES COMPLETE 4-HERO PARTY)";
+            startBtn = Ui.Button(Root, "CONFIRM 4", 244, 135, 70, () => TryConfirmPartyAndBegin(out _), 12);
+            startBtn.tooltip = "CONFIRM 4-HERO PARTY, SAVE GAME & START PROLOGUE";
             menu.Add(startBtn);
 
-            Session.Changed += Refresh;
+            Builder.Changed += Refresh;
             Refresh();
         }
 
@@ -197,8 +218,67 @@ namespace Obscure
             HintLabel?.Set(Truncate((text ?? "").ToUpperInvariant(), 50));
         }
 
+        // Cycles between Manual -> Predefined Templates (0..N-1) -> Random creation methods (Section 4).
+        public void CycleCreationMethodOrTemplate(int dir)
+        {
+            EnsureEditingMode();
+            int totalModes = 2 + TemplateIds.Length; // 0 = Manual, 1..TemplateIds.Length = Templates, last = Random
+            int currentMode = Session.Method == CreationMethod.Manual
+                ? 0
+                : Session.Method == CreationMethod.Random
+                    ? totalModes - 1
+                    : Math.Max(1, templateIndex + 1);
+
+            currentMode = (currentMode + dir + totalModes) % totalModes;
+            if (currentMode == 0)
+            {
+                templateIndex = -1;
+                Session.SetCreationMethod(CreationMethod.Manual);
+                SetHint(Session.LastFeedbackMessage);
+            }
+            else if (currentMode == totalModes - 1)
+            {
+                templateIndex = -1;
+                Session.TryRandomize(null, out _);
+                SetHint(Session.LastFeedbackMessage);
+            }
+            else
+            {
+                templateIndex = currentMode - 1;
+                Session.TryApplyTemplate(TemplateIds[templateIndex], out _);
+                SetHint(Session.LastFeedbackMessage);
+            }
+            Refresh();
+        }
+
+        void OnActivateCreationMethodButton()
+        {
+            if (Builder.FlowState == NewGameFlowState.PendingPartyReview)
+            {
+                CycleReviewSlot(1);
+                return;
+            }
+            if (Session.Method == CreationMethod.Random)
+            {
+                Session.TryRandomize(null, out _);
+                SetHint(Session.LastFeedbackMessage);
+                Refresh();
+            }
+            else
+            {
+                CycleCreationMethodOrTemplate(1);
+            }
+        }
+
+        void EnsureEditingMode()
+        {
+            if (Builder.FlowState == NewGameFlowState.PendingPartyReview && Builder.PendingParty.Count > 0)
+                Builder.ReturnToEditCharacter(Builder.SelectedReviewIndex);
+        }
+
         public void CycleRace(int dir)
         {
+            EnsureEditingMode();
             Session.GoToStep(CreationStep.SelectRace);
             int idx = Array.IndexOf(RaceIds, Session.Race.id);
             if (idx < 0) idx = 0;
@@ -208,6 +288,7 @@ namespace Obscure
 
         public void CycleClass(int dir)
         {
+            EnsureEditingMode();
             Session.GoToStep(CreationStep.SelectClass);
             int idx = Array.IndexOf(ClassIds, Session.Class.id);
             if (idx < 0) idx = 0;
@@ -217,6 +298,7 @@ namespace Obscure
 
         public void CycleBackground(int dir)
         {
+            EnsureEditingMode();
             int idx = Array.IndexOf(BackgroundIds, Session.Background.id);
             if (idx < 0) idx = 0;
             idx = (idx + dir + BackgroundIds.Length) % BackgroundIds.Length;
@@ -225,6 +307,7 @@ namespace Obscure
 
         public void CycleEquipmentSlot(int dir)
         {
+            EnsureEditingMode();
             Session.GoToStep(CreationStep.ConfigureEquipment);
             int idx = Array.IndexOf(EquipmentSlots.All, SelectedEquipmentSlot);
             if (idx < 0) idx = 0;
@@ -235,6 +318,7 @@ namespace Obscure
 
         public void CycleEquipmentItem(int dir)
         {
+            EnsureEditingMode();
             Session.GoToStep(CreationStep.ConfigureEquipment);
             var compatible = Session.GetCompatibleEquipmentForSlot(SelectedEquipmentSlot).ToList();
             if (compatible.Count == 0)
@@ -252,6 +336,7 @@ namespace Obscure
 
         void AdjustAbility(Ability ability, int delta)
         {
+            EnsureEditingMode();
             Session.GoToStep(CreationStep.AllocateAbilityScores);
             bool ok = delta > 0 ? Session.IncreaseStat(ability) : Session.DecreaseStat(ability);
             if (!ok) Sfx.Play(Sound.Deny);
@@ -259,50 +344,124 @@ namespace Obscure
             Refresh();
         }
 
-        public void ConfirmAndAddToParty()
+        void OnResetOrEditClicked()
         {
-            if (!Session.CanConfirm)
+            if (Builder.FlowState == NewGameFlowState.PendingPartyReview)
             {
-                Sfx.Play(Sound.Deny);
-                SetHint(Session.Validate() ?? "INVALID CHARACTER CONFIGURATION");
-                return;
+                Builder.ReturnToEditCharacter(Builder.SelectedReviewIndex);
+                SetHint(Builder.LastFeedback);
             }
-
-            var activeRoster = Game != null ? Game.Roster : Roster;
-            // If the roster was preloaded with the 4 default heroes and the user is building a new party,
-            // allow replacing slots sequentially or adding to an open party.
-            if (activeRoster.IsPartyComplete && editingPartySlot < CharacterRoster.PartySize)
+            else
             {
-                string customId = $"hero_{editingPartySlot + 1}_{Session.Class.id}_{Guid.NewGuid().ToString("N").Substring(0, 4)}";
-                Session.CharacterName = $"{Session.Class.name}";
-                var created = Session.Confirm(activeRoster, customId);
-                activeRoster.SetPartySlot(editingPartySlot, created.id);
-                editingPartySlot = (editingPartySlot + 1) % CharacterRoster.PartySize;
-                SetHint($"ADDED {created.name} TO PARTY ({activeRoster.PartyCount}/{CharacterRoster.PartySize})!");
-                Session.CreateNewCharacter();
+                Session.ResetPointBuy();
+                SetHint(Session.LastFeedbackMessage);
+            }
+            Refresh();
+        }
+
+        // In PendingPartyReview, rerolls ONLY the selected party member (Section 5.2).
+        // In PendingCharacterCreation, randomizes the current character being configured (Section 5).
+        public void OnRandomOrRerollSelected(System.Random rng = null)
+        {
+            if (Builder.FlowState == NewGameFlowState.PendingPartyReview && Builder.PendingParty.Count > 0)
+            {
+                Builder.TryRerollSelected(Builder.SelectedReviewIndex, rng, out _);
+                SetHint(Builder.LastFeedback);
+            }
+            else
+            {
+                Session.TryRandomize(rng, out _);
+                SetHint(Session.LastFeedbackMessage);
+            }
+            Refresh();
+        }
+
+        public bool RandomizeAll(System.Random rng = null)
+        {
+            bool ok = Builder.TryRandomizeAll(rng, out _);
+            SetHint(Builder.LastFeedback);
+            Refresh();
+            return ok;
+        }
+
+        public bool RerollSelected(int slotIndex, System.Random rng = null)
+        {
+            bool ok = Builder.TryRerollSelected(slotIndex, rng, out _);
+            SetHint(Builder.LastFeedback);
+            Refresh();
+            return ok;
+        }
+
+        public void CycleReviewSlot(int dir)
+        {
+            if (Builder.PendingParty.Count == 0) return;
+            int next = (Builder.SelectedReviewIndex + dir + Builder.PendingParty.Count) % Builder.PendingParty.Count;
+            Builder.SelectReviewMember(next);
+            Session.LoadFromCharacterDef(Builder.PendingParty[next]);
+            SetHint($"REVIEWING HERO {next + 1}/4: {Builder.PendingParty[next].name}");
+            Refresh();
+        }
+
+        void OnBackPressed()
+        {
+            if (Builder.FlowState == NewGameFlowState.PendingCharacterCreation && Session.CurrentStep > CreationStep.SelectRace)
+            {
+                Session.PreviousStep();
+                SetHint($"RETURNED TO STEP {(int)Session.CurrentStep}/7.");
                 Refresh();
                 return;
             }
+            Game?.Go(GameState.MainMenu);
+        }
 
-            string newId = $"hero_{activeRoster.PartyCount + 1}_{Session.Class.id}_{Guid.NewGuid().ToString("N").Substring(0, 4)}";
-            Session.CharacterName = $"{Session.Class.name}";
-            var confirmed = Session.Confirm(null, newId);
-            if (!activeRoster.TryAddToParty(confirmed, out string partyErr))
+        public void ConfirmAndAddToParty()
+        {
+            if (Builder.FlowState == NewGameFlowState.PendingPartyReview && !Builder.EditingExistingMember)
             {
-                Sfx.Play(Sound.Deny);
-                SetHint(partyErr);
+                CycleReviewSlot(1);
                 return;
             }
 
-            SetHint($"ADDED {confirmed.name} ({activeRoster.PartyCount}/{CharacterRoster.PartySize})!");
-            if (!activeRoster.IsPartyComplete)
-                Session.CreateNewCharacter();
+            if (!Builder.TryConfirmCurrentCharacter(out var confirmed, out string err))
+            {
+                Sfx.Play(Sound.Deny);
+                SetHint(err ?? "INVALID CHARACTER CONFIGURATION");
+                return;
+            }
+
+            SetHint(Builder.LastFeedback);
             Refresh();
+        }
+
+        public bool TryConfirmPartyAndBegin(out string error)
+        {
+            var activeRoster = Game != null ? Game.Roster : Roster;
+            if (!Builder.TryConfirmParty(activeRoster, out error))
+            {
+                Sfx.Play(Sound.Deny);
+                SetHint(error);
+                Refresh();
+                return false;
+            }
+            SetHint(Builder.LastFeedback);
+            Refresh();
+            Game?.BeginOpeningSequence();
+            return true;
         }
 
         public bool TryBeginExpedition(out string error)
         {
             var activeRoster = Game != null ? Game.Roster : Roster;
+            if (Builder.CanConfirmParty && !Builder.IsPartyConfirmed)
+            {
+                if (!Builder.TryConfirmParty(activeRoster, out error))
+                {
+                    Sfx.Play(Sound.Deny);
+                    SetHint(error);
+                    Refresh();
+                    return false;
+                }
+            }
             error = activeRoster.ValidateExpeditionStart();
             if (error != null)
             {
@@ -311,7 +470,7 @@ namespace Obscure
                 Refresh();
                 return false;
             }
-            Game?.StartRun();
+            Game?.BeginFirstExpedition();
             return true;
         }
 
@@ -323,7 +482,23 @@ namespace Obscure
             RemainingPointsLabel.Set($"POINTS {rem}/{Session.PointBuy.Config.budget}");
             RemainingPointsLabel.Color = rem < 0 ? Palette.Crimson : rem == 0 ? Palette.Moss : Palette.Gold;
 
-            StepLabel?.Set($"STEP {(int)Session.CurrentStep}/7");
+            if (Builder.FlowState == NewGameFlowState.PendingPartyReview && !Builder.EditingExistingMember)
+                StepLabel?.Set($"REVIEW ({Builder.SelectedReviewIndex + 1}/4)");
+            else
+                StepLabel?.Set($"H{Builder.CurrentMemberIndex + 1}/4 STEP {(int)Session.CurrentStep}/7");
+
+            if (MethodLabel != null)
+            {
+                if (Session.Method == CreationMethod.Template && !string.IsNullOrEmpty(Session.ActiveTemplateId) &&
+                    Database.Templates.TryGetValue(Session.ActiveTemplateId, out var tpl))
+                {
+                    MethodLabel.Set($"TPL < {Truncate(tpl.name.ToUpperInvariant(), 17)} >");
+                }
+                else
+                {
+                    MethodLabel.Set($"MODE < {Session.Method.ToString().ToUpperInvariant()} >");
+                }
+            }
 
             string featName = Session.Race?.racialFeat?.name ?? "NONE";
             RaceLabel.Set($"RACE < {Truncate(Session.Race.name.ToUpperInvariant(), 16)} >");
@@ -335,7 +510,7 @@ namespace Obscure
             RaceFeatLabel?.Set(Truncate($"FT:{featName.ToUpperInvariant()}", 18));
 
             var sp = Session.StarterPassive;
-            StarterPassiveLabel?.Set(Truncate($"PASSIVE: {(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 26));
+            StarterPassiveLabel?.Set(Truncate($"PSV:{(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 22));
 
             var eq = Session.GetEquipped(SelectedEquipmentSlot);
             string eqName = eq != null ? eq.name.ToUpperInvariant() : "EMPTY";
@@ -368,24 +543,35 @@ namespace Obscure
                 kv.Value.Set($"{def.shortName} {preview.FormatValue(kv.Key)}");
             }
 
+            bool inReview = Builder.FlowState == NewGameFlowState.PendingPartyReview && !Builder.EditingExistingMember;
+            if (resetOrEditBtn != null)
+                resetOrEditBtn.label.Set(inReview ? "EDIT" : "RESET");
+            if (randOrRerollBtn != null)
+                randOrRerollBtn.label.Set(inReview ? "REROLL" : "RND 1");
             if (confirmBtn != null)
-                confirmBtn.interactable = Session.CanConfirm;
-
-            var activeRoster = Game != null ? Game.Roster : Roster;
-            if (startBtn != null && activeRoster != null)
-                startBtn.interactable = activeRoster.CanBeginExpedition;
-
-            if (activeRoster != null && PartySummaryLabel != null)
             {
-                var members = activeRoster.SelectedPartyIds
-                    .Select((id, i) =>
+                confirmBtn.label.Set(inReview ? $"HERO {Builder.SelectedReviewIndex + 1}" : "ADD HERO");
+                confirmBtn.interactable = inReview || Session.CanConfirm;
+            }
+
+            if (startBtn != null)
+                startBtn.interactable = Builder.CanConfirmParty;
+
+            if (PartySummaryLabel != null)
+            {
+                if (Builder.PendingParty.Count > 0)
+                {
+                    var members = Builder.PendingParty.Select((c, i) =>
                     {
-                        var c = activeRoster.Characters.FirstOrDefault(x => x.id == id)
-                                ?? (Database.Characters.TryGetValue(id, out var dc) ? dc : null);
-                        string shortName = Truncate((c != null ? c.name : id).ToUpperInvariant(), 8);
-                        return $"{i + 1}:{shortName}";
+                        string mark = inReview && i == Builder.SelectedReviewIndex ? "*" : "";
+                        return $"{i + 1}{mark}:{Truncate(c.name.ToUpperInvariant(), 7)}";
                     });
-                PartySummaryLabel.Set(Truncate($"PARTY ({activeRoster.PartyCount}/{CharacterRoster.PartySize}): " + string.Join(" ", members), 50));
+                    PartySummaryLabel.Set(Truncate($"PARTY ({Builder.PendingParty.Count}/{CharacterRoster.PartySize}): " + string.Join(" ", members), 50));
+                }
+                else
+                {
+                    PartySummaryLabel.Set($"PARTY (0/{CharacterRoster.PartySize}): CREATE 4 HEROES TO BEGIN");
+                }
             }
         }
     }

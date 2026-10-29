@@ -386,6 +386,9 @@ namespace Obscure
             return total;
         }
 
+        public int TotalCost(AbilityScores baseScores) => GetTotalCost(baseScores);
+        public int RemainingPoints(AbilityScores baseScores) => budget - GetTotalCost(baseScores);
+
         // Null when the allocation is valid; otherwise an explanation of why it is rejected.
         public string Validate(AbilityScores baseScores)
         {
@@ -422,6 +425,12 @@ namespace Obscure
         public int RemainingPoints => Config.budget - TotalSpent;
         public string ValidationError => Config.Validate(Scores);
         public bool IsValid => ValidationError == null && RemainingPoints >= 0;
+
+        public bool IsValidForConfirmation(out string error)
+        {
+            error = ValidationError;
+            return error == null && RemainingPoints >= 0;
+        }
 
         public int GetScore(Ability a) => Scores[a];
         public int GetCost(Ability a) => Config.GetCost(Scores[a]);

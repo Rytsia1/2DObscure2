@@ -376,6 +376,8 @@ namespace Obscure
     public class CharacterCreationSession
     {
         public string CharacterName { get; set; }
+        public CreationMethod Method { get; private set; } = CreationMethod.Manual;
+        public string ActiveTemplateId { get; private set; }
         public CreationStep CurrentStep { get; private set; } = CreationStep.SelectRace;
         public RaceDef Race { get; private set; }
         public ClassDef Class { get; private set; }
@@ -399,6 +401,8 @@ namespace Obscure
         public void CreateNewCharacter()
         {
             IsConfirmed = false;
+            Method = CreationMethod.Manual;
+            ActiveTemplateId = null;
             CurrentStep = CreationStep.SelectRace;
             PointBuy.Reset();
             Race = Database.Races.TryGetValue("human", out var human) ? human : Database.Races.Values.First();
@@ -406,8 +410,319 @@ namespace Obscure
             Background = Database.Backgrounds.Values.First();
             CharacterName = defaultClass.name;
             ApplyClassSelection(defaultClass, resetEquipmentAndLoadout: true);
-            LastFeedbackMessage = "NEW CHARACTER STARTED.";
+            LastFeedbackMessage = "NEW CHARACTER STARTED (MANUAL).";
             Changed?.Invoke();
+        }
+
+        public void SetCreationMethod(CreationMethod method)
+        {
+            Method = method;
+            if (method != CreationMethod.Template)
+                ActiveTemplateId = null;
+            LastFeedbackMessage = $"CREATION METHOD: {method.ToString().ToUpperInvariant()}.";
+            Changed?.Invoke();
+        }
+
+        // Validates a predefined character template against all Race, Class, Point Buy, Skill, and Equipment rules (Section 4.2).
+        public static string ValidateTemplate(CharacterTemplateDef template, PointBuyConfig config = null)
+        {
+            if (template == null) return "Template is null.";
+            if (string.IsNullOrWhiteSpace(template.id)) return "Template ID is required.";
+            if (string.IsNullOrWhiteSpace(template.name)) return $"Template '{template.id}' is missing a name.";
+            if (string.IsNullOrEmpty(template.raceId) || !Database.Races.TryGetValue(template.raceId, out var race) || !race.isPlayable)
+                return $"Template '{template.name}' specifies invalid or non-playable race '{template.raceId}'.";
+            if (string.IsNullOrEmpty(template.classId) || !Database.Classes.TryGetValue(template.classId, out var classDef) || !classDef.isPlayable)
+                return $"Template '{template.name}' specifies invalid or non-playable class '{template.classId}'.";
+
+            var cfg = config ?? PointBuyConfig.Standard;
+            string pbErr = cfg.Validate(template.baseScores);
+            if (pbErr != null)
+                return $"Template '{template.name}' has invalid Ability Score allocation: {pbErr}";
+            if (cfg.TotalCost(template.baseScores) > cfg.budget)
+                return $"Template '{template.name}' exceeds Point Buy budget ({cfg.TotalCost(template.baseScores)}/{cfg.budget}).";
+
+            if (!string.IsNullOrEmpty(template.starterPassiveId) && template.starterPassiveId != classDef.starterPassiveId)
+                return $"Template '{template.name}' specifies incompatible starter passive '{template.starterPassiveId}' for class '{classDef.name}'.";
+
+            var tempLoadout = new SkillLoadout();
+            tempLoadout.InitializeForClass(classDef);
+            if (template.activeSkillLoadout != null)
+            {
+                if (template.activeSkillLoadout.Length > SkillLoadout.ActiveSlotCount)
+                    return $"Template '{template.name}' exceeds {SkillLoadout.ActiveSlotCount} active skill slots.";
+                foreach (var sid in template.activeSkillLoadout)
+                {
+                    if (!string.IsNullOrEmpty(sid) && !tempLoadout.UnlockedActiveSkills.Contains(sid))
+                        return $"Template '{template.name}' equips locked active skill '{sid}'.";
+                }
+            }
+            if (template.passiveSkillLoadout != null)
+            {
+                if (template.passiveSkillLoadout.Length > SkillLoadout.PassiveSlotCount)
+                    return $"Template '{template.name}' exceeds {SkillLoadout.PassiveSlotCount} passive skill slots.";
+                foreach (var pid in template.passiveSkillLoadout)
+                {
+                    if (!string.IsNullOrEmpty(pid) && !tempLoadout.UnlockedPassiveSkills.Contains(pid))
+                        return $"Template '{template.name}' equips locked passive skill '{pid}'.";
+                }
+            }
+
+            var eqAbilBonus = AbilityScores.Zero;
+            if (template.startingEquipment != null)
+            {
+                foreach (var entry in template.startingEquipment)
+                {
+                    if (string.IsNullOrEmpty(entry.equipmentId)) continue;
+                    if (!Database.Equipment.TryGetValue(entry.equipmentId, out var item))
+                        return $"Template '{template.name}' references unknown equipment '{entry.equipmentId}'.";
+                    eqAbilBonus = eqAbilBonus.Plus(item.abilityBonuses);
+                }
+                var finalScores = template.baseScores.Plus(race.abilityModifiers).Plus(eqAbilBonus);
+                foreach (var entry in template.startingEquipment)
+                {
+                    if (string.IsNullOrEmpty(entry.equipmentId)) continue;
+                    var item = Database.Equipment[entry.equipmentId];
+                    string eqErr = EquipmentValidator.Validate(item, entry.slot, classDef, race, 1, finalScores);
+                    if (eqErr != null)
+                        return $"Template '{template.name}' equipment error: {eqErr}";
+                }
+            }
+
+            return null;
+        }
+
+        // Applies a predefined template to the current character after full validation.
+        // Rejects invalid templates without silently accepting invalid data. Player remains free to edit before confirming.
+        public bool TryApplyTemplate(string templateId, out string error)
+        {
+            if (string.IsNullOrEmpty(templateId) || !Database.Templates.TryGetValue(templateId, out var t))
+            {
+                error = $"Unknown template ID '{templateId}'.";
+                LastFeedbackMessage = error.ToUpperInvariant();
+                return false;
+            }
+            return TryApplyTemplate(t, out error);
+        }
+
+        public bool TryApplyTemplate(CharacterTemplateDef template, out string error)
+        {
+            error = ValidateTemplate(template, PointBuy.Config);
+            if (error != null)
+            {
+                LastFeedbackMessage = error.ToUpperInvariant();
+                return false;
+            }
+
+            IsConfirmed = false;
+            Method = CreationMethod.Template;
+            ActiveTemplateId = template.id;
+            Race = Database.Races[template.raceId];
+            Class = Database.Classes[template.classId];
+            Background = !string.IsNullOrEmpty(template.backgroundId) && Database.Backgrounds.TryGetValue(template.backgroundId, out var bg)
+                ? bg
+                : Database.Backgrounds.Values.First();
+            CharacterName = template.name;
+
+            PointBuy.SetAllOrThrow(template.baseScores);
+            Loadout.InitializeForClass(Class);
+
+            if (template.activeSkillLoadout != null && template.activeSkillLoadout.Length > 0)
+            {
+                for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
+                    Loadout.TryEquipActive(i, i < template.activeSkillLoadout.Length ? template.activeSkillLoadout[i] : null, out _);
+            }
+            if (template.passiveSkillLoadout != null && template.passiveSkillLoadout.Length > 0)
+            {
+                for (int i = 0; i < SkillLoadout.PassiveSlotCount; i++)
+                    Loadout.TryEquipPassive(i, i < template.passiveSkillLoadout.Length ? template.passiveSkillLoadout[i] : null, out _);
+            }
+
+            Equipped.Clear();
+            if (template.startingEquipment != null)
+            {
+                foreach (var entry in template.startingEquipment)
+                {
+                    if (!string.IsNullOrEmpty(entry.equipmentId) && Database.Equipment.TryGetValue(entry.equipmentId, out var item))
+                        Equipped[entry.slot] = item;
+                }
+            }
+            else
+            {
+                ResetToClassStartingEquipment();
+            }
+
+            LastFeedbackMessage = $"LOADED TEMPLATE: {template.name.ToUpperInvariant()}.";
+            Changed?.Invoke();
+            return true;
+        }
+
+        // Generates a valid random Point Buy Ability Score allocation within [minScore..maxScoreBeforeRacial]
+        // that spends the full configured budget (Section 5).
+        public static AbilityScores GenerateRandomPointBuy(PointBuyConfig config, Random rng = null)
+        {
+            var cfg = config ?? PointBuyConfig.Standard;
+            var r = rng ?? new Random();
+            var scores = AbilityScores.Uniform(cfg.baseScore);
+
+            int safety = 64;
+            while (cfg.RemainingPoints(scores) > 0 && safety-- > 0)
+            {
+                int rem = cfg.RemainingPoints(scores);
+                var candidates = new List<Ability>();
+                foreach (var a in AbilityScores.AllAbilities)
+                {
+                    int cur = scores[a];
+                    if (cur >= cfg.maxScoreBeforeRacial) continue;
+                    int stepCost = cfg.GetCost(cur + 1) - cfg.GetCost(cur);
+                    if (stepCost <= rem)
+                        candidates.Add(a);
+                }
+                if (candidates.Count == 0) break;
+                var pick = candidates[r.Next(candidates.Count)];
+                scores[pick] = scores[pick] + 1;
+            }
+            return scores;
+        }
+
+        // Random Creation: automatically generates a valid character with random Race, Class, Point Buy allocation,
+        // Starter Passive, Skill Loadout, and valid Starting Equipment using bounded retries (Section 5).
+        public const int MaxRandomRetries = 16;
+
+        public bool TryRandomize(Random rng, out string error)
+        {
+            var r = rng ?? new Random();
+            error = null;
+
+            for (int attempt = 0; attempt < MaxRandomRetries; attempt++)
+            {
+                string raceId = Database.PlayableRaceIds[r.Next(Database.PlayableRaceIds.Length)];
+                string classId = Database.PlayableClassIds[r.Next(Database.PlayableClassIds.Length)];
+                if (!Database.Races.TryGetValue(raceId, out var race) || !Database.Classes.TryGetValue(classId, out var classDef))
+                    continue;
+
+                var randomScores = GenerateRandomPointBuy(PointBuy.Config, r);
+                if (PointBuy.Config.Validate(randomScores) != null)
+                    continue;
+
+                IsConfirmed = false;
+                Method = CreationMethod.Random;
+                ActiveTemplateId = null;
+                Race = race;
+                Class = classDef;
+                Background = Database.Backgrounds.Values.ElementAt(r.Next(Database.Backgrounds.Count));
+                CharacterName = Class.name;
+
+                PointBuy.SetAllOrThrow(randomScores);
+                Loadout.InitializeForClass(Class);
+
+                Equipped.Clear();
+                foreach (var slot in EquipmentSlots.All)
+                {
+                    var validForSlot = Database.Equipment.Values
+                        .Where(item =>
+                            item.rarity == EquipmentRarity.Common &&
+                            EquipmentValidator.Validate(item, slot, Class, Race, 1, FinalScores) == null)
+                        .ToList();
+
+                    if (slot == EquipmentSlot.Accessory2 && Equipped.TryGetValue(EquipmentSlot.Accessory1, out var acc1) && acc1 != null)
+                    {
+                        var distinctAcc = validForSlot.Where(x => x.id != acc1.id).ToList();
+                        if (distinctAcc.Count > 0) validForSlot = distinctAcc;
+                    }
+
+                    if (validForSlot.Count > 0)
+                        Equipped[slot] = validForSlot[r.Next(validForSlot.Count)];
+                }
+
+                RemoveInvalidEquippedItems();
+                error = Validate();
+                if (error == null)
+                {
+                    LastFeedbackMessage = $"RANDOMIZED: {Race.name.ToUpperInvariant()} {Class.name.ToUpperInvariant()}.";
+                    Changed?.Invoke();
+                    return true;
+                }
+            }
+
+            error = error ?? "Random generation could not produce a valid configuration.";
+            LastFeedbackMessage = error.ToUpperInvariant();
+            return false;
+        }
+
+        public void Randomize(Random rng = null)
+        {
+            if (!TryRandomize(rng, out string err))
+                throw new InvalidOperationException(err);
+        }
+
+        // Restores the session from an existing pending CharacterDef so a player can edit a character from Party Review.
+        public void LoadFromCharacterDef(CharacterDef def)
+        {
+            if (def == null) throw new ArgumentNullException(nameof(def));
+            IsConfirmed = false;
+            Method = def.creationMethod;
+            ActiveTemplateId = def.templateId;
+            Race = !string.IsNullOrEmpty(def.raceId) && Database.Races.TryGetValue(def.raceId, out var r) ? r : Database.Races["human"];
+            Class = !string.IsNullOrEmpty(def.classId) && Database.Classes.TryGetValue(def.classId, out var c) ? c : Database.Classes["fighter"];
+            Background = !string.IsNullOrEmpty(def.backgroundId) && Database.Backgrounds.TryGetValue(def.backgroundId, out var bg)
+                ? bg
+                : Database.Backgrounds.Values.First();
+            CharacterName = !string.IsNullOrWhiteSpace(def.name) ? def.name : Class.name;
+
+            PointBuy.SetAllOrThrow(def.baseScores.Equals(default) ? AbilityScores.DefaultBase : def.baseScores);
+            Loadout.InitializeForClass(Class);
+
+            if (def.activeSkillLoadout != null && def.activeSkillLoadout.Length > 0)
+            {
+                for (int i = 0; i < Math.Min(SkillLoadout.ActiveSlotCount, def.activeSkillLoadout.Length); i++)
+                    Loadout.activeSlots[i] = def.activeSkillLoadout[i];
+            }
+            if (def.passiveSkillLoadout != null && def.passiveSkillLoadout.Length > 0)
+            {
+                for (int i = 0; i < Math.Min(SkillLoadout.PassiveSlotCount, def.passiveSkillLoadout.Length); i++)
+                    Loadout.passiveSlots[i] = def.passiveSkillLoadout[i];
+            }
+
+            Equipped.Clear();
+            if (def.equipmentLoadout != null && def.equipmentLoadout.Length > 0)
+            {
+                foreach (var assign in def.equipmentLoadout)
+                    if (!string.IsNullOrEmpty(assign.equipmentId) && Database.Equipment.TryGetValue(assign.equipmentId, out var eq))
+                        Equipped[assign.slot] = eq;
+            }
+            else if (def.startingEquipment != null)
+            {
+                foreach (var eid in def.startingEquipment)
+                    if (!string.IsNullOrEmpty(eid) && Database.Equipment.TryGetValue(eid, out var eq))
+                        Equipped[eq.slot] = eq;
+            }
+
+            RemoveInvalidEquippedItems();
+            CurrentStep = CreationStep.SelectRace;
+            LastFeedbackMessage = $"EDITING {CharacterName.ToUpperInvariant()} ({Race.name.ToUpperInvariant()} {Class.name.ToUpperInvariant()}).";
+            Changed?.Invoke();
+        }
+
+        // Individual Character Review summary containing Race, Class, Creation Method, Ability Scores,
+        // Ability Modifiers, Derived Stats, Starter Passive, Active/Passive Skill Loadout, and Equipment Loadout (Section 11).
+        public string GetCharacterReviewSummary()
+        {
+            var fin = FinalScores;
+            var mods = AbilityModifiers;
+            var der = PreviewDerivedStats;
+            string spName = StarterPassive != null ? StarterPassive.name : "None";
+            string actives = string.Join(", ", Loadout.GetEquippedActives());
+            string passives = string.Join(", ", Loadout.GetEquippedPassives());
+            string eqSummary = string.Join(", ", EquipmentSlots.All.Select(s =>
+                $"{EquipmentSlots.ShortName(s)}:{(Equipped.TryGetValue(s, out var e) && e != null ? e.name : "Empty")}"));
+
+            return $"NAME: {CharacterName} | METHOD: {Method} | RACE: {Race?.name} | CLASS: {Class?.name}\n" +
+                   $"SCORES: STR {fin.str}({AbilityScores.FormatMod(mods.str)}) DEX {fin.dex}({AbilityScores.FormatMod(mods.dex)}) " +
+                   $"VIT {fin.vit}({AbilityScores.FormatMod(mods.vit)}) INT {fin.intel}({AbilityScores.FormatMod(mods.intel)}) " +
+                   $"WIS {fin.wis}({AbilityScores.FormatMod(mods.wis)}) CHA {fin.cha}({AbilityScores.FormatMod(mods.cha)})\n" +
+                   $"DERIVED: HP {der.maxHp} MP {der.maxMp} ATK {der.physicalPower} RNG {der.rangedPower} MAG {der.magicPower} DEF {der.physicalDefense} MDF {der.magicDefense} INI {der.initiative}\n" +
+                   $"STARTER PASSIVE: {spName} | ACTIVES: [{actives}] | PASSIVES: [{passives}]\n" +
+                   $"EQUIPMENT: {eqSummary}";
         }
 
         public bool NextStep()
@@ -701,6 +1016,8 @@ namespace Obscure
                 id = id,
                 name = CharacterName.Trim(),
                 role = Class.role,
+                creationMethod = Method,
+                templateId = ActiveTemplateId,
                 description = $"{Race.name} {Class.name} ({Class.gameplayIdentity ?? Background.name}). {Class.description}",
                 raceId = Race.id,
                 classId = Class.id,
@@ -724,6 +1041,43 @@ namespace Obscure
             LastFeedbackMessage = $"CONFIRMED {def.name.ToUpperInvariant()} ({Race.name.ToUpperInvariant()} {Class.name.ToUpperInvariant()}).";
             roster?.AddCharacter(def);
             return def;
+        }
+
+        // Reusable validation for a CharacterDef against all Character Creation rules (Race, Class, Point Buy, Starter Passive, Equipment).
+        public static string ValidateCharacterDef(CharacterDef def, PointBuyConfig config = null)
+        {
+            if (def == null) return "Character is null.";
+            if (string.IsNullOrWhiteSpace(def.id)) return "Character ID is required.";
+            if (string.IsNullOrWhiteSpace(def.name)) return "Character name is required.";
+            if (string.IsNullOrEmpty(def.raceId) || !Database.Races.TryGetValue(def.raceId, out var race))
+                return $"Unknown race '{def.raceId}'.";
+            if (string.IsNullOrEmpty(def.classId) || !Database.Classes.TryGetValue(def.classId, out var classDef))
+                return $"Unknown class '{def.classId}'.";
+
+            var cfg = config ?? PointBuyConfig.Standard;
+            string pbErr = cfg.Validate(def.baseScores);
+            if (pbErr != null) return pbErr;
+
+            var eqAbilBonus = AbilityScores.Zero;
+            if (def.equipmentLoadout != null)
+            {
+                foreach (var assign in def.equipmentLoadout)
+                {
+                    if (string.IsNullOrEmpty(assign.equipmentId)) continue;
+                    if (!Database.Equipment.TryGetValue(assign.equipmentId, out var eq))
+                        return $"Unknown equipment '{assign.equipmentId}'.";
+                    eqAbilBonus = eqAbilBonus.Plus(eq.abilityBonuses);
+                }
+                var finalScores = def.baseScores.Plus(race.abilityModifiers).Plus(eqAbilBonus);
+                foreach (var assign in def.equipmentLoadout)
+                {
+                    if (string.IsNullOrEmpty(assign.equipmentId)) continue;
+                    var eq = Database.Equipment[assign.equipmentId];
+                    string eqErr = EquipmentValidator.Validate(eq, assign.slot, classDef, race, 1, finalScores);
+                    if (eqErr != null) return eqErr;
+                }
+            }
+            return null;
         }
     }
 
@@ -763,6 +1117,26 @@ namespace Obscure
         {
             SelectedPartyIds.Clear();
             AssembledParty.Clear();
+        }
+
+        // Replaces the confirmed party in the roster with a validated 4-character party.
+        public void CommitConfirmedParty(IEnumerable<CharacterDef> confirmedParty)
+        {
+            if (confirmedParty == null) throw new ArgumentNullException(nameof(confirmedParty));
+            var list = confirmedParty.ToList();
+            if (list.Count != PartySize)
+                throw new InvalidOperationException($"Confirmed party must contain {PartySize} characters.");
+            if (list.Distinct().Count() != PartySize || list.Select(c => c.id).Distinct().Count() != PartySize)
+                throw new InvalidOperationException("Confirmed party contains duplicate character instances.");
+
+            SelectedPartyIds.Clear();
+            AssembledParty.Clear();
+            foreach (var c in list)
+            {
+                AddCharacter(c, selectInPartyIfRoom: false);
+                SelectedPartyIds.Add(c.id);
+                AssembledParty.Add(c);
+            }
         }
 
         public void AddCharacter(CharacterDef def, bool selectInPartyIfRoom = false)
@@ -882,6 +1256,618 @@ namespace Obscure
             if (SelectedPartyIds.Count != PartySize)
                 return Database.Party.Select(id => Database.Characters[id]).ToList();
             return SelectedPartyIds.Select(id => Characters.FirstOrDefault(c => c.id == id) ?? Database.Characters[id]).ToList();
+        }
+    }
+
+    // State machine for New Game Character Creation -> Party Review -> Party Confirmation -> Save -> Opening Sequence -> First Expedition (Section 12).
+    public enum NewGameFlowState
+    {
+        Idle = 0,
+        NewGameInitialization = 1,
+        PendingCharacterCreation = 2,
+        PendingPartyReview = 3,
+        PartyConfirmation = 4,
+        PersistentSaveInitialization = 5,
+        OpeningSequence = 6,
+        FirstExpedition = 7
+    }
+
+    // Orchestrates New Game Initial Party Creation (4 characters via Manual, Template, or Random Creation),
+    // Randomize All, Reroll Selected, Full Party Review, and Party Confirmation while keeping pending state
+    // strictly separated from the persistent GameSave and confirmed CharacterRoster until ConfirmParty() (Sections 2-5, 11-12).
+    public class NewGamePartyBuilder
+    {
+        public NewGameFlowState FlowState { get; private set; } = NewGameFlowState.Idle;
+        public CharacterCreationSession CurrentSession { get; }
+        public readonly List<CharacterDef> PendingParty = new List<CharacterDef>();
+        public int CurrentMemberIndex { get; private set; }
+        public int SelectedReviewIndex { get; private set; }
+        public bool EditingExistingMember { get; private set; }
+        public bool IsPartyConfirmed { get; private set; }
+        public string LastFeedback { get; private set; } = "";
+
+        public event Action Changed;
+
+        public NewGamePartyBuilder(CharacterCreationSession session = null)
+        {
+            CurrentSession = session ?? new CharacterCreationSession();
+            CurrentSession.Changed += () => Changed?.Invoke();
+            StartNewGame();
+        }
+
+        // Initializes a pending New Game character creation flow without modifying any existing saved game.
+        public void StartNewGame()
+        {
+            FlowState = NewGameFlowState.NewGameInitialization;
+            PendingParty.Clear();
+            CurrentMemberIndex = 0;
+            SelectedReviewIndex = 0;
+            EditingExistingMember = false;
+            IsPartyConfirmed = false;
+            CurrentSession.CreateNewCharacter();
+            FlowState = NewGameFlowState.PendingCharacterCreation;
+            LastFeedback = "NEW GAME: CREATE PARTY MEMBER 1 OF 4.";
+            Changed?.Invoke();
+        }
+
+        public void SelectReviewMember(int slotIndex)
+        {
+            if (PendingParty.Count == 0) return;
+            SelectedReviewIndex = Math.Clamp(slotIndex, 0, PendingParty.Count - 1);
+            Changed?.Invoke();
+        }
+
+        // Confirms the current character being configured and adds/updates them in the pending party (Section 3).
+        // Never allows duplicate character instances in the pending party.
+        public bool TryConfirmCurrentCharacter(out CharacterDef confirmedHero, out string error)
+        {
+            confirmedHero = null;
+            error = CurrentSession.Validate();
+            if (error != null)
+            {
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+
+            int targetSlot = EditingExistingMember ? SelectedReviewIndex : PendingParty.Count;
+            if (!EditingExistingMember && PendingParty.Count >= CharacterRoster.PartySize)
+            {
+                error = $"Pending party already has {CharacterRoster.PartySize} characters.";
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+
+            string heroId = $"hero_{targetSlot + 1}_{CurrentSession.Class.id}_{Guid.NewGuid().ToString("N").Substring(0, 6)}";
+            CurrentSession.CharacterName = $"{CurrentSession.Class.name}";
+            var def = CurrentSession.Confirm(null, heroId);
+
+            if (PendingParty.Where((_, idx) => !EditingExistingMember || idx != targetSlot).Any(c => ReferenceEquals(c, def) || c.id == def.id))
+            {
+                error = $"Character '{def.name}' ({def.id}) is already in the party.";
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+
+            if (EditingExistingMember && targetSlot >= 0 && targetSlot < PendingParty.Count)
+            {
+                PendingParty[targetSlot] = def;
+                EditingExistingMember = false;
+            }
+            else
+            {
+                PendingParty.Add(def);
+            }
+
+            confirmedHero = def;
+            IsPartyConfirmed = false;
+
+            if (PendingParty.Count < CharacterRoster.PartySize)
+            {
+                CurrentMemberIndex = PendingParty.Count;
+                SelectedReviewIndex = PendingParty.Count - 1;
+                FlowState = NewGameFlowState.PendingCharacterCreation;
+                CurrentSession.CreateNewCharacter();
+                LastFeedback = $"CONFIRMED HERO {PendingParty.Count}/4 ({def.name.ToUpperInvariant()}). CREATE HERO {PendingParty.Count + 1}/4.";
+            }
+            else
+            {
+                CurrentMemberIndex = CharacterRoster.PartySize - 1;
+                SelectedReviewIndex = 0;
+                FlowState = NewGameFlowState.PendingPartyReview;
+                LastFeedback = "ALL 4 HEROES CREATED! REVIEW AND CONFIRM PARTY.";
+            }
+
+            Changed?.Invoke();
+            return true;
+        }
+
+        // Rejects adding the same CharacterDef instance/ID directly into the pending party.
+        public bool TryAddPendingCharacter(CharacterDef def, out string error)
+        {
+            error = null;
+            if (def == null)
+            {
+                error = "Character is null.";
+                return false;
+            }
+            if (PendingParty.Count >= CharacterRoster.PartySize)
+            {
+                error = $"Pending party is already full ({CharacterRoster.PartySize}/{CharacterRoster.PartySize}).";
+                return false;
+            }
+            if (PendingParty.Contains(def) || PendingParty.Any(c => c.id == def.id))
+            {
+                error = $"Duplicate character instance '{def.id}' cannot be added to the party.";
+                return false;
+            }
+            string valErr = CharacterCreationSession.ValidateCharacterDef(def, CurrentSession.PointBuy.Config);
+            if (valErr != null)
+            {
+                error = valErr;
+                return false;
+            }
+            PendingParty.Add(def);
+            IsPartyConfirmed = false;
+            if (PendingParty.Count == CharacterRoster.PartySize)
+                FlowState = NewGameFlowState.PendingPartyReview;
+            Changed?.Invoke();
+            return true;
+        }
+
+        // Section 5.1 — Randomize All:
+        // Generates a completely new randomized initial party of 4 valid, independently initialized characters.
+        // Enters PendingPartyReview without auto-confirming the party, without starting the expedition,
+        // and without modifying any existing saved game.
+        public bool TryRandomizeAll(Random rng, out string error)
+        {
+            var r = rng ?? new Random();
+            error = null;
+            var generated = new List<CharacterDef>(CharacterRoster.PartySize);
+            var tempSession = new CharacterCreationSession(CurrentSession.PointBuy.Config);
+
+            for (int i = 0; i < CharacterRoster.PartySize; i++)
+            {
+                if (!tempSession.TryRandomize(r, out error))
+                {
+                    LastFeedback = (error ?? "RANDOMIZE ALL FAILED.").ToUpperInvariant();
+                    return false;
+                }
+                string id = $"hero_{i + 1}_{tempSession.Class.id}_{Guid.NewGuid().ToString("N").Substring(0, 6)}";
+                tempSession.CharacterName = tempSession.Class.name;
+                var hero = tempSession.Confirm(null, id);
+                generated.Add(hero);
+            }
+
+            PendingParty.Clear();
+            PendingParty.AddRange(generated);
+            CurrentMemberIndex = CharacterRoster.PartySize - 1;
+            SelectedReviewIndex = 0;
+            EditingExistingMember = false;
+            IsPartyConfirmed = false;
+            FlowState = NewGameFlowState.PendingPartyReview;
+
+            CurrentSession.LoadFromCharacterDef(PendingParty[0]);
+            LastFeedback = "RANDOMIZED ALL 4 HEROES. REVIEW PARTY BEFORE CONFIRMING.";
+            Changed?.Invoke();
+            return true;
+        }
+
+        public void RandomizeAll(Random rng = null)
+        {
+            if (!TryRandomizeAll(rng, out string err))
+                throw new InvalidOperationException(err);
+        }
+
+        // Section 5.2 — Reroll Selected:
+        // Generates a new randomized configuration for ONLY the selected party member (0..3).
+        // The other 3 characters remain completely unchanged. Does not auto-confirm the character or party,
+        // and does not modify any existing saved game.
+        public bool TryRerollSelected(int slotIndex, Random rng, out string error)
+        {
+            error = null;
+            if (slotIndex < 0 || slotIndex >= PendingParty.Count)
+            {
+                error = $"Invalid party member index {slotIndex}.";
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+
+            var r = rng ?? new Random();
+            var tempSession = new CharacterCreationSession(CurrentSession.PointBuy.Config);
+            if (!tempSession.TryRandomize(r, out error))
+            {
+                LastFeedback = (error ?? "REROLL FAILED.").ToUpperInvariant();
+                return false;
+            }
+
+            string id = $"hero_{slotIndex + 1}_{tempSession.Class.id}_{Guid.NewGuid().ToString("N").Substring(0, 6)}";
+            tempSession.CharacterName = tempSession.Class.name;
+            var replacement = tempSession.Confirm(null, id);
+            replacement.creationMethod = CreationMethod.Random;
+
+            PendingParty[slotIndex] = replacement;
+            SelectedReviewIndex = slotIndex;
+            IsPartyConfirmed = false;
+
+            // Load the rerolled configuration into CurrentSession in unconfirmed state so the player can review it.
+            CurrentSession.LoadFromCharacterDef(replacement);
+            LastFeedback = $"REROLLED HERO {slotIndex + 1}: {replacement.raceId.ToUpperInvariant()} {replacement.name.ToUpperInvariant()}.";
+            Changed?.Invoke();
+            return true;
+        }
+
+        public void RerollSelected(int slotIndex, Random rng = null)
+        {
+            if (!TryRerollSelected(slotIndex, rng, out string err))
+                throw new InvalidOperationException(err);
+        }
+
+        public void RerollSelected(Random rng = null) => RerollSelected(SelectedReviewIndex, rng);
+
+        // Allows the player to return from Full Party Review to edit a specific character's configuration (Section 11).
+        public bool ReturnToEditCharacter(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= PendingParty.Count) return false;
+            SelectedReviewIndex = slotIndex;
+            CurrentMemberIndex = slotIndex;
+            EditingExistingMember = true;
+            IsPartyConfirmed = false;
+            FlowState = NewGameFlowState.PendingCharacterCreation;
+            CurrentSession.LoadFromCharacterDef(PendingParty[slotIndex]);
+            LastFeedback = $"EDITING HERO {slotIndex + 1} ({PendingParty[slotIndex].name.ToUpperInvariant()}).";
+            Changed?.Invoke();
+            return true;
+        }
+
+        public string ValidatePendingParty()
+        {
+            if (PendingParty.Count < CharacterRoster.PartySize)
+                return $"Party is incomplete ({PendingParty.Count}/{CharacterRoster.PartySize} characters).";
+            if (PendingParty.Count > CharacterRoster.PartySize)
+                return $"Party exceeds maximum size ({PendingParty.Count}/{CharacterRoster.PartySize}).";
+            if (PendingParty.Any(c => c == null))
+                return "Party contains an unconfigured character slot.";
+            if (PendingParty.Distinct().Count() != CharacterRoster.PartySize ||
+                PendingParty.Select(c => c.id).Distinct().Count() != CharacterRoster.PartySize)
+                return "Party contains duplicate character instances.";
+
+            for (int i = 0; i < PendingParty.Count; i++)
+            {
+                string cErr = CharacterCreationSession.ValidateCharacterDef(PendingParty[i], CurrentSession.PointBuy.Config);
+                if (cErr != null)
+                    return $"Party member {i + 1} ({PendingParty[i].name}) is invalid: {cErr}";
+            }
+            return null;
+        }
+
+        public bool CanConfirmParty => ValidatePendingParty() == null;
+
+        // Full Party Review overview containing all 4 characters, Race & Class, stats, Starter Passive,
+        // Equipment summary, and Party Composition summary (Section 11).
+        public string GetPartyReviewSummary()
+        {
+            if (PendingParty.Count == 0) return "NO CHARACTERS IN PENDING PARTY.";
+            var lines = new List<string>();
+            var roles = new List<string>();
+            for (int i = 0; i < PendingParty.Count; i++)
+            {
+                var c = PendingParty[i];
+                var u = new Unit(c);
+                string raceName = u.race?.name ?? c.raceId;
+                string className = u.classDef?.name ?? c.classId;
+                string spName = !string.IsNullOrEmpty(u.starterPassiveId) && Database.Passives.TryGetValue(u.starterPassiveId, out var sp)
+                    ? sp.name
+                    : "None";
+                string mainEq = u.equipped.TryGetValue(EquipmentSlot.MainHand, out var mh) && mh != null ? mh.name : "Unarmed";
+                string offEq = u.equipped.TryGetValue(EquipmentSlot.SecondHand, out var sh) && sh != null ? sh.name : "None";
+                roles.Add($"{className}({u.role})");
+                lines.Add($"{i + 1}. {c.name} [{c.creationMethod}] - {raceName} {className} | HP:{u.Derived.maxHp} MP:{u.Derived.maxMp} ATK:{u.Derived.physicalPower} DEF:{u.Derived.physicalDefense} MAG:{u.Derived.magicPower} INI:{u.Derived.initiative} | Passive: {spName} | Eqp: {mainEq}/{offEq}");
+            }
+            lines.Add($"COMPOSITION ({PendingParty.Count}/{CharacterRoster.PartySize}): " + string.Join(", ", roles));
+            return string.Join("\n", lines);
+        }
+
+        // Confirms the completed 4-character party, commits it to the roster, initializes the persistent GameSave,
+        // and transitions to the Opening Sequence (Section 11 & Section 12).
+        public bool TryConfirmParty(CharacterRoster targetRoster, out string error, int? initialSeed = null)
+        {
+            error = ValidatePendingParty();
+            if (error != null)
+            {
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+
+            FlowState = NewGameFlowState.PartyConfirmation;
+            targetRoster?.CommitConfirmedParty(PendingParty);
+
+            FlowState = NewGameFlowState.PersistentSaveInitialization;
+            int seed = initialSeed ?? Environment.TickCount;
+            GameSave.SaveNewGame(PendingParty, seed);
+
+            IsPartyConfirmed = true;
+            FlowState = NewGameFlowState.OpeningSequence;
+            LastFeedback = "PARTY CONFIRMED AND SAVED! READY FOR OPENING SEQUENCE.";
+            Changed?.Invoke();
+            return true;
+        }
+
+        // Transitions from Opening Sequence into the First Expedition (Section 2 & Section 12).
+        public bool TryBeginOpeningSequence(out string error)
+        {
+            error = ValidatePendingParty();
+            if (error != null)
+            {
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+            if (!IsPartyConfirmed)
+            {
+                error = "Party must be confirmed before beginning the opening sequence.";
+                LastFeedback = error.ToUpperInvariant();
+                return false;
+            }
+            FlowState = NewGameFlowState.OpeningSequence;
+            Changed?.Invoke();
+            return true;
+        }
+
+        public RunState BeginFirstExpedition(CharacterRoster roster, int seed = 1)
+        {
+            if (!IsPartyConfirmed)
+                throw new InvalidOperationException("Cannot begin the first expedition before confirming the party.");
+            string err = ValidatePendingParty();
+            if (err != null) throw new InvalidOperationException(err);
+
+            var activeRoster = roster ?? new CharacterRoster(startWithEmptyParty: true);
+            activeRoster.CommitConfirmedParty(PendingParty);
+            FlowState = NewGameFlowState.FirstExpedition;
+            var run = activeRoster.BeginExpedition(seed);
+            GameSave.SaveRunState(run, PendingParty);
+            Changed?.Invoke();
+            return run;
+        }
+    }
+
+    // Persistent save data for a single character. Stores authoritative primary data (Race, Class, Base Ability Scores,
+    // Starter Passive, Skill Loadout, Equipment Loadout, Creation Method) so Derived Stats are recalculated on load
+    // without fragile duplicate state (Section 12).
+    [Serializable]
+    public class SavedCharacterData
+    {
+        public string id;
+        public string name;
+        public string role;
+        public CreationMethod creationMethod;
+        public string templateId;
+        public string raceId;
+        public string classId;
+        public string backgroundId;
+        public AbilityScores baseScores;
+        public AbilityScores permanentAbilityBonuses;
+        public string starterPassiveId;
+        public string[] activeSkillLoadout;
+        public string[] passiveSkillLoadout;
+        public string[] unlockedSkills;
+        public EquipmentSlotAssignment[] equipmentLoadout;
+        public int level = 1;
+        public int hp;
+        public int mp;
+        public int unspentAsiPoints;
+
+        public static SavedCharacterData FromCharacterDef(CharacterDef d, Unit runtimeUnit = null)
+        {
+            return new SavedCharacterData
+            {
+                id = d.id,
+                name = d.name,
+                role = d.role,
+                creationMethod = d.creationMethod,
+                templateId = d.templateId,
+                raceId = d.raceId,
+                classId = d.classId,
+                backgroundId = d.backgroundId,
+                baseScores = runtimeUnit != null ? runtimeUnit.BaseScores : d.baseScores,
+                permanentAbilityBonuses = runtimeUnit != null ? runtimeUnit.PermanentAbilityBonuses : AbilityScores.Zero,
+                starterPassiveId = runtimeUnit != null ? runtimeUnit.starterPassiveId : d.starterPassiveId,
+                activeSkillLoadout = runtimeUnit != null ? runtimeUnit.skillLoadout.ActiveSlots.ToArray() : (d.activeSkillLoadout ?? Array.Empty<string>()),
+                passiveSkillLoadout = runtimeUnit != null ? runtimeUnit.skillLoadout.PassiveSlots.ToArray() : (d.passiveSkillLoadout ?? Array.Empty<string>()),
+                unlockedSkills = runtimeUnit != null
+                    ? runtimeUnit.skillLoadout.UnlockedActiveSkills.Concat(runtimeUnit.skillLoadout.UnlockedPassiveSkills).ToArray()
+                    : (d.unlockedSkills ?? Array.Empty<string>()),
+                equipmentLoadout = runtimeUnit != null
+                    ? runtimeUnit.equipped.Where(kv => kv.Value != null).Select(kv => new EquipmentSlotAssignment(kv.Key, kv.Value.id)).ToArray()
+                    : (d.equipmentLoadout ?? Array.Empty<EquipmentSlotAssignment>()),
+                level = runtimeUnit != null ? runtimeUnit.level : 1,
+                hp = runtimeUnit != null ? runtimeUnit.hp : 0,
+                mp = runtimeUnit != null ? runtimeUnit.mp : 0,
+                unspentAsiPoints = runtimeUnit != null ? runtimeUnit.unspentAsiPoints : 0,
+            };
+        }
+
+        public CharacterDef ToCharacterDef()
+        {
+            var race = !string.IsNullOrEmpty(raceId) && Database.Races.TryGetValue(raceId, out var r) ? r : Database.Races["human"];
+            var classDef = !string.IsNullOrEmpty(classId) && Database.Classes.TryGetValue(classId, out var c) ? c : Database.Classes["fighter"];
+            var bg = !string.IsNullOrEmpty(backgroundId) && Database.Backgrounds.TryGetValue(backgroundId, out var b) ? b : Database.Backgrounds.Values.First();
+
+            var def = new CharacterDef
+            {
+                id = id,
+                name = name,
+                role = !string.IsNullOrEmpty(role) ? role : classDef.role,
+                creationMethod = creationMethod,
+                templateId = templateId,
+                description = $"{race.name} {classDef.name} ({classDef.gameplayIdentity ?? bg.name}). {classDef.description}",
+                raceId = race.id,
+                classId = classDef.id,
+                backgroundId = bg.id,
+                baseScores = baseScores.Equals(default) ? AbilityScores.DefaultBase : baseScores,
+                starterPassiveId = !string.IsNullOrEmpty(starterPassiveId) ? starterPassiveId : classDef.starterPassiveId,
+                activeSkillLoadout = activeSkillLoadout ?? Array.Empty<string>(),
+                passiveSkillLoadout = passiveSkillLoadout ?? Array.Empty<string>(),
+                unlockedSkills = unlockedSkills ?? Array.Empty<string>(),
+                equipmentLoadout = equipmentLoadout ?? Array.Empty<EquipmentSlotAssignment>(),
+                startingEquipment = (equipmentLoadout ?? Array.Empty<EquipmentSlotAssignment>()).Select(a => a.equipmentId).ToArray(),
+                passives = (passiveSkillLoadout ?? Array.Empty<string>()).Where(s => !string.IsNullOrEmpty(s)).ToArray(),
+                skills = (activeSkillLoadout ?? Array.Empty<string>()).Where(s => !string.IsNullOrEmpty(s)).ToArray(),
+                affinities = classDef.affinities ?? Affinities.None,
+                sprite = classDef.sprite ?? Art.Knight,
+            };
+
+            // Recalculate Derived Stats authoritatively through Unit
+            var unit = new Unit(def);
+            def.stats = unit.Derived.ToLegacyStats();
+            return def;
+        }
+    }
+
+    [Serializable]
+    public class GameSaveData
+    {
+        public bool hasConfirmedParty;
+        public int seed = 1;
+        public int act = 1;
+        public int gold;
+        public string currentNodeId;
+        public string[] clearedNodeIds = Array.Empty<string>();
+        public string[] items = Array.Empty<string>();
+        public string[] relics = Array.Empty<string>();
+        public SavedCharacterData[] party = Array.Empty<SavedCharacterData>();
+    }
+
+    // Persistent Save Manager using the existing PlayerPrefs + JsonUtility architecture (Sections 2 & 12).
+    public static class GameSave
+    {
+        public const string PrefKey = "obscure.save";
+        static GameSaveData memoryCache;
+
+        public static bool HasSavedGame()
+        {
+            if (memoryCache != null && memoryCache.hasConfirmedParty && memoryCache.party != null && memoryCache.party.Length == CharacterRoster.PartySize)
+                return true;
+            string raw = UnityEngine.PlayerPrefs.GetString(PrefKey, "");
+            if (string.IsNullOrEmpty(raw)) return false;
+            try
+            {
+                var data = UnityEngine.JsonUtility.FromJson<GameSaveData>(raw);
+                return data != null && data.hasConfirmedParty && data.party != null && data.party.Length == CharacterRoster.PartySize;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void ClearSave()
+        {
+            memoryCache = null;
+            UnityEngine.PlayerPrefs.DeleteKey(PrefKey);
+            UnityEngine.PlayerPrefs.Save();
+        }
+
+        public static GameSaveData SaveNewGame(IReadOnlyList<CharacterDef> confirmedParty, int seed = 1)
+        {
+            if (confirmedParty == null || confirmedParty.Count != CharacterRoster.PartySize)
+                throw new InvalidOperationException($"Cannot save an incomplete party (requires {CharacterRoster.PartySize} characters).");
+
+            var data = new GameSaveData
+            {
+                hasConfirmedParty = true,
+                seed = seed,
+                act = 1,
+                gold = 0,
+                currentNodeId = "",
+                clearedNodeIds = Array.Empty<string>(),
+                items = Database.StartingItems.ToArray(),
+                relics = Array.Empty<string>(),
+                party = confirmedParty.Select(c => SavedCharacterData.FromCharacterDef(c)).ToArray()
+            };
+            WriteSaveData(data);
+            return data;
+        }
+
+        public static GameSaveData SaveRunState(RunState run, IReadOnlyList<CharacterDef> partyDefs = null)
+        {
+            if (run == null) throw new ArgumentNullException(nameof(run));
+            var defs = partyDefs ?? run.Party.Select(u => new CharacterDef
+            {
+                id = u.id,
+                name = u.name,
+                role = u.role,
+                raceId = u.race?.id ?? "human",
+                classId = u.classDef?.id ?? "fighter",
+                backgroundId = u.background?.id ?? "oathsworn",
+                baseScores = u.BaseScores,
+                starterPassiveId = u.starterPassiveId,
+                activeSkillLoadout = u.skillLoadout.ActiveSlots.ToArray(),
+                passiveSkillLoadout = u.skillLoadout.PassiveSlots.ToArray(),
+                unlockedSkills = u.skillLoadout.UnlockedActiveSkills.Concat(u.skillLoadout.UnlockedPassiveSkills).ToArray(),
+                equipmentLoadout = u.equipped.Where(kv => kv.Value != null).Select(kv => new EquipmentSlotAssignment(kv.Key, kv.Value.id)).ToArray(),
+            }).ToList();
+
+            var data = new GameSaveData
+            {
+                hasConfirmedParty = true,
+                seed = run.Seed,
+                act = run.Act,
+                gold = run.Gold,
+                currentNodeId = run.Current?.id ?? "",
+                clearedNodeIds = run.Cleared.ToArray(),
+                items = run.Items.ToArray(),
+                relics = run.Relics.ToArray(),
+                party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray()
+            };
+            WriteSaveData(data);
+            return data;
+        }
+
+        public static void WriteSaveData(GameSaveData data)
+        {
+            memoryCache = data;
+            string json = UnityEngine.JsonUtility.ToJson(data);
+            UnityEngine.PlayerPrefs.SetString(PrefKey, json);
+            UnityEngine.PlayerPrefs.Save();
+        }
+
+        public static GameSaveData LoadSaveData()
+        {
+            string raw = UnityEngine.PlayerPrefs.GetString(PrefKey, "");
+            if (!string.IsNullOrEmpty(raw))
+            {
+                try
+                {
+                    var parsed = UnityEngine.JsonUtility.FromJson<GameSaveData>(raw);
+                    if (parsed != null && parsed.hasConfirmedParty)
+                    {
+                        memoryCache = parsed;
+                        return parsed;
+                    }
+                }
+                catch
+                {
+                    // Fall back to memoryCache if present
+                }
+            }
+            return memoryCache;
+        }
+
+        // Restores the confirmed CharacterRoster and active RunState from the saved game (Section 2 Continue & Section 12).
+        public static bool TryLoadContinue(out CharacterRoster restoredRoster, out RunState restoredRun)
+        {
+            restoredRoster = null;
+            restoredRun = null;
+            var data = LoadSaveData();
+            if (data == null || !data.hasConfirmedParty || data.party == null || data.party.Length != CharacterRoster.PartySize)
+                return false;
+
+            var partyDefs = data.party.Select(p => p.ToCharacterDef()).ToList();
+            restoredRoster = new CharacterRoster(startWithEmptyParty: true);
+            restoredRoster.CommitConfirmedParty(partyDefs);
+
+            restoredRun = new RunState(MapGenerator.Generate(data.seed), partyDefs, data.seed);
+            restoredRun.RestoreFromSave(data);
+            return true;
         }
     }
 }

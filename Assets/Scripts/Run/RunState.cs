@@ -645,5 +645,39 @@ namespace Obscure
                 EndedUtc = DateTime.UtcNow;
             }
         }
+
+        // Restores progression and per-character runtime state from a saved game (Section 2 & Section 12).
+        public void RestoreFromSave(GameSaveData data)
+        {
+            if (data == null) return;
+            Gold = data.gold;
+            Items.Clear();
+            if (data.items != null) Items.AddRange(data.items);
+            Relics.Clear();
+            if (data.relics != null) Relics.AddRange(data.relics);
+            Cleared.Clear();
+            if (data.clearedNodeIds != null)
+            {
+                foreach (var cid in data.clearedNodeIds)
+                    if (!string.IsNullOrEmpty(cid)) Cleared.Add(cid);
+            }
+            if (!string.IsNullOrEmpty(data.currentNodeId) && Map.nodes.Any(n => n.id == data.currentNodeId))
+                Current = Map.Get(data.currentNodeId);
+
+            if (data.party != null)
+            {
+                for (int i = 0; i < Math.Min(Party.Count, data.party.Length); i++)
+                {
+                    var sc = data.party[i];
+                    var u = Party[i];
+                    u.level = Math.Max(1, sc.level);
+                    u.unspentAsiPoints = sc.unspentAsiPoints;
+                    u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
+                    u.RecalculateStats(fillResources: true);
+                    if (sc.hp > 0) u.hp = Math.Min(u.stats.maxHp, sc.hp);
+                    if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);
+                }
+            }
+        }
     }
 }

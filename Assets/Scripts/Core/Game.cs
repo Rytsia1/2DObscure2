@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, Map, Combat, Reward, Rest, Event, GameOver, Victory }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -36,9 +36,11 @@ namespace Obscure
         public static Game I { get; private set; }
         public RunState Run { get; private set; }
         public CharacterRoster Roster { get; private set; } = new CharacterRoster();
+        public NewGamePartyBuilder NewGameBuilder { get; private set; } = new NewGamePartyBuilder();
         public GameSettings Settings { get; private set; }
         public GameState State { get; private set; }
         public GameScreen CurrentScreen => screen;
+        public bool HasSavedGame => GameSave.HasSavedGame();
 
         GameScreen screen;
         SpriteRenderer fader;
@@ -80,12 +82,58 @@ namespace Obscure
             ppc.cropFrame = PixelPerfectCamera.CropFrame.Windowbox;
         }
 
-        // A fresh run: new seed (unless given), new map, active party from Roster. The previous run is dropped here.
+        // Main Menu -> New Game (Section 2):
+        // Initializes a pending New Game character creation flow without overwriting any existing save,
+        // and opens the Character Creation screen to create the 4 initial party members.
+        public void StartNewGame()
+        {
+            if (NewGameBuilder == null)
+                NewGameBuilder = new NewGamePartyBuilder();
+            else
+                NewGameBuilder.StartNewGame();
+            Go(GameState.CharacterCreation);
+        }
+
+        // Main Menu -> Continue (Section 2):
+        // Loads the existing save, restores the confirmed 4-character party and current progression,
+        // and enters the expedition map directly without opening Character Creation.
+        public bool ContinueGame()
+        {
+            if (!GameSave.TryLoadContinue(out var restoredRoster, out var restoredRun))
+                return false;
+            Roster = restoredRoster;
+            Run = restoredRun;
+            Go(GameState.Map);
+            return true;
+        }
+
+        // Transitions from confirmed party creation to the Opening Sequence before the first expedition (Section 2 & 12).
+        public void BeginOpeningSequence()
+        {
+            Go(GameState.OpeningSequence);
+        }
+
+        // Starts the first expedition after the Opening Sequence using the confirmed New Game party.
+        public void BeginFirstExpedition(int? seed = null)
+        {
+            int s = seed ?? System.Environment.TickCount;
+            if (NewGameBuilder != null && NewGameBuilder.IsPartyConfirmed)
+            {
+                Run = NewGameBuilder.BeginFirstExpedition(Roster, s);
+                Go(GameState.Map);
+                return;
+            }
+            StartRun(s);
+        }
+
+        // A fresh expedition run using the existing confirmed party in Roster (does NOT reopen Character Creation).
         public void StartRun(int? seed = null)
         {
             int s = seed ?? System.Environment.TickCount;
             var party = Roster != null ? Roster.GetActiveParty() : Database.Party.Select(id => Database.Characters[id]).ToList();
             Run = new RunState(MapGenerator.Generate(s), party, s);
+            if (GameSave.HasSavedGame())
+                GameSave.SaveRunState(Run, party);
             Go(GameState.Map);
         }
 
@@ -107,6 +155,15 @@ namespace Obscure
         // Every state change goes through here: lock input, fade out, swap screen, fade in.
         public void Go(GameState next)
         {
+            if (!Application.isPlaying)
+            {
+                screen?.Close();
+                State = next;
+                screen = Create(next);
+                if (transform != null)
+                    screen.Open(transform);
+                return;
+            }
             if (transitioning) return;
             transitioning = true;
             Controls.Locked = true;
@@ -143,6 +200,7 @@ namespace Obscure
             GameState.Settings => new SettingsScreen(),
             GameState.CharacterCreation => new CharacterCreationScreen(),
             GameState.CharacterStatus => new CharacterStatusScreen(),
+            GameState.OpeningSequence => new OpeningSequenceScreen(),
             GameState.Map => new MapScreen(),
             GameState.Combat => new CombatScreen(),
             GameState.Reward => new RewardScreen(),

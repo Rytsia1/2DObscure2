@@ -434,6 +434,11 @@ namespace Obscure.Tests
                         Assert.LessOrEqual(creation.EquipmentSlotLabel.Text.Length, 26, $"EquipmentSlotLabel overflow: {creation.EquipmentSlotLabel.Text}");
                     }
                 }
+                for (int m = 0; m < Database.TemplateIds.Length + 3; m++)
+                {
+                    creation.CycleCreationMethodOrTemplate(1);
+                    Assert.LessOrEqual(creation.MethodLabel.Text.Length, 26, $"MethodLabel overflow: {creation.MethodLabel.Text}");
+                }
                 Assert.LessOrEqual(creation.HintLabel.Text.Length, 50);
                 Assert.LessOrEqual(creation.PartySummaryLabel.Text.Length, 50);
                 creation.Close();
@@ -878,6 +883,279 @@ namespace Obscure.Tests
             Assert.IsFalse(evalPerfectMiss.isHit, "A successful/Perfect QTE never guarantees a 100% hit");
             Assert.IsTrue(evalMissHit.isHit, "An attack with a failed QTE can still hit based on Accuracy");
             Assert.Greater(evalPerfectHit.qteDamageMultiplier, evalMissHit.qteDamageMultiplier, "QTE independently controls action performance");
+        }
+
+        // =====================================================================
+        // 11. New Game Character Creation System (Manual, Template, Random,
+        //     Randomize All, Reroll Selected, Save/Continue & Opening Flow)
+        // =====================================================================
+
+        [Test]
+        public void ManualTemplateAndRandomCreationProduceValidCharactersAndEnforceAllRules()
+        {
+            var session = new CharacterCreationSession();
+
+            // 1. Manual Creation
+            session.CreateNewCharacter();
+            session.SetCreationMethod(CreationMethod.Manual);
+            Assert.AreEqual(CreationMethod.Manual, session.Method);
+            session.SelectRace("dragonborn");
+            session.SelectClass("fighter");
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
+            Assert.IsTrue(session.CanConfirm, session.Validate());
+            session.CharacterName = "Vanguard";
+            var manualDef = session.Confirm(null, "manual_fighter");
+            Assert.AreEqual(CreationMethod.Manual, manualDef.creationMethod);
+            Assert.IsNull(CharacterCreationSession.ValidateCharacterDef(manualDef));
+
+            // 2. Template Creation — all 9 class templates must be valid and produce valid CharacterDefs
+            Assert.AreEqual(9, Database.TemplateIds.Length);
+            foreach (var templateId in Database.TemplateIds)
+            {
+                var template = Database.Templates[templateId];
+                Assert.IsNull(CharacterCreationSession.ValidateTemplate(template), $"Template {templateId} invalid");
+                Assert.IsTrue(session.TryApplyTemplate(templateId, out string applyErr), applyErr);
+                Assert.AreEqual(CreationMethod.Template, session.Method);
+                Assert.AreEqual(templateId, session.ActiveTemplateId);
+                Assert.AreEqual(0, session.PointBuy.RemainingPoints, $"Template {templateId} must spend all 27 points");
+                Assert.IsTrue(session.CanConfirm, session.Validate());
+
+                var tplChar = session.Confirm(null, $"tpl_{templateId}");
+                Assert.AreEqual(CreationMethod.Template, tplChar.creationMethod);
+                Assert.AreEqual(templateId, tplChar.templateId);
+                Assert.IsNull(CharacterCreationSession.ValidateCharacterDef(tplChar));
+            }
+
+            // Players can edit a character after applying a template before confirming
+            Assert.IsTrue(session.TryApplyTemplate("frontline_fighter", out _));
+            session.SelectRace("dwarf");
+            Assert.AreEqual("dwarf", session.Race.id);
+            Assert.IsTrue(session.CanConfirm);
+
+            // Invalid templates are rejected with clear feedback
+            var invalidPointBuyTpl = new CharacterTemplateDef
+            {
+                id = "bad_points", name = "Bad Points", raceId = "human", classId = "fighter",
+                baseScores = new AbilityScores(15, 15, 15, 15, 15, 15) // exceeds 27 points
+            };
+            string badPtsReason = CharacterCreationSession.ValidateTemplate(invalidPointBuyTpl);
+            Assert.IsNotNull(badPtsReason);
+            StringAssert.Contains("Point Buy", badPtsReason);
+
+            var invalidWeaponTpl = new CharacterTemplateDef
+            {
+                id = "bad_weapon", name = "Bad Weapon", raceId = "elf", classId = "wizard",
+                baseScores = new AbilityScores(8, 12, 12, 15, 14, 11),
+                startingEquipment = new[]
+                {
+                    new EquipmentSlotAssignment(EquipmentSlot.MainHand, "battle_greataxe") // incompatible with Wizard
+                }
+            };
+            string badWpnReason = CharacterCreationSession.ValidateTemplate(invalidWeaponTpl);
+            Assert.IsNotNull(badWpnReason);
+            StringAssert.Contains("Incompatible Main Hand weapon", badWpnReason);
+
+            // 3. Random Creation — generates valid characters across multiple seeds without infinite loops
+            for (int seed = 1; seed <= 25; seed++)
+            {
+                var rng = new System.Random(seed * 7919);
+                Assert.IsTrue(session.TryRandomize(rng, out string randErr), $"Seed {seed} failed: {randErr}");
+                Assert.AreEqual(CreationMethod.Random, session.Method);
+                Assert.IsTrue(session.Race.isPlayable);
+                Assert.IsTrue(session.Class.isPlayable);
+                Assert.AreEqual(0, session.PointBuy.RemainingPoints);
+                Assert.IsTrue(session.PointBuy.IsValidForConfirmation(out _));
+                Assert.AreEqual(8, session.Equipped.Count);
+                Assert.IsTrue(session.CanConfirm, session.Validate());
+
+                session.CharacterName = $"Rand_{seed}";
+                var randDef = session.Confirm(null, $"rand_{seed}");
+                Assert.AreEqual(CreationMethod.Random, randDef.creationMethod);
+                Assert.IsNull(CharacterCreationSession.ValidateCharacterDef(randDef));
+            }
+        }
+
+        [Test]
+        public void RandomizeAllGeneratesFourValidPendingCharactersWithoutAutoConfirmingOrOverwritingSave()
+        {
+            // Seed an existing confirmed save first to verify RandomizeAll does NOT overwrite it
+            GameSave.ClearSave();
+            var savedRoster = new CharacterRoster(startWithEmptyParty: false);
+            GameSave.SaveNewGame(savedRoster.AssembledParty, seed: 101);
+            Assert.IsTrue(GameSave.HasSavedGame());
+
+            var builder = new NewGamePartyBuilder();
+            builder.StartNewGame();
+            Assert.AreEqual(NewGameFlowState.PendingCharacterCreation, builder.FlowState);
+            Assert.AreEqual(0, builder.PendingParty.Count);
+            Assert.IsFalse(builder.IsPartyConfirmed);
+
+            // Execute Randomize All
+            var rng = new System.Random(4242);
+            Assert.IsTrue(builder.TryRandomizeAll(rng, out string err), err);
+
+            // 1. Generates 4 valid randomized characters in PendingParty
+            Assert.AreEqual(4, builder.PendingParty.Count);
+            Assert.IsTrue(builder.CanConfirmParty);
+            Assert.AreEqual(NewGameFlowState.PendingPartyReview, builder.FlowState);
+
+            for (int i = 0; i < CharacterRoster.PartySize; i++)
+            {
+                var hero = builder.PendingParty[i];
+                Assert.IsNotNull(hero);
+                Assert.AreEqual(CreationMethod.Random, hero.creationMethod);
+                Assert.IsNull(CharacterCreationSession.ValidateCharacterDef(hero), $"Slot {i} invalid");
+            }
+
+            // 2. Does NOT auto-confirm the party and does NOT start the expedition
+            Assert.IsFalse(builder.IsPartyConfirmed, "RandomizeAll must NOT auto-confirm the party");
+            Assert.IsFalse(builder.TryBeginOpeningSequence(out string notConfirmedErr));
+            StringAssert.Contains("must be confirmed", notConfirmedErr);
+
+            // 3. Existing save remains untouched while in pending creation/review
+            Assert.IsTrue(GameSave.TryLoadContinue(out var loadedRoster, out var loadedRun));
+            Assert.AreEqual("knight", loadedRoster.AssembledParty[0].id, "Existing save must NOT be overwritten by RandomizeAll before party confirmation");
+            Assert.AreEqual(101, loadedRun.Seed);
+
+            // 4. Player can still reroll or edit individual members after RandomizeAll before confirming
+            Assert.IsTrue(builder.ReturnToEditCharacter(2));
+            Assert.AreEqual(NewGameFlowState.PendingCharacterCreation, builder.FlowState);
+            Assert.AreEqual(2, builder.CurrentMemberIndex);
+
+            GameSave.ClearSave();
+        }
+
+        [Test]
+        public void RerollSelectedModifiesOnlySelectedMemberAndLeavesOtherThreeUnchanged()
+        {
+            var builder = new NewGamePartyBuilder();
+            builder.StartNewGame();
+            Assert.IsTrue(builder.TryRandomizeAll(new System.Random(12345), out string initErr), initErr);
+            Assert.AreEqual(4, builder.PendingParty.Count);
+            Assert.AreEqual(NewGameFlowState.PendingPartyReview, builder.FlowState);
+
+            // Snapshot the 4 party members before rerolling slot 1 (Character 2)
+            var before0 = builder.PendingParty[0];
+            var before1 = builder.PendingParty[1];
+            var before2 = builder.PendingParty[2];
+            var before3 = builder.PendingParty[3];
+
+            // Reroll ONLY slot 1 (Character 2)
+            Assert.IsTrue(builder.TryRerollSelected(1, new System.Random(99999), out string rerollErr), rerollErr);
+
+            // 1. Other 3 party members are completely unchanged (same instances & data)
+            Assert.AreSame(before0, builder.PendingParty[0], "Slot 0 must not be modified by RerollSelected(1)");
+            Assert.AreSame(before2, builder.PendingParty[2], "Slot 2 must not be modified by RerollSelected(1)");
+            Assert.AreSame(before3, builder.PendingParty[3], "Slot 3 must not be modified by RerollSelected(1)");
+
+            // 2. Selected member (slot 1) has a newly generated valid character
+            var after1 = builder.PendingParty[1];
+            Assert.IsNotNull(after1);
+            Assert.AreNotSame(before1, after1, "Slot 1 must be replaced with a new randomized CharacterDef");
+            Assert.AreEqual(CreationMethod.Random, after1.creationMethod);
+            Assert.IsNull(CharacterCreationSession.ValidateCharacterDef(after1));
+
+            // 3. Party is not reset (still 4 members) and is NOT auto-confirmed
+            Assert.AreEqual(4, builder.PendingParty.Count);
+            Assert.IsFalse(builder.IsPartyConfirmed, "RerollSelected must NOT auto-confirm the party");
+            Assert.AreEqual(NewGameFlowState.PendingPartyReview, builder.FlowState);
+        }
+
+        [Test]
+        public void MainMenuNewGameContinueSaveLoadOpeningSequenceAndSubsequentExpeditionFlowWorkProperly()
+        {
+            GameSave.ClearSave();
+            Assert.IsFalse(GameSave.HasSavedGame());
+
+            var roster = new CharacterRoster(startWithEmptyParty: true);
+            var builder = new NewGamePartyBuilder();
+
+            // 1. New Game starts in PendingCharacterCreation; cannot confirm or begin with < 4 heroes
+            builder.StartNewGame();
+            Assert.AreEqual(NewGameFlowState.PendingCharacterCreation, builder.FlowState);
+            Assert.IsFalse(builder.TryConfirmParty(roster, out string incErr));
+            StringAssert.Contains("incomplete", incErr.ToLowerInvariant());
+
+            // 2. Create 4 heroes (mix of Manual, Template, and Random)
+            // Hero 1: Manual
+            builder.CurrentSession.SelectRace("human");
+            builder.CurrentSession.SelectClass("fighter");
+            builder.CurrentSession.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
+            Assert.IsTrue(builder.TryConfirmCurrentCharacter(out var h1, out string err1), err1);
+            h1.name = "Aldric";
+            Assert.AreEqual(1, builder.PendingParty.Count);
+
+            // Hero 2: Template
+            Assert.IsTrue(builder.CurrentSession.TryApplyTemplate("sharpshooter_ranger", out string err2), err2);
+            Assert.IsTrue(builder.TryConfirmCurrentCharacter(out var h2, out err2), err2);
+            h2.name = "Sylva";
+            Assert.AreEqual(2, builder.PendingParty.Count);
+
+            // Hero 3: Template
+            Assert.IsTrue(builder.CurrentSession.TryApplyTemplate("elemental_wizard", out string err3), err3);
+            Assert.IsTrue(builder.TryConfirmCurrentCharacter(out var h3, out err3), err3);
+            h3.name = "Lyra";
+            Assert.AreEqual(3, builder.PendingParty.Count);
+
+            // Hero 4: Random
+            Assert.IsTrue(builder.CurrentSession.TryRandomize(new System.Random(77), out string err4), err4);
+            Assert.IsTrue(builder.TryConfirmCurrentCharacter(out var h4, out err4), err4);
+            h4.name = "Kael";
+            Assert.AreEqual(4, builder.PendingParty.Count);
+
+            // 3. Now in PendingPartyReview; review summary lists all 4 members, and save does NOT exist yet
+            Assert.AreEqual(NewGameFlowState.PendingPartyReview, builder.FlowState);
+            string summary = builder.GetPartyReviewSummary();
+            StringAssert.Contains("Aldric", summary);
+            StringAssert.Contains("Sylva", summary);
+            StringAssert.Contains("Lyra", summary);
+            StringAssert.Contains("Kael", summary);
+            Assert.IsFalse(GameSave.HasSavedGame(), "Save must not be committed before party confirmation");
+
+            // 4. Confirm Party & Begin Opening Sequence -> commits party to Roster, transitions to OpeningSequence, and writes GameSave
+            Assert.IsTrue(builder.TryConfirmParty(roster, out string confirmErr, initialSeed: 555), confirmErr);
+            Assert.IsTrue(builder.IsPartyConfirmed);
+            Assert.AreEqual(NewGameFlowState.OpeningSequence, builder.FlowState);
+            Assert.AreEqual(4, roster.PartyCount);
+            Assert.IsTrue(GameSave.HasSavedGame());
+
+            // Initialize first expedition and persist save
+            var firstRun = builder.BeginFirstExpedition(roster, seed: 555);
+            Assert.AreEqual(NewGameFlowState.FirstExpedition, builder.FlowState);
+            Assert.AreEqual(4, firstRun.Party.Count);
+            Assert.AreEqual("Aldric", firstRun.Party[0].name);
+            Assert.AreEqual("Sylva", firstRun.Party[1].name);
+            Assert.AreEqual("Lyra", firstRun.Party[2].name);
+            Assert.AreEqual("Kael", firstRun.Party[3].name);
+
+            // Progress in the run (e.g. gain gold and lose some HP) and save
+            firstRun.Gold = 250;
+            firstRun.Party[0].hp -= 12;
+            int expectedHp0 = firstRun.Party[0].hp;
+            GameSave.SaveRunState(firstRun, roster.AssembledParty);
+            Assert.IsTrue(GameSave.HasSavedGame());
+
+            // 5. Continue loads the saved party (races, classes, ability scores, starter passives, skills, 8 equipment slots) and run progression
+            Assert.IsTrue(GameSave.TryLoadContinue(out var restoredRoster, out var restoredRun));
+            Assert.AreEqual(4, restoredRoster.AssembledParty.Count);
+            Assert.AreEqual("Aldric", restoredRoster.AssembledParty[0].name);
+            Assert.AreEqual("human", restoredRoster.AssembledParty[0].raceId);
+            Assert.AreEqual("fighter", restoredRoster.AssembledParty[0].classId);
+            Assert.AreEqual("weapon_proficiency", restoredRoster.AssembledParty[0].starterPassiveId);
+            Assert.AreEqual(8, restoredRoster.AssembledParty[0].startingEquipment.Length);
+            Assert.AreEqual(250, restoredRun.Gold);
+            Assert.AreEqual(expectedHp0, restoredRun.Party[0].hp);
+            Assert.AreEqual(4, restoredRun.Party.Count);
+
+            // 6. Starting a subsequent expedition reuses the confirmed party in Roster without repeating Character Creation
+            var secondExpedition = restoredRoster.BeginExpedition(seed: 888);
+            Assert.AreEqual(4, secondExpedition.Party.Count);
+            Assert.AreEqual("Aldric", secondExpedition.Party[0].name);
+            Assert.AreEqual("Sylva", secondExpedition.Party[1].name);
+            Assert.AreEqual("Lyra", secondExpedition.Party[2].name);
+            Assert.AreEqual("Kael", secondExpedition.Party[3].name);
+
+            GameSave.ClearSave();
         }
     }
 }

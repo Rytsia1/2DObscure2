@@ -1261,6 +1261,189 @@ namespace Obscure
         public static readonly string[] Party = { "knight", "rogue", "mage", "healer" };
         public static readonly string[] StartingItems = { "draught", "draught", "ether" };
 
+        // ---- 10b. Data-Driven Character Creation Templates (Section 4.2) ----
+        public static readonly string[] TemplateIds =
+        {
+            "frontline_fighter", "berserker_barbarian", "monk_martial_artist",
+            "agile_rogue", "sharpshooter_ranger", "support_cleric",
+            "elemental_wizard", "pact_warlock", "nature_druid"
+        };
+
+        public static readonly Dictionary<string, CharacterTemplateDef> Templates = Index(new[]
+        {
+            new CharacterTemplateDef
+            {
+                id = "frontline_fighter", name = "Frontline Fighter",
+                description = "Durable sword-and-shield vanguard built for frontline defense and posture breaking.",
+                raceId = "human", classId = "fighter", backgroundId = "oathsworn",
+                baseScores = new AbilityScores(15, 12, 15, 8, 10, 11), // 9+4+9+0+2+3 = 27
+                starterPassiveId = "weapon_proficiency",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "iron_broadsword"),
+                    Eq(EquipmentSlot.SecondHand, "iron_shield"),
+                    Eq(EquipmentSlot.HeadArmor, "iron_helm"),
+                    Eq(EquipmentSlot.BodyArmor, "chain_hauberk"),
+                    Eq(EquipmentSlot.LegArmor, "chain_greaves"),
+                    Eq(EquipmentSlot.FootArmor, "iron_sabatons"),
+                    Eq(EquipmentSlot.Accessory1, "vanguard_ring"),
+                    Eq(EquipmentSlot.Accessory2, "soldier_medal")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "berserker_barbarian", name = "Frenzied Berserker",
+                description = "High-strength Dragonborn bruiser thriving in low-HP berserk exchanges.",
+                raceId = "dragonborn", classId = "barbarian", backgroundId = "outcast",
+                baseScores = new AbilityScores(15, 12, 15, 8, 10, 11), // 9+4+9+0+2+3 = 27
+                starterPassiveId = "savage_instinct",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "battle_greataxe"),
+                    Eq(EquipmentSlot.SecondHand, "bone_warhorn"),
+                    Eq(EquipmentSlot.HeadArmor, "horned_helm"),
+                    Eq(EquipmentSlot.BodyArmor, "hide_harness"),
+                    Eq(EquipmentSlot.LegArmor, "fur_leggings"),
+                    Eq(EquipmentSlot.FootArmor, "strider_boots"),
+                    Eq(EquipmentSlot.Accessory1, "fang_talisman"),
+                    Eq(EquipmentSlot.Accessory2, "vanguard_ring")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "monk_martial_artist", name = "Zen Striker",
+                description = "Fast unarmed striker focused on Combo Flow and shattering enemy Break Gauges.",
+                raceId = "liichtian", classId = "martial_artist", backgroundId = "pilgrim",
+                baseScores = new AbilityScores(14, 15, 13, 8, 13, 9), // 7+9+5+0+5+1 = 27
+                starterPassiveId = "martial_discipline",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "hand_wraps"),
+                    Eq(EquipmentSlot.SecondHand, "ki_beads"),
+                    Eq(EquipmentSlot.HeadArmor, "monk_headband"),
+                    Eq(EquipmentSlot.BodyArmor, "cloth_tunic"),
+                    Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
+                    Eq(EquipmentSlot.FootArmor, "soft_boots"),
+                    Eq(EquipmentSlot.Accessory1, "focus_band"),
+                    Eq(EquipmentSlot.Accessory2, "swift_anklet")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "agile_rogue", name = "Agile Rogue",
+                description = "High-initiative Halfling opportunist exploiting debuffed targets for critical hits.",
+                raceId = "halfling", classId = "rogue", backgroundId = "outcast",
+                baseScores = new AbilityScores(14, 15, 12, 9, 12, 10), // 7+9+4+1+4+2 = 27
+                starterPassiveId = "opportunist",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "iron_dagger"),
+                    Eq(EquipmentSlot.SecondHand, "parrying_dagger"),
+                    Eq(EquipmentSlot.HeadArmor, "shadow_hood"),
+                    Eq(EquipmentSlot.BodyArmor, "leather_jerkin"),
+                    Eq(EquipmentSlot.LegArmor, "leather_greaves"),
+                    Eq(EquipmentSlot.FootArmor, "soft_boots"),
+                    Eq(EquipmentSlot.Accessory1, "thief_ring"),
+                    Eq(EquipmentSlot.Accessory2, "swift_anklet")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "sharpshooter_ranger", name = "Sharpshooter Ranger",
+                description = "Precision Elven archer leveraging Hunter's Instinct for accurate ranged volleys.",
+                raceId = "elf", classId = "ranger", backgroundId = "outcast",
+                baseScores = new AbilityScores(12, 15, 13, 10, 13, 10), // 4+9+5+2+5+2 = 27
+                starterPassiveId = "hunters_instinct",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "hunting_bow"),
+                    Eq(EquipmentSlot.SecondHand, "fletched_quiver"),
+                    Eq(EquipmentSlot.HeadArmor, "scout_cap"),
+                    Eq(EquipmentSlot.BodyArmor, "leather_jerkin"),
+                    Eq(EquipmentSlot.LegArmor, "leather_greaves"),
+                    Eq(EquipmentSlot.FootArmor, "strider_boots"),
+                    Eq(EquipmentSlot.Accessory1, "hawk_feather"),
+                    Eq(EquipmentSlot.Accessory2, "swift_anklet")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "support_cleric", name = "Support Cleric",
+                description = "Resilient Dwarven healer and protector amplified by Divine Grace.",
+                raceId = "dwarf", classId = "cleric", backgroundId = "pilgrim",
+                baseScores = new AbilityScores(10, 10, 14, 10, 15, 13), // 2+2+7+2+9+5 = 27
+                starterPassiveId = "divine_grace",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "sanctified_mace"),
+                    Eq(EquipmentSlot.SecondHand, "sacred_chime"),
+                    Eq(EquipmentSlot.HeadArmor, "acolyte_circlet"),
+                    Eq(EquipmentSlot.BodyArmor, "linen_vestments"),
+                    Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
+                    Eq(EquipmentSlot.FootArmor, "pilgrim_sandals"),
+                    Eq(EquipmentSlot.Accessory1, "prayer_rosary"),
+                    Eq(EquipmentSlot.Accessory2, "soldier_medal")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "elemental_wizard", name = "Elemental Wizard",
+                description = "Arcane spellcaster with reduced spell MP costs and high elemental Break damage.",
+                raceId = "elf", classId = "wizard", backgroundId = "acolyte",
+                baseScores = new AbilityScores(8, 12, 13, 15, 13, 12), // 0+4+5+9+5+4 = 27
+                starterPassiveId = "arcane_affinity",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "oak_staff"),
+                    Eq(EquipmentSlot.SecondHand, "apprentice_tome"),
+                    Eq(EquipmentSlot.HeadArmor, "scholar_hood"),
+                    Eq(EquipmentSlot.BodyArmor, "cloth_tunic"),
+                    Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
+                    Eq(EquipmentSlot.FootArmor, "pilgrim_sandals"),
+                    Eq(EquipmentSlot.Accessory1, "mana_crystal"),
+                    Eq(EquipmentSlot.Accessory2, "focus_band")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "pact_warlock", name = "Pact Warlock",
+                description = "Occult caster channeling Pact Affinity for amplified dark magic and hexes.",
+                raceId = "dragonborn", classId = "warlock", backgroundId = "acolyte",
+                baseScores = new AbilityScores(8, 10, 13, 15, 10, 15), // 0+2+5+9+2+9 = 27
+                starterPassiveId = "pact_affinity",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "eldritch_rod"),
+                    Eq(EquipmentSlot.SecondHand, "pact_grimoire"),
+                    Eq(EquipmentSlot.HeadArmor, "cowl_of_whispers"),
+                    Eq(EquipmentSlot.BodyArmor, "darkweave_robe"),
+                    Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
+                    Eq(EquipmentSlot.FootArmor, "pilgrim_sandals"),
+                    Eq(EquipmentSlot.Accessory1, "pact_seal"),
+                    Eq(EquipmentSlot.Accessory2, "mana_crystal")
+                }
+            },
+            new CharacterTemplateDef
+            {
+                id = "nature_druid", name = "Nature Druid",
+                description = "Balanced Merfolk primal caster combining Nature's Attunement magic and restorative healing.",
+                raceId = "merfolk", classId = "druid", backgroundId = "pilgrim",
+                baseScores = new AbilityScores(10, 12, 14, 10, 15, 11), // 2+4+7+2+9+3 = 27
+                starterPassiveId = "natures_attunement",
+                startingEquipment = new[]
+                {
+                    Eq(EquipmentSlot.MainHand, "oak_staff"),
+                    Eq(EquipmentSlot.SecondHand, "verdant_totem"),
+                    Eq(EquipmentSlot.HeadArmor, "antler_crown"),
+                    Eq(EquipmentSlot.BodyArmor, "barkskin_vest"),
+                    Eq(EquipmentSlot.LegArmor, "fur_leggings"),
+                    Eq(EquipmentSlot.FootArmor, "strider_boots"),
+                    Eq(EquipmentSlot.Accessory1, "amber_seed"),
+                    Eq(EquipmentSlot.Accessory2, "prayer_rosary")
+                }
+            },
+        }, t => t.id);
+
         public static readonly Dictionary<string, EnemyDef> Enemies = Index(new[]
         {
             new EnemyDef

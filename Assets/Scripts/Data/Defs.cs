@@ -34,6 +34,13 @@ namespace Obscure
 
     public enum AiKind { Basic, Tactical, Boss }
 
+    public enum CreationMethod
+    {
+        Manual = 0,
+        Template = 1,
+        Random = 2
+    }
+
     [Serializable]
     public struct EquipmentSlotAssignment
     {
@@ -47,10 +54,29 @@ namespace Obscure
         }
     }
 
+    // Data-driven predefined character build template for Template Creation (Section 4.2).
+    [Serializable]
+    public class CharacterTemplateDef
+    {
+        public string id;
+        public string name;
+        public string description;
+        public string raceId = "human";
+        public string classId = "fighter";
+        public string backgroundId = "oathsworn";
+        public AbilityScores baseScores = AbilityScores.DefaultBase;
+        public string starterPassiveId;
+        public string[] activeSkillLoadout = Array.Empty<string>();
+        public string[] passiveSkillLoadout = Array.Empty<string>();
+        public EquipmentSlotAssignment[] startingEquipment = Array.Empty<EquipmentSlotAssignment>();
+    }
+
     // Combat uses only HP and MP resource pools (Section 5).
     public class CharacterDef
     {
         public string id, name, role, description;
+        public CreationMethod creationMethod = CreationMethod.Manual;
+        public string templateId;
         public string raceId = "human", classId = "knight", backgroundId = "oathsworn";
         public AbilityScores baseScores = AbilityScores.DefaultBase;
         public string starterPassiveId;
