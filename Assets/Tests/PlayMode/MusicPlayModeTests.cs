@@ -124,7 +124,7 @@ namespace Obscure.Tests
         }
 
         [UnityTest]
-        public IEnumerator BattleUsesItsEncounterThemeThenMapPlaysMenuMusic()
+        public IEnumerator BattleUsesItsEncounterThemeThenMapPlaysMapMusic()
         {
             var run = new RunState(MapGenerator.Generate(11), Database.Party.Select(id => Database.Characters[id]), 11);
             typeof(Game).GetProperty(nameof(Game.Run)).SetValue(Game.I, run); // no Continue/save involved
@@ -139,15 +139,17 @@ namespace Obscure.Tests
             Assert.IsTrue(Music.Source.isPlaying);
 
             yield return GoTo(GameState.Map); // battle -> exploration
+            Assert.AreEqual(MusicIds.Map, Music.CurrentId);
+            yield return Until(() => !Music.Fading);
+            Assert.AreSame(Library.Get(MusicIds.Map).clip, Music.Source.clip);
+            Assert.IsTrue(Music.Source.isPlaying);
+            Assert.IsTrue(Music.Source.loop);
+
+            Game.I.EndRun(); // -> title
+            yield return Until(() => Game.I.State == GameState.MainMenu && !Controls.Locked);
             Assert.AreEqual(MusicIds.MainMenu, Music.CurrentId);
             yield return Until(() => !Music.Fading);
             Assert.AreSame(Library.Get(MusicIds.MainMenu).clip, Music.Source.clip);
-            Assert.IsTrue(Music.Source.isPlaying);
-
-            Game.I.EndRun(); // -> title: same track, so it carries on without restarting
-            yield return Until(() => Game.I.State == GameState.MainMenu && !Controls.Locked);
-            Assert.AreEqual(MusicIds.MainMenu, Music.CurrentId);
-            Assert.IsFalse(Music.Fading);
         }
 
         [UnityTest]

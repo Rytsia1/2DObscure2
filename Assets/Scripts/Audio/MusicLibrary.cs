@@ -9,7 +9,7 @@ namespace Obscure
 
     public static class MusicIds
     {
-        public const string MainMenu = "main_menu", Battle1 = "battle_1", Battle2 = "battle_2", Battle3 = "battle_3";
+        public const string MainMenu = "main_menu", Map = "map", Battle1 = "battle_1", Battle2 = "battle_2", Battle3 = "battle_3";
     }
 
     [Serializable]
@@ -33,7 +33,7 @@ namespace Obscure
         [Header("Selection (empty id = silence)")]
         public string menuMusic = MusicIds.MainMenu;
         public string creationMusic = "";       // character creation and prologue
-        public string explorationMusic = MusicIds.MainMenu; // map, rewards, rest, events, run summary
+        public string explorationMusic = MusicIds.Map; // map, rewards, rest, events, run summary
         public string defaultBattleMusic = MusicIds.Battle1;
         public bool randomBattleMusic;           // encounters without their own theme pick a random battle track
 

@@ -10,13 +10,14 @@ namespace Obscure.Tests
         static readonly string[] BattleIds = { MusicIds.Battle1, MusicIds.Battle2, MusicIds.Battle3 };
 
         [Test]
-        public void LibraryMapsTheFourProjectTracks()
+        public void LibraryMapsTheProjectTracks()
         {
             var lib = Library;
             Assert.IsNotNull(lib, "Resources/MusicLibrary.asset is missing");
             var expected = new (string id, string file, MusicCategory category)[]
             {
                 (MusicIds.MainMenu, "The beginning of an endless journey- Main Menu", MusicCategory.Menu),
+                (MusicIds.Map, "Stone_Path_at_Daybreak", MusicCategory.Exploration),
                 (MusicIds.Battle1, "When the journey becomes a battle - Battle Theme 1", MusicCategory.Battle),
                 (MusicIds.Battle2, "Every shadow hides a challenge - Battle theme 2", MusicCategory.Battle),
                 (MusicIds.Battle3, "Let every strike become a melody - Battle theme 3", MusicCategory.Battle),
@@ -30,7 +31,7 @@ namespace Obscure.Tests
                 Assert.IsTrue(t.loop, id);
                 Assert.Greater(t.clip.length, 30f, id);
             }
-            Assert.AreEqual(4, lib.tracks.Select(t => t.clip).Distinct().Count(), "every id has its own clip");
+            Assert.AreEqual(lib.tracks.Length, lib.tracks.Select(t => t.clip).Distinct().Count(), "every id has its own clip");
         }
 
         [Test]
@@ -76,7 +77,7 @@ namespace Obscure.Tests
             foreach (var quiet in new[] { GameState.CharacterCreation, GameState.OpeningSequence })
                 Assert.AreEqual("", lib.MusicFor(quiet, null, rng), quiet.ToString());
             foreach (var exploring in new[] { GameState.Map, GameState.Reward, GameState.Rest, GameState.Event, GameState.GameOver, GameState.Victory })
-                Assert.AreEqual(MusicIds.MainMenu, lib.MusicFor(exploring, null, rng), exploring.ToString());
+                Assert.AreEqual(MusicIds.Map, lib.MusicFor(exploring, null, rng), exploring.ToString());
 
             var run = new RunState(MapGenerator.Generate(7), Database.Party.Select(id => Database.Characters[id]), 7);
             var node = run.Available.First(n => n.IsCombat);
@@ -99,6 +100,31 @@ namespace Obscure.Tests
             Assert.AreEqual(0.3f, back.MusicLevel, 1e-5f);
             back.musicMuted = true;
             Assert.AreEqual(0f, JsonUtility.FromJson<GameSettings>(JsonUtility.ToJson(back)).MusicLevel);
+        }
+
+        [Test]
+        public void UiHoverSfxAssetAndSynthesisMatchQuarterSecondCrystallineSpec()
+        {
+            var clip = Resources.Load<AudioClip>(Sfx.UiHoverResourcePath);
+            Assert.IsNotNull(clip, "Resources/Sfx/ui_hover.wav is missing");
+            Assert.AreEqual(0.25f, clip.length, 0.005f, "UI hover sound must be 0.25 seconds");
+            Assert.AreEqual(44100, clip.frequency);
+
+            var samples = Sfx.GenerateUiHoverSamples();
+            Assert.AreEqual(11025, samples.Length);
+            Assert.AreEqual(0f, samples[samples.Length - 1], 1e-4f, "Clean fade-out with no end click");
+
+            var host = new GameObject("TestSfxHost");
+            try
+            {
+                Sfx.Init(host);
+                Assert.IsNotNull(Sfx.GetClip(Sound.Move));
+                Assert.AreEqual(0.25f, Sfx.GetClip(Sound.Move).length, 0.005f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
         }
     }
 }

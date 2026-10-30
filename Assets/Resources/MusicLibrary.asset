@@ -41,9 +41,16 @@ MonoBehaviour:
     volume: 1
     fadeIn: -1
     fadeOut: -1
+  - id: map
+    clip: {fileID: 8300000, guid: 4cdc74e8eb8a92c4e8e0ce514e18b33a, type: 3}
+    category: 2
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
   menuMusic: main_menu
   creationMusic: 
-  explorationMusic: main_menu
+  explorationMusic: map
   defaultBattleMusic: battle_1
   randomBattleMusic: 0
   fadeOut: 0.6
