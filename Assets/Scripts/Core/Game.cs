@@ -12,7 +12,7 @@ namespace Obscure
     {
         protected Transform Root { get; private set; }
         protected static Game Game => Game.I;
-        protected static RunState Run => Game.I.Run;
+        protected static RunState Run => Game.I != null ? Game.I.Run : null;
 
         public void Open(Transform parent)
         {
@@ -62,7 +62,7 @@ namespace Obscure
             Sfx.Init(gameObject);
             MusicManager.Create(gameObject);
             Settings.Apply();
-            fader = Ui.Image(transform, PixelArt.Pixel, 0, 0, Ui.Overlay, Palette.Void);
+            fader = Ui.Image(transform, PixelArt.Pixel, 0, 0, Ui.Overlay, Color.clear);
             fader.transform.localScale = new Vector3(Ui.Width, Ui.Height, 1);
             Go(GameState.MainMenu);
         }

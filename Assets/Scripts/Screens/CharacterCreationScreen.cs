@@ -6,11 +6,7 @@ using UnityEngine;
 namespace Obscure
 {
     // Full Character Creation & 4-Hero Party Assembly screen (Character Creation System Specification Sections 2-10).
-    // Supports:
-    // 1. Create New Character -> 2. Select Race (7 playable races) -> 3. Select Class (9 playable classes)
-    // -> 4. Allocate Ability Scores (27-Point Buy) -> 5. Review Character Stats -> 6. Review Starter Passive
-    // -> 7. Configure Equipment (8 slots with Strict Weapon Compatibility) -> 8. Confirm Character
-    // -> 9. Add Character to Party -> 10. Repeat until Party has 4 Heroes -> 11. Begin Expedition.
+    // Conforming to 640x360 Reference Resolution, Octopath Traveler II Aesthetics, Serif Display Headers.
     public class CharacterCreationScreen : GameScreen
     {
         public NewGamePartyBuilder Builder { get; private set; }
@@ -35,8 +31,8 @@ namespace Obscure
         readonly Dictionary<Ability, Label[]> abilityColumns = new Dictionary<Ability, Label[]>();
         Label classTitle;
 
-        // Ability table columns (centers) inside the 160px rows at x=11: BASE, RACE, TOTAL, MOD, COST.
-        static readonly int[] AbilityColumnX = { 39, 65, 93, 120, 146 };
+        // Ability table columns (centers) inside the 320px rows at x=14: BASE, RACE, TOTAL, MOD, COST.
+        static readonly int[] AbilityColumnX = { 95, 145, 195, 245, 290 };
         const int RightTextWidth = 112, HintWidth = 308;
 
         public EquipmentSlot SelectedEquipmentSlot { get; private set; } = EquipmentSlot.MainHand;
@@ -73,6 +69,8 @@ namespace Obscure
             DerivedStatId.QteTimingBonus,
         };
 
+        public CharacterCreationScreen() : this(null, null, null) { }
+
         public CharacterCreationScreen(CharacterCreationSession session = null, CharacterRoster roster = null, NewGamePartyBuilder builder = null)
         {
             if (builder != null)
@@ -89,116 +87,124 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 8, Palette.Void, Palette.Night, Palette.Dusk);
+            Backdrop.Create(Root, false, 8, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk);
 
-            // Top bar: Title, Current Step & Remaining Point Buy Budget
-            Ui.Panel(Root, 0, 0, Ui.Width, 16);
-            Ui.Label(Root, "CHARACTER CREATION", 6, 4, Palette.Gold);
-            StepLabel = Ui.Label(Root, "", 162, 4, Palette.Parchment, Align.Center);
-            RemainingPointsLabel = Ui.Label(Root, "", 314, 4, Palette.Gold, Align.Right);
+            // 1. Top bar: Title, Current Step & Remaining Point Buy Budget
+            Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
+            Ui.Label(Root, "CHARACTER CREATION & RECRUITMENT", 14, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            StepLabel = Ui.Label(Root, "", 320, 7, Palette.WarmIvory, Align.Center);
+            RemainingPointsLabel = Ui.Label(Root, "", 626, 7, Palette.AntiqueGoldBright, Align.Right);
 
-            // Left panel: Creation Method, Race, Class, Equipment (8 slots), and 6 Point Buy Ability Rows
-            Ui.Panel(Root, 2, 17, 174, 134);
-            // Right panel: Live Character, Starter Passive & Derived Stats Preview
-            Ui.Panel(Root, 178, 17, 140, 134);
-            // Bottom panel: Validation Feedback / Party Bar (X/4) & Action buttons
-            Ui.Panel(Root, 0, 152, Ui.Width, 28);
+            // 2. Left panel (334x294): Creation Method, Race, Class, Equipment, and 6 Ability Rows
+            Ui.Panel(Root, 10, 28, 336, 294, Palette.DeepCharcoal, Palette.DarkBorder);
+
+            // 3. Right panel (274x294): Live Character, Starter Passive & Derived Stats Preview
+            Ui.Panel(Root, 354, 28, 276, 294, Palette.DeepCharcoal, Palette.DarkBorder);
+
+            // 4. Bottom panel (640x36): Validation Feedback / Party Bar (X/4) & Action buttons
+            Ui.Panel(Root, 0, 324, Ui.Width, 36, Palette.DeepCharcoal, Palette.AntiqueGold);
 
             var menu = Root.gameObject.AddComponent<Menu>();
-            HintLabel = Ui.Label(Root, "", 6, 155, Palette.Parchment);
-            PartySummaryLabel = Ui.Label(Root, "", 6, 165, Palette.Ash);
+            HintLabel = Ui.Label(Root, "", 14, 328, Palette.WarmIvory);
+            PartySummaryLabel = Ui.Label(Root, "", 14, 342, Palette.MutedGray);
             menu.onFocus = s => SetHint(s?.tooltip ?? "LEFT/RIGHT: ADJUST   ENTER: SELECT");
 
-            // 1. Creation Method / Template / Random Selector (Section 4)
-            var methodBtn = Ui.Button(Root, "", 11, 19, 160, OnActivateCreationMethodButton, 9);
+            // Creation Method / Template / Random Selector
+            var methodBtn = Ui.Button(Root, "", 18, 32, 320, OnActivateCreationMethodButton, 19);
             methodBtn.onAdjust = CycleCreationMethodOrTemplate;
             methodBtn.tooltip = "L/R: MANUAL, TEMPLATE OR RANDOM. ENTER: REROLL";
             MethodLabel = methodBtn.label;
             menu.Add(methodBtn);
 
-            // 2. Race Selector (7 Playable Races) — x=11 keeps '>' cursor at x=4 inside left panel border
-            var raceBtn = Ui.Button(Root, "", 11, 29, 160, () => CycleRace(1), 9);
+            // Race Selector (7 Playable Races)
+            var raceBtn = Ui.Button(Root, "", 18, 54, 320, () => CycleRace(1), 19);
             raceBtn.onAdjust = CycleRace;
             raceBtn.tooltip = "STEP 2: LEFT/RIGHT SELECT RACE (BONUS+FEAT+UTIL)";
             RaceLabel = raceBtn.label;
             menu.Add(raceBtn);
 
-            // 3. Class Selector (9 Playable Classes)
-            var classBtn = Ui.Button(Root, "", 11, 39, 160, () => CycleClass(1), 9);
+            // Class Selector (9 Playable Classes)
+            var classBtn = Ui.Button(Root, "", 18, 76, 320, () => CycleClass(1), 19);
             classBtn.onAdjust = CycleClass;
             classBtn.tooltip = "STEP 3: LEFT/RIGHT SELECT CLASS & STARTER PASSIVE";
             ClassLabel = classBtn.label;
             menu.Add(classBtn);
 
-            // 4. Equipment Slot Configurator (8 Slots with Strict Weapon Compatibility)
-            var eqBtn = Ui.Button(Root, "", 11, 49, 160, () => CycleEquipmentSlot(1), 9);
+            // Equipment Slot Configurator
+            var eqBtn = Ui.Button(Root, "", 18, 98, 320, () => CycleEquipmentSlot(1), 19);
             eqBtn.onAdjust = CycleEquipmentItem;
             eqBtn.tooltip = "STEP 7: ENTER NEXT SLOT (1-8), L/R EQUIP ITEM";
             EquipmentSlotLabel = eqBtn.label;
             menu.Add(eqBtn);
 
-            BackgroundLabel = Ui.Label(Root, "", 11, 49, Color.clear); // retained for compatibility
+            BackgroundLabel = Ui.Label(Root, "", 18, 98, Color.clear); // retained for compatibility
 
-            // Ability table: one label per column so the proportional font still lines up.
-            Ui.Label(Root, "STAT", 17, 59, Palette.Ash);
+            // Ability table header
+            Ui.Divider(Root, 18, 120, 320, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            Ui.Label(Root, "STAT", 26, 124, Palette.MutedGray);
             string[] headers = { "BASE", "RACE", "TOTAL", "MOD", "COST" };
             for (int c = 0; c < headers.Length; c++)
-                Ui.Label(Root, headers[c], 11 + AbilityColumnX[c], 59, Palette.Ash, Align.Center);
+                Ui.Label(Root, headers[c], 18 + AbilityColumnX[c], 124, Palette.MutedGray, Align.Center);
 
-            // 5. Six Primary Ability Score Point-Buy rows
+            // Six Primary Ability Score Point-Buy rows
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
             {
                 var ability = AbilityScores.AllAbilities[i];
-                int y = 67 + i * 11;
-                var btn = Ui.Button(Root, "", 11, y, 160, () => AdjustAbility(ability, 1), 10);
+                int y = 136 + i * 20;
+                var btn = Ui.Button(Root, "", 18, y, 320, () => AdjustAbility(ability, 1), 18);
                 btn.onAdjust = d => AdjustAbility(ability, d);
                 btn.tooltip = GetAbilityShortTooltip(ability);
-                AbilityRowLabels[ability] = Ui.Label(btn.transform, ability.ToString(), 6, 2, Palette.Bone, order: Ui.Widget + 1);
-                abilityColumns[ability] = AbilityColumnX.Select(x => Ui.Label(btn.transform, "", x, 2, Palette.Parchment, Align.Center, order: Ui.Widget + 1)).ToArray();
+                AbilityRowLabels[ability] = Ui.Label(btn.transform, ability.ToString(), 8, 2, Palette.WarmIvory, order: Ui.Widget + 1);
+                abilityColumns[ability] = AbilityColumnX.Select(x => Ui.Label(btn.transform, "", x, 2, Palette.WarmIvory, Align.Center, order: Ui.Widget + 1)).ToArray();
                 menu.Add(btn);
             }
 
-            // 6. Action Buttons: using framed box highlight without external cursor to prevent overlap in tight horizontal bars
-            resetOrEditBtn = Ui.Button(Root, "RESET", 10, 135, 34, OnResetOrEditClicked, 12, showCursor: false);
+            // Left panel bottom actions
+            Ui.Divider(Root, 18, 260, 320, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            resetOrEditBtn = Ui.Button(Root, "RESET", 18, 266, 70, OnResetOrEditClicked, 22, showCursor: false);
             resetOrEditBtn.tooltip = "RESET ABILITY SCORES TO 8 (OR EDIT SELECTED HERO)";
             menu.Add(resetOrEditBtn);
 
-            randOrRerollBtn = Ui.Button(Root, "RND 1", 52, 135, 34, () => OnRandomOrRerollSelected(), 12, showCursor: false);
+            randOrRerollBtn = Ui.Button(Root, "RND 1", 94, 266, 70, () => OnRandomOrRerollSelected(), 22, showCursor: false);
             randOrRerollBtn.tooltip = "RANDOMIZE CURRENT HERO OR REROLL SELECTED PARTY HERO";
             menu.Add(randOrRerollBtn);
 
-            confirmBtn = Ui.Button(Root, "ADD HERO", 94, 135, 48, ConfirmAndAddToParty, 12, showCursor: false);
+            confirmBtn = Ui.Button(Root, "ADD HERO", 170, 266, 88, ConfirmAndAddToParty, 22, showCursor: false);
             confirmBtn.onAdjust = d => CycleReviewSlot(d);
             confirmBtn.tooltip = "CONFIRM HERO (1-4) OR SELECT PARTY MEMBER IN REVIEW";
             menu.Add(confirmBtn);
 
-            var backBtn = Ui.Button(Root, "BACK", 150, 135, 24, OnBackPressed, 12, showCursor: false);
+            var backBtn = Ui.Button(Root, "BACK", 264, 266, 74, OnBackPressed, 22, showCursor: false);
             backBtn.tooltip = "PREVIOUS STEP OR RETURN TO TITLE SCREEN";
             menu.Add(backBtn);
             menu.onBack = OnBackPressed;
 
-            // Right Panel: Portrait (16x24 at y=19..43) + Identity/Feat/Passive header + Live Derived Stats (y=55..124)
-            portrait = Ui.Image(Root, PixelArt.FromRows(Session.Class.sprite), 182, 19, Ui.Widget);
-            classTitle = Ui.Label(Root, "", 202, 19, Palette.Gold);
-            ClassIdentityLabel = Ui.Label(Root, "", 202, 28, Palette.Parchment);
-            RaceFeatLabel = Ui.Label(Root, "", 202, 37, Palette.Ash);
-            StarterPassiveLabel = Ui.Label(Root, "", 183, 46, Palette.Moss);
+            // Right Panel: Portrait well + Identity/Feat/Passive header + Live Derived Stats
+            Ui.Image(Root, PixelArt.Box(40, 46, Palette.DeepCharcoal, Palette.AntiqueGoldDim), 364, 32, Ui.Panels + 1);
+            portrait = Ui.Image(Root, PixelArt.FromRows(Session.Class.sprite), 368, 36, Ui.Widget);
+            classTitle = Ui.Label(Root, "", 412, 33, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            ClassIdentityLabel = Ui.Label(Root, "", 412, 47, Palette.WarmIvory);
+            RaceFeatLabel = Ui.Label(Root, "", 412, 61, Palette.MutedGray);
+            StarterPassiveLabel = Ui.Label(Root, "", 364, 82, Palette.Emerald);
+
+            Ui.Divider(Root, 364, 96, 256, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             for (int i = 0; i < PreviewedStats.Length; i++)
             {
                 var st = PreviewedStats[i];
                 int col = i / 8;
                 int row = i % 8;
-                int x = 183 + col * 68;
-                int y = 56 + row * 9;
-                PreviewStatLabels[st] = Ui.Label(Root, "", x, y, Palette.Bone);
+                int x = 364 + col * 130;
+                int y = 104 + row * 19;
+                PreviewStatLabels[st] = Ui.Label(Root, "", x, y, Palette.WarmIvory);
             }
 
-            randAllBtn = Ui.Button(Root, "RND ALL", 188, 135, 48, () => RandomizeAll(), 12, showCursor: false);
+            Ui.Divider(Root, 364, 260, 256, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            randAllBtn = Ui.Button(Root, "RND ALL", 364, 266, 110, () => RandomizeAll(), 22, showCursor: false);
             randAllBtn.tooltip = "RANDOMIZE ALL 4 PENDING PARTY HEROES FOR REVIEW";
             menu.Add(randAllBtn);
 
-            startBtn = Ui.Button(Root, "CONFIRM 4", 244, 135, 70, () => TryConfirmPartyAndBegin(out _), 12, showCursor: false);
+            startBtn = Ui.Button(Root, "CONFIRM 4", 484, 266, 136, () => TryConfirmPartyAndBegin(out _), 22, showCursor: false);
             startBtn.tooltip = "CONFIRM 4-HERO PARTY, SAVE GAME & START PROLOGUE";
             menu.Add(startBtn);
 
@@ -217,7 +223,6 @@ namespace Obscure
             _ => ability.ToString(),
         };
 
-        // "RACE < HUMAN >", with the value trimmed so the whole row fits a 160px selector.
         static string Selector(string prefix, string value)
         {
             prefix = prefix.ToUpperInvariant();
@@ -235,11 +240,10 @@ namespace Obscure
             HintLabel?.Set(PixelFont.Fit((text ?? "").ToUpperInvariant(), HintWidth));
         }
 
-        // Cycles between Manual -> Predefined Templates (0..N-1) -> Random creation methods (Section 4).
         public void CycleCreationMethodOrTemplate(int dir)
         {
             EnsureEditingMode();
-            int totalModes = 2 + TemplateIds.Length; // 0 = Manual, 1..TemplateIds.Length = Templates, last = Random
+            int totalModes = 2 + TemplateIds.Length;
             int currentMode = Session.Method == CreationMethod.Manual
                 ? 0
                 : Session.Method == CreationMethod.Random
@@ -376,8 +380,6 @@ namespace Obscure
             Refresh();
         }
 
-        // In PendingPartyReview, rerolls ONLY the selected party member (Section 5.2).
-        // In PendingCharacterCreation, randomizes the current character being configured (Section 5).
         public void OnRandomOrRerollSelected(System.Random rng = null)
         {
             if (Builder.FlowState == NewGameFlowState.PendingPartyReview && Builder.PendingParty.Count > 0)
@@ -499,7 +501,7 @@ namespace Obscure
 
             int rem = Session.PointBuy.RemainingPoints;
             RemainingPointsLabel.Set($"POINTS {rem}/{Session.PointBuy.Config.budget}");
-            RemainingPointsLabel.Color = rem < 0 ? Palette.Crimson : rem == 0 ? Palette.Moss : Palette.Gold;
+            RemainingPointsLabel.Color = rem < 0 ? Palette.SpecCrimson : rem == 0 ? Palette.Emerald : Palette.AntiqueGold;
 
             if (Builder.FlowState == NewGameFlowState.PendingPartyReview && !Builder.EditingExistingMember)
                 StepLabel?.Set($"REVIEW ({Builder.SelectedReviewIndex + 1}/4)");
@@ -554,13 +556,13 @@ namespace Obscure
                 var cols = abilityColumns[a];
                 cols[0].Set(b.ToString());
                 cols[1].Set(r > 0 ? $"+{r}" : r < 0 ? r.ToString() : "-");
-                cols[1].Color = r > 0 ? Palette.Moss : r < 0 ? Palette.Crimson : Palette.Ash;
+                cols[1].Color = r > 0 ? Palette.Emerald : r < 0 ? Palette.SpecCrimson : Palette.MutedGray;
                 cols[2].Set(fin.ToString());
-                cols[2].Color = Palette.Bone;
+                cols[2].Color = Palette.WarmIvory;
                 cols[3].Set(AbilityScores.FormatMod(mod));
-                cols[3].Color = mod > 0 ? Palette.Moss : mod < 0 ? Palette.Crimson : Palette.Parchment;
+                cols[3].Color = mod > 0 ? Palette.Emerald : mod < 0 ? Palette.SpecCrimson : Palette.WarmIvory;
                 cols[4].Set(cost.ToString());
-                cols[4].Color = Palette.Gold;
+                cols[4].Color = Palette.AntiqueGold;
             }
 
             var preview = Session.PreviewDerivedStats;

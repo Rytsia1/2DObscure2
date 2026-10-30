@@ -5,32 +5,56 @@ using UnityEngine;
 namespace Obscure
 {
     // Rest site: Recover (heal part of missing HP/MP) or Improve one hero. One choice per site.
+    // Conforming to 640x360 Reference Resolution, Octopath Traveler II Aesthetics, Serif Display Headers.
     public class RestScreen : GameScreen
     {
         Transform phase;
         Label hint;
         readonly Label[] hpRows = new Label[4];
+        readonly SpriteRenderer[] hpGauges = new SpriteRenderer[4];
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 30, Palette.Void, Palette.Night, Palette.Blood);
-            Ui.Label(Root, "CAMPFIRE", 160, 14, Palette.Gold, Align.Center, 2);
-            Ui.Image(Root, PixelArt.FromRows(Art.IconRest), 146, 36, Ui.World).transform.localScale = new Vector3(3, 3, 1);
+            Backdrop.Create(Root, false, 32, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.SpecCrimson);
 
-            Ui.Panel(Root, 16, 72, 128, 66);
-            for (int i = 0; i < hpRows.Length; i++)
+            Ui.Label(Root, "CAMPFIRE SANCTUARY", 320, 18, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.Serif);
+            Ui.Divider(Root, 160, 42, 320, Palette.DarkBorder, Palette.AntiqueGoldBright);
+            Ui.Image(Root, PixelArt.FromRows(Art.IconRest), 305, 52, Ui.World).transform.localScale = new Vector3(3, 3, 1);
+
+            // Left panel (270x190): Party Vitality
+            Ui.Panel(Root, 28, 108, 274, 192, Palette.DeepCharcoal, Palette.DarkBorder);
+            Ui.Label(Root, "PARTY CONDITION", 38, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Divider(Root, 38, 126, 254, Palette.DarkBorder, Palette.AntiqueGoldDim);
+
+            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            for (int i = 0; i < hpRows.Length && i < party.Count; i++)
             {
-                Ui.Label(Root, PixelFont.FitName(Run.Party[i].name.ToUpper(), 64), 24, 79 + i * 14, Palette.Bone);
-                hpRows[i] = Ui.Label(Root, "", 136, 79 + i * 14, Palette.Parchment, Align.Right);
+                var u = party[i];
+                int y = 136 + i * 38;
+                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 130), 40, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.Serif);
+                hpRows[i] = Ui.Label(Root, "", 290, y, Palette.WarmIvory, Align.Right);
+                hpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(250, 7, Palette.Emerald, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 40, y + 16, Ui.Widget);
             }
-            hint = Ui.Label(Root, "", 160, 150, Palette.Ash, Align.Center);
+
+            // Right panel (274x192): Actions & Options
+            Ui.Panel(Root, 338, 108, 274, 192, Palette.DeepCharcoal, Palette.AntiqueGold);
+            Ui.Label(Root, "CAMP ACTIONS", 348, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Divider(Root, 348, 126, 254, Palette.DarkBorder, Palette.AntiqueGoldDim);
+
+            hint = Ui.Label(Root, "", 320, 318, Palette.WarmIvory, Align.Center);
             ShowParty();
             ShowMain();
         }
 
         void ShowParty()
         {
-            for (int i = 0; i < hpRows.Length; i++) hpRows[i].Set($"{Run.Party[i].hp}/{Run.Party[i].stats.maxHp}");
+            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            for (int i = 0; i < hpRows.Length && i < party.Count; i++)
+            {
+                var u = party[i];
+                if (hpRows[i] != null) hpRows[i].Set($"HP {u.hp}/{u.stats.maxHp}");
+                if (hpGauges[i] != null) hpGauges[i].sprite = PixelArt.GaugeBar(250, 7, Palette.Emerald, (float)u.hp / Mathf.Max(1, u.stats.maxHp));
+            }
         }
 
         Menu NewMenu()
@@ -45,7 +69,7 @@ namespace Obscure
 
         void Option(Menu m, string text, Action onClick, string tooltip)
         {
-            var b = Ui.Button(phase, text, 158, 76 + m.items.Count * 15, 146, onClick);
+            var b = Ui.Button(phase, text, 348, 136 + m.items.Count * 36, 254, onClick, 24);
             b.tooltip = tooltip;
             m.Add(b);
         }
@@ -53,30 +77,30 @@ namespace Obscure
         void ShowMain()
         {
             var m = NewMenu();
-            int total = Run.Party.Sum(RunState.RecoverAmount);
-            Option(m, $"RECOVER +{total} HP", Recover, $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP");
-            Option(m, "IMPROVE A HERO", ShowImprove, "A PERMANENT UPGRADE FOR ONE CHARACTER");
+            int total = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
+            Option(m, $"RECOVER +{total} HP", Recover, $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES");
+            Option(m, "IMPROVE A HERO", ShowImprove, "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE");
         }
 
         void ShowImprove()
         {
             var m = NewMenu();
-            foreach (var u in Run.Party)
+            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            foreach (var u in party)
             {
                 var up = RunState.GetUpgradeFor(u);
-                Option(m, u.name.ToUpper(), () => Confirm(u), $"{up.name.ToUpper()}: {u.stats.Preview(up.bonus)}");
+                Option(m, u.name.ToUpperInvariant(), () => Confirm(u), $"{up.name.ToUpperInvariant()}: {u.stats.Preview(up.bonus)}");
             }
             Option(m, "BACK", ShowMain, "");
             m.onBack = ShowMain;
         }
 
-        // Shows exactly what changes before it is applied.
         void Confirm(Unit u)
         {
             var up = RunState.GetUpgradeFor(u);
-            string preview = $"{up.name.ToUpper()}: {u.stats.Preview(up.bonus)}";
+            string preview = $"{up.name.ToUpperInvariant()}: {u.stats.Preview(up.bonus)}";
             var m = NewMenu();
-            Option(m, $"CONFIRM {u.name.ToUpper()}", () => { Run.RestImprove(u.id); Done($"{u.name.ToUpper()} LEARNS {up.name.ToUpper()}."); }, preview);
+            Option(m, $"CONFIRM {u.name.ToUpperInvariant()}", () => { Run.RestImprove(u.id); Done($"{u.name.ToUpperInvariant()} LEARNS {up.name.ToUpperInvariant()}."); }, preview);
             Option(m, "BACK", ShowImprove, preview);
             m.onBack = ShowImprove;
         }
@@ -84,7 +108,7 @@ namespace Obscure
         void Recover()
         {
             Run.RestRecover();
-            Done("THE PARTY RESTS BY THE FIRE.");
+            Done("THE PARTY RESTS BY THE HEARTH, STRENGTH RESTORED.");
         }
 
         void Done(string text)
@@ -92,7 +116,7 @@ namespace Obscure
             Sfx.Play(Sound.Success);
             ShowParty();
             var m = NewMenu();
-            Option(m, "CONTINUE", () => Game.Go(GameState.Map), text);
+            Option(m, "CONTINUE EXPEDITION", () => Game.Go(GameState.Map), text);
         }
     }
 }

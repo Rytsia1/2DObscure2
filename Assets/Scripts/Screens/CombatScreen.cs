@@ -4,58 +4,77 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+// 2DObscure — Battle UI (Priority 1)
+// Conforming to UI/UX Visual Direction Specification (Octopath Traveler II Inspired Staging).
+// Reference resolution: 640x360.
 namespace Obscure
 {
     public class CombatScreen : GameScreen
     {
         protected override void Build()
         {
-            var enc = Run.CurrentEncounter;
-            Backdrop.Create(Root, false, 6, Palette.Void, Palette.Night, Palette.Dusk, Palette.Shade);
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 40, Palette.Dusk, 5), 0, 62, Ui.Back + 5);
-            Ui.Image(Root, PixelArt.Gradient(Ui.Width, 80, Palette.Dusk, Palette.Night, Palette.Void), 0, 82, Ui.Back + 6);
+            var enc = Run?.CurrentEncounter ?? Database.Encounters.Values.First();
+            Backdrop.Create(Root, true, 16, Palette.Void, Palette.DeepCharcoal, Palette.MidnightNavy);
+            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 80, Palette.DeepCharcoal, 5), 0, 150, Ui.Back + 5);
+            Ui.Image(Root, PixelArt.Gradient(Ui.Width, 140, Palette.DeepCharcoal, Palette.Void), 0, 190, Ui.Back + 6);
 
-            var battle = new Battle(Run.Party, enc.enemies.Select(id => Database.Enemies[id]), Run.Items, Run.Rng);
-            foreach (var buff in Run.TakeBattleBuffs()) // event blessings last one battle
-                foreach (var p in battle.Party.Where(p => p.Alive)) p.AddStatus(buff.id, buff.turns, buff.magnitude, p);
+            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            var items = Run?.Items ?? new List<string>(Database.StartingItems);
+            var rng = Run?.Rng ?? new System.Random(1);
+            var battle = new Battle(party, enc.enemies.Select(id => Database.Enemies[id]), items, rng);
+            if (Run != null)
+            {
+                foreach (var buff in Run.TakeBattleBuffs())
+                    foreach (var p in battle.Party.Where(p => p.Alive)) p.AddStatus(buff.id, buff.turns, buff.magnitude, p);
+            }
             Root.gameObject.AddComponent<CombatView>().Init(battle, enc);
         }
     }
 
-    // Renders a Battle and feeds it player choices and enemy AI decisions. All rules live in Battle.
     public class CombatView : MonoBehaviour
     {
-        const float EnemyThink = 0.5f, AfterAction = 0.6f, LogWidth = 148;
-        const int LogX = 162, NameWidth = 52; // party panel 0..160, log/command panel 162..320
+        const float EnemyThink = 0.5f, AfterAction = 0.6f;
+        const int ConsoleY = 240, ConsoleH = 120;
+        const int PartyConsoleW = 330, CommandMenuW = 122;
+        const int DossierX = 332 + CommandMenuW + 4, DossierW = Ui.Width - DossierX - 4;
         const int LogLines = 6;
-        static readonly Vector2Int[] PartySlots = { new Vector2Int(80, 34), new Vector2Int(80, 72), new Vector2Int(52, 50), new Vector2Int(52, 88) };
+
+        // Side-view party hero staging coordinates (640x360)
+        static readonly Vector2Int[] PartySlots =
+        {
+            new Vector2Int(130, 85),
+            new Vector2Int(155, 145),
+            new Vector2Int(65, 105),
+            new Vector2Int(90, 165)
+        };
 
         public Battle Battle { get; private set; }
 
         class Hud
         {
             public Vector2Int pos, size;
-            public SpriteRenderer sprite, hpBar, hpBack, mpBar, brkBar, brkBack;
-            public Label name, hp, mp, status;
+            public SpriteRenderer sprite, cardBox, hpBar, hpBack, mpBar, mpBack, brkBar, brkBack;
+            public Label name, role, hp, mp, status, shieldBadge, weaknessLabel;
             public int phase = 1;
         }
 
         readonly Dictionary<Combatant, Hud> huds = new Dictionary<Combatant, Hud>();
         readonly List<Label> logLabels = new List<Label>();
         readonly List<string> logLines = new List<string>();
-        Transform turnBar, phase;
-        Label roundLabel, hint;
+        Transform turnBar, phase, dossierPanel;
+        Label roundLabel, hint, actBanner;
+        Label dossierTitle, dossierCostType, dossierTarget, dossierDesc;
         SpriteRenderer marker;
         string turnText = "";
         BattleAction chosen;
         Qte activeQte;
-        readonly System.Random qteRng = new System.Random(); // separate from battle RNG so QTEs don't shift damage rolls
+        readonly System.Random qteRng = new System.Random();
 
         static Vector2Int[] EnemySlots(int count) => count switch
         {
-            1 => new[] { new Vector2Int(230, 34) },
-            2 => new[] { new Vector2Int(212, 32), new Vector2Int(256, 50) },
-            _ => new[] { new Vector2Int(200, 30), new Vector2Int(240, 50), new Vector2Int(278, 30) },
+            1 => new[] { new Vector2Int(480, 110) },
+            2 => new[] { new Vector2Int(420, 95), new Vector2Int(520, 145) },
+            _ => new[] { new Vector2Int(380, 90), new Vector2Int(465, 135), new Vector2Int(550, 90) },
         };
 
         public void Init(Battle battle, EncounterDef encounter)
@@ -63,21 +82,37 @@ namespace Obscure
             Battle = battle;
             var t = transform;
 
-            Ui.Panel(t, 0, 0, Ui.Width, 14);
-            roundLabel = Ui.Label(t, "", 5, 4, Palette.Parchment);
+            // 1. Top 24px Header: Act banner, Round indicator, and Timeline ribbon (Spec Section 4.1)
+            Ui.Panel(t, 0, 0, Ui.Width, 24, Palette.DeepCharcoal, Palette.AntiqueGold);
+            string actName = encounter.tier == Tier.Boss ? "ACT 1: THE INNER SANCTUM" : "ACT 1: ASHEN RUINS";
+            actBanner = Ui.Label(t, actName, 10, 6, Palette.AntiqueGoldBright, font: FontKind.Serif);
+            roundLabel = Ui.Label(t, "", 185, 7, Palette.WarmIvory);
             turnBar = Child("TurnBar");
-            // Hint strip under the turn bar: telegraphs, tooltips and target info never cover the battlefield.
-            Ui.Panel(t, 0, 13, Ui.Width, 12, Palette.Void, Palette.Shade);
-            hint = Ui.Label(t, "", 160, 16, Palette.Bone, Align.Center, order: Ui.Widget + 2);
 
+            // 2. 18px Telegraph banner under the header
+            Ui.Panel(t, 0, 23, Ui.Width, 18, Palette.OverlayCharcoal, Palette.DarkBorder);
+            hint = Ui.Label(t, "", Ui.Width / 2, 27, Palette.WarmIvory, Align.Center, order: Ui.Widget + 2);
+
+            // 3. Side-view combatants
             for (int i = 0; i < battle.Party.Count; i++) AddCombatant(battle.Party[i], PartySlots[i]);
             var slots = EnemySlots(battle.Enemies.Count);
             for (int i = 0; i < battle.Enemies.Count; i++) AddCombatant(battle.Enemies[i], slots[i]);
             marker = Ui.Image(t, PixelArt.FromRows(Art.Marker), 0, 0, Ui.Widget + 5);
 
-            Ui.Panel(t, 0, 112, LogX - 2, 68);
-            Ui.Panel(t, LogX, 112, Ui.Width - LogX, 68);
-            for (int i = 0; i < LogLines; i++) logLabels.Add(Ui.Label(t, "", LogX + 5, 117 + i * 10, Palette.Parchment));
+            // 4. Bottom 120px Console: Left 4-Hero Vitality Cards (330px), Right Command & Dossier (310px)
+            Ui.Panel(t, 0, ConsoleY, PartyConsoleW, ConsoleH, Palette.DeepCharcoal, Palette.AntiqueGold);
+            Ui.Panel(t, PartyConsoleW + 2, ConsoleY, Ui.Width - PartyConsoleW - 2, ConsoleH, Palette.DeepCharcoal, Palette.AntiqueGold);
+
+            // Action Dossier & Combat Log feed panel (Right side of console)
+            dossierPanel = Child("DossierPanel");
+            Ui.Card(dossierPanel, DossierX, ConsoleY + 4, DossierW, ConsoleH - 8);
+            dossierTitle = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 8, Palette.AntiqueGoldBright, font: FontKind.Serif);
+            dossierCostType = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 22, Palette.WarmIvory);
+            dossierTarget = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 34, Palette.MutedGray);
+            dossierDesc = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 46, Palette.WarmIvory);
+
+            for (int i = 0; i < LogLines; i++)
+                logLabels.Add(Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 8 + i * 17, Palette.WarmIvory));
 
             battle.Logged += AddLog;
             AddLog(encounter.tier == Tier.Boss ? "The Warden's eye opens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
@@ -100,40 +135,59 @@ namespace Obscure
 
             if (c.IsEnemy)
             {
-                int cx = pos.x + h.size.x / 2, ly = pos.y + h.size.y + 2;
-                var tierColor = c.enemy.tier == Tier.Boss ? Palette.Crimson : c.enemy.tier == Tier.Elite ? Palette.Ember : Palette.Bone;
-                h.name = Ui.Label(transform, c.name.ToUpperInvariant(), cx, ly, tierColor, Align.Center);
-                h.hpBack = Bar(cx - 15, ly + 9, 30, Palette.Void, 0);
-                h.hpBar = Bar(cx - 15, ly + 9, 30, Palette.Crimson, 1);
-                h.brkBack = Bar(cx - 15, ly + 12, 30, Palette.Void, 0);
-                h.brkBar = Bar(cx - 15, ly + 12, 30, Palette.Gold, 1);
-                h.status = Ui.Label(transform, "", cx, ly + 15, Palette.Frost, Align.Center);
+                int cx = pos.x + h.size.x / 2, ly = pos.y + h.size.y + 4;
+                var tierColor = c.enemy.tier == Tier.Boss ? Palette.SpecCrimson : c.enemy.tier == Tier.Elite ? Palette.Ember : Palette.WarmIvory;
+                h.name = Ui.Label(transform, c.name.ToUpperInvariant(), cx, ly, tierColor, Align.Center, font: c.enemy.tier == Tier.Boss ? FontKind.Serif : FontKind.Interface);
+
+                // Shield count badge & weaknesses (Spec Section 4.1)
+                h.shieldBadge = Ui.Label(transform, "", cx, ly + 11, Palette.AntiqueGoldBright, Align.Center);
+                h.weaknessLabel = Ui.Label(transform, "", cx, ly + 21, Palette.MutedGray, Align.Center);
+
+                // Framed health & break bars
+                h.hpBack = Bar(cx - 30, ly + 31, 60, Palette.OverlayCharcoal, 0, 4);
+                h.hpBar = Bar(cx - 30, ly + 31, 60, Palette.SpecCrimson, 1, 4);
+                h.brkBack = Bar(cx - 30, ly + 36, 60, Palette.OverlayCharcoal, 0, 3);
+                h.brkBar = Bar(cx - 30, ly + 36, 60, Palette.AntiqueGold, 1, 3);
+                h.status = Ui.Label(transform, "", cx, ly + 41, Palette.Frost, Align.Center);
                 return;
             }
-            int y = 117 + c.slot * 15;
-            h.name = Ui.Label(transform, PixelFont.FitName(c.name.ToUpperInvariant(), NameWidth), 5, y, Palette.Bone);
-            h.hp = Ui.Label(transform, "", 62, y, Palette.Bone);
-            h.mp = Ui.Label(transform, "", 106, y, Palette.Lilac);
-            h.status = Ui.Label(transform, "", 141, y, Palette.Frost);
-            Bar(62, y + 9, 40, Palette.Void, 0);
-            h.hpBar = Bar(62, y + 9, 40, Palette.Moss, 1);
-            Bar(106, y + 9, 30, Palette.Void, 0);
-            h.mpBar = Bar(106, y + 9, 30, Palette.Arcane, 1);
+
+            // 4-Hero Vitality Cards (Spec Section 4.1): 4 spacious stacked rows inside 330px width
+            int cy = ConsoleY + 5 + c.slot * 28;
+            h.cardBox = Ui.Image(transform, PixelArt.Box(PartyConsoleW - 10, 26, Palette.DeepCharcoal, Palette.DarkBorder), 5, cy, Ui.Panels + 2);
+
+            h.name = Ui.Label(transform, c.name.ToUpperInvariant(), 12, cy + 4, Palette.WarmIvory, font: FontKind.Serif);
+            string roleStr = c.unit.role != null ? c.unit.role.ToUpperInvariant() : "HERO";
+            h.role = Ui.Label(transform, roleStr, 12, cy + 15, Palette.AntiqueGoldDim);
+
+            // HP readout & Emerald GaugeBar
+            Ui.Label(transform, "HP", 90, cy + 4, Palette.Emerald);
+            h.hp = Ui.Label(transform, "", 110, cy + 4, Palette.WarmIvory);
+            h.hpBack = Bar(90, cy + 15, 95, Palette.OverlayCharcoal, 0, 5);
+            h.hpBar = Bar(90, cy + 15, 95, Palette.Emerald, 1, 5);
+
+            // MP readout & Arcane Violet GaugeBar
+            Ui.Label(transform, "MP", 195, cy + 4, Palette.ArcaneViolet);
+            h.mp = Ui.Label(transform, "", 215, cy + 4, Palette.WarmIvory);
+            h.mpBack = Bar(195, cy + 15, 75, Palette.OverlayCharcoal, 0, 5);
+            h.mpBar = Bar(195, cy + 15, 75, Palette.ArcaneViolet, 1, 5);
+
+            h.status = Ui.Label(transform, "", 275, cy + 8, Palette.Frost);
         }
 
-        SpriteRenderer Bar(int x, int y, int w, Color color, int layer)
+        SpriteRenderer Bar(int x, int y, int w, Color color, int layer, int h = 4)
         {
             var sr = Ui.Image(transform, PixelArt.Pixel, x, y, Ui.Widget + layer, color);
-            sr.transform.localScale = new Vector3(w, 2, 1);
+            sr.transform.localScale = new Vector3(w, h, 1);
             return sr;
         }
 
-        static void SetBar(SpriteRenderer bar, int full, int value, int max) =>
-            bar.transform.localScale = new Vector3(max <= 0 ? 0 : Mathf.CeilToInt(full * (float)value / max), 2, 1);
+        static void SetBar(SpriteRenderer bar, int full, int value, int max, int h = 4) =>
+            bar.transform.localScale = new Vector3(max <= 0 ? 0 : Mathf.CeilToInt(full * (float)value / max), h, 1);
 
         void Refresh()
         {
-            roundLabel.Set($"ROUND {Battle.Round}");
+            roundLabel.Set($"[R{Battle.Round}]");
             foreach (var kv in huds)
             {
                 var c = kv.Key;
@@ -145,14 +199,46 @@ namespace Obscure
                     if (h.brkBar != null)
                     {
                         h.brkBar.enabled = c.Alive && c.HasBreakGauge;
-                        SetBar(h.brkBar, 30, c.CurrentBreakGauge, c.MaxBreakGauge);
-                        h.brkBar.color = c.IsBroken ? Palette.Ash : Palette.Gold;
+                        SetBar(h.brkBar, 60, c.CurrentBreakGauge, c.MaxBreakGauge, 3);
+                        h.brkBar.color = c.IsBroken ? Palette.MutedGray : Palette.AntiqueGoldBright;
                     }
                     h.name.gameObject.SetActive(c.Alive);
                     h.status.gameObject.SetActive(c.Alive);
-                    SetBar(h.hpBar, 30, c.unit.hp, c.Stats.maxHp);
+                    if (h.shieldBadge != null)
+                    {
+                        h.shieldBadge.gameObject.SetActive(c.Alive);
+                        if (c.IsBroken)
+                        {
+                            h.shieldBadge.Set("[BREAK!] STAGGERED (150% DMG)");
+                            h.shieldBadge.Color = Palette.AntiqueGoldBright;
+                        }
+                        else if (c.HasBreakGauge)
+                        {
+                            h.shieldBadge.Set($"# SHIELD: ({c.CurrentBreakGauge})");
+                            h.shieldBadge.Color = Palette.AntiqueGold;
+                        }
+                        else
+                        {
+                            h.shieldBadge.Set("");
+                        }
+                    }
+                    if (h.weaknessLabel != null)
+                    {
+                        h.weaknessLabel.gameObject.SetActive(c.Alive);
+                        var weaks = c.Affinities?.weak;
+                        if (weaks != null && weaks.Length > 0)
+                        {
+                            string weakStr = string.Join(" ", weaks.Select(w => $"[{ElementConfig.Short(w)}]"));
+                            h.weaknessLabel.Set($"WEAK: {weakStr}");
+                        }
+                        else
+                        {
+                            h.weaknessLabel.Set("");
+                        }
+                    }
+                    SetBar(h.hpBar, 60, c.unit.hp, c.Stats.maxHp, 4);
                     h.status.Set((c.enemy.phase2At > 0 ? $"PHASE {c.phase} " : "") + c.StatusTags);
-                    h.status.Color = c.phase > 1 ? Palette.Crimson : c.HasDebuff ? Palette.Ember : Palette.Frost;
+                    h.status.Color = c.phase > 1 ? Palette.CrimsonBright : c.HasDebuff ? Palette.Ember : Palette.Frost;
                     if (c.phase != h.phase)
                     {
                         h.phase = c.phase;
@@ -161,37 +247,60 @@ namespace Obscure
                     }
                     continue;
                 }
+
                 h.sprite.color = c.Alive ? Color.white : Palette.Shade;
-                h.name.Color = !c.Alive ? Palette.Crimson : c == Battle.Active ? Palette.Gold : Palette.Bone;
+                bool isActive = c == Battle.Active;
+                if (h.cardBox != null)
+                {
+                    h.cardBox.sprite = PixelArt.Box(PartyConsoleW - 10, 26,
+                        isActive ? Palette.MidnightNavy : Palette.DeepCharcoal,
+                        isActive ? Palette.AntiqueGold : Palette.DarkBorder);
+                }
+                h.name.Color = !c.Alive ? Palette.SpecCrimson : isActive ? Palette.AntiqueGoldBright : Palette.WarmIvory;
                 h.hp.Set($"{c.unit.hp}/{c.Stats.maxHp}");
-                h.mp.Set(c.Alive ? $"MP {c.unit.mp}" : "DOWN");
-                h.mp.Color = c.Alive ? Palette.Lilac : Palette.Crimson;
-                h.status.Set(c.Alive ? PixelFont.Fit(c.StatusTags, 17) : "");
-                h.status.Color = c.HasDebuff ? Palette.Crimson : Palette.Frost;
-                SetBar(h.hpBar, 40, c.unit.hp, c.Stats.maxHp);
-                SetBar(h.mpBar, 30, c.unit.mp, c.Stats.maxMp);
+                h.mp.Set(c.Alive ? $"{c.unit.mp}/{c.Stats.maxMp}" : "DOWN");
+                h.mp.Color = c.Alive ? Palette.WarmIvory : Palette.SpecCrimson;
+                h.status.Set(c.Alive ? PixelFont.Fit(c.StatusTags, 40) : "");
+                h.status.Color = c.HasDebuff ? Palette.SpecCrimson : Palette.Frost;
+
+                bool lowHp = c.unit.hp * 4 <= c.Stats.maxHp;
+                h.hpBar.color = lowHp ? Palette.SpecCrimson : Palette.Emerald;
+                SetBar(h.hpBar, 95, c.unit.hp, c.Stats.maxHp, 5);
+                SetBar(h.mpBar, 75, c.unit.mp, c.Stats.maxMp, 5);
             }
             marker.enabled = Battle.Active != null;
             BuildTurnBar();
         }
 
-        // Active combatant boxed, then the rest of this round, then a preview of the next round.
+        // Timeline ribbon with active combatant highlighted and future turns chained
         void BuildTurnBar()
         {
             foreach (Transform child in turnBar) Destroy(child.gameObject);
-            int x = 52;
+            int x = 230;
+            Ui.Label(turnBar, "TIMELINE:", x - 72, 7, Palette.AntiqueGoldDim);
+
             void Chip(Combatant c, Color color, bool active = false)
             {
                 int w = PixelFont.Measure(c.tag);
-                if (x + w > 314) return;
-                if (active) Ui.Image(turnBar, PixelArt.Box(w + 6, 12, Palette.Dusk, Palette.Gold), x - 3, 1, Ui.Widget);
-                Ui.Label(turnBar, c.tag, x, 4, color, order: Ui.Widget + 1);
-                x += w + 8;
+                if (x + w > Ui.Width - 14) return;
+                if (active)
+                {
+                    Ui.Image(turnBar, PixelArt.ButtonBox(w + 12, 16, true, true), x - 4, 4, Ui.Widget);
+                    Ui.Label(turnBar, ">" + c.tag, x - 1, 6, Palette.AntiqueGoldBright, order: Ui.Widget + 1);
+                    x += w + 16;
+                }
+                else
+                {
+                    Ui.Image(turnBar, PixelArt.Box(w + 8, 16, c.IsEnemy ? Palette.DeepCharcoal : Palette.MidnightNavy, c.IsEnemy ? Palette.Blood : Palette.DarkBorder), x - 3, 4, Ui.Widget);
+                    Ui.Label(turnBar, c.tag, x + 1, 6, color, order: Ui.Widget + 1);
+                    x += w + 12;
+                }
             }
-            if (Battle.Active != null) Chip(Battle.Active, Palette.Gold, true);
-            foreach (var c in Battle.Upcoming) Chip(c, c.IsEnemy ? Palette.Crimson : Palette.Bone);
-            if (x < 300) { Ui.Label(turnBar, "|", x - 3, 4, Palette.Ash, order: Ui.Widget + 1); x += 5; }
-            foreach (var c in Battle.NextRoundOrder) Chip(c, Palette.Ash);
+
+            if (Battle.Active != null) Chip(Battle.Active, Palette.AntiqueGoldBright, true);
+            foreach (var c in Battle.Upcoming) Chip(c, c.IsEnemy ? Palette.SpecCrimson : Palette.WarmIvory);
+            if (x < Ui.Width - 30) { Ui.Label(turnBar, "||", x - 2, 7, Palette.MutedGray, order: Ui.Widget + 1); x += 12; }
+            foreach (var c in Battle.NextRoundOrder) Chip(c, Palette.MutedGray);
         }
 
         void Update()
@@ -200,16 +309,39 @@ namespace Obscure
             if (a == null || !marker.enabled) return;
             var h = huds[a];
             int bob = Mathf.Sin(Time.time * 6f) > 0 ? 1 : 0;
-            marker.transform.localPosition = new Vector3(h.pos.x + h.size.x / 2 - 2, -(h.pos.y - 6 + bob), 0);
+            marker.transform.localPosition = new Vector3(h.pos.x + h.size.x / 2 - 2, -(h.pos.y - 8 + bob), 0);
         }
 
-        void Hint(string text) => hint.Set(PixelFont.Fit(text ?? "", Ui.Width - 8));
+        void Hint(string text) => hint.Set(PixelFont.Fit(text ?? "", Ui.Width - 16));
 
         void AddLog(string line)
         {
-            logLines.AddRange(PixelFont.Wrap(line.ToUpperInvariant(), (int)LogWidth).Split('\n'));
+            logLines.AddRange(PixelFont.Wrap(line.ToUpperInvariant(), DossierW - 12).Split('\n'));
             while (logLines.Count > LogLines) logLines.RemoveAt(0);
             for (int i = 0; i < LogLines; i++) logLabels[i].Set(i < logLines.Count ? logLines[i] : "");
+        }
+
+        void ShowDossier(string title, string costType, string target, string desc)
+        {
+            foreach (var l in logLabels) l.gameObject.SetActive(false);
+            dossierTitle.gameObject.SetActive(true);
+            dossierCostType.gameObject.SetActive(true);
+            dossierTarget.gameObject.SetActive(true);
+            dossierDesc.gameObject.SetActive(true);
+
+            dossierTitle.Set(title);
+            dossierCostType.Set(costType);
+            dossierTarget.Set(target);
+            dossierDesc.Set(PixelFont.Wrap(desc, DossierW - 12));
+        }
+
+        void HideDossier()
+        {
+            dossierTitle.gameObject.SetActive(false);
+            dossierCostType.gameObject.SetActive(false);
+            dossierTarget.gameObject.SetActive(false);
+            dossierDesc.gameObject.SetActive(false);
+            foreach (var l in logLabels) l.gameObject.SetActive(true);
         }
 
         IEnumerator Loop()
@@ -244,7 +376,6 @@ namespace Obscure
                     chosen = null;
                     ShowActions(c);
                     while (chosen == null) yield return null;
-                    // Validated already (Choose), so a QTE never starts for an illegal action.
                     var qte = QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng);
                     float power = 1f;
                     if (qte != null)
@@ -264,12 +395,11 @@ namespace Obscure
         {
             ClearPhase();
             Hint("");
+            HideDossier();
             foreach (var h in Battle.Perform(action, power, defense)) Feedback(h);
             Refresh();
             yield return new WaitForSeconds(AfterAction);
         }
-
-        // ---- QTEs ----
 
         static QteAssist Assist => Game.I != null ? Game.I.Settings.Assist : QteAssist.Standard;
 
@@ -288,7 +418,6 @@ namespace Obscure
             }
             string who = move != null && move.allTargets ? "ALL" : a.target.name.ToUpperInvariant();
             string element = move != null && move.element != Element.Physical ? " " + move.element.ToString().ToUpperInvariant() : "";
-            // Telegraph: move, hit count, target, severity and element all spelled out.
             Hint(move == null ? $"{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
                 : $"{move.name.ToUpperInvariant()}{(move.hits > 1 ? $" X{move.hits}" : "")} > {who}  {EnemyAI.Severity(move)}{element}");
             return $"GUARD {who}!";
@@ -297,90 +426,92 @@ namespace Obscure
         IEnumerator RunQte(Qte qte, string heading, BattleAction enemyAction)
         {
             ClearPhase();
-            ShowLog(false);
+            HideDossier();
             if (enemyAction != null)
                 foreach (var t in enemyAction.attack != null && enemyAction.attack.allTargets ? Battle.Party.Where(p => p.Alive) : new[] { enemyAction.target })
                 {
                     var h = huds[t];
-                    Ui.Image(phase, PixelArt.FromRows(Art.TargetMarker), h.pos.x + h.size.x / 2 - 2, h.pos.y - 6, Ui.Widget + 6);
+                    Ui.Image(phase, PixelArt.FromRows(Art.TargetMarker), h.pos.x + h.size.x / 2 - 2, h.pos.y - 8, Ui.Widget + 6);
                 }
             var panel = phase.gameObject.AddComponent<QtePanel>();
             panel.Init(qte, heading);
             activeQte = qte;
-            if (qte is AutoQte) yield return new WaitForSeconds(enemyAction != null ? EnemyThink : 0.15f); // still show the telegraph
+            if (qte is AutoQte) yield return new WaitForSeconds(enemyAction != null ? EnemyThink : 0.15f);
             while (!qte.Done)
             {
                 if (Battle.Outcome != Outcome.None) qte.Cancel();
                 yield return null;
             }
             activeQte = null;
-            if (!qte.Cancelled && !(qte is AutoQte)) yield return new WaitForSecondsRealtime(0.45f); // let the result read
+            if (!qte.Cancelled && !(qte is AutoQte)) yield return new WaitForSecondsRealtime(0.45f);
         }
 
-        void OnDestroy() => activeQte?.Cancel(); // leaving combat mid-QTE (e.g. run abandoned)
+        void OnDestroy() => activeQte?.Cancel();
 
         void Feedback(Hit hit)
         {
             var h = huds[hit.target];
             int cx = h.pos.x + h.size.x / 2;
             bool immune = hit.effect == Effectiveness.Immune;
-            var popup = Ui.Label(transform, hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 4,
-                hit.blocked ? Palette.Frost : immune ? Palette.Ash : hit.heal ? Palette.Moss : Palette.Crimson, Align.Center, order: Ui.Widget + 10);
+            var popup = Ui.Label(transform, hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 6,
+                hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : Palette.CrimsonBright, Align.Center, order: Ui.Widget + 10);
             popup.gameObject.AddComponent<Popup>();
             if (hit.brokeTarget)
-                Ui.Label(transform, "BROKEN!", cx, h.pos.y - 21, Palette.Gold, Align.Center, order: Ui.Widget + 10).gameObject.AddComponent<Popup>();
+                Ui.Label(transform, "@ BREAK! @", cx, h.pos.y - 25, Palette.AntiqueGoldBright, Align.Center, order: Ui.Widget + 10, font: FontKind.Serif).gameObject.AddComponent<Popup>();
             if (hit.effect == Effectiveness.Weak || hit.effect == Effectiveness.Resist)
-                Ui.Label(transform, hit.effect == Effectiveness.Weak ? "WEAK!" : "RESIST", cx, h.pos.y - 13,
-                    hit.effect == Effectiveness.Weak ? Palette.Gold : Palette.Ash, Align.Center, order: Ui.Widget + 10).gameObject.AddComponent<Popup>();
+                Ui.Label(transform, hit.effect == Effectiveness.Weak ? "* WEAK! *" : "RESIST", cx, h.pos.y - 16,
+                    hit.effect == Effectiveness.Weak ? Palette.AntiqueGoldBright : Palette.MutedGray, Align.Center, order: Ui.Widget + 10).gameObject.AddComponent<Popup>();
             if (!hit.heal && hit.amount > 0) StartCoroutine(Flash(h, hit.target));
         }
 
         IEnumerator Flash(Hud h, Combatant c)
         {
-            h.sprite.color = Palette.Crimson;
+            h.sprite.color = Palette.SpecCrimson;
             yield return new WaitForSeconds(0.12f);
             h.sprite.color = c.Alive ? Color.white : Palette.Shade;
         }
-
-        // ---- Player input phases ----
 
         void ClearPhase()
         {
             if (phase != null) Destroy(phase.gameObject);
             phase = Child("Phase");
-            ShowLog(true);
+            HideDossier();
         }
 
-        void ShowLog(bool on)
-        {
-            foreach (var l in logLabels) l.gameObject.SetActive(on);
-        }
-
-        // Command menus take over the log panel, classic-RPG style.
         Menu NewMenu()
         {
             ClearPhase();
-            ShowLog(false);
             var m = phase.gameObject.AddComponent<Menu>();
-            m.onFocus = s => Hint(s.tooltip ?? turnText);
+            m.onFocus = s =>
+            {
+                Hint(s.tooltip ?? turnText);
+                if (s.tooltip != null)
+                {
+                    ShowDossier(s.label != null ? s.label.Text : "ACTION", "", "", s.tooltip);
+                }
+                else
+                {
+                    HideDossier();
+                }
+            };
             return m;
         }
 
-        void Option(Menu m, string text, Action onClick, bool enabled = true, string tooltip = null)
+        void Option(Menu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null)
         {
-            var s = Ui.Button(phase, PixelFont.Fit(text, 128), LogX + 14, 116 + m.items.Count * 14, Ui.Width - LogX - 22, onClick, 12, enabled);
+            var s = Ui.Button(phase, PixelFont.Fit(text, CommandMenuW - 16), PartyConsoleW + 6, ConsoleY + 6 + m.items.Count * 22, CommandMenuW, onClick, 20, enabled);
             s.tooltip = tooltip;
             m.Add(s);
         }
 
         void ShowActions(Combatant c)
         {
-            turnText = $"{c.name.ToUpperInvariant()}'S TURN - {c.unit.role.ToUpperInvariant()}";
+            turnText = $"{c.name.ToUpperInvariant()}'S TURN — {c.unit.role.ToUpperInvariant()}";
             var m = NewMenu();
-            Option(m, "ATTACK", () => ChooseTarget(Battle.Opponents(c), t => BattleAction.Attack(c, t), () => ShowActions(c)));
-            Option(m, "SKILL", () => ShowSkills(c));
-            Option(m, "ITEM", () => ShowItems(c), Battle.Items.Count > 0, Battle.Items.Count > 0 ? null : "NO ITEMS LEFT");
-            Option(m, "GUARD", () => Choose(BattleAction.Guard(c)), tooltip: "HALVE DAMAGE UNTIL NEXT TURN");
+            Option(m, "ATTACK", () => ChooseTarget(Battle.Opponents(c), t => BattleAction.Attack(c, t), () => ShowActions(c)), tooltip: "STRIKE ENEMY WITH WEAPON");
+            Option(m, "SKILL", () => ShowSkills(c), tooltip: "EXECUTE CLASS SKILLS & SPELLS");
+            Option(m, "ITEM", () => ShowItems(c), Battle.Items.Count > 0, Battle.Items.Count > 0 ? "USE A BATTLE INVENTORY ITEM" : "NO ITEMS REMAINING");
+            Option(m, "GUARD", () => Choose(BattleAction.Guard(c)), tooltip: "HALVE INCOMING DAMAGE UNTIL NEXT TURN");
         }
 
         void ShowSkills(Combatant c)
@@ -391,8 +522,12 @@ namespace Obscure
             {
                 int cd = c.Cooldown(s.id);
                 string element = s.kind == SkillKind.Magic || s.kind == SkillKind.Heal ? s.element.ToString().ToUpperInvariant() + " " : "";
-                Option(m, $"{s.name.ToUpperInvariant()} {(cd > 0 ? $"CD{cd}" : $"{s.mpCost}MP")}", () => UseSkill(c, s),
-                    cd == 0 && c.unit.mp >= s.mpCost, $"{s.mpCost} MP {element}- {s.description.ToUpperInvariant()}");
+                string costText = cd > 0 ? $"CD {cd}" : $"{s.mpCost} MP";
+                string typeText = $"{element}{s.kind.ToString().ToUpperInvariant()}";
+                string targetText = $"TARGET: {s.target.ToString().ToUpperInvariant()}";
+                Option(m, $"{s.name.ToUpperInvariant()} {costText}", () => UseSkill(c, s),
+                    cd == 0 && c.unit.mp >= s.mpCost, $"{s.description.ToUpperInvariant()}",
+                    $"COST: {costText}  TYPE: {typeText}", targetText);
             }
             Option(m, "BACK", () => ShowActions(c));
             m.onBack = () => ShowActions(c);
@@ -415,7 +550,7 @@ namespace Obscure
             foreach (var stack in stacks)
             {
                 var item = Database.Items[stack.Key];
-                Option(m, $"{item.name.ToUpperInvariant()} {stack.Count()}",
+                Option(m, $"{item.name.ToUpperInvariant()} x{stack.Count()}",
                     () => ChooseTarget(Battle.Allies(c), t => BattleAction.Item(c, item, t), () => ShowItems(c)),
                     tooltip: item.description.ToUpperInvariant());
             }
@@ -423,7 +558,6 @@ namespace Obscure
             m.onBack = () => ShowActions(c);
         }
 
-        // Targets are selected directly on the battlefield sprites (keys or mouse).
         void ChooseTarget(IEnumerable<Combatant> candidates, Func<Combatant, BattleAction> make, Action back)
         {
             ClearPhase();
@@ -436,10 +570,10 @@ namespace Obscure
                 var go = new GameObject("Target:" + t.name);
                 go.transform.SetParent(phase, false);
                 go.transform.localPosition = new Vector3(h.pos.x, -h.pos.y, 0);
-                var arrow = Ui.Image(go.transform, PixelArt.FromRows(Art.TargetMarker), h.size.x / 2 - 2, -6, Ui.Widget + 6);
+                var arrow = Ui.Image(go.transform, PixelArt.FromRows(Art.TargetMarker), h.size.x / 2 - 2, -8, Ui.Widget + 6);
                 var sel = go.AddComponent<Selectable>();
                 sel.size = h.size;
-                string brk = t.IsEnemy && t.HasBreakGauge ? $" BRK:{t.CurrentBreakGauge}/{t.MaxBreakGauge}" : "";
+                string brk = t.IsEnemy && t.HasBreakGauge ? $" SHIELD:{t.CurrentBreakGauge}/{t.MaxBreakGauge}" : "";
                 sel.tooltip = $"{t.name.ToUpperInvariant()} {t.unit.hp}/{t.Stats.maxHp}{brk} " + (t.IsEnemy ? t.Affinities.Describe() : t.StatusTags);
                 sel.visual = on => arrow.enabled = on;
                 sel.visual(false);
@@ -467,10 +601,11 @@ namespace Obscure
             ClearPhase();
             foreach (Transform child in turnBar) Destroy(child.gameObject);
             Hint("");
-            Ui.Panel(phase, 100, 40, 120, 52, Palette.Night, won ? Palette.Gold : Palette.Crimson).sortingOrder = Ui.Widget - 1;
-            Ui.Label(phase, won ? "VICTORY" : "DEFEAT", 160, 48, won ? Palette.Gold : Palette.Crimson, Align.Center, 2, Ui.Widget + 1);
+            Ui.Panel(phase, 180, 100, 280, 120, Palette.DeepCharcoal, won ? Palette.AntiqueGold : Palette.SpecCrimson).sortingOrder = Ui.Widget - 1;
+            Ui.Divider(phase, 190, 106, 260, won ? Palette.AntiqueGoldDim : Palette.Blood, won ? Palette.AntiqueGoldBright : Palette.SpecCrimson);
+            Ui.Label(phase, won ? "VICTORY" : "DEFEAT", 320, 120, won ? Palette.AntiqueGoldBright : Palette.SpecCrimson, Align.Center, 2, Ui.Widget + 1, font: FontKind.Serif);
             var m = phase.gameObject.AddComponent<Menu>();
-            m.Add(Ui.Button(phase, "CONTINUE", 125, 72, 70, () =>
+            m.Add(Ui.Button(phase, "CONTINUE", 250, 170, 140, () =>
             {
                 if (won)
                 {
@@ -482,20 +617,24 @@ namespace Obscure
                     Game.I.Run.LoseCombat();
                     Game.I.Go(GameState.GameOver);
                 }
-            }));
+            }, 22));
         }
     }
 
-    // Floating damage/heal number.
     public class Popup : MonoBehaviour
     {
         float age;
+        Vector3 startPos;
+        bool init;
 
         void Update()
         {
+            if (!init) { startPos = transform.localPosition; init = true; }
             age += Time.deltaTime;
-            transform.localPosition += Vector3.up * (12f * Time.deltaTime);
-            if (age > 0.7f) Destroy(gameObject);
+            float t = Mathf.Clamp01(age / 0.75f);
+            float yOff = Mathf.Sin(t * Mathf.PI * 0.5f) * 18f;
+            transform.localPosition = startPos + new Vector3(0, yOff, 0);
+            if (age > 0.75f) Destroy(gameObject);
         }
     }
 }

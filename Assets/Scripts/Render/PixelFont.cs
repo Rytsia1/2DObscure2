@@ -2,14 +2,19 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
-// 5x7 bitmap font baked to sprites (white glyphs + 1px dark shadow, tint via SpriteRenderer.color).
+// Dual Typography Engine:
+// 1. Interface: Clean, ultra-readable 5x7 sans-serif for numbers, descriptions, tables, and combat readouts.
+// 2. Serif: Elegant, decorative 7x9 display serif font for titles, section banners, and hero names (inspired by Cinzel / Cormorant).
 namespace Obscure
 {
+    public enum FontKind { Interface, Serif }
+
     public static class PixelFont
     {
         public const int GlyphHeight = 7, LineHeight = 10;
+        public const int SerifGlyphHeight = 9, SerifLineHeight = 13;
 
-        static readonly Dictionary<char, string[]> Glyphs = Parse(new Dictionary<char, string>
+        static readonly Dictionary<char, string[]> InterfaceGlyphs = Parse(new Dictionary<char, string>
         {
             ['A'] = ".###.|#...#|#...#|#####|#...#|#...#|#...#",
             ['B'] = "####.|#...#|#...#|####.|#...#|#...#|####.",
@@ -64,10 +69,76 @@ namespace Obscure
             [')'] = "#.|.#|.#|.#|.#|.#|#.",
             ['['] = "##|#.|#.|#.|#.|#.|##",
             [']'] = "##|.#|.#|.#|.#|.#|##",
-            ['<'] = "...#|..#.|.#..|#...|.#..|..#.|...#",
-            ['>'] = "#...|.#..|..#.|...#|..#.|.#..|#...",
+            ['<'] = "....#|...##|..###|.####|..###|...##|....#",
+            ['>'] = "#....|##...|###..|####.|###..|##...|#....",
             ['|'] = "#|#|#|#|#|#|#",
-            ['*'] =".....|#.#.#|.###.|#####|.###.|#.#.#|.....",
+            ['*'] = "..#..|#.#.#|.###.|#####|.###.|#.#.#|..#..",
+            ['@'] = "..#..|.###.|#####|.###.|..#..|.....|.....", // Solid Diamond
+            ['#'] = "#####|#...#|#.#.#|#...#|.###.|..#..|.....", // Shield crest
+            ['$'] = ".###.|#.#.#|#.###|..#.#|#.#.#|.###.|..#..", // Coin glyph
+            ['^'] = "..#..|..#..|.#.#.|.###.|#####|.....|.....", // Arrow up
+            ['~'] = ".....|.....|.##..|#..#.|...##|.....|.....", // Wave divider
+            ['{'] = ".##|.#.|##.|.#.|.#.|.##|...",
+            ['}'] = "##.|.#.|.##|.#.|.#.|##.|...",
+        });
+
+        static readonly Dictionary<char, string[]> SerifGlyphs = Parse(new Dictionary<char, string>
+        {
+            ['A'] = "..###..\n.#...#.\n#.....#\n#.....#\n#######\n#.....#\n#.....#\n##...##\n##...##",
+            ['B'] = "######.\n#.....#\n#.....#\n######.\n#.....#\n#.....#\n#.....#\n######.\n#######",
+            ['C'] = ".#####.\n#.....#\n#......\n#......\n#......\n#......\n#.....#\n.#####.\n.......",
+            ['D'] = "######.\n#.....#\n#.....#\n#.....#\n#.....#\n#.....#\n#.....#\n######.\n#######",
+            ['E'] = "#######\n#......\n#......\n#####..\n#......\n#......\n#......\n#######\n#######",
+            ['F'] = "#######\n#......\n#......\n#####..\n#......\n#......\n#......\n###....\n###....",
+            ['G'] = ".#####.\n#.....#\n#......\n#..####\n#.....#\n#.....#\n#.....#\n.#####.\n.......",
+            ['H'] = "##...##\n##...##\n.#...#.\n.#####.\n.#####.\n.#...#.\n.#...#.\n##...##\n##...##",
+            ['I'] = "#####\n..#..\n..#..\n..#..\n..#..\n..#..\n..#..\n#####\n#####",
+            ['J'] = "...####\n.....#.\n.....#.\n.....#.\n.....#.\n.....#.\n#....#.\n.####..\n.......",
+            ['K'] = "##...##\n##..#..\n.#.#...\n.##....\n.###...\n.#..#..\n.#...#.\n##...##\n##...##",
+            ['L'] = "###....\n.#.....\n.#.....\n.#.....\n.#.....\n.#.....\n.#.....\n.######\n.######",
+            ['M'] = "##...##\n###.###\n#.#.#.#\n#..#..#\n#.....#\n#.....#\n#.....#\n##...##\n##...##",
+            ['N'] = "##...##\n###..##\n####.##\n#.##.##\n#..####\n#...###\n#....##\n##...##\n##...##",
+            ['O'] = ".#####.\n#.....#\n#.....#\n#.....#\n#.....#\n#.....#\n#.....#\n.#####.\n.......",
+            ['P'] = "######.\n#.....#\n#.....#\n######.\n#......\n#......\n#......\n###....\n###....",
+            ['Q'] = ".#####.\n#.....#\n#.....#\n#.....#\n#.....#\n#...#.#\n#....##\n.#####.\n......#",
+            ['R'] = "######.\n#.....#\n#.....#\n######.\n#..#...\n#...#..\n#....#.\n##...##\n##...##",
+            ['S'] = ".######\n#.....#\n#......\n.#####.\n......#\n......#\n#.....#\n.#####.\n.......",
+            ['T'] = "#######\n.#.#.#.\n...#...\n...#...\n...#...\n...#...\n...#...\n..###..\n..###..",
+            ['U'] = "##...##\n##...##\n.#...#.\n.#...#.\n.#...#.\n.#...#.\n.#...#.\n..###..\n.......",
+            ['V'] = "##...##\n##...##\n.#...#.\n.#...#.\n..#.#..\n..#.#..\n...#...\n...#...\n...#...",
+            ['W'] = "##...##\n##...##\n.#...#.\n.#.#.#.\n.#.#.#.\n..#.#..\n..#.#..\n...#...\n...#...",
+            ['X'] = "##...##\n.##.##.\n..###..\n...#...\n..###..\n.##.##.\n##...##\n##...##\n.......",
+            ['Y'] = "##...##\n.##.##.\n..###..\n...#...\n...#...\n...#...\n...#...\n..###..\n..###..",
+            ['Z'] = "#######\n.....#.\n....#..\n...#...\n..#....\n.#.....\n#......\n#######\n#######",
+            ['0'] = ".#####.\n#....##\n#...#.#\n#..#..#\n#.#...#\n##....#\n#.....#\n.#####.\n.......",
+            ['1'] = "..##..\n.###..\n...#..\n...#..\n...#..\n...#..\n...#..\n.#####\n.#####",
+            ['2'] = ".#####.\n#.....#\n......#\n.....#.\n...##..\n.##....\n#......\n#######\n#######",
+            ['3'] = "######.\n......#\n.....#.\n..###..\n.....#.\n......#\n#.....#\n.#####.\n.......",
+            ['4'] = "....##.\n...###.\n..#.##.\n.#..##.\n#######\n....##.\n....##.\n...####\n...####",
+            ['5'] = "#######\n#......\n#......\n######.\n......#\n......#\n#.....#\n.#####.\n.......",
+            ['6'] = ".#####.\n#......\n#......\n######.\n#.....#\n#.....#\n#.....#\n.#####.\n.......",
+            ['7'] = "#######\n.....#.\n....#..\n...#...\n...#...\n..#....\n..#....\n..#....\n..#....",
+            ['8'] = ".#####.\n#.....#\n#.....#\n.#####.\n#.....#\n#.....#\n#.....#\n.#####.\n.......",
+            ['9'] = ".#####.\n#.....#\n#.....#\n#.....#\n.######\n......#\n......#\n.#####.\n.......",
+            [' '] = "....\n....\n....\n....\n....\n....\n....\n....\n....",
+            ['.'] = "..\n..\n..\n..\n..\n..\n..\n##\n##",
+            [','] = "..\n..\n..\n..\n..\n..\n##\n##\n#.",
+            [':'] = "..\n..\n##\n..\n..\n..\n##\n..\n..",
+            ['!'] = "##\n##\n##\n##\n##\n..\n..\n##\n##",
+            ['?'] = ".#####.\n#.....#\n......#\n....##.\n...##..\n...##..\n.......\n...##..\n...##..",
+            ['\''] = "##\n##\n#.\n..\n..\n..\n..\n..\n..",
+            ['-'] = ".....\n.....\n.....\n.....\n#####\n.....\n.....\n.....\n.....",
+            ['+'] = ".......\n...#...\n...#...\n...#...\n#######\n...#...\n...#...\n...#...\n.......",
+            ['='] = ".....\n.....\n#####\n.....\n.....\n#####\n.....\n.....\n.....",
+            ['/'] = "......#\n.....#.\n....#..\n...#...\n...#...\n..#....\n.#.....\n#......\n.......",
+            ['['] = "###\n.#.\n.#.\n.#.\n.#.\n.#.\n.#.\n###\n###",
+            [']'] = "###\n..#\n..#\n..#\n..#\n..#\n..#\n###\n###",
+            ['<'] = ".....#\n....##\n..###.\n.####.\n..###.\n....##\n.....#\n......\n......",
+            ['>'] = "#.....\n##....\n.###..\n.####.\n.###..\n##....\n#.....\n......\n......",
+            ['@'] = "...#...\n..###..\n.#####.\n#######\n.#####.\n..###..\n...#...\n.......\n.......", // Diamond ornament
+            ['#'] = "#######\n#.....#\n#.#.#.#\n#..#..#\n#.....#\n.#...#.\n..###..\n...#...\n.......", // Shield
+            ['$'] = ".#####.\n#.#.#.#\n#.#####\n...#..#\n#..#..#\n#####.#\n#.#.#.#\n.#####.\n...#...", // Currency
+            ['~'] = ".......\n.......\n.##....\n#..#..#\n....##.\n.......\n.......\n.......\n.......",
         });
 
         static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
@@ -75,68 +146,79 @@ namespace Obscure
         static Dictionary<char, string[]> Parse(Dictionary<char, string> src)
         {
             var d = new Dictionary<char, string[]>();
-            foreach (var kv in src) d[kv.Key] = kv.Value.Split('|');
+            foreach (var kv in src)
+            {
+                var rows = kv.Value.Contains('\n') ? kv.Value.Split('\n') : kv.Value.Split('|');
+                d[kv.Key] = rows;
+            }
             return d;
         }
 
-        static string[] Glyph(char c) => Glyphs.TryGetValue(char.ToUpperInvariant(c), out var g) ? g : Glyphs['?'];
+        static string[] Glyph(char c, FontKind font = FontKind.Interface)
+        {
+            char upper = char.ToUpperInvariant(c);
+            if (font == FontKind.Serif && SerifGlyphs.TryGetValue(upper, out var sg))
+                return sg;
+            return InterfaceGlyphs.TryGetValue(upper, out var g) ? g : InterfaceGlyphs['?'];
+        }
 
-        public static int Measure(string line)
+        public static int Measure(string line, FontKind font = FontKind.Interface)
         {
             int w = 0;
-            foreach (var c in line) w += Glyph(c)[0].Length + 1;
+            foreach (var c in line) w += Glyph(c, font)[0].Length + 1;
             return Mathf.Max(0, w - 1);
         }
 
-        // Trims text to fit maxWidth pixels, ending in '.' when cut.
-        public static string Fit(string text, int maxWidth)
+        public static string Fit(string text, int maxWidth, FontKind font = FontKind.Interface)
         {
-            if (Measure(text) <= maxWidth) return text;
-            while (text.Length > 1 && Measure(text + ".") > maxWidth) text = text.Substring(0, text.Length - 1);
+            if (Measure(text, font) <= maxWidth) return text;
+            while (text.Length > 1 && Measure(text + ".", font) > maxWidth) text = text.Substring(0, text.Length - 1);
             return text.TrimEnd() + ".";
         }
 
-        // Names: "MARTIAL ARTIST" -> "MARTIAL" when the full name does not fit, then trimmed if still too wide.
-        public static string FitName(string name, int maxWidth)
+        public static string FitName(string name, int maxWidth, FontKind font = FontKind.Interface)
         {
-            if (Measure(name) > maxWidth && name.Contains(' ')) name = name.Substring(0, name.IndexOf(' '));
-            return Fit(name, maxWidth);
+            if (Measure(name, font) > maxWidth && name.Contains(' ')) name = name.Substring(0, name.IndexOf(' '));
+            return Fit(name, maxWidth, font);
         }
 
-        public static string Wrap(string text, int maxWidth)
+        public static string Wrap(string text, int maxWidth, FontKind font = FontKind.Interface)
         {
-            if (text.Contains('\n')) // keep explicit line breaks, wrap each paragraph
-                return string.Join("\n", System.Array.ConvertAll(text.Split('\n'), p => Wrap(p, maxWidth)));
+            if (text.Contains('\n'))
+                return string.Join("\n", System.Array.ConvertAll(text.Split('\n'), p => Wrap(p, maxWidth, font)));
             var sb = new StringBuilder();
             var line = "";
             foreach (var word in text.Split(' '))
             {
                 var candidate = line.Length == 0 ? word : line + " " + word;
-                if (Measure(candidate) > maxWidth && line.Length > 0) { sb.Append(line).Append('\n'); line = word; }
+                if (Measure(candidate, font) > maxWidth && line.Length > 0) { sb.Append(line).Append('\n'); line = word; }
                 else line = candidate;
             }
             return sb.Append(line).ToString();
         }
 
-        // ponytail: one texture per distinct string, never evicted. Fine for menu text; add LRU if dynamic text explodes.
-        public static Sprite Render(string text)
+        public static Sprite Render(string text, FontKind font = FontKind.Interface)
         {
-            if (Cache.TryGetValue(text, out var cached) && cached != null) return cached;
+            string key = ((int)font) + ":" + text;
+            if (Cache.TryGetValue(key, out var cached) && cached != null) return cached;
             var lines = text.Split('\n');
-            int w = 1, h = (lines.Length - 1) * LineHeight + GlyphHeight + 1;
-            foreach (var l in lines) w = Mathf.Max(w, Measure(l) + 1);
+            int gHeight = font == FontKind.Serif ? SerifGlyphHeight : GlyphHeight;
+            int lHeight = font == FontKind.Serif ? SerifLineHeight : LineHeight;
+
+            int w = 1, h = (lines.Length - 1) * lHeight + gHeight + 1;
+            foreach (var l in lines) w = Mathf.Max(w, Measure(l, font) + 1);
 
             var px = new Color32[w * h];
-            Color32 shadow = Palette.Void, ink = Color.white;
+            Color32 shadow = Palette.OverlayCharcoal, ink = Color.white;
             for (int pass = 0; pass < 2; pass++)
             {
                 int off = pass == 0 ? 1 : 0;
                 for (int li = 0; li < lines.Length; li++)
                 {
-                    int x = 0, y0 = li * LineHeight;
+                    int x = 0, y0 = li * lHeight;
                     foreach (var c in lines[li])
                     {
-                        var g = Glyph(c);
+                        var g = Glyph(c, font);
                         for (int gy = 0; gy < g.Length; gy++)
                             for (int gx = 0; gx < g[gy].Length; gx++)
                                 if (g[gy][gx] == '#')
@@ -145,8 +227,8 @@ namespace Obscure
                     }
                 }
             }
-            var sprite = PixelArt.SpriteFrom(px, w, h, new Vector2(0, 1), "text:" + text);
-            Cache[text] = sprite;
+            var sprite = PixelArt.SpriteFrom(px, w, h, new Vector2(0, 1), "text:" + key);
+            Cache[key] = sprite;
             return sprite;
         }
     }

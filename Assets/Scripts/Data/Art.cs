@@ -1,4 +1,4 @@
-// Temporary pixel art as palette-keyed rows ('.' = transparent, keys in Palette.Key).
+﻿// Temporary pixel art as palette-keyed rows ('.' = transparent, keys in Palette.Key).
 // Party faces right, enemies face left.
 namespace Obscure
 {
@@ -413,6 +413,7 @@ namespace Obscure
 
         public static readonly string[] Marker =
         {
+            "YYYYY",
             "yyyyy",
             ".yyy.",
             "..y..",
@@ -420,6 +421,7 @@ namespace Obscure
 
         public static readonly string[] TargetMarker =
         {
+            "BBBBB",
             "rrrrr",
             ".rrr.",
             "..r..",

@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Inventory Screen conforming to Inventory & Equipment System GDD v1.0 (Section 12)
-    // 320x180 Virtual Pixel Resolution, 4 categories, 100 equipment capacity, rarity color-coding, sorting & filtering.
+    // Inventory Screen conforming to UI/UX Overhaul Specification (Section 4.2)
+    // 640x360 Reference Resolution, 4 categories, 100 equipment capacity, rarity color-coding, sorting & filtering.
     public class InventoryScreen : GameScreen
     {
         readonly GameState returnState;
@@ -18,10 +18,11 @@ namespace Obscure
         EquipmentSlot? currentSlotFilter = null;
         int selectedIndex = 0;
         int pageIndex = 0;
-        const int ItemsPerPage = 6;
+        const int ItemsPerPage = 10;
 
         Label headerTitle;
         Label capacityLabel;
+        Label pageIndicator;
         Label feedbackLabel;
 
         // Details panel labels
@@ -48,6 +49,8 @@ namespace Obscure
 
         bool confirmSellActive = false;
 
+        public InventoryScreen() : this(null, null, null) { }
+
         public InventoryScreen(InventoryRuntime inv = null, IEnumerable<Unit> partyUnits = null, GameState? backTo = null)
         {
             inventory = inv ?? (Game.I?.Run?.Inventory ?? new InventoryRuntime());
@@ -65,23 +68,24 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 8, Palette.Void, Palette.Night, Palette.Dusk);
+            Backdrop.Create(Root, false, 8, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk);
 
             // 1. Top bar: Title, Category Tabs, Capacity
-            Ui.Panel(Root, 0, 0, Ui.Width, 18);
-            headerTitle = Ui.Label(Root, "INVENTORY", 6, 5, Palette.Gold);
+            Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
+            headerTitle = Ui.Label(Root, "INVENTORY & SATCHEL", 12, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
 
-            tabEquipBtn = Ui.Button(Root, "EQP", 80, 2, 34, () => SelectCategory(InventoryCategory.Equipment), 14, showCursor: false);
-            tabConsumableBtn = Ui.Button(Root, "USE", 118, 2, 34, () => SelectCategory(InventoryCategory.Consumables), 14, showCursor: false);
-            tabMaterialBtn = Ui.Button(Root, "MAT", 156, 2, 34, () => SelectCategory(InventoryCategory.Materials), 14, showCursor: false);
-            tabKeyBtn = Ui.Button(Root, "KEY", 194, 2, 34, () => SelectCategory(InventoryCategory.KeyItems), 14, showCursor: false);
+            tabEquipBtn = Ui.Button(Root, "EQUIPMENT", 170, 4, 82, () => SelectCategory(InventoryCategory.Equipment), 18, showCursor: false);
+            tabConsumableBtn = Ui.Button(Root, "CONSUMABLES", 256, 4, 94, () => SelectCategory(InventoryCategory.Consumables), 18, showCursor: false);
+            tabMaterialBtn = Ui.Button(Root, "MATERIALS", 354, 4, 84, () => SelectCategory(InventoryCategory.Materials), 18, showCursor: false);
+            tabKeyBtn = Ui.Button(Root, "KEY ITEMS", 442, 4, 80, () => SelectCategory(InventoryCategory.KeyItems), 18, showCursor: false);
 
-            capacityLabel = Ui.Label(Root, "", 314, 5, Palette.Bone, Align.Right);
+            capacityLabel = Ui.Label(Root, "", 628, 7, Palette.WarmIvory, Align.Right);
 
-            // 2. Left Panel: Item list, Pagination, Sorting & Filtering
-            Ui.Panel(Root, 2, 19, 150, 132);
-            sortBtn = Ui.Button(Root, "SORT: RAR", 6, 21, 68, CycleSortMode, 11, showCursor: false);
-            filterBtn = Ui.Button(Root, "FILTER: ALL", 78, 21, 70, CycleFilter, 11, showCursor: false);
+            // 2. Left Panel (350x296): Item list, Pagination, Sorting & Filtering
+            Ui.Panel(Root, 8, 28, 350, 296, Palette.DeepCharcoal, Palette.DarkBorder);
+            sortBtn = Ui.Button(Root, "SORT: RARITY", 16, 32, 160, CycleSortMode, 18, showCursor: false);
+            filterBtn = Ui.Button(Root, "FILTER: ALL", 182, 32, 168, CycleFilter, 18, showCursor: false);
+            Ui.Divider(Root, 16, 52, 334, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             var menu = Root.gameObject.AddComponent<Menu>();
             menu.onBack = () => Game.Go(returnState);
@@ -96,37 +100,48 @@ namespace Obscure
             for (int i = 0; i < ItemsPerPage; i++)
             {
                 int slotIdx = i;
-                int y = 35 + i * 16;
-                var btn = Ui.Button(Root, "", 6, y, 142, () => SelectItem(slotIdx), 14);
+                int y = 56 + i * 22;
+                var btn = Ui.Button(Root, "", 16, y, 334, () => SelectItem(slotIdx), 19);
                 itemSlotButtons.Add(btn);
                 menu.Add(btn);
             }
 
-            var prevPageBtn = Ui.Button(Root, "< PREV", 6, 133, 44, () => ChangePage(-1), 14, showCursor: false);
-            var nextPageBtn = Ui.Button(Root, "NEXT >", 104, 133, 44, () => ChangePage(1), 14, showCursor: false);
+            Ui.Divider(Root, 16, 280, 334, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            var prevPageBtn = Ui.Button(Root, "< PREV", 16, 288, 80, () => ChangePage(-1), 18, showCursor: false);
+            pageIndicator = Ui.Label(Root, "PAGE 1 / 1", 183, 292, Palette.MutedGray, Align.Center);
+            var nextPageBtn = Ui.Button(Root, "NEXT >", 270, 288, 80, () => ChangePage(1), 18, showCursor: false);
             menu.Add(prevPageBtn);
             menu.Add(nextPageBtn);
 
-            // 3. Right Panel: Selected Item Details
-            Ui.Panel(Root, 154, 19, 164, 132);
-            detailName = Ui.Label(Root, "", 158, 23, Palette.Gold);
-            detailTypeRarity = Ui.Label(Root, "", 158, 33, Palette.Parchment);
-            detailBaseStats = Ui.Label(Root, "", 158, 45, Palette.Bone);
-            detailAffixes = Ui.Label(Root, "", 158, 65, Palette.Lilac);
-            detailSpecialEffect = Ui.Label(Root, "", 158, 97, Palette.Gold);
-            detailRestrictions = Ui.Label(Root, "", 158, 117, Palette.Ash);
-            detailValue = Ui.Label(Root, "", 158, 135, Palette.Gold);
+            // 3. Right Panel (270x296): Selected Item Details & Lore
+            Ui.Panel(Root, 362, 28, 270, 296, Palette.DeepCharcoal, Palette.DarkBorder);
+            detailName = Ui.Label(Root, "", 372, 33, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            detailTypeRarity = Ui.Label(Root, "", 372, 47, Palette.MutedGray);
+            Ui.Divider(Root, 372, 59, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
-            // 4. Bottom Panel: Actions & Feedback
-            Ui.Panel(Root, 0, 152, Ui.Width, 28);
-            feedbackLabel = Ui.Label(Root, "", 6, 154, Palette.Parchment);
+            detailBaseStats = Ui.Label(Root, "", 372, 65, Palette.WarmIvory);
+            Ui.Divider(Root, 372, 108, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
-            actionEquipBtn = Ui.Button(Root, "EQUIP", 6, 163, 42, OnEquipClicked, 13, showCursor: false);
-            actionUpgradeBtn = Ui.Button(Root, "UPGRADE", 52, 163, 52, OnUpgradeClicked, 13, showCursor: false);
-            actionSellBtn = Ui.Button(Root, "SELL", 108, 163, 40, OnSellClicked, 13, showCursor: false);
-            actionDiscardBtn = Ui.Button(Root, "DISCARD", 152, 163, 50, OnDiscardClicked, 13, showCursor: false);
-            actionUseBtn = Ui.Button(Root, "USE", 206, 163, 34, OnUseClicked, 13, showCursor: false);
-            var backBtn = Ui.Button(Root, "BACK", 276, 163, 38, () => Game.Go(returnState), 13, showCursor: false);
+            Ui.Label(Root, "AFFIXES & ATTRIBUTES", 372, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            detailAffixes = Ui.Label(Root, "", 372, 128, Palette.ArcaneViolet);
+
+            Ui.Divider(Root, 372, 182, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            detailSpecialEffect = Ui.Label(Root, "", 372, 188, Palette.AntiqueGoldBright);
+            detailRestrictions = Ui.Label(Root, "", 372, 248, Palette.MutedGray);
+
+            Ui.Divider(Root, 372, 266, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            detailValue = Ui.Label(Root, "", 372, 274, Palette.AntiqueGoldBright);
+
+            // 4. Bottom Panel (640x32): Actions & Feedback
+            Ui.Panel(Root, 0, 328, Ui.Width, 32, Palette.DeepCharcoal, Palette.AntiqueGold);
+            feedbackLabel = Ui.Label(Root, "", 14, 333, Palette.WarmIvory);
+
+            actionEquipBtn = Ui.Button(Root, "EQUIP", 16, 336, 64, OnEquipClicked, 18, showCursor: false);
+            actionUpgradeBtn = Ui.Button(Root, "UPGRADE", 84, 336, 76, OnUpgradeClicked, 18, showCursor: false);
+            actionSellBtn = Ui.Button(Root, "SELL", 164, 336, 56, OnSellClicked, 18, showCursor: false);
+            actionDiscardBtn = Ui.Button(Root, "DISCARD", 224, 336, 72, OnDiscardClicked, 18, showCursor: false);
+            actionUseBtn = Ui.Button(Root, "USE", 300, 336, 52, OnUseClicked, 18, showCursor: false);
+            var backBtn = Ui.Button(Root, "BACK", 564, 336, 64, () => Game.Go(returnState), 18, showCursor: false);
 
             menu.Add(actionEquipBtn);
             menu.Add(actionUpgradeBtn);
@@ -157,7 +172,7 @@ namespace Obscure
                 EquipmentSortMode.Name => EquipmentSortMode.SellValueDesc,
                 _ => EquipmentSortMode.RarityDesc
             };
-            sortBtn?.label?.Set(PixelFont.Fit($"SORT: {currentSortMode.ToString().ToUpperInvariant().Substring(0, 3)}", 66));
+            sortBtn?.label?.Set(PixelFont.Fit($"SORT: {currentSortMode.ToString().ToUpperInvariant()}", 150));
             Refresh();
         }
 
@@ -172,8 +187,8 @@ namespace Obscure
                 EquipmentSlot.Accessory1 => EquipmentSlot.Accessory2,
                 _ => null
             };
-            string fltText = currentSlotFilter.HasValue ? EquipmentSlots.ShortName(currentSlotFilter.Value) : "ALL";
-            filterBtn?.label?.Set(PixelFont.Fit($"FLT: {fltText}", 68));
+            string fltText = currentSlotFilter.HasValue ? EquipmentSlots.DisplayName(currentSlotFilter.Value) : "ALL";
+            filterBtn?.label?.Set(PixelFont.Fit($"FILTER: {fltText.ToUpperInvariant()}", 158));
             Refresh();
         }
 
@@ -200,20 +215,20 @@ namespace Obscure
             feedbackLabel?.Set("");
 
             // Update Tab Highlights
-            tabEquipBtn.label.Color = currentCategory == InventoryCategory.Equipment ? Palette.Gold : Palette.Ash;
-            tabConsumableBtn.label.Color = currentCategory == InventoryCategory.Consumables ? Palette.Gold : Palette.Ash;
-            tabMaterialBtn.label.Color = currentCategory == InventoryCategory.Materials ? Palette.Gold : Palette.Ash;
-            tabKeyBtn.label.Color = currentCategory == InventoryCategory.KeyItems ? Palette.Gold : Palette.Ash;
+            tabEquipBtn.label.Color = currentCategory == InventoryCategory.Equipment ? Palette.AntiqueGoldBright : Palette.MutedGray;
+            tabConsumableBtn.label.Color = currentCategory == InventoryCategory.Consumables ? Palette.AntiqueGoldBright : Palette.MutedGray;
+            tabMaterialBtn.label.Color = currentCategory == InventoryCategory.Materials ? Palette.AntiqueGoldBright : Palette.MutedGray;
+            tabKeyBtn.label.Color = currentCategory == InventoryCategory.KeyItems ? Palette.AntiqueGoldBright : Palette.MutedGray;
 
             int eqCount = inventory.EquipmentCount;
-            capacityLabel?.Set($"EQP: {eqCount}/{InventoryRuntime.MaxEquipmentCapacity}");
-            capacityLabel.Color = inventory.IsEquipmentFull ? Palette.Crimson : Palette.Bone;
+            capacityLabel?.Set($"GEAR: {eqCount}/{InventoryRuntime.MaxEquipmentCapacity}");
+            capacityLabel.Color = inventory.IsEquipmentFull ? Palette.SpecCrimson : Palette.WarmIvory;
 
             // Clear item slot buttons
             foreach (var b in itemSlotButtons)
             {
                 b.label.Set("");
-                b.label.Color = Palette.Bone;
+                b.label.Color = Palette.WarmIvory;
             }
 
             if (currentCategory == InventoryCategory.Equipment)
@@ -221,6 +236,7 @@ namespace Obscure
                 var list = GetCurrentEquipmentList();
                 int totalPages = Math.Max(1, (list.Count + ItemsPerPage - 1) / ItemsPerPage);
                 if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+                pageIndicator?.Set($"PAGE {pageIndex + 1} / {totalPages}");
 
                 int start = pageIndex * ItemsPerPage;
                 for (int i = 0; i < ItemsPerPage; i++)
@@ -231,7 +247,7 @@ namespace Obscure
                         var eq = list[itemIdx];
                         string eqName = eq.upgradeLevel > 0 ? $"{eq.Definition?.name} +{eq.upgradeLevel}" : eq.Definition?.name ?? "Equipment";
                         string prefix = (i == selectedIndex) ? "> " : "  ";
-                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{eqName}".ToUpperInvariant(), 138));
+                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{eqName}".ToUpperInvariant(), 320));
                         itemSlotButtons[i].label.Color = EquipmentRarities.GetColor(eq.rarity);
                     }
                 }
@@ -242,15 +258,19 @@ namespace Obscure
                 else
                     ClearDetails();
 
-                actionEquipBtn.label.Color = Palette.Bone;
-                actionUpgradeBtn.label.Color = Palette.Bone;
-                actionSellBtn.label.Color = Palette.Bone;
-                actionDiscardBtn.label.Color = Palette.Bone;
+                actionEquipBtn.label.Color = Palette.WarmIvory;
+                actionUpgradeBtn.label.Color = Palette.WarmIvory;
+                actionSellBtn.label.Color = Palette.WarmIvory;
+                actionDiscardBtn.label.Color = Palette.WarmIvory;
                 actionUseBtn.label.Color = Palette.Shade;
             }
             else if (currentCategory == InventoryCategory.Consumables)
             {
                 var list = inventory.consumables;
+                int totalPages = Math.Max(1, (list.Count + ItemsPerPage - 1) / ItemsPerPage);
+                if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+                pageIndicator?.Set($"PAGE {pageIndex + 1} / {totalPages}");
+
                 int start = pageIndex * ItemsPerPage;
                 for (int i = 0; i < ItemsPerPage; i++)
                 {
@@ -260,8 +280,8 @@ namespace Obscure
                         var c = list[itemIdx];
                         string name = c.Definition?.name ?? c.itemId;
                         string prefix = (i == selectedIndex) ? "> " : "  ";
-                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{name} x{c.count}".ToUpperInvariant(), 138));
-                        itemSlotButtons[i].label.Color = Palette.Moss;
+                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{name} x{c.count}".ToUpperInvariant(), 320));
+                        itemSlotButtons[i].label.Color = Palette.Emerald;
                     }
                 }
 
@@ -274,12 +294,16 @@ namespace Obscure
                 actionEquipBtn.label.Color = Palette.Shade;
                 actionUpgradeBtn.label.Color = Palette.Shade;
                 actionSellBtn.label.Color = Palette.Shade;
-                actionDiscardBtn.label.Color = Palette.Bone;
-                actionUseBtn.label.Color = Palette.Bone;
+                actionDiscardBtn.label.Color = Palette.WarmIvory;
+                actionUseBtn.label.Color = Palette.Emerald;
             }
             else if (currentCategory == InventoryCategory.Materials)
             {
                 var list = inventory.materials.ToList();
+                int totalPages = Math.Max(1, (list.Count + ItemsPerPage - 1) / ItemsPerPage);
+                if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+                pageIndicator?.Set($"PAGE {pageIndex + 1} / {totalPages}");
+
                 int start = pageIndex * ItemsPerPage;
                 for (int i = 0; i < ItemsPerPage; i++)
                 {
@@ -288,8 +312,8 @@ namespace Obscure
                     {
                         var m = list[itemIdx];
                         string prefix = (i == selectedIndex) ? "> " : "  ";
-                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{m.Key} x{m.Value}".ToUpperInvariant(), 138));
-                        itemSlotButtons[i].label.Color = Palette.Wood;
+                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{m.Key} x{m.Value}".ToUpperInvariant(), 320));
+                        itemSlotButtons[i].label.Color = Palette.WarmIvory;
                     }
                 }
 
@@ -302,12 +326,16 @@ namespace Obscure
                 actionEquipBtn.label.Color = Palette.Shade;
                 actionUpgradeBtn.label.Color = Palette.Shade;
                 actionSellBtn.label.Color = Palette.Shade;
-                actionDiscardBtn.label.Color = Palette.Bone;
+                actionDiscardBtn.label.Color = Palette.WarmIvory;
                 actionUseBtn.label.Color = Palette.Shade;
             }
             else // KeyItems
             {
                 var list = inventory.keyItems.ToList();
+                int totalPages = Math.Max(1, (list.Count + ItemsPerPage - 1) / ItemsPerPage);
+                if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+                pageIndicator?.Set($"PAGE {pageIndex + 1} / {totalPages}");
+
                 int start = pageIndex * ItemsPerPage;
                 for (int i = 0; i < ItemsPerPage; i++)
                 {
@@ -316,8 +344,8 @@ namespace Obscure
                     {
                         string k = list[itemIdx];
                         string prefix = (i == selectedIndex) ? "> " : "  ";
-                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{k}".ToUpperInvariant(), 138));
-                        itemSlotButtons[i].label.Color = Palette.Gold;
+                        itemSlotButtons[i].label.Set(PixelFont.Fit($"{prefix}{k}".ToUpperInvariant(), 320));
+                        itemSlotButtons[i].label.Color = Palette.AntiqueGoldBright;
                     }
                 }
 
@@ -350,12 +378,12 @@ namespace Obscure
         {
             var def = eq.Definition;
             string eqName = eq.upgradeLevel > 0 ? $"{def?.name} +{eq.upgradeLevel}" : def?.name ?? "Equipment";
-            detailName?.Set(PixelFont.Fit(eqName.ToUpperInvariant(), 160));
+            detailName?.Set(PixelFont.Fit(eqName.ToUpperInvariant(), 250));
             detailName.Color = EquipmentRarities.GetColor(eq.rarity);
 
             string slotName = def != null ? EquipmentSlots.DisplayName(def.slot) : "UNKNOWN";
-            detailTypeRarity?.Set(PixelFont.Fit($"{eq.rarity.ToString().ToUpperInvariant()} {slotName} (LVL {eq.level})", 160));
-            detailTypeRarity.Color = Palette.Parchment;
+            detailTypeRarity?.Set(PixelFont.Fit($"{eq.rarity.ToString().ToUpperInvariant()}  •  {slotName.ToUpperInvariant()}  (LVL {eq.level})", 250));
+            detailTypeRarity.Color = Palette.MutedGray;
 
             // Base Stats
             var statParts = new List<string>();
@@ -363,13 +391,13 @@ namespace Obscure
             if (eq.EffectivePhysicalDefense > 0) statParts.Add($"DEF +{eq.EffectivePhysicalDefense}");
             if (eq.EffectiveMagicDefense > 0) statParts.Add($"MDEF +{eq.EffectiveMagicDefense}");
             if (eq.EffectiveBreakPowerModifier > 0) statParts.Add($"BRK +{eq.EffectiveBreakPowerModifier}");
-            detailBaseStats?.Set(PixelFont.Fit(statParts.Count > 0 ? string.Join("  ", statParts) : "NO BASE STATS", 160));
+            detailBaseStats?.Set(PixelFont.Fit(statParts.Count > 0 ? string.Join("   ", statParts) : "NO BASE STATS", 250));
 
             // Affixes
             if (eq.affixes != null && eq.affixes.Count > 0)
             {
                 var affList = eq.affixes.Select(a => $"• {a.GetDescription()}");
-                detailAffixes?.Set(PixelFont.Wrap(string.Join("\n", affList).ToUpperInvariant(), 160));
+                detailAffixes?.Set(PixelFont.Wrap(string.Join("\n", affList).ToUpperInvariant(), 250));
             }
             else
             {
@@ -380,8 +408,8 @@ namespace Obscure
             var se = eq.SpecialEffect;
             if (se != null)
             {
-                detailSpecialEffect?.Set(PixelFont.Wrap($"★ {se.name}: {se.description}".ToUpperInvariant(), 160));
-                detailSpecialEffect.Color = eq.rarity == EquipmentRarity.Mythic ? Palette.Crimson : Palette.Gold;
+                detailSpecialEffect?.Set(PixelFont.Wrap($"★ {se.name}: {se.description}".ToUpperInvariant(), 250));
+                detailSpecialEffect.Color = eq.rarity == EquipmentRarity.Mythic ? Palette.SpecCrimson : Palette.AntiqueGold;
             }
             else
             {
@@ -391,31 +419,31 @@ namespace Obscure
             // Restrictions
             var r = def?.restrictions;
             if (r != null && r.allowedClasses != null && r.allowedClasses.Length > 0)
-                detailRestrictions?.Set(PixelFont.Fit($"CLASS: {string.Join("/", r.allowedClasses).ToUpperInvariant()}", 160));
+                detailRestrictions?.Set(PixelFont.Fit($"CLASS: {string.Join("/", r.allowedClasses).ToUpperInvariant()}", 250));
             else
-                detailRestrictions?.Set("ALL CLASSES");
+                detailRestrictions?.Set("ALL CLASSES COMPATIBLE");
 
-            detailValue?.Set($"SELL: {eq.CalculateSellValue()}G  UPGRADE COST: {eq.GetUpgradeCostGold()}G");
+            detailValue?.Set($"SELL VALUE: {eq.CalculateSellValue()}G   UPGRADE: {eq.GetUpgradeCostGold()}G");
         }
 
         void DisplayConsumableDetails(ConsumableStack c)
         {
             var def = c.Definition;
-            detailName?.Set(PixelFont.Fit(def?.name ?? c.itemId, 160));
-            detailName.Color = Palette.Moss;
-            detailTypeRarity?.Set($"CONSUMABLE  STACK: {c.count}/{c.maxStack}");
-            detailBaseStats?.Set(PixelFont.Wrap(def?.description ?? "Consumable recovery or buff item.", 160));
+            detailName?.Set(PixelFont.Fit(def?.name ?? c.itemId, 250));
+            detailName.Color = Palette.Emerald;
+            detailTypeRarity?.Set($"CONSUMABLE  •  STACK: {c.count}/{c.maxStack}");
+            detailBaseStats?.Set(PixelFont.Wrap(def?.description ?? "Consumable recovery or buff item.", 250));
             detailAffixes?.Set("");
             detailSpecialEffect?.Set("");
             detailRestrictions?.Set("");
-            detailValue?.Set($"SELL: 10G");
+            detailValue?.Set($"SELL VALUE: 10G");
         }
 
         void DisplayMaterialDetails(string materialId, int count)
         {
-            detailName?.Set(PixelFont.Fit(materialId.ToUpperInvariant(), 160));
-            detailName.Color = Palette.Wood;
-            detailTypeRarity?.Set($"MATERIAL  QUANTITY: {count}");
+            detailName?.Set(PixelFont.Fit(materialId.ToUpperInvariant(), 250));
+            detailName.Color = Palette.WarmIvory;
+            detailTypeRarity?.Set($"MATERIAL  •  QUANTITY: {count}");
             detailBaseStats?.Set("Upgrade material used at the Hub Blacksmith to hone equipment.");
             detailAffixes?.Set("");
             detailSpecialEffect?.Set("");
@@ -425,9 +453,9 @@ namespace Obscure
 
         void DisplayKeyItemDetails(string keyId)
         {
-            detailName?.Set(PixelFont.Fit(keyId.ToUpperInvariant(), 160));
-            detailName.Color = Palette.Gold;
-            detailTypeRarity?.Set("KEY ITEM  (CANNOT SELL / DISCARD)");
+            detailName?.Set(PixelFont.Fit(keyId.ToUpperInvariant(), 250));
+            detailName.Color = Palette.AntiqueGoldBright;
+            detailTypeRarity?.Set("KEY ITEM  •  BOUND TO HEROES");
             detailBaseStats?.Set("Unique progression item for dungeon and story exploration.");
             detailAffixes?.Set("");
             detailSpecialEffect?.Set("");
@@ -448,16 +476,15 @@ namespace Obscure
             var eq = GetSelectedEquipment();
             if (eq == null || party == null || party.Count == 0) return;
 
-            // Open equipment screen or equip onto first compatible party member
             var targetHero = party.FirstOrDefault(u => EquipmentValidator.Validate(eq.Definition, eq.Definition.slot, u.classDef, u.race, u.level, u.FinalScores) == null) ?? party[0];
             if (EquipmentManager.EquipFromInventory(targetHero, eq.Definition.slot, eq, inventory, out string err))
             {
-                feedbackLabel?.Set(PixelFont.Fit($"EQUIPPED {eq.Definition?.name} ON {targetHero.name.ToUpperInvariant()}", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"EQUIPPED {eq.Definition?.name} ON {targetHero.name.ToUpperInvariant()}", 610));
                 Refresh();
             }
             else
             {
-                feedbackLabel?.Set(PixelFont.Fit($"CANNOT EQUIP: {err.ToUpperInvariant()}", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"CANNOT EQUIP: {err.ToUpperInvariant()}", 610));
             }
         }
 
@@ -474,22 +501,21 @@ namespace Obscure
 
             if (!eq.CanUpgrade(out string reason))
             {
-                feedbackLabel?.Set(PixelFont.Fit(reason.ToUpperInvariant(), 308));
+                feedbackLabel?.Set(PixelFont.Fit(reason.ToUpperInvariant(), 610));
                 return;
             }
 
             if (Game.I?.Run != null && Game.I.Run.Gold < goldCost)
             {
-                feedbackLabel?.Set(PixelFont.Fit($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)", 610));
                 return;
             }
 
             if (inventory.GetMaterialCount("iron_ingot") < matCost)
             {
-                // If in dev/test or player doesn't have materials, grant or verify
                 if (playerMat < matCost && inventory.materials.Count > 0)
                 {
-                    feedbackLabel?.Set(PixelFont.Fit($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})", 308));
+                    feedbackLabel?.Set(PixelFont.Fit($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})", 610));
                     return;
                 }
             }
@@ -497,7 +523,7 @@ namespace Obscure
             if (Game.I?.Run != null) Game.I.Run.Gold -= goldCost;
             inventory.RemoveMaterial("iron_ingot", matCost);
             eq.TryUpgrade(out _);
-            feedbackLabel?.Set(PixelFont.Fit($"UPGRADED {eq.Definition?.name} TO +{eq.upgradeLevel}!", 308));
+            feedbackLabel?.Set(PixelFont.Fit($"UPGRADED {eq.Definition?.name} TO +{eq.upgradeLevel}!", 610));
             Refresh();
         }
 
@@ -512,15 +538,15 @@ namespace Obscure
                 if (EquipmentRarities.HasSpecialEffect(eq.rarity) && !confirmSellActive)
                 {
                     confirmSellActive = true;
-                    feedbackLabel?.Set(PixelFont.Fit($"SELL {eq.rarity.ToString().ToUpperInvariant()} ITEM? CLICK SELL AGAIN TO CONFIRM.", 308));
-                    actionSellBtn.label.Color = Palette.Crimson;
+                    feedbackLabel?.Set(PixelFont.Fit($"SELL {eq.rarity.ToString().ToUpperInvariant()} ITEM? CLICK SELL AGAIN TO CONFIRM.", 610));
+                    actionSellBtn.label.Color = Palette.SpecCrimson;
                     return;
                 }
 
                 int val = eq.CalculateSellValue();
                 inventory.RemoveEquipment(eq.instanceId);
                 if (Game.I?.Run != null) Game.I.Run.Gold += val;
-                feedbackLabel?.Set(PixelFont.Fit($"SOLD {eq.Definition?.name} FOR {val} GOLD.", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"SOLD {eq.Definition?.name} FOR {val} GOLD.", 610));
                 confirmSellActive = false;
                 Refresh();
             }
@@ -538,7 +564,7 @@ namespace Obscure
                 var eq = GetSelectedEquipment();
                 if (eq == null) return;
                 inventory.RemoveEquipment(eq.instanceId);
-                feedbackLabel?.Set(PixelFont.Fit($"DISCARDED {eq.Definition?.name}.", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"DISCARDED {eq.Definition?.name}.", 610));
                 Refresh();
             }
             else if (currentCategory == InventoryCategory.Consumables)
@@ -566,7 +592,7 @@ namespace Obscure
                     if (itemDef.heal > 0) target.Heal(itemDef.heal);
                     if (itemDef.mana > 0) target.mp = Math.Min(target.stats.maxMp, target.mp + itemDef.mana);
                     inventory.RemoveConsumable(c.itemId, 1);
-                    feedbackLabel?.Set(PixelFont.Fit($"USED {itemDef.name} ON {target.name.ToUpperInvariant()}.", 308));
+                    feedbackLabel?.Set(PixelFont.Fit($"USED {itemDef.name} ON {target.name.ToUpperInvariant()}.", 610));
                     Refresh();
                 }
             }

@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Character Status Screen & Stat Detail Tooltip viewer (PRD Section 12.3 & 12.4).
-    // Displays all 6 Primary Stats (Score, Modifier, Sources), all required Derived Stats, and detailed calculation tooltips.
+    // Character Status Screen & Stat Detail Tooltip viewer conforming to UI/UX Overhaul Specification
+    // 640x360 Reference Resolution, Octopath Traveler II Aesthetics, Serif Display Headers, Tabular Interface Readouts.
     public class CharacterStatusScreen : GameScreen
     {
         readonly List<Unit> units;
@@ -23,7 +23,6 @@ namespace Obscure
         SpriteRenderer portrait;
         Label vitals;
 
-        // The 15 Derived Stats required on the Character Status Screen (Prompt Section 9 / PRD Section 12.3), plus Magic Break.
         public static readonly DerivedStatId[] DisplayedDerivedStats =
         {
             DerivedStatId.MaxHP,
@@ -44,6 +43,8 @@ namespace Obscure
             DerivedStatId.QteTimingBonus,
         };
 
+        public CharacterStatusScreen() : this(null, null) { }
+
         public CharacterStatusScreen(IEnumerable<Unit> partyUnits = null, GameState? backTo = null)
         {
             if (partyUnits != null)
@@ -60,67 +61,75 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 6, Palette.Void, Palette.Night, Palette.Dusk);
+            Backdrop.Create(Root, false, 8, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk);
 
-            // Top bar: Hero selector & Class/Race summary, plus GEAR & ITEMS shortcuts
-            Ui.Panel(Root, 0, 0, Ui.Width, 18);
-            HeaderLabel = Ui.Label(Root, "", 6, 5, Palette.Gold);
-            IdentityLabel = Ui.Label(Root, "", 94, 5, Palette.Parchment);
-            var gearBtn = Ui.Button(Root, "GEAR", 224, 2, 40, () => Game?.Go(GameState.Equipment), 14, showCursor: false);
+            // 1. Top bar: Hero Selector & Class/Race summary, plus GEAR & ITEMS shortcuts
+            Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
+            HeaderLabel = Ui.Label(Root, "", 14, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            IdentityLabel = Ui.Label(Root, "", 120, 7, Palette.WarmIvory);
+            vitals = Ui.Label(Root, "", 370, 7, Palette.MutedGray);
+
+            var gearBtn = Ui.Button(Root, "LOADOUT", 480, 4, 72, () => Game?.Go(GameState.Equipment), 18, showCursor: false);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT LOADOUT";
-            var itemsBtn = Ui.Button(Root, "ITEMS", 268, 2, 46, () => Game?.Go(GameState.Inventory), 14, showCursor: false);
+            var itemsBtn = Ui.Button(Root, "SATCHEL", 558, 4, 72, () => Game?.Go(GameState.Inventory), 18, showCursor: false);
             itemsBtn.tooltip = "INVENTORY (EQUIPMENT, CONSUMABLES, MATERIALS, KEYS)";
 
-            // Left panel: 6 Primary Ability Scores
-            Ui.Panel(Root, 2, 19, 108, 108);
-            Ui.Label(Root, "PRIMARY STATS", 10, 23, Palette.Gold);
+            // 2. Left Panel: 6 Primary Ability Scores
+            Ui.Panel(Root, 12, 28, 192, 222, Palette.DeepCharcoal, Palette.DarkBorder);
+            Ui.Label(Root, "PRIMARY STATS", 22, 33, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Divider(Root, 22, 45, 172, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
-            // Right panel: 16 Derived Stats in two columns
-            Ui.Panel(Root, 112, 19, 206, 108);
-            Ui.Label(Root, "DERIVED STATS", 120, 23, Palette.Gold);
-            vitals = Ui.Label(Root, "", 312, 23, Palette.Parchment, Align.Right);
+            // 3. Right Panel: 16 Derived Stats in two columns
+            Ui.Panel(Root, 208, 28, 420, 222, Palette.DeepCharcoal, Palette.DarkBorder);
+            Ui.Label(Root, "DERIVED ATTRIBUTES", 218, 33, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Divider(Root, 218, 45, 400, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
-            // Bottom panel: Portrait + 4-line Stat Detail Tooltip
-            Ui.Panel(Root, 0, 128, Ui.Width, 52);
-            portrait = Ui.Image(Root, PixelArt.FromRows(CurrentUnit.sprite), 8, 136, Ui.Widget);
-            TooltipLabel = Ui.Label(Root, "", 28, 132, Palette.Bone);
+            // 4. Bottom Panel: Portrait + Detailed Formula Tooltip Card
+            Ui.Panel(Root, 0, 254, Ui.Width, 106, Palette.DeepCharcoal, Palette.AntiqueGold);
+
+            // Portrait well (38x44)
+            Ui.Image(Root, PixelArt.Box(40, 46, Palette.DeepCharcoal, Palette.AntiqueGoldDim), 14, 260, Ui.Panels + 1);
+            portrait = Ui.Image(Root, PixelArt.FromRows(CurrentUnit.sprite), 18, 264, Ui.Widget);
+
+            // Tooltip card
+            Ui.Image(Root, PixelArt.Box(564, 62, Palette.MidnightNavy, Palette.DarkBorder), 62, 260, Ui.Panels + 1);
+            TooltipLabel = Ui.Label(Root, "", 72, 266, Palette.WarmIvory);
 
             var menu = Root.gameObject.AddComponent<Menu>();
-            menu.onFocus = s => TooltipLabel.Set(PixelFont.Wrap(s?.tooltip ?? "", 284));
+            menu.onFocus = s => TooltipLabel.Set(PixelFont.Wrap(s?.tooltip ?? "", 544));
             menu.onBack = () => Game?.Go(returnState);
 
-            // Hero switch button (spaced so '>' cursor never overlaps border or adjacent button)
-            var switchBtn = Ui.Button(Root, "NEXT", 10, 112, 44, () => SwitchHero(1), 12);
+            var switchBtn = Ui.Button(Root, "NEXT HERO", 62, 328, 92, () => SwitchHero(1), 22);
             switchBtn.onAdjust = SwitchHero;
             switchBtn.tooltip = "LEFT/RIGHT OR CLICK: INSPECT ANOTHER PARTY MEMBER";
             menu.Add(switchBtn);
 
-            var backBtn = Ui.Button(Root, "BACK", 64, 112, 42, () => Game?.Go(returnState), 12);
+            var backBtn = Ui.Button(Root, "BACK", 552, 328, 74, () => Game?.Go(returnState), 22);
             backBtn.tooltip = "RETURN TO PREVIOUS SCREEN";
             menu.Add(backBtn);
 
             menu.Add(gearBtn);
             menu.Add(itemsBtn);
 
-            // Primary Ability Score interactive rows (x=10 keeps '>' cursor at x=3 inside left panel border; h=12 prevents drop-shadow border clipping)
+            // Primary Ability Score interactive rows
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
             {
                 var a = AbilityScores.AllAbilities[i];
-                int y = 34 + i * 12;
-                var btn = Ui.Button(Root, "", 10, y, 96, () => TooltipLabel.Set(PixelFont.Wrap(CurrentUnit.ExplainAbility(a), 284)), 12);
+                int y = 52 + i * 28;
+                var btn = Ui.Button(Root, "", 20, y, 176, () => TooltipLabel.Set(PixelFont.Wrap(CurrentUnit.ExplainAbility(a), 544)), 22);
                 PrimaryStatLabels[a] = btn.label;
                 menu.Add(btn);
             }
 
-            // Derived Stat interactive rows (2 columns x 8 rows, with 10px gap between columns for '>' cursor)
+            // Derived Stat interactive rows (2 columns x 8 rows)
             for (int i = 0; i < DisplayedDerivedStats.Length; i++)
             {
                 var st = DisplayedDerivedStats[i];
                 int col = i / 8;
                 int row = i % 8;
-                int x = 121 + col * 100;
-                int y = 34 + row * 11;
-                var btn = Ui.Button(Root, "", x, y, 90, () => ShowStatTooltip(st), 10);
+                int x = 216 + col * 202;
+                int y = 52 + row * 21;
+                var btn = Ui.Button(Root, "", x, y, 196, () => ShowStatTooltip(st), 19);
                 DerivedStatLabels[st] = btn.label;
                 menu.Add(btn);
             }
@@ -149,7 +158,7 @@ namespace Obscure
         }
 
         void ShowStatTooltip(DerivedStatId st) =>
-            TooltipLabel.Set(PixelFont.Wrap(GetStatTooltip(st), 284));
+            TooltipLabel.Set(PixelFont.Wrap(GetStatTooltip(st), 544));
 
         public void Refresh()
         {
@@ -157,7 +166,7 @@ namespace Obscure
             u.RecalculateStats();
 
             HeaderLabel.Set(PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 84));
-            vitals.Set($"HP {u.hp}/{u.stats.maxHp}  MP {u.mp}/{u.stats.maxMp}");
+            vitals.Set($"HP: {u.hp}/{u.stats.maxHp}   MP: {u.mp}/{u.stats.maxMp}");
             string raceName = u.race?.name ?? "Human";
             string className = u.classDef?.name ?? u.role;
             IdentityLabel.Set(PixelFont.Fit($"{raceName} {className}".ToUpperInvariant(), 125));
@@ -173,7 +182,7 @@ namespace Obscure
                 int mod = u.Mod(a);
                 int bonus = score - u.BaseScores[a];
                 string bonusTag = bonus != 0 ? $"({(bonus > 0 ? "+" : "")}{bonus})" : "";
-                PrimaryStatLabels[a].Set($"{a} {score,2} {AbilityScores.FormatMod(mod),2} {bonusTag}");
+                PrimaryStatLabels[a].Set($"{a} {score,2}  {AbilityScores.FormatMod(mod),2}  {bonusTag}");
 
                 var btn = PrimaryStatLabels[a].GetComponentInParent<Selectable>();
                 if (btn != null) btn.tooltip = u.ExplainAbility(a);
@@ -182,14 +191,13 @@ namespace Obscure
             foreach (var st in DisplayedDerivedStats)
             {
                 var def = Database.DerivedStatDefs[st];
-                DerivedStatLabels[st].Set($"{def.shortName,-4} {u.Derived.FormatValue(st)}");
+                DerivedStatLabels[st].Set($"{def.shortName,-4} : {u.Derived.FormatValue(st)}");
                 var btn = DerivedStatLabels[st].GetComponentInParent<Selectable>();
                 if (btn != null) btn.tooltip = GetStatTooltip(st);
             }
 
             if (menu?.Current != null)
-                TooltipLabel.Set(PixelFont.Wrap(menu.Current.tooltip ?? "", 284));
+                TooltipLabel.Set(PixelFont.Wrap(menu.Current.tooltip ?? "", 544));
         }
     }
 }
-

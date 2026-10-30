@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Equipment Screen conforming to Inventory & Equipment System GDD v1.0 (Section 13)
-    // 320x180 Virtual Pixel Resolution, 5 Core Equipment Slots, Live Stat Comparison, Equip & Unequip.
+    // Equipment Screen conforming to UI/UX Overhaul Specification (Section 4.2)
+    // 640x360 Reference Resolution, 5 Core Equipment Slots, Dual-Panel Comparison, Octopath Traveler II Aesthetics.
     public class EquipmentScreen : GameScreen
     {
         readonly GameState returnState;
@@ -70,6 +70,8 @@ namespace Obscure
             DerivedStatId.StatusResistance
         };
 
+        public EquipmentScreen() : this(null, null, 0, null) { }
+
         public EquipmentScreen(InventoryRuntime inv = null, IEnumerable<Unit> partyUnits = null, int initialHero = 0, GameState? backTo = null)
         {
             inventory = inv ?? (Game.I?.Run?.Inventory ?? new InventoryRuntime());
@@ -88,50 +90,56 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 8, Palette.Void, Palette.Night, Palette.Dusk);
+            Backdrop.Create(Root, false, 8, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk);
 
-            // 1. Top bar: Title, Hero Switcher, Capacity
-            Ui.Panel(Root, 0, 0, Ui.Width, 18);
-            titleLabel = Ui.Label(Root, "EQUIPMENT LOADOUT", 6, 5, Palette.Gold);
-            heroLabel = Ui.Label(Root, "", 160, 5, Palette.Parchment, Align.Center);
+            // 1. Top bar (640x26): Header Title, Hero Switcher, Navigation hint
+            Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
+            titleLabel = Ui.Label(Root, "EQUIPMENT LOADOUT", 12, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
 
-            var prevHeroBtn = Ui.Button(Root, "<", 100, 2, 18, () => SwitchHero(-1), 14, showCursor: false);
-            var nextHeroBtn = Ui.Button(Root, ">", 220, 2, 18, () => SwitchHero(1), 14, showCursor: false);
+            var prevHeroBtn = Ui.Button(Root, "<", 220, 4, 24, () => SwitchHero(-1), 18, showCursor: false);
+            heroLabel = Ui.Label(Root, "", 320, 7, Palette.WarmIvory, Align.Center, 1, FontKind.Serif);
+            var nextHeroBtn = Ui.Button(Root, ">", 396, 4, 24, () => SwitchHero(1), 18, showCursor: false);
+
+            Ui.Badge(Root, "TAB/ESC: CLOSE", 530, 6, 98, 14, Palette.MidnightNavy, Palette.DarkBorder, Palette.MutedGray, Align.Center);
 
             var menu = Root.gameObject.AddComponent<Menu>();
             menu.onBack = () => Game.Go(returnState);
             menu.Add(prevHeroBtn);
             menu.Add(nextHeroBtn);
 
-            // 2. Left Panel: 5 Core Equipment Slots (Top) & Compatible Inventory Items (Bottom)
-            Ui.Panel(Root, 2, 19, 150, 132);
-            Ui.Label(Root, "EQUIPPED SLOTS", 6, 21, Palette.Gold);
+            // 2. Left Panel (350x296): Equipped Slots (Top) & Compatible Inventory Candidates (Bottom)
+            Ui.Panel(Root, 8, 28, 350, 296, Palette.DeepCharcoal, Palette.DarkBorder);
+            Ui.Label(Root, "EQUIPPED SLOTS", 18, 33, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Divider(Root, 18, 45, 330, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             slotButtons.Clear();
             for (int i = 0; i < CoreSlots.Length; i++)
             {
                 int sIdx = i;
-                int y = 31 + i * 14;
-                var btn = Ui.Button(Root, "", 6, y, 142, () => SelectSlot(sIdx), 12);
+                int y = 50 + i * 22;
+                var btn = Ui.Button(Root, "", 16, y, 334, () => SelectSlot(sIdx), 19);
                 slotButtons.Add(btn);
                 menu.Add(btn);
             }
 
-            Ui.Label(Root, "AVAILABLE GEAR", 6, 102, Palette.Gold);
+            Ui.Divider(Root, 18, 166, 330, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            Ui.Label(Root, "COMPATIBLE GEAR IN BAG", 18, 172, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+
             candidateButtons.Clear();
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 5; i++)
             {
                 int cIdx = i;
-                int y = 112 + i * 14;
-                var btn = Ui.Button(Root, "", 6, y, 142, () => SelectCandidate(cIdx), 12);
+                int y = 188 + i * 22;
+                var btn = Ui.Button(Root, "", 16, y, 334, () => SelectCandidate(cIdx), 19);
                 candidateButtons.Add(btn);
                 menu.Add(btn);
             }
 
-            // 3. Right Panel: Stat Comparison & Equipment Details
-            Ui.Panel(Root, 154, 19, 164, 132);
-            detailTitle = Ui.Label(Root, "", 158, 22, Palette.Gold);
-            detailSub = Ui.Label(Root, "", 158, 31, Palette.Parchment);
+            // 3. Right Panel (270x296): Side-by-Side Comparison Modal & Item Details
+            Ui.Panel(Root, 362, 28, 270, 296, Palette.DeepCharcoal, Palette.DarkBorder);
+            detailTitle = Ui.Label(Root, "", 372, 33, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            detailSub = Ui.Label(Root, "", 372, 47, Palette.MutedGray);
+            Ui.Divider(Root, 372, 59, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             comparisonLabels.Clear();
             for (int i = 0; i < ComparedStats.Length; i++)
@@ -139,22 +147,26 @@ namespace Obscure
                 var st = ComparedStats[i];
                 int col = i / 4;
                 int row = i % 4;
-                int x = 158 + col * 80;
-                int y = 43 + row * 11;
-                comparisonLabels[st] = Ui.Label(Root, "", x, y, Palette.Bone);
+                int x = 372 + col * 128;
+                int y = 64 + row * 18;
+                comparisonLabels[st] = Ui.Label(Root, "", x, y, Palette.WarmIvory);
             }
 
-            candidateAffixesLabel = Ui.Label(Root, "", 158, 88, Palette.Lilac);
-            candidateSpecialLabel = Ui.Label(Root, "", 158, 122, Palette.Gold);
+            Ui.Divider(Root, 372, 142, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            Ui.Label(Root, "ENCHANTMENTS & AFFIXES", 372, 147, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            candidateAffixesLabel = Ui.Label(Root, "", 372, 162, Palette.ArcaneViolet);
 
-            // 4. Bottom Panel: Actions
-            Ui.Panel(Root, 0, 152, Ui.Width, 28);
-            feedbackLabel = Ui.Label(Root, "", 6, 154, Palette.Parchment);
+            Ui.Divider(Root, 372, 230, 250, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            candidateSpecialLabel = Ui.Label(Root, "", 372, 236, Palette.AntiqueGoldBright);
 
-            equipActionBtn = Ui.Button(Root, "EQUIP", 6, 163, 48, OnEquipClicked, 13, showCursor: false);
-            unequipActionBtn = Ui.Button(Root, "UNEQUIP", 58, 163, 56, OnUnequipClicked, 13, showCursor: false);
-            var invBtn = Ui.Button(Root, "INVENTORY", 118, 163, 68, () => Game.Go(GameState.Inventory), 13, showCursor: false);
-            var backBtn = Ui.Button(Root, "BACK", 276, 163, 38, () => Game.Go(returnState), 13, showCursor: false);
+            // 4. Bottom Panel (640x32): Actions & Live Feedback
+            Ui.Panel(Root, 0, 328, Ui.Width, 32, Palette.DeepCharcoal, Palette.AntiqueGold);
+            feedbackLabel = Ui.Label(Root, "", 14, 333, Palette.WarmIvory);
+
+            equipActionBtn = Ui.Button(Root, "EQUIP", 16, 336, 68, OnEquipClicked, 18, showCursor: false);
+            unequipActionBtn = Ui.Button(Root, "UNEQUIP", 90, 336, 80, OnUnequipClicked, 18, showCursor: false);
+            var invBtn = Ui.Button(Root, "INVENTORY", 176, 336, 96, () => Game.Go(GameState.Inventory), 18, showCursor: false);
+            var backBtn = Ui.Button(Root, "BACK", 564, 336, 64, () => Game.Go(returnState), 18, showCursor: false);
 
             menu.Add(equipActionBtn);
             menu.Add(unequipActionBtn);
@@ -200,7 +212,7 @@ namespace Obscure
         void Refresh()
         {
             var hero = CurrentHero;
-            heroLabel?.Set(PixelFont.Fit($"{hero.name.ToUpperInvariant()} ({hero.classDef?.name.ToUpperInvariant()})", 118));
+            heroLabel?.Set(PixelFont.Fit($"{hero.name.ToUpperInvariant()}  —  {hero.classDef?.name.ToUpperInvariant()}", 160));
 
             // Populate 5 core slots
             for (int i = 0; i < CoreSlots.Length; i++)
@@ -211,7 +223,7 @@ namespace Obscure
                 EquipmentDef legacyDef = hero.equipped.TryGetValue(s, out var ld) ? ld : null;
 
                 string itemName = "EMPTY";
-                Color itemColor = Palette.Ash;
+                Color itemColor = Palette.MutedGray;
                 if (inst != null)
                 {
                     itemName = inst.upgradeLevel > 0 ? $"{inst.Definition?.name} +{inst.upgradeLevel}" : inst.Definition?.name ?? "ITEM";
@@ -224,7 +236,7 @@ namespace Obscure
                 }
 
                 string prefix = (i == selectedSlotIndex) ? "> " : "  ";
-                slotButtons[i].label.Set(PixelFont.Fit($"{prefix}{slotName}: {itemName}".ToUpperInvariant(), 138));
+                slotButtons[i].label.Set(PixelFont.Fit($"{prefix}{slotName,-7} : {itemName}".ToUpperInvariant(), 320));
                 slotButtons[i].label.Color = itemColor;
             }
 
@@ -237,7 +249,7 @@ namespace Obscure
                     var item = compatible[i];
                     string prefix = (i == candidateIndex) ? "> " : "  ";
                     string name = item.upgradeLevel > 0 ? $"{item.Definition?.name} +{item.upgradeLevel}" : item.Definition?.name ?? "ITEM";
-                    candidateButtons[i].label.Set(PixelFont.Fit($"{prefix}{name}".ToUpperInvariant(), 138));
+                    candidateButtons[i].label.Set(PixelFont.Fit($"{prefix}{name}".ToUpperInvariant(), 320));
                     candidateButtons[i].label.Color = EquipmentRarities.GetColor(item.rarity);
                 }
                 else
@@ -255,37 +267,37 @@ namespace Obscure
             {
                 // Comparison Mode
                 string candName = selectedCandidate.upgradeLevel > 0 ? $"{selectedCandidate.Definition?.name} +{selectedCandidate.upgradeLevel}" : selectedCandidate.Definition?.name ?? "ITEM";
-                detailTitle?.Set(PixelFont.Fit($"COMPARE: {candName}".ToUpperInvariant(), 160));
+                detailTitle?.Set(PixelFont.Fit($"COMPARE: {candName}".ToUpperInvariant(), 250));
                 detailTitle.Color = EquipmentRarities.GetColor(selectedCandidate.rarity);
-                detailSub?.Set($"SLOT: {GetCoreSlotName(SelectedSlot)}  LVL {selectedCandidate.level}");
+                detailSub?.Set($"SLOT: {GetCoreSlotName(SelectedSlot)}  •  LEVEL {selectedCandidate.level}  •  {selectedCandidate.rarity.ToString().ToUpperInvariant()}");
 
                 foreach (var st in ComparedStats)
                 {
                     int delta = EquipmentManager.CalculateStatDelta(hero, SelectedSlot, selectedCandidate, st);
                     int currentVal = hero.Derived.Get(st);
                     string deltaStr = delta > 0 ? $"+{delta}" : delta.ToString();
-                    Color deltaColor = delta > 0 ? Palette.Moss : delta < 0 ? Palette.Crimson : Palette.Bone;
+                    Color deltaColor = delta > 0 ? Palette.Emerald : delta < 0 ? Palette.SpecCrimson : Palette.WarmIvory;
                     string isPct = DerivedStats.IsPercentage(st) ? "%" : "";
-                    comparisonLabels[st].Set(PixelFont.Fit($"{Database.DerivedStatDefs[st].shortName}: {currentVal}{isPct} ({deltaStr})", 78));
+                    comparisonLabels[st].Set(PixelFont.Fit($"{Database.DerivedStatDefs[st].shortName}: {currentVal}{isPct} ({deltaStr})", 124));
                     comparisonLabels[st].Color = deltaColor;
                 }
 
                 if (selectedCandidate.affixes != null && selectedCandidate.affixes.Count > 0)
-                    candidateAffixesLabel?.Set(PixelFont.Wrap(string.Join("\n", selectedCandidate.affixes.Select(a => $"• {a.GetDescription()}")).ToUpperInvariant(), 160));
+                    candidateAffixesLabel?.Set(PixelFont.Wrap(string.Join("\n", selectedCandidate.affixes.Select(a => $"• {a.GetDescription()}")).ToUpperInvariant(), 250));
                 else
                     candidateAffixesLabel?.Set("NO AFFIXES");
 
                 if (selectedCandidate.SpecialEffect != null)
                 {
-                    candidateSpecialLabel?.Set(PixelFont.Wrap($"★ {selectedCandidate.SpecialEffect.name}: {selectedCandidate.SpecialEffect.description}".ToUpperInvariant(), 160));
-                    candidateSpecialLabel.Color = selectedCandidate.rarity == EquipmentRarity.Mythic ? Palette.Crimson : Palette.Gold;
+                    candidateSpecialLabel?.Set(PixelFont.Wrap($"★ {selectedCandidate.SpecialEffect.name}: {selectedCandidate.SpecialEffect.description}".ToUpperInvariant(), 250));
+                    candidateSpecialLabel.Color = selectedCandidate.rarity == EquipmentRarity.Mythic ? Palette.SpecCrimson : Palette.AntiqueGold;
                 }
                 else
                 {
                     candidateSpecialLabel?.Set("");
                 }
 
-                equipActionBtn.label.Color = Palette.Moss;
+                equipActionBtn.label.Color = Palette.Emerald;
             }
             else
             {
@@ -293,27 +305,27 @@ namespace Obscure
                 if (currentEquipped != null)
                 {
                     string curName = currentEquipped.upgradeLevel > 0 ? $"{currentEquipped.Definition?.name} +{currentEquipped.upgradeLevel}" : currentEquipped.Definition?.name ?? "ITEM";
-                    detailTitle?.Set(PixelFont.Fit(curName.ToUpperInvariant(), 160));
+                    detailTitle?.Set(PixelFont.Fit(curName.ToUpperInvariant(), 250));
                     detailTitle.Color = EquipmentRarities.GetColor(currentEquipped.rarity);
-                    detailSub?.Set($"EQUIPPED {GetCoreSlotName(SelectedSlot)} (LVL {currentEquipped.level})");
+                    detailSub?.Set($"EQUIPPED {GetCoreSlotName(SelectedSlot)}  •  LEVEL {currentEquipped.level}  •  {currentEquipped.rarity.ToString().ToUpperInvariant()}");
 
                     foreach (var st in ComparedStats)
                     {
                         int currentVal = hero.Derived.Get(st);
                         string isPct = DerivedStats.IsPercentage(st) ? "%" : "";
-                        comparisonLabels[st].Set(PixelFont.Fit($"{Database.DerivedStatDefs[st].shortName}: {currentVal}{isPct}", 78));
-                        comparisonLabels[st].Color = Palette.Bone;
+                        comparisonLabels[st].Set(PixelFont.Fit($"{Database.DerivedStatDefs[st].shortName}: {currentVal}{isPct}", 124));
+                        comparisonLabels[st].Color = Palette.WarmIvory;
                     }
 
                     if (currentEquipped.affixes != null && currentEquipped.affixes.Count > 0)
-                        candidateAffixesLabel?.Set(PixelFont.Wrap(string.Join("\n", currentEquipped.affixes.Select(a => $"• {a.GetDescription()}")).ToUpperInvariant(), 160));
+                        candidateAffixesLabel?.Set(PixelFont.Wrap(string.Join("\n", currentEquipped.affixes.Select(a => $"• {a.GetDescription()}")).ToUpperInvariant(), 250));
                     else
                         candidateAffixesLabel?.Set("NO AFFIXES");
 
                     if (currentEquipped.SpecialEffect != null)
                     {
-                        candidateSpecialLabel?.Set(PixelFont.Wrap($"★ {currentEquipped.SpecialEffect.name}: {currentEquipped.SpecialEffect.description}".ToUpperInvariant(), 160));
-                        candidateSpecialLabel.Color = currentEquipped.rarity == EquipmentRarity.Mythic ? Palette.Crimson : Palette.Gold;
+                        candidateSpecialLabel?.Set(PixelFont.Wrap($"★ {currentEquipped.SpecialEffect.name}: {currentEquipped.SpecialEffect.description}".ToUpperInvariant(), 250));
+                        candidateSpecialLabel.Color = currentEquipped.rarity == EquipmentRarity.Mythic ? Palette.SpecCrimson : Palette.AntiqueGold;
                     }
                     else
                     {
@@ -323,14 +335,14 @@ namespace Obscure
                 else
                 {
                     detailTitle?.Set("SLOT EMPTY");
-                    detailTitle.Color = Palette.Ash;
+                    detailTitle.Color = Palette.MutedGray;
                     detailSub?.Set($"NO ITEM EQUIPPED IN {GetCoreSlotName(SelectedSlot)}");
                     foreach (var st in ComparedStats)
                     {
                         int currentVal = hero.Derived.Get(st);
                         string isPct = DerivedStats.IsPercentage(st) ? "%" : "";
-                        comparisonLabels[st].Set(PixelFont.Fit($"{Database.DerivedStatDefs[st].shortName}: {currentVal}{isPct}", 78));
-                        comparisonLabels[st].Color = Palette.Bone;
+                        comparisonLabels[st].Set(PixelFont.Fit($"{Database.DerivedStatDefs[st].shortName}: {currentVal}{isPct}", 124));
+                        comparisonLabels[st].Color = Palette.WarmIvory;
                     }
                     candidateAffixesLabel?.Set("");
                     candidateSpecialLabel?.Set("");
@@ -339,7 +351,7 @@ namespace Obscure
                 equipActionBtn.label.Color = Palette.Shade;
             }
 
-            unequipActionBtn.label.Color = currentEquipped != null ? Palette.Bone : Palette.Shade;
+            unequipActionBtn.label.Color = currentEquipped != null ? Palette.WarmIvory : Palette.Shade;
         }
 
         void OnEquipClicked()
@@ -350,13 +362,13 @@ namespace Obscure
                 var candidate = compatible[candidateIndex];
                 if (EquipmentManager.EquipFromInventory(CurrentHero, SelectedSlot, candidate, inventory, out string err))
                 {
-                    feedbackLabel?.Set(PixelFont.Fit($"EQUIPPED {candidate.Definition?.name}!", 308));
+                    feedbackLabel?.Set(PixelFont.Fit($"EQUIPPED {candidate.Definition?.name}!", 610));
                     candidateIndex = -1;
                     Refresh();
                 }
                 else
                 {
-                    feedbackLabel?.Set(PixelFont.Fit($"CANNOT EQUIP: {err}", 308));
+                    feedbackLabel?.Set(PixelFont.Fit($"CANNOT EQUIP: {err}", 610));
                 }
             }
         }
@@ -365,12 +377,12 @@ namespace Obscure
         {
             if (EquipmentManager.UnequipToInventory(CurrentHero, SelectedSlot, inventory, out string err))
             {
-                feedbackLabel?.Set(PixelFont.Fit($"UNEQUIPPED {GetCoreSlotName(SelectedSlot)} TO INVENTORY.", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"UNEQUIPPED {GetCoreSlotName(SelectedSlot)} TO INVENTORY.", 610));
                 Refresh();
             }
             else
             {
-                feedbackLabel?.Set(PixelFont.Fit($"CANNOT UNEQUIP: {err}", 308));
+                feedbackLabel?.Set(PixelFont.Fit($"CANNOT UNEQUIP: {err}", 610));
             }
         }
     }
