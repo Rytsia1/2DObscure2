@@ -89,6 +89,7 @@ namespace Obscure
 
         void Done(string text)
         {
+            Sfx.Play(Sound.Success);
             ShowParty();
             var m = NewMenu();
             Option(m, "CONTINUE", () => Game.Go(GameState.Map), text);

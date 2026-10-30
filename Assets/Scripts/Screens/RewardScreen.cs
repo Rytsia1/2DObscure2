@@ -39,6 +39,7 @@ namespace Obscure
         static void Claim(int choice)
         {
             Run.ClaimReward(choice);
+            if (choice >= 0) Sfx.Play(Sound.Success); // a prize taken, not skipped
             Game.Go(Run.Won ? GameState.Victory : GameState.Map);
         }
     }

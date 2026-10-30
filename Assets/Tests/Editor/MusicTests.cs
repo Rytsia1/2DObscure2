@@ -126,5 +126,79 @@ namespace Obscure.Tests
                 Object.DestroyImmediate(host);
             }
         }
+
+        [Test]
+        public void UiClickSfxIsCrispThreeTenthsOfASecond()
+        {
+            var clip = Resources.Load<AudioClip>(Sfx.UiClickResourcePath);
+            Assert.IsNotNull(clip, "Resources/Sfx/ui_click.wav is missing");
+            Assert.AreEqual(0.3f, clip.length, 0.005f, "UI click must be 0.3 seconds");
+            Assert.AreEqual(44100, clip.frequency);
+
+            var samples = Sfx.GenerateUiClickSamples();
+            Assert.AreEqual(13230, samples.Length);
+            Assert.AreEqual(0f, samples[samples.Length - 1], 1e-4f, "Clean fade-out with no end click");
+            CollectionAssert.AreEqual(samples, Sfx.GenerateUiClickSamples(), "same click every time");
+
+            int peakAt = 0;
+            for (int i = 1; i < samples.Length; i++)
+                if (Mathf.Abs(samples[i]) > Mathf.Abs(samples[peakAt])) peakAt = i;
+            Assert.Less(peakAt, 0.005f * Sfx.Rate, "sharp attack: loudest within the first 5ms");
+            Assert.LessOrEqual(Mathf.Abs(samples[peakAt]), 0.95f, "no clipping");
+            Assert.Less(Rms(samples, 0.2f, 0.3f), Rms(samples, 0f, 0.04f) * 0.1f, "short tail");
+
+            var host = new GameObject("TestSfxHost");
+            try
+            {
+                Sfx.Init(host);
+                Assert.AreEqual(0.3f, Sfx.GetClip(Sound.Confirm).length, 0.005f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void UiConfirmSfxIsARisingSixTenthsOfASecondChime()
+        {
+            var clip = Resources.Load<AudioClip>(Sfx.UiConfirmResourcePath);
+            Assert.IsNotNull(clip, "Resources/Sfx/ui_confirm.wav is missing");
+            Assert.AreEqual(0.6f, clip.length, 0.005f, "UI confirmation must be 0.6 seconds");
+            Assert.AreEqual(44100, clip.frequency);
+
+            var samples = Sfx.GenerateUiConfirmSamples();
+            Assert.AreEqual(26460, samples.Length);
+            Assert.AreEqual(0f, samples[samples.Length - 1], 1e-4f, "Clean fade-out with no end click");
+            CollectionAssert.AreEqual(samples, Sfx.GenerateUiConfirmSamples(), "same chime every time");
+            Assert.LessOrEqual(samples.Max(Mathf.Abs), 0.95f, "no clipping");
+
+            // The arpeggio keeps the level up while it rises, then the sparkling tail decays softly.
+            float rising = Rms(samples, 0.05f, 0.2f), tail = Rms(samples, 0.35f, 0.5f), end = Rms(samples, 0.5f, 0.6f);
+            Assert.GreaterOrEqual(rising, Rms(samples, 0f, 0.05f) * 0.9f, "ascending notes sustain, not a single hit");
+            Assert.Less(tail, rising);
+            Assert.Greater(tail, 0f, "audible sparkling tail");
+            Assert.Less(end, tail);
+
+            var host = new GameObject("TestSfxHost");
+            try
+            {
+                Sfx.Init(host);
+                Assert.AreEqual(0.6f, Sfx.GetClip(Sound.Success).length, 0.005f);
+                Assert.AreNotSame(Sfx.GetClip(Sound.Confirm), Sfx.GetClip(Sound.Success), "button click and confirmation differ");
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        static float Rms(float[] s, float from, float to)
+        {
+            int a = (int)(from * Sfx.Rate), b = (int)(to * Sfx.Rate);
+            double sum = 0;
+            for (int i = a; i < b; i++) sum += s[i] * s[i];
+            return (float)System.Math.Sqrt(sum / (b - a));
+        }
     }
 }

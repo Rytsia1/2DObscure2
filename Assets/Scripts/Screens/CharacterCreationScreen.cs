@@ -446,6 +446,7 @@ namespace Obscure
                 return;
             }
 
+            Sfx.Play(Sound.Success);
             SetHint(Builder.LastFeedback);
             Refresh();
         }
@@ -460,6 +461,7 @@ namespace Obscure
                 Refresh();
                 return false;
             }
+            Sfx.Play(Sound.Success);
             SetHint(Builder.LastFeedback);
             Refresh();
             Game?.BeginOpeningSequence();
