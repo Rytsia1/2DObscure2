@@ -36,6 +36,11 @@ namespace Obscure
             return label;
         }
 
+        public static Label Label(Transform parent, string text, int x, int y, Color color, Align align, int scale, FontKind font, int order = Text)
+        {
+            return Label(parent, text, x, y, color, align, scale, order, font);
+        }
+
         // Primary panel: Deep Charcoal (#171B24) fill with thin Antique Gold (#C5A66A) filigree border
         public static SpriteRenderer Panel(Transform parent, int x, int y, int w, int h, Color? fill = null, Color? border = null) =>
             Image(parent, PixelArt.Box(w, h, fill ?? Palette.DeepCharcoal, border ?? Palette.AntiqueGold), x, y, Panels);

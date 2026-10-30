@@ -153,6 +153,20 @@ namespace Obscure
         }
 
         // Framed gauge bar (HP: Emerald, MP: Arcane Violet, Break: Antique Gold) with dark bezel and gradient fill
+        public static Sprite GaugeBar(int w, int h, Color fill, float ratio)
+        {
+            Color highlight = fill == Palette.Emerald ? Palette.Emerald
+                : fill == Palette.ArcaneViolet ? Palette.Lilac
+                : fill == Palette.AntiqueGold ? Palette.AntiqueGoldBright
+                : Color.Lerp(fill, Color.white, 0.4f);
+            return GaugeBar(w, h, ratio, fill, highlight, Palette.OverlayCharcoal);
+        }
+
+        public static Sprite GaugeBar(int w, int h, float ratio, Color fill)
+        {
+            return GaugeBar(w, h, fill, ratio);
+        }
+
         public static Sprite GaugeBar(int w, int h, float ratio, Color fill, Color highlight, Color bg)
         {
             ratio = Mathf.Clamp01(ratio);
