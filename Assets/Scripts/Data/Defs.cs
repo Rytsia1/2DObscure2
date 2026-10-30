@@ -99,6 +99,7 @@ namespace Obscure
         public Tier tier;             // also selects the defense QTE profile
         public AiKind ai;
         public Affinities affinities = Affinities.None;
+        public EnemyAffinityProfile affinityProfile;
         public AbilityScores abilityScores = AbilityScores.Uniform(10);
         public Stats stats;
         public int magicDef = -1;     // -1 defaults to stats.def if not separately specified
@@ -151,6 +152,37 @@ namespace Obscure
         public int cooldown;      // own turns before reuse (0 = none)
         public float perfectPower; // overrides the Perfect QTE multiplier (critical hits), 0 = default
         public StatusApply[] apply;
+
+        // Modular Damage System configuration (Prompt Sections 3, 8.3, 10, 11, 12).
+        public int skillLevel = 1;
+        public DamageComponent[] damageComponents = Array.Empty<DamageComponent>();
+        public DamageSkillData damageSkillAsset;
+        public bool appliesNullBreak;
+        public AffinityDamageKey nullBreakTarget;
+
+        public bool HasDamageSystemComponents =>
+            (damageComponents != null && damageComponents.Length > 0) ||
+            (damageSkillAsset != null && damageSkillAsset.GetComponentsForLevel(skillLevel).Count > 0);
+
+        public IReadOnlyList<DamageComponent> GetDamageComponents(int? levelOverride = null)
+        {
+            int lvl = levelOverride ?? skillLevel;
+            if (damageSkillAsset != null)
+            {
+                var fromAsset = damageSkillAsset.GetComponentsForLevel(lvl);
+                if (fromAsset != null && fromAsset.Count > 0)
+                    return fromAsset;
+            }
+            return damageComponents ?? Array.Empty<DamageComponent>();
+        }
+
+        public int GetDamageHitCount(int? levelOverride = null)
+        {
+            int lvl = levelOverride ?? skillLevel;
+            if (damageSkillAsset != null)
+                return damageSkillAsset.GetHitCountForLevel(lvl);
+            return Math.Max(1, hits);
+        }
 
         public bool HasTag(string tag) =>
             tags != null && tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));

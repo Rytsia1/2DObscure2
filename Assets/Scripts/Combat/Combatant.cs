@@ -36,6 +36,15 @@ namespace Obscure
         public bool OverdriveExhaustPending;
         public bool UsedOceansEmbrace;
 
+        // Modular Damage System per-battle state (Prompt Sections 5, 7, 8, 9)
+        public readonly EnemyAffinityProfile AffinityProfile;
+        public readonly NullBreakController NullBreak = new NullBreakController();
+        public readonly ElementalResistanceProfile ElementalResistances;
+        public readonly DamageModifierSet DamageModifiers;
+
+        // Status Effect System controller (GDD Sections 8-13)
+        public readonly StatusEffectController StatusController = new StatusEffectController();
+
         public Combatant(Unit unit, Side side, int slot, string name, string tag, EnemyDef enemy = null)
         {
             this.unit = unit;
@@ -44,6 +53,22 @@ namespace Obscure
             this.name = name;
             this.tag = tag;
             this.enemy = enemy;
+
+            AffinityProfile = enemy?.affinityProfile != null
+                ? enemy.affinityProfile.Clone()
+                : EnemyAffinityProfile.FromLegacyAffinities(unit?.affinities);
+            ElementalResistances = unit?.elementalResistances != null
+                ? unit.elementalResistances.Clone()
+                : new ElementalResistanceProfile();
+            DamageModifiers = unit?.damageModifiers != null
+                ? unit.damageModifiers.Clone()
+                : new DamageModifierSet();
+
+            StatusController.isBoss = enemy != null && enemy.tier == Tier.Boss;
+            if (unit != null)
+                StatusController.ResistanceProfile.statsResistance = Math.Clamp(unit.Derived.statusResistance / 100f, 0f, 0.75f);
+            if (enemy != null && enemy.tier == Tier.Boss)
+                StatusController.ResistanceProfile.baseResistance = 0.50f; // High base resistance for Bosses (GDD Section 13)
 
             if (unit?.race?.racialFeat != null && unit.race.racialFeat.canRetryFailedQte)
                 SecondChanceRetriesRemaining = Math.Max(0, unit.race.racialFeat.maxQteRetriesPerBattle);
@@ -86,9 +111,9 @@ namespace Obscure
         }
 
         // Effective stats: base/derived stats modified by combat statuses. Speed/Initiative changes apply from the next round.
-        public int Atk => Scale(unit.stats.atk + LowHpPhysicalPowerBonus, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted));
-        public int RangedAtk => Scale(unit.Derived.rangedPower, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted));
-        public int Magic => Scale(unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted));
+        public int Atk => Scale(unit.stats.atk + LowHpPhysicalPowerBonus, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
+        public int RangedAtk => Scale(unit.Derived.rangedPower, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
+        public int Magic => Scale(unit.stats.mag, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
         public int HealPower => Scale(unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
         public int SupportPower => unit.Derived.supportPower;
 
@@ -98,9 +123,9 @@ namespace Obscure
             unit.Derived.magicDefense > 0 || !IsEnemy ? unit.Derived.magicDefense : unit.stats.def,
             1 + Mag(StatusId.MagicDefenseUp) - Mag(StatusId.MagicDefenseDown));
 
-        public int Speed => Scale(unit.stats.spd, 1 - Mag(StatusId.Slow));
+        public int Speed => Scale(unit.stats.spd, (1 - Mag(StatusId.Slow) - Mag(StatusId.Freeze)) * StatusController.GetSpeedMultiplier());
         public int Initiative => Speed;
-        public int ActionSpeed => Scale(unit.Derived.actionSpeed, 1 - Mag(StatusId.Slow));
+        public int ActionSpeed => Scale(unit.Derived.actionSpeed, (1 - Mag(StatusId.Slow) - Mag(StatusId.Freeze)) * StatusController.GetSpeedMultiplier());
 
         public int ArmorPen => unit.Derived.armorPenetration;
         public int MagicPen => unit.Derived.magicPenetration;
@@ -122,6 +147,39 @@ namespace Obscure
                         crit += p.critChanceVsDebuffedBonus;
             }
             return Math.Clamp(crit, 0, 100);
+        }
+
+        public CriticalHitConfig GetCriticalHitConfig(Combatant target = null)
+        {
+            float chance = GetCritChanceAgainst(target) / 100f;
+            float dmg = CritDamage > 0 ? CritDamage / 100f : CriticalHitConfig.BaseCriticalDamage;
+            return CriticalHitConfig.FromTotals(chance, dmg);
+        }
+
+        public DamageContext CreateDamageContext(
+            Combatant target,
+            IReadOnlyList<DamageComponent> components,
+            int hitCount = 1,
+            QteResult qteResult = QteResult.Good,
+            Func<float> criticalRollProvider = null)
+        {
+            var scores = unit != null ? unit.FinalScores : AbilityScores.Uniform(10);
+            return new DamageContext
+            {
+                attackerStr = scores.str,
+                attackerInt = scores.intel,
+                attackerModifiers = DamageModifiers ?? new DamageModifierSet(),
+                criticalHitConfig = GetCriticalHitConfig(target),
+                targetPhysicalDefense = target != null ? target.Def : 0f,
+                targetModifiers = target?.DamageModifiers ?? new DamageModifierSet(),
+                targetEnemyAffinity = target?.AffinityProfile ?? new EnemyAffinityProfile(),
+                targetNullBreak = target?.NullBreak,
+                targetElementalResistance = target?.ElementalResistances ?? new ElementalResistanceProfile(),
+                components = components ?? Array.Empty<DamageComponent>(),
+                hitCount = Math.Max(1, hitCount),
+                qteResult = qteResult,
+                criticalRollProvider = criticalRollProvider
+            };
         }
 
         // Wizard Starter Passive — Arcane Affinity: reduces the MP cost of Arcane Spells.
@@ -238,14 +296,15 @@ namespace Obscure
         static int Scale(int value, float factor) => (int)Math.Round(value * Math.Max(0f, factor));
         float Mag(StatusId id) => Get(id)?.magnitude ?? 0f;
 
-        public StatusEffect Get(StatusId id) => statuses.Find(s => s.id == id);
-        public bool Has(StatusId id) => Get(id) != null;
+        public StatusEffect Get(StatusId id) => statuses.Find(x => x.id == id);
+
+        public bool Has(StatusId id) => statuses.Any(s => s.id == id) || StatusController.HasStatus(id);
         public int Cooldown(string skillId) => cooldowns.TryGetValue(skillId, out var n) ? n : 0;
 
         // Reapplying refreshes: the longer duration and the stronger magnitude win. No stacking.
         public void AddStatus(StatusId id, int turns, float magnitude, Combatant source)
         {
-            var s = Get(id);
+            var s = statuses.Find(x => x.id == id);
             if (s == null) statuses.Add(new StatusEffect { id = id, turns = turns, magnitude = magnitude, source = source });
             else
             {
@@ -253,10 +312,16 @@ namespace Obscure
                 s.magnitude = Math.Max(s.magnitude, magnitude);
                 s.source = source;
             }
+
+            // Also register in StatusController if not already tracked there
+            if (!StatusController.HasStatus(id))
+            {
+                StatusController.TryApplyStatus(new StatusApply { id = id, turns = turns, magnitude = magnitude, chance = 1f }, source, this, out _);
+            }
         }
 
         public string StatusTags => (guarding ? "GD" : "") + string.Concat(statuses.Select(s => StatusInfo.Tag(s.id)));
-        public bool HasDebuff => statuses.Any(s => !StatusInfo.IsBuff(s.id));
+        public bool HasDebuff => statuses.Any(s => !StatusInfo.IsBuff(s.id)) || StatusController.ActiveInstances.Any(i => !StatusInfo.IsBuff(i.statusId));
     }
 
     public static class TurnOrder

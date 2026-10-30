@@ -26,6 +26,8 @@ namespace Obscure
         public readonly List<PassiveDef> passives = new List<PassiveDef>();
         public readonly List<StatModifier> permanentModifiers = new List<StatModifier>();
         public readonly List<StatModifier> temporaryModifiers = new List<StatModifier>();
+        public readonly ElementalResistanceProfile elementalResistances = new ElementalResistanceProfile();
+        public readonly DamageModifierSet damageModifiers = new DamageModifierSet();
 
         Stats permanentLegacyBonuses;
         public DerivedStats Derived { get; private set; }

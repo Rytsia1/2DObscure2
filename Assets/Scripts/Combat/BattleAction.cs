@@ -63,6 +63,29 @@ namespace Obscure
         public static int Healing(Combatant a, float power, Random rng) =>
             Math.Max(1, (int)Math.Round(a.HealPower * power * Variance(rng)));
 
+        // Modular Damage System entry points (Prompt Sections 3-14).
+        public static DamageResult CalculateDamage(DamageContext context) =>
+            DamageCalculator.Calculate(context);
+
+        public static DamageResult CalculateSkillDamage(
+            Combatant attacker,
+            Combatant target,
+            SkillDef skill,
+            QteResult qteResult = QteResult.Good,
+            Random rng = null,
+            int? levelOverride = null)
+        {
+            if (attacker == null) throw new ArgumentNullException(nameof(attacker));
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            if (skill == null) throw new ArgumentNullException(nameof(skill));
+
+            var components = skill.GetDamageComponents(levelOverride);
+            int hitCount = skill.GetDamageHitCount(levelOverride);
+            Func<float> rollProvider = rng != null ? () => (float)rng.NextDouble() : null;
+            var context = attacker.CreateDamageContext(target, components, hitCount, qteResult, rollProvider);
+            return DamageCalculator.Calculate(context);
+        }
+
         // Break damage scaling: Physical -> STR (PhysicalBreak), Magic -> INT (MagicBreak).
         public static int BreakDamage(Combatant a, SkillDef skill = null, Effectiveness effect = Effectiveness.Neutral)
         {

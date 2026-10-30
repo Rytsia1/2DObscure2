@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Obscure
 {
-    public enum Element { Physical, Fire, Ice, Lightning, Arcane, Holy, Dark }
+    public enum Element { Physical, Fire, Ice, Lightning, Arcane, Holy, Dark, Earth, Wind, Water, Shadow = Dark }
 
     public enum Effectiveness { Neutral, Weak, Resist, Immune }
 
@@ -15,7 +15,8 @@ namespace Obscure
         public static string Short(Element e) => e switch
         {
             Element.Physical => "PHY", Element.Fire => "FIR", Element.Ice => "ICE", Element.Lightning => "LIG",
-            Element.Arcane => "ARC", Element.Holy => "HOL", _ => "DRK",
+            Element.Arcane => "ARC", Element.Holy => "HOL", Element.Earth => "ERT", Element.Wind => "WND",
+            Element.Water => "WTR", _ => "DRK",
         };
     }
 

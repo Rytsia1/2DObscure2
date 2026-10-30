@@ -69,11 +69,16 @@ namespace Obscure
                 if (!c.Alive || !acted.Add(c)) continue;
                 c.guarding = false;
                 StartTurn(c);
-                if (!c.Alive) continue; // poison finished it
-                if (c.stunTurns > 0)
+                if (!c.Alive) continue; // DoT finished it
+                if (c.stunTurns > 0 || c.StatusController.HasStatus(StatusId.Stun))
                 {
-                    c.stunTurns--;
+                    if (c.stunTurns > 0) c.stunTurns--;
                     Say($"{c.name} is stunned and cannot act.");
+                    continue;
+                }
+                if (c.StatusController.HasStatus(StatusId.Sleep))
+                {
+                    Say($"{c.name} is asleep and cannot act.");
                     continue;
                 }
                 return Active = c;
@@ -88,31 +93,45 @@ namespace Obscure
             queue.AddRange(TurnOrder.Build(All));
         }
 
-        // Start of the bearer's turn: cooldowns and status durations tick, poison bites, Break recovers.
+        // Start of the bearer's turn: cooldowns and status durations tick, DoTs bite, Break recovers.
         void StartTurn(Combatant c)
         {
             foreach (var id in c.cooldowns.Keys.ToList())
                 if (--c.cooldowns[id] <= 0) c.cooldowns.Remove(id);
 
-            var poison = c.Get(StatusId.Poison);
-            if (poison != null)
+            // Process DoTs and status lifecycle via StatusController (GDD Section 8, 10, 11, 12)
+            c.StatusController.ProcessTurnStart(this, c, Say);
+
+            // Synchronize legacy statuses list with StatusController active instances
+            for (int i = c.statuses.Count - 1; i >= 0; i--)
             {
-                int dmg = Math.Max(1, (int)poison.magnitude);
-                c.unit.hp = Math.Max(0, c.unit.hp - dmg);
-                Say($"{c.name} suffers {dmg} poison damage.");
-                if (!c.Alive) Say(c.IsEnemy ? $"{c.name} is destroyed." : $"{c.name} falls!");
+                var s = c.statuses[i];
+                var inst = c.StatusController.GetFirst(s.id);
+                if (inst != null)
+                {
+                    s.turns = inst.remainingTurns;
+                }
+                else
+                {
+                    // If not in StatusController or expired
+                    if (--s.turns <= 0)
+                    {
+                        c.statuses.RemoveAt(i);
+                        if (s.id == StatusId.Broken && c.HasBreakGauge)
+                            c.CurrentBreakGauge = c.MaxBreakGauge;
+                        if (s.id == StatusId.AttackUp && c.OverdriveExhaustPending)
+                            c.TriggerDraconicExhaustion();
+                        Say($"{c.name}'s {StatusInfo.Name(s.id)} wears off.");
+                    }
+                }
             }
 
-            foreach (var s in c.statuses.ToList())
-                if (--s.turns <= 0)
-                {
-                    c.statuses.Remove(s);
-                    if (s.id == StatusId.Broken && c.HasBreakGauge)
-                        c.CurrentBreakGauge = c.MaxBreakGauge;
-                    if (s.id == StatusId.AttackUp && c.OverdriveExhaustPending)
-                        c.TriggerDraconicExhaustion();
-                    Say($"{c.name}'s {StatusInfo.Name(s.id)} wears off.");
-                }
+            if (c.NullBreak != null && c.NullBreak.HasActiveNullBreak)
+            {
+                c.NullBreak.TickTurn();
+                if (!c.NullBreak.HasActiveNullBreak)
+                    Say($"{c.name}'s Null Break wears off.");
+            }
         }
 
         // Null when the action is legal right now, otherwise a reason for the player.
@@ -120,6 +139,8 @@ namespace Obscure
         {
             if (Outcome != Outcome.None) return "The battle is over.";
             if (a?.actor == null || a.actor != Active) return "It is not that combatant's turn.";
+            if (!a.actor.StatusController.CanPerformAction(a, out var cantReason))
+                return cantReason;
             switch (a.kind)
             {
                 case ActionKind.Attack:
@@ -169,6 +190,23 @@ namespace Obscure
 
             var actor = a.actor;
             var hits = new List<Hit>();
+
+            // GDD Section 11 & 12: Check Action Disruption (Shock / Despair)
+            if (actor.StatusController.CheckActionDisruption(a, Rng, out var disruptionReason))
+            {
+                Say(disruptionReason);
+                Active = null;
+                return hits;
+            }
+
+            // GDD Section 12: Check Confusion / Madness redirection
+            if (actor.StatusController.TryRedirectAction(a, this, Rng, out var redirectedAction))
+            {
+                if (redirectedAction.target != a.target && redirectedAction.target != null)
+                    Say($"{actor.name}'s senses are scrambled! Targets {redirectedAction.target.name} instead.");
+                a = redirectedAction;
+            }
+
             switch (a.kind)
             {
                 case ActionKind.Attack:
@@ -211,21 +249,68 @@ namespace Obscure
                     Say($"{actor.name} uses {s.name}.{(power > QteConfig.PerfectPower ? " Critical!" : "")}");
                     foreach (var t in Targets(actor, s.target, a.target))
                     {
-                        for (int i = 0; i < s.hits && t.Alive; i++)
+                        if (s.appliesNullBreak && s.nullBreakTarget.IsValid)
                         {
-                            float skillPwr = s.power * power;
-                            switch (s.kind)
+                            if (t.NullBreak.TryApply(s.nullBreakTarget, s.skillLevel))
+                                Say($"{t.name}'s {s.nullBreakTarget} Nullification is broken!");
+                        }
+
+                        if (s.HasDamageSystemComponents)
+                        {
+                            QteResult mappedQte = power > 1.05f
+                                ? QteResult.Perfect
+                                : (power < 0.95f ? QteResult.Miss : QteResult.Good);
+                            var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel);
+                            foreach (var hitRes in dmgResult.hits)
                             {
-                                case SkillKind.Physical:
-                                    int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng) : Rules.Physical(actor, t, skillPwr, Rng);
-                                    hits.Add(Deal(actor, t, pDmg, s.element, null, s));
-                                    break;
-                                case SkillKind.Magic:
-                                    hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s));
-                                    break;
-                                case SkillKind.Heal:
-                                    hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng)));
-                                    break;
+                                if (!t.Alive && hitRes.hitIndex > 0) break;
+                                string note = hitRes.allComponentsNullified
+                                    ? " (nullified)"
+                                    : (hitRes.anyComponentCriticalHit ? " (CRITICAL!)" : "");
+                                var hit = Damage(t, hitRes.finalHitDamage, note);
+                                hit.critical = hitRes.anyComponentCriticalHit;
+
+                                var primaryComp = hitRes.componentResults.Count > 0 ? hitRes.componentResults[0] : default;
+                                Effectiveness eff = primaryComp.effectiveAffinity switch
+                                {
+                                    AffinityType.Weakness => Effectiveness.Weak,
+                                    AffinityType.Resistant => Effectiveness.Resist,
+                                    AffinityType.Nullification => Effectiveness.Immune,
+                                    _ => Effectiveness.Neutral
+                                };
+                                hit.effect = eff;
+
+                                if (t.Alive && t.HasBreakGauge && actor != null && actor.side != t.side)
+                                {
+                                    int rawBreak = Rules.BreakDamage(actor, s, eff);
+                                    bool broke = t.ApplyBreakDamage(rawBreak, actor, out int reduced);
+                                    hit.breakAmount = reduced;
+                                    hit.brokeTarget = broke;
+                                    if (broke)
+                                        Say($"{t.name}'s guard shatters! (BROKEN)");
+                                }
+
+                                hits.Add(hit);
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < s.hits && t.Alive; i++)
+                            {
+                                float skillPwr = s.power * power;
+                                switch (s.kind)
+                                {
+                                    case SkillKind.Physical:
+                                        int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng) : Rules.Physical(actor, t, skillPwr, Rng);
+                                        hits.Add(Deal(actor, t, pDmg, s.element, null, s));
+                                        break;
+                                    case SkillKind.Magic:
+                                        hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s));
+                                        break;
+                                    case SkillKind.Heal:
+                                        hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng)));
+                                        break;
+                                }
                             }
                         }
                         // Self-applied statuses link to the target (Interpose remembers whom it guards).
@@ -261,10 +346,42 @@ namespace Obscure
         void Apply(Combatant t, StatusApply ap, Combatant source, float power)
         {
             if (!t.Alive) return;
-            bool sure = ap.chance >= 1f || power > QteConfig.GoodPower; // a Perfect QTE guarantees the effect
-            if (!sure && Rng.NextDouble() >= ap.chance) return;
-            t.AddStatus(ap.id, ap.turns, ap.magnitude, source);
-            Say(StatusInfo.IsBuff(ap.id) ? $"{t.name} gains {StatusInfo.Name(ap.id)}." : $"{t.name} suffers {StatusInfo.Name(ap.id)}.");
+
+            // Check Mental Effect immunity if boss (GDD Section 13)
+            bool isBoss = t.enemy != null && t.enemy.tier == Tier.Boss;
+            if (t.StatusController.ResistanceProfile.IsImmune(ap.id, isBoss))
+            {
+                Say($"{t.name} is immune to {StatusInfo.Name(ap.id)}!");
+                return;
+            }
+
+            // Power from QTE: power > GoodPower guarantees application unless resisted/immune
+            float effChance = (power > QteConfig.GoodPower) ? 1.0f : ap.chance;
+            var applyClone = new StatusApply
+            {
+                id = ap.id,
+                turns = ap.turns,
+                magnitude = ap.magnitude,
+                chance = effChance,
+                onSelf = ap.onSelf,
+                dotDamageType = ap.dotDamageType,
+                dotElementType = ap.dotElementType,
+                dotScalingStat = ap.dotScalingStat,
+                dotSkillPower = ap.dotSkillPower,
+                dotScaling = ap.dotScaling
+            };
+
+            bool applied = t.StatusController.TryApplyStatus(applyClone, source, t, out var inst, Rng, 1);
+            if (applied)
+            {
+                t.AddStatus(ap.id, inst.remainingTurns, inst.magnitude, source);
+                Say(StatusInfo.IsBuff(ap.id) ? $"{t.name} gains {StatusInfo.Name(ap.id)}." : $"{t.name} suffers {StatusInfo.Name(ap.id)}.");
+            }
+            else
+            {
+                if (t.StatusController.ResistanceProfile.GetEffectiveResistance() > 0f)
+                    Say($"{t.name} resists {StatusInfo.Name(ap.id)}!");
+            }
         }
 
         // All damage goes through here: reaction, then element, then HP, then Break Gauge reduction.
@@ -308,6 +425,8 @@ namespace Obscure
         Hit Damage(Combatant t, int amount, string note = "")
         {
             t.unit.hp = Math.Max(0, t.unit.hp - amount);
+            // GDD Section 12: Sleep ends when target receives direct damage or DoT
+            t.StatusController.OnDamageReceived(amount, false, Say);
             Say($"{t.name} takes {amount} damage{(t.guarding ? " (guarded)" : "")}{note}.");
             if (!t.Alive) Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
             else CheckPhase(t);
