@@ -183,14 +183,67 @@ namespace Obscure
         Magic = 2
     }
 
-    // Draft equipment rarity tiers (never bypasses Strict Weapon Compatibility).
+    // Equipment rarity tiers (6 tiers according to Inventory & Equipment GDD v1.0).
     public enum EquipmentRarity
     {
         Common = 0,
         Uncommon = 1,
         Rare = 2,
         Epic = 3,
-        Legendary = 4
+        Legendary = 4,
+        Mythic = 5
+    }
+
+    public static class EquipmentRarities
+    {
+        public static readonly EquipmentRarity[] All =
+        {
+            EquipmentRarity.Common,
+            EquipmentRarity.Uncommon,
+            EquipmentRarity.Rare,
+            EquipmentRarity.Epic,
+            EquipmentRarity.Legendary,
+            EquipmentRarity.Mythic
+        };
+
+        // Fixed affix counts per GDD Section 4:
+        // Common: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 3, Mythic: 4
+        public static int GetAffixCount(EquipmentRarity rarity) => rarity switch
+        {
+            EquipmentRarity.Common => 0,
+            EquipmentRarity.Uncommon => 1,
+            EquipmentRarity.Rare => 2,
+            EquipmentRarity.Epic => 3,
+            EquipmentRarity.Legendary => 3,
+            EquipmentRarity.Mythic => 4,
+            _ => 0
+        };
+
+        public static bool HasSpecialEffect(EquipmentRarity rarity) =>
+            rarity == EquipmentRarity.Legendary || rarity == EquipmentRarity.Mythic;
+
+        // Visual presentation colors per GDD Section 4.1
+        public static UnityEngine.Color GetColor(EquipmentRarity rarity) => rarity switch
+        {
+            EquipmentRarity.Common => Palette.Ash,
+            EquipmentRarity.Uncommon => Palette.Moss,
+            EquipmentRarity.Rare => Palette.Frost,
+            EquipmentRarity.Epic => Palette.Arcane,
+            EquipmentRarity.Legendary => Palette.Gold,
+            EquipmentRarity.Mythic => Palette.Crimson,
+            _ => Palette.Bone
+        };
+
+        public static float GetSellMultiplier(EquipmentRarity rarity) => rarity switch
+        {
+            EquipmentRarity.Common => 1.0f,
+            EquipmentRarity.Uncommon => 1.5f,
+            EquipmentRarity.Rare => 2.2f,
+            EquipmentRarity.Epic => 3.2f,
+            EquipmentRarity.Legendary => 5.0f,
+            EquipmentRarity.Mythic => 8.0f,
+            _ => 1.0f
+        };
     }
 
     // Holds the six Primary Ability Scores (or modifiers/bonuses for each of the six).
@@ -756,6 +809,14 @@ namespace Obscure
         public AbilityScores abilityBonuses;
         public StatModifier[] modifiers = Array.Empty<StatModifier>();
         public EquipmentRestriction restrictions;
+
+        // Inventory & Equipment System progression and economy properties
+        public int equipmentLevel = 1;
+        public int maxUpgradeLevel = 5;
+        public int baseValue = 50;
+        public string legendaryEffectId;
+        public string mythicEffectId;
+        public string affixPoolId;
     }
 
     // Reusable validator enforcing Strict Weapon Compatibility and Equipment Restrictions.

@@ -1650,6 +1650,7 @@ namespace Obscure
         public string[] passiveSkillLoadout;
         public string[] unlockedSkills;
         public EquipmentSlotAssignment[] equipmentLoadout;
+        public EquipmentInstanceSaveData[] equippedInstances = Array.Empty<EquipmentInstanceSaveData>();
         public int level = 1;
         public int hp;
         public int mp;
@@ -1678,6 +1679,9 @@ namespace Obscure
                 equipmentLoadout = runtimeUnit != null
                     ? runtimeUnit.equipped.Where(kv => kv.Value != null).Select(kv => new EquipmentSlotAssignment(kv.Key, kv.Value.id)).ToArray()
                     : (d.equipmentLoadout ?? Array.Empty<EquipmentSlotAssignment>()),
+                equippedInstances = runtimeUnit != null
+                    ? runtimeUnit.equippedInstances.Where(kv => kv.Value != null).Select(kv => kv.Value.ToSaveData(kv.Key)).ToArray()
+                    : Array.Empty<EquipmentInstanceSaveData>(),
                 level = runtimeUnit != null ? runtimeUnit.level : 1,
                 hp = runtimeUnit != null ? runtimeUnit.hp : 0,
                 mp = runtimeUnit != null ? runtimeUnit.mp : 0,
@@ -1717,6 +1721,20 @@ namespace Obscure
 
             // Recalculate Derived Stats authoritatively through Unit
             var unit = new Unit(def);
+            if (equippedInstances != null && equippedInstances.Length > 0)
+            {
+                unit.equipped.Clear();
+                unit.equippedInstances.Clear();
+                foreach (var eqData in equippedInstances)
+                {
+                    var inst = EquipmentInstance.FromSaveData(eqData);
+                    if (inst != null && eqData.slot >= 0)
+                    {
+                        var slot = (EquipmentSlot)eqData.slot;
+                        unit.TryEquip(slot, inst, out _);
+                    }
+                }
+            }
             def.stats = unit.Derived.ToLegacyStats();
             return def;
         }
@@ -1734,6 +1752,12 @@ namespace Obscure
         public string[] items = Array.Empty<string>();
         public string[] relics = Array.Empty<string>();
         public SavedCharacterData[] party = Array.Empty<SavedCharacterData>();
+
+        // Inventory & Equipment persistence (GDD Section 10 & 16)
+        public EquipmentInstanceSaveData[] inventoryEquipment = Array.Empty<EquipmentInstanceSaveData>();
+        public ConsumableStackSaveData[] inventoryConsumables = Array.Empty<ConsumableStackSaveData>();
+        public MaterialEntrySaveData[] inventoryMaterials = Array.Empty<MaterialEntrySaveData>();
+        public string[] inventoryKeyItems = Array.Empty<string>();
     }
 
     // Persistent Save Manager using the existing PlayerPrefs + JsonUtility architecture (Sections 2 & 12).
@@ -1780,6 +1804,7 @@ namespace Obscure
                 currentNodeId = "",
                 clearedNodeIds = Array.Empty<string>(),
                 items = Database.StartingItems.ToArray(),
+                inventoryConsumables = Database.StartingItems.Select(id => new ConsumableStackSaveData { itemId = id, count = 1, maxStack = 99 }).ToArray(),
                 relics = Array.Empty<string>(),
                 party = confirmedParty.Select(c => SavedCharacterData.FromCharacterDef(c)).ToArray()
             };
@@ -1806,6 +1831,7 @@ namespace Obscure
                 equipmentLoadout = u.equipped.Where(kv => kv.Value != null).Select(kv => new EquipmentSlotAssignment(kv.Key, kv.Value.id)).ToArray(),
             }).ToList();
 
+            var invData = run.Inventory != null ? run.Inventory.ToSaveData() : new InventorySaveData();
             var data = new GameSaveData
             {
                 hasConfirmedParty = true,
@@ -1816,7 +1842,11 @@ namespace Obscure
                 clearedNodeIds = run.Cleared.ToArray(),
                 items = run.Items.ToArray(),
                 relics = run.Relics.ToArray(),
-                party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray()
+                party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
+                inventoryEquipment = invData.equipment ?? Array.Empty<EquipmentInstanceSaveData>(),
+                inventoryConsumables = invData.consumables ?? Array.Empty<ConsumableStackSaveData>(),
+                inventoryMaterials = invData.materials ?? Array.Empty<MaterialEntrySaveData>(),
+                inventoryKeyItems = invData.keyItems ?? Array.Empty<string>()
             };
             WriteSaveData(data);
             return data;

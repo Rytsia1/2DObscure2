@@ -18,6 +18,8 @@ namespace Obscure
 
             Ui.Panel(Root, 0, 0, Ui.Width, 17);
             Ui.Label(Root, $"ACT {map.act}  FLOOR {Run.Floor}/{map.Floors}", 6, 5, Palette.Bone);
+            var invBtn = Ui.Button(Root, "ITEMS", 150, 2, 44, () => Game.Go(GameState.Inventory), 13, showCursor: false);
+            invBtn.tooltip = "INVENTORY & EQUIPMENT (100 SLOTS)";
             Ui.Label(Root, $"GOLD {Run.Gold}  ITEMS {Run.Items.Count}  RELICS {Run.Relics.Count}", 314, 5, Palette.Gold, Align.Right);
 
             var available = Run.Available.ToList();
@@ -42,6 +44,7 @@ namespace Obscure
 
             tooltip = Ui.Label(Root, "", 160, 141, Palette.Bone, Align.Center);
             var menu = Root.gameObject.AddComponent<Menu>();
+            menu.Add(invBtn);
             menu.onFocus = s => tooltip.Set(nodeOf.TryGetValue(s, out var nd) ? Describe(nd) : (s.tooltip ?? ""));
             foreach (var n in map.nodes)
             {

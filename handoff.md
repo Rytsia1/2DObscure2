@@ -1,9 +1,9 @@
 # PROJECT HANDOFF & AGENT ONBOARDING CONTEXT
 **Project:** 2DObscure — 2D Turn-Based Roguelike RPG in Unity  
-**Generated:** 2026-10-30  
+**Updated:** 2026-10-30  
 **Target Engine:** Unity 6000.3.16f1 (URP 2D, Pixel Perfect Camera)  
 **Primary Language:** C# (.NET Standard 2.1 / C# 9.0+)  
-**Test Suite Status:** 122 / 122 EditMode Tests Passing (100% Pass Rate)
+**Test Suite Status:** 133 / 133 EditMode Tests Passing (100% Pass Rate)
 
 ---
 
@@ -20,6 +20,7 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 - **Races & Classes:** 7 Playable Races with signature Racial Feats; 9 Playable Classes with signature Starter Passives and Strict Weapon Compatibility.
 - **Combat & Damage:** Consolidated Damage System v1.0 (Physical, Elemental, Almighty — no "Magical" category; Nature is Druid-themed Elemental damage).
 - **Point Buy:** 27-point budget, 6 Primary Ability Scores (STR, DEX, VIT, INT, WIS, CHA) ranging 8–15 prior to racial modifiers.
+- **Inventory & Equipment System:** GDD v1.0 Model C (Persistent Equipment Retention upon Defeat, 100-slot equipment capacity, consumable stacks, 6 rarity tiers, randomized affixes, upgrading, and live stat comparison).
 - **UI Architecture:** Custom pure sprite-based pixel UI rendered top-left at $320 \times 180$ resolution ($\text{PPU} = 1$), driven by [`PixelFont`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/PixelFont.cs), [`Ui.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs), and dedicated screen controllers.
 
 ---
@@ -30,6 +31,7 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 2DObscure/
 ├── Assets/
 │   ├── Docs/
+│   │   ├── Equipment and Inventory.md                 # Authoritative Equipment & Inventory GDD v1.0
 │   │   ├── Game_Design_Document_Draft_v0.1.md         # Baseline Game Design Document
 │   │   ├── GDD_Visual_Direction_v0.2.md               # Visual, UI & Resolution Specifications
 │   │   ├── Consolidated_Damage_Status_Effect_GDD_v1.0.md # Authoritative Damage & Status Rules
@@ -57,19 +59,22 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 │   │   │   └── RunState.cs                           # Roguelike expedition run state & map tracking
 │   │   ├── Data/
 │   │   │   ├── CharacterCreation.cs                  # PointBuy, Session, Roster & NewGamePartyBuilder
-│   │   │   ├── Database.cs                           # Static registries (Races, Classes, Skills, Items)
-│   │   │   ├── Defs.cs                               # Core data records (CharacterDef, SkillDef, ItemDef)
+│   │   │   ├── Database.cs                           # Static registries (Races, Classes, Skills, Items, Affixes, Effects)
+│   │   │   ├── Defs.cs                               # Core data records (CharacterDef, SkillDef, ItemDef, EquipmentDef)
 │   │   │   ├── GameSave.cs                           # Persistence controller (JSON / PlayerPrefs)
-│   │   │   └── StatsSystem.cs                        # AbilityScores, DerivedStats, EquipmentLoadout
+│   │   │   ├── InventorySystem.cs                    # AffixDef, SpecialEffectDef, EquipmentInstance, InventoryRuntime, LootGen
+│   │   │   └── StatsSystem.cs                        # AbilityScores, DerivedStats, EquipmentLoadout, EquipmentRarity
 │   │   ├── Render/
 │   │   │   ├── Palette.cs                            # Retro 16-color fantasy palette
-│   │   │   ├── PixelArt.cs                           # Procedural procedural bitmap & box generation
+│   │   │   ├── PixelArt.cs                           # Procedural bitmap & box generation
 │   │   │   ├── PixelFont.cs                          # 5x7 bitmap font rendering & word fitting
 │   │   │   └── Ui.cs                                 # Sprite UI primitives (Label, Button, Panel, Menu)
 │   │   └── Screens/
 │   │       ├── CharacterCreationScreen.cs            # Step 1-7 New Game 4-Hero Party Creator
 │   │       ├── CharacterStatusScreen.cs              # Full party inspect & formula tooltips
 │   │       ├── CombatScreen.cs                       # Side-view combat view, timeline & QTE prompts
+│   │       ├── EquipmentScreen.cs                    # 5-Slot Equipment screen with live delta preview
+│   │       ├── InventoryScreen.cs                    # 4-Tab Inventory browser, pagination, sorting & actions
 │   │       ├── MainMenuScreen.cs                     # Main menu & opening prologue screen
 │   │       └── MapScreen.cs                          # Node map navigation screen
 │   └── Tests/
@@ -77,6 +82,7 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 │       │   ├── BattleTests.cs                        # Combat turn & targeting tests
 │       │   ├── CharacterStatsTests.cs                # Stats, racial feats, weapon compatibility (47 tests)
 │       │   ├── DamageSystemTests.cs                  # Damage formulas, QTE multipliers, defense (29 tests)
+│       │   ├── InventoryAndEquipmentTests.cs         # Inventory & Equipment System validation (11 tests)
 │       │   ├── QteTests.cs                           # QTE precision, windows & assist mode
 │       │   ├── RunStateTests.cs                      # Expedition persistence & node transitions
 │       │   ├── StatusEffectTests.cs                  # Buffs, DoTs, HoTs, CC & cleansing (31 tests)
@@ -92,13 +98,13 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 
 ## 3. System Implementation Dashboard
 
-The comprehensive codebase audit completed on 2026-10-30 evaluated 23 project subsystems against the approved GDD specifications.
+The comprehensive codebase audit completed on 2026-10-30 evaluated project subsystems against the approved GDD specifications.
 
 | System ID | Subsystem Name | Status | Verified Test Count | Notes |
 |:---|:---|:---:|:---:|:---|
 | **SYS-01** | Six Primary Ability Scores | **IMPLEMENTED** | 12 tests | STR, DEX, VIT, INT, WIS, CHA with floor formula. |
 | **SYS-02** | 27-Point Buy Character Creation | **IMPLEMENTED** | 8 tests | 8–15 range, progressive cost table ($8 \to 0, 15 \to 9$). |
-| **SYS-03** | Save / Load & Persistence | **PARTIAL** | 4 tests | Functional save/load, but uses single key; missing 4 slots. |
+| **SYS-03** | Save / Load & Persistence | **IMPLEMENTED** | 5 tests | Full save/load of Roster, RunState, and Model C Persistent Equipment. |
 | **SYS-04** | 7 Playable Races & Racial Feats | **IMPLEMENTED** | 7 tests | Human, Elf, Dwarf, Orc, Halfling, Dragonborn, Tiefling. |
 | **SYS-05** | 9 Playable Classes & Identities | **IMPLEMENTED** | 9 tests | Knight, Barbarian, Rogue, Ranger, Mage, Cleric, Druid, Monk, Warlock. |
 | **SYS-06** | Strict Weapon Compatibility | **IMPLEMENTED** | 9 tests | Validates 1H, 2H, dual-wielding, and weapon category rules. |
@@ -116,19 +122,23 @@ The comprehensive codebase audit completed on 2026-10-30 evaluated 23 project su
 | **SYS-18** | Character Creation UI (New Game) | **IMPLEMENTED** | 11 tests | 7-step party creation, templates, randomizer, review mode. |
 | **SYS-19** | Audio & Sound Effects System | **IMPLEMENTED** | 6 tests | Procedural synth SFX, audio clips, background music fading. |
 | **SYS-20** | Settings & Accessibility | **IMPLEMENTED** | 4 tests | Volume sliders, fullscreen toggle, QTE Auto-Success assist. |
-| **SYS-21** | Shop System v1.0 | **NOT IMPLEMENTED**| 0 tests | **Missing entirely**: no shop node, inventory, or UI. |
+| **SYS-21** | Shop System v1.0 | **NOT IMPLEMENTED**| 0 tests | Missing shop node, inventory, or UI. |
 | **SYS-22** | Rest Site System | **PARTIAL** | 2 tests | Basic heal/stamina node exists; missing camp save triggers. |
 | **SYS-23** | 8 Sequential Dungeons | **PARTIAL** | 2 tests | Only Act 1 (Floors 1–8) generated; no Act 2–8 progression. |
+| **SYS-24** | **Inventory & Equipment System** | **IMPLEMENTED** | 11 tests | **GDD v1.0 (Model C)**: 6 Rarities, Affixes, Upgrades, Selling, 100 Cap, 5 Slots, Delta UI. |
 
 ---
 
 ## 4. Key Architectural Patterns & Conventions
 
 ### 4.1 Data vs. Runtime Separation
+- **`EquipmentDef`**: Immutable ScriptableObject/code blueprint for equipment items (ID, name, base stats, slot, weapon type, restrictions, rarity, base value).
+- **`EquipmentInstance`**: Unique runtime mutable instance (`instanceId` GUID, level, rarity, upgrade level, list of `GeneratedAffix`, `specialEffectId`, `boundCharacterId`).
+- **`InventoryRuntime`**: Manages the player's 100-slot equipment storage, stacked consumables (up to 99), tracked crafting materials, and quest key items.
 - **`CharacterDef`**: Immutable persistent blueprint of a hero (Base ability scores, race, class, starter passive, equipped items, level, exp).
-- **`Unit`**: Mutable runtime representation of an entity, owning authoritative stat recalculation (`unit.Recalculate()`) and primary scores.
+- **`Unit`**: Mutable runtime entity owning authoritative stat recalculation (`unit.Recalculate()`), primary ability scores, and `equippedInstances` dictionary.
 - **`Combatant`**: Battle-scoped wrapper encapsulating `Unit`, managing temporary battle buffs, shields, break meters, and `StatusController`.
-- **`RunState`**: Active expedition context tracking the node map, current floor, dungeon seed, temporary party gold, and party roster.
+- **`RunState`**: Active expedition context tracking the node map, current floor, dungeon seed, temporary party gold, party roster, and `InventoryRuntime`.
 
 ### 4.2 Stats Recalculation Flow
 Primary Ability Scores strictly follow:
@@ -138,9 +148,9 @@ $$\text{AbilityModifier} = \lfloor(\text{FinalScore} - 10) / 2\rfloor \quad (\te
 Derived Stats are recalculated through `DerivedStats.Calculate(unit)`:
 - $\text{MaxHP} = \text{BaseHP} + (\text{VIT\_Mod} \times 10) + \text{EqHP}$
 - $\text{MaxMP} = \text{BaseMP} + (\text{INT\_Mod} \times 5) + \text{EqMP}$
-- $\text{PhysicalPower} = \text{BaseAtk} + (\text{STR\_Mod} \times 2) + \text{WeaponPower}$
-- $\text{PhysicalDefense} = \text{BaseDef} + (\text{VIT\_Mod} \times 2) + \text{ArmorDef}$
-- $\text{MagicDefense} = \text{BaseMDef} + (\text{WIS\_Mod} \times 2) + \text{ArmorMDef}$
+- $\text{PhysicalPower} = \text{BaseAtk} + (\text{STR\_Mod} \times 2) + \text{EffectiveWeaponPower}$
+- $\text{PhysicalDefense} = \text{BaseDef} + (\text{VIT\_Mod} \times 2) + \text{EffectivePhysicalDefense}$
+- $\text{MagicDefense} = \text{BaseMDef} + (\text{WIS\_Mod} \times 2) + \text{EffectiveMagicDefense}$
 - $\text{Initiative} = \text{BaseIni} + \text{DEX\_Mod}$
 
 ### 4.3 Combat Damage Pipeline
@@ -164,52 +174,60 @@ Managed in [`StatusController.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2D
 - **String Fitting:** All labels with limited bounding boxes MUST use `PixelFont.Fit(text, maxWidth)` to prevent horizontal overflow.
 - **Button Focus:** Buttons feature dynamic borders (`Palette.Gold` when focused, `Palette.Shade` when idle). Horizontal button bars use `showCursor: false` in [`Ui.Button`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs#L42) to avoid overlapping adjacent buttons.
 
+### 4.6 Inventory & Equipment Architecture (SYS-24)
+- **5 Core Slots:**
+  1. `Weapon` $\to$ `EquipmentSlot.MainHand`
+  2. `Head` $\to$ `EquipmentSlot.HeadArmor`
+  3. `Body` $\to$ `EquipmentSlot.BodyArmor`
+  4. `Accessory 1` $\to$ `EquipmentSlot.Accessory1`
+  5. `Accessory 2` $\to$ `EquipmentSlot.Accessory2`
+- **6 Rarity Tiers & Affix Rules:**
+  - Common: 0 affixes (White `#E0E0E0`, $1.0\times$ sell multiplier)
+  - Uncommon: 1 affix (Green `#4BE368`, $1.5\times$ sell multiplier)
+  - Rare: 2 affixes (Blue `#38B6FF`, $2.2\times$ sell multiplier)
+  - Epic: 3 affixes (Purple `#A35CFF`, $3.2\times$ sell multiplier)
+  - Legendary: 3 affixes + 1 Legendary Special Effect (Orange `#FF8C00`, $5.0\times$ sell multiplier)
+  - Mythic: 4 affixes + 1 Mythic Special Effect (Red `#FF3B30`, $8.0\times$ sell multiplier)
+- **Upgrades:** Upgrades (+0 to +5) scale base stats only ($+5\%$ base weapon power, defense per rank) without mutating affixes or special effects.
+- **Selling Formula:** $\text{SellValue} = \text{Round}(\text{BaseValue} \times \text{RarityMultiplier} \times (1 + (\text{Level} - 1) \times 0.1) \times (1 + \text{UpgradeLevel} \times 0.2))$.
+- **Model C Persistence:** When the party is defeated in combat (`RunStatus.Defeat`), gold is wiped, but all inventory equipment, consumables, materials, key items, and equipped hero gear are permanently preserved in the save file.
+
 ---
 
 ## 5. Work Completed in Recent Sessions
 
-1. **Test Suite Stabilization:**
-   - Fixed nullable DoT scaling in [`Status.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Combat/Status.cs).
-   - Fixed un-buffing on status list manipulation in [`Combatant.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Combat/Combatant.cs).
-   - Corrected base stat assertions and racial modifier handling in [`StatusEffectTests.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Tests/Editor/StatusEffectTests.cs).
-   - Achieved 100% pass rate across all 122 EditMode tests.
-2. **Comprehensive Technical Audit:**
-   - Conducted an exhaustive review of all 23 subsystems against approved GDDs.
-   - Authored and placed [`UNITY_IMPLEMENTATION_AUDIT.md`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/UNITY_IMPLEMENTATION_AUDIT.md) in the project root.
-3. **Character Creation UI Refactor:**
-   - Fixed class label left-truncation (`ASS < FIGHTER...`) by relocating class gameplay identity, racial feat, and starter passive into dedicated display rows in the right panel and enforcing 150px string clamping in `Selector()`.
-   - Fixed cursor overlap (`[NEW] > [ADD HERO]`) by introducing `bool showCursor = true` in `Ui.Button` and disabling external cursor rendering on horizontal button bars.
-   - Fixed bottom tooltip text clipping using `PixelFont.Fit(..., 308)`.
-   - Fixed roster pre-population so a New Game cleanly starts with `PARTY (0/4): CREATE 4 HEROES TO BEGIN`.
+1. **Inventory & Equipment System Implementation (SYS-24 / GDD v1.0, Model C):**
+   - **Data Foundation:** Implemented `AffixDef`, `AffixCategory`, `AffixModifierType`, `GeneratedAffix`, `SpecialEffectDef`, and `EquipmentInstance` in `InventorySystem.cs`. Registered 21 affixes across all categories and 7 Legendary/Mythic special effects in `Database.cs`. Added `EquipmentRarities` helper with fixed affix counts, UI colors, and sell multipliers.
+   - **Inventory Runtime:** Implemented `InventoryRuntime` with 100-slot equipment capacity, consumable stacks (up to 99), crafting materials, and key items.
+   - **Equipment Management:** Added `equippedInstances` to `Unit`, implementing `TryEquip` and `Unequip` with full validation against class proficiencies, slot types, and level requirements. Synchronized with legacy `Unit.equipped` via `ToEffectiveDef()` for 100% backward compatibility.
+   - **Equipment Generation:** Implemented `EquipmentLootGenerator` supporting dungeon tier scaling, enemy tier rarity weights, unique affix rolls, and special effects. Added `RewardKind.Equipment` to reward distribution.
+   - **Model C Persistence:** Created serializable data transfer objects (`InventorySaveData`, `EquipmentInstanceSaveData`, etc.) and integrated with `GameSave.cs`. Ensured inventory and equipment are preserved upon run defeat while resetting temporary gold.
+   - **UI Screens:** Created `InventoryScreen.cs` (4 tabs, pagination, sorting, filtering, item details, Equip, Upgrade, Sell with confirmation for Legendary/Mythic, Discard, Use) and `EquipmentScreen.cs` (5 core slots, candidate inventory picker, live stat comparison deltas, Equip/Unequip). Wired into `Game.cs` with hotkeys (`I` for Inventory, `E` for Equipment) and navigation shortcuts on Map and Status screens.
+   - **Testing & Verification:** Authored `InventoryAndEquipmentTests.cs` (11 comprehensive test cases). All 133 / 133 EditMode tests passing with 100% pass rate.
+2. **Character Creation UI Refactor & EditMode Test Fix:**
+   - Fixed `CharacterCreationScreen` so EditMode tests always construct a clean builder without stale state.
+   - Fixed class label left-truncation, cursor overlaps, and tooltip clipping.
 
 ---
 
-## 6. Priority Roadmap for the Next Session
+## 6. Priority Roadmap for Next Steps
 
-### Phase 1: Core Loop & Foundation Integrity (Immediate Next Steps)
+### Phase 1: Core Loop & Progression
 - **Task 1: Multi-Slot Save Architecture (SYS-03)**
-  - Expand [`GameSave.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Data/GameSave.cs) from a single `"obscure.save"` key to 4 independent slots (`"obscure.save.slot.0"` through `"obscure.save.slot.3"`).
-  - Create a Save Slot Selection / Management UI in Main Menu and Pause/Settings.
-  - Enforce saving only at Camp nodes and between dungeon floor transitions.
+  - Expand `GameSave.cs` to 4 independent slots (`"obscure.save.slot.0"` through `"obscure.save.slot.3"`).
+  - Create Save Slot Selection UI in Main Menu and Settings.
 - **Task 2: 8 Sequential Dungeons Progression (SYS-23)**
-  - Update [`RunState.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Core/RunState.cs) to generate and advance through Acts 1 through 8 sequentially.
-  - Implement dungeon completion transitions (carry over remaining gold, reset temporary buffs, advance to the next dungeon theme).
-  - Enforce permadeath: dungeon defeat wipes run state and temporary gold, returning the player to the Main Menu.
+  - Update `RunState.cs` to advance through Acts 1 through 8 sequentially.
+  - Implement dungeon transitions and theme progression.
+- **Task 3: Combat EXP & Level 15 Progression (SYS-08)**
+  - Award EXP upon winning encounters, clamp level progression to 15, and award Skill Points.
 
 ### Phase 2: Missing Core Gameplay Systems
-- **Task 3: Shop System v1.0 (SYS-21)**
+- **Task 4: Shop System v1.0 (SYS-21)**
   - Introduce `NodeType.Shop` into `NodeDef` and `MapGenerator`.
-  - Create `ShopInventory` supporting consumables, weapons, armor, and accessories.
-  - Implement purchasing (deducting temporary run gold), selling (returning $50\%$ gold value), and restock mechanics.
-  - Create `ShopScreen.cs` conforming to the $320 \times 180$ pixel art UI standard.
-- **Task 4: Combat EXP & Level 15 Progression (SYS-08)**
-  - Award EXP to living party members upon winning a battle encounter.
-  - Clamp character level progression strictly to Level 15.
-  - Award Skill Points (SP) upon leveling up and create a skill upgrade allocation screen.
-
-### Phase 3: Content Expansion
+  - Create `ShopInventory` and `ShopScreen.cs` integrating with `InventoryRuntime` and equipment purchasing/selling.
 - **Task 5: Author Full Class Skill Trees (SYS-07)**
-  - Expand [`Database.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Data/Database.cs) from the current 23 skills to the full 225 player skills (25 skills $\times$ 9 classes across Tiers 1–5).
+  - Expand `Database.cs` to the full 225 player skills across 9 classes.
 
 ---
 
@@ -228,6 +246,7 @@ namespace Unity.AI.Assistant.Agent.Dynamic.Extension.Editor
     {
         public void Execute(ExecutionResult result)
         {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             var api = ScriptableObject.CreateInstance<TestRunnerApi>();
             var filter = new Filter { testMode = TestMode.EditMode };
             api.Execute(new ExecutionSettings(filter) { runSynchronously = true });
@@ -239,13 +258,3 @@ namespace Unity.AI.Assistant.Agent.Dynamic.Extension.Editor
 
 Test results are logged to the Unity Console and saved to:  
 `C:/Users/Dios/AppData/LocalLow/DefaultCompany/2DObscure/TestResults.xml`
-
----
-
-## 8. Open Design Questions Requiring User Confirmation
-
-Before beginning implementation on Phase 1 and 2, confirm the following rules with the designer:
-1. **Inter-Dungeon Recovery:** Does clearing a dungeon grant a full party HP/MP heal and purge all debuffs, or is HP/MP preserved between dungeons?
-2. **Shop Economy:** What are the exact base price tables for items and the formula for rerolling shop stock?
-3. **EXP Curve:** What is the exact formula for EXP required per level from Level 1 to 15 (e.g., linear vs. polynomial) and the base EXP awarded per enemy type?
-4. **Target Resolution:** Should new screens remain strictly in $320 \times 180$ ($\text{PPU} = 1$), or should the project begin migrating toward the $640 \times 360$ ($\text{PPU} = 32$) standard described in Visual Direction GDD v0.2?

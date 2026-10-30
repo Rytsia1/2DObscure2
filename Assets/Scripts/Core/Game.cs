@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -209,6 +209,8 @@ namespace Obscure
             GameState.Rest => new RestScreen(),
             GameState.Event => new EventScreen(),
             GameState.GameOver => new EndScreen(false),
+            GameState.Inventory => new InventoryScreen(),
+            GameState.Equipment => new EquipmentScreen(),
             _ => new EndScreen(true),
         };
 

@@ -77,7 +77,8 @@ namespace Obscure
         // Player-facing text for an option (shared by the reward, event and summary screens).
         public static (string label, string detail) Describe(RewardOption o) => o.kind switch
         {
-            RewardKind.Item => (Database.Items[o.id].name, Database.Items[o.id].description),
+            RewardKind.Item => Database.Items.TryGetValue(o.id, out var itm) ? (itm.name, itm.description) : (o.id, ""),
+            RewardKind.Equipment => Database.Equipment.TryGetValue(o.id, out var eq) ? ($"{eq.name} ({EquipmentSlots.DisplayName(eq.slot)})", eq.description) : (o.id, ""),
             RewardKind.Relic => ("Relic: " + Database.Relics[o.id].name, Database.Relics[o.id].description),
             RewardKind.Upgrade => ($"{Database.Characters[o.id].name}: {Database.Upgrades[o.id].name}",
                 Database.Characters[o.id].stats.Preview(Database.Upgrades[o.id].bonus)),

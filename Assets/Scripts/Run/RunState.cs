@@ -23,6 +23,7 @@ namespace Obscure
         public readonly AbilityScoreSheet abilities = new AbilityScoreSheet();
         public readonly SkillLoadout skillLoadout = new SkillLoadout();
         public readonly Dictionary<EquipmentSlot, EquipmentDef> equipped = new Dictionary<EquipmentSlot, EquipmentDef>();
+        public readonly Dictionary<EquipmentSlot, EquipmentInstance> equippedInstances = new Dictionary<EquipmentSlot, EquipmentInstance>();
         public readonly List<PassiveDef> passives = new List<PassiveDef>();
         public readonly List<StatModifier> permanentModifiers = new List<StatModifier>();
         public readonly List<StatModifier> temporaryModifiers = new List<StatModifier>();
@@ -102,12 +103,21 @@ namespace Obscure
 
             if (d.startingEquipment != null)
                 foreach (var eid in d.startingEquipment)
-                    if (Database.Equipment.TryGetValue(eid, out var eq)) equipped[eq.slot] = eq;
+                    if (Database.Equipment.TryGetValue(eid, out var eq))
+                    {
+                        equipped[eq.slot] = eq;
+                        var inst = new EquipmentInstance(eq, eq.rarity, eq.equipmentLevel) { boundCharacterId = id, isEquipped = true };
+                        equippedInstances[eq.slot] = inst;
+                    }
 
             if (d.equipmentLoadout != null)
                 foreach (var assign in d.equipmentLoadout)
                     if (!string.IsNullOrEmpty(assign.equipmentId) && Database.Equipment.TryGetValue(assign.equipmentId, out var eq))
+                    {
                         equipped[assign.slot] = eq;
+                        var inst = new EquipmentInstance(eq, eq.rarity, eq.equipmentLevel) { boundCharacterId = id, isEquipped = true };
+                        equippedInstances[assign.slot] = inst;
+                    }
 
             RecalculateStats(fillResources: true);
         }
@@ -307,6 +317,8 @@ namespace Obscure
         public void Equip(EquipmentDef item)
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
+            var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
+            equippedInstances[item.slot] = inst;
             equipped[item.slot] = item;
             RecalculateStats();
         }
@@ -316,7 +328,39 @@ namespace Obscure
         {
             error = EquipmentValidator.Validate(item, slot, classDef, race, level, FinalScores);
             if (error != null) return false;
+            var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
+            equippedInstances[slot] = inst;
             equipped[slot] = item;
+            RecalculateStats();
+            return true;
+        }
+
+        public bool TryEquip(EquipmentSlot slot, EquipmentInstance instance, out string error)
+        {
+            if (instance == null)
+            {
+                error = "Equipment instance is null.";
+                return false;
+            }
+            var def = instance.Definition;
+            if (def == null)
+            {
+                error = $"Unknown equipment definition '{instance.definitionId}'.";
+                return false;
+            }
+            error = EquipmentValidator.Validate(def, slot, classDef, race, level, FinalScores);
+            if (error != null) return false;
+
+            if (equippedInstances.TryGetValue(slot, out var oldInst) && oldInst != null)
+            {
+                oldInst.isEquipped = false;
+                oldInst.boundCharacterId = null;
+            }
+
+            instance.isEquipped = true;
+            instance.boundCharacterId = id;
+            equippedInstances[slot] = instance;
+            equipped[slot] = instance.ToEffectiveDef();
             RecalculateStats();
             return true;
         }
@@ -331,8 +375,24 @@ namespace Obscure
             return TryEquip(item.slot, item, out error);
         }
 
+        public bool TryEquip(EquipmentInstance instance, out string error)
+        {
+            if (instance?.Definition == null)
+            {
+                error = "Equipment instance or definition is null.";
+                return false;
+            }
+            return TryEquip(instance.Definition.slot, instance, out error);
+        }
+
         public bool Unequip(EquipmentSlot slot)
         {
+            if (equippedInstances.TryGetValue(slot, out var inst) && inst != null)
+            {
+                inst.isEquipped = false;
+                inst.boundCharacterId = null;
+                equippedInstances.Remove(slot);
+            }
             if (!equipped.Remove(slot)) return false;
             RecalculateStats();
             return true;
@@ -425,6 +485,7 @@ namespace Obscure
         public readonly List<string> Items = new List<string>();
         public readonly List<string> Relics = new List<string>();
         public readonly HashSet<string> Cleared = new HashSet<string>();
+        public readonly InventoryRuntime Inventory = new InventoryRuntime();
         public readonly Random Rng; // combat randomness
         public readonly RunStats Stats = new RunStats();
         public readonly List<StatusApply> BattleBuffs = new List<StatusApply>();
@@ -444,6 +505,8 @@ namespace Obscure
             Seed = seed;
             Party = party.Select(c => new Unit(c)).ToList();
             Items.AddRange(Database.StartingItems);
+            foreach (var itm in Database.StartingItems)
+                Inventory.AddConsumable(itm, 1);
             Rng = new Random(seed);
         }
 
@@ -507,6 +570,8 @@ namespace Obscure
             if (Status != RunStatus.Active) return;
             Status = RunStatus.Defeat;
             EndedUtc = DateTime.UtcNow;
+            Gold = 0;
+            GameSave.SaveRunState(this);
         }
 
         // Battle-start buffs from events, consumed by the next battle only.
@@ -534,7 +599,26 @@ namespace Obscure
         {
             switch (o.kind)
             {
-                case RewardKind.Item: Items.Add(o.id); break;
+                case RewardKind.Item:
+                    if (Database.Equipment.ContainsKey(o.id))
+                    {
+                        var eq = Database.Equipment[o.id];
+                        var inst = EquipmentLootGenerator.CreateInstance(eq, eq.rarity, eq.equipmentLevel, Rng);
+                        Inventory.TryAddEquipment(inst, out _);
+                    }
+                    else
+                    {
+                        Items.Add(o.id);
+                        Inventory.AddConsumable(o.id, 1);
+                    }
+                    break;
+                case RewardKind.Equipment:
+                    if (Database.Equipment.TryGetValue(o.id, out var eqDef))
+                    {
+                        var inst = EquipmentLootGenerator.CreateInstance(eqDef, eqDef.rarity, eqDef.equipmentLevel, Rng);
+                        Inventory.TryAddEquipment(inst, out _);
+                    }
+                    break;
                 case RewardKind.Relic: AddRelic(o.id); break;
                 case RewardKind.Upgrade: Upgrade(o.id); break;
                 default: AddGold(o.amount); break;
@@ -666,6 +750,18 @@ namespace Obscure
             if (!string.IsNullOrEmpty(data.currentNodeId) && Map.nodes.Any(n => n.id == data.currentNodeId))
                 Current = Map.Get(data.currentNodeId);
 
+            if (data.inventoryEquipment != null || data.inventoryConsumables != null || data.inventoryMaterials != null || data.inventoryKeyItems != null)
+            {
+                var invData = new InventorySaveData
+                {
+                    equipment = data.inventoryEquipment ?? Array.Empty<EquipmentInstanceSaveData>(),
+                    consumables = data.inventoryConsumables ?? Array.Empty<ConsumableStackSaveData>(),
+                    materials = data.inventoryMaterials ?? Array.Empty<MaterialEntrySaveData>(),
+                    keyItems = data.inventoryKeyItems ?? Array.Empty<string>()
+                };
+                Inventory.RestoreFromSave(invData);
+            }
+
             if (data.party != null)
             {
                 for (int i = 0; i < Math.Min(Party.Count, data.party.Length); i++)
@@ -675,6 +771,22 @@ namespace Obscure
                     u.level = Math.Max(1, sc.level);
                     u.unspentAsiPoints = sc.unspentAsiPoints;
                     u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
+
+                    if (sc.equippedInstances != null && sc.equippedInstances.Length > 0)
+                    {
+                        u.equipped.Clear();
+                        u.equippedInstances.Clear();
+                        foreach (var eqData in sc.equippedInstances)
+                        {
+                            var inst = EquipmentInstance.FromSaveData(eqData);
+                            if (inst != null && eqData.slot >= 0)
+                            {
+                                var slot = (EquipmentSlot)eqData.slot;
+                                u.TryEquip(slot, inst, out _);
+                            }
+                        }
+                    }
+
                     u.RecalculateStats(fillResources: true);
                     if (sc.hp > 0) u.hp = Math.Min(u.stats.maxHp, sc.hp);
                     if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);

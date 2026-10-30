@@ -222,7 +222,7 @@ namespace Obscure
         public StatModifier[] modifiers = Array.Empty<StatModifier>();
     }
 
-    public enum RewardKind { Item, Relic, Upgrade, Gold }
+    public enum RewardKind { Item, Relic, Upgrade, Gold, Equipment }
 
     public class RewardOption
     {

@@ -65,6 +65,10 @@ namespace Obscure
             // Top bar: Hero selector & Class/Race/Background summary
             Ui.Panel(Root, 0, 0, Ui.Width, 18);
             HeaderLabel = Ui.Label(Root, "", 6, 5, Palette.Gold);
+            var gearBtn = Ui.Button(Root, "GEAR", 175, 2, 40, () => Game?.Go(GameState.Equipment), 14, showCursor: false);
+            gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT LOADOUT";
+            var itemsBtn = Ui.Button(Root, "ITEMS", 220, 2, 44, () => Game?.Go(GameState.Inventory), 14, showCursor: false);
+            itemsBtn.tooltip = "INVENTORY (EQUIPMENT, CONSUMABLES, MATERIALS, KEYS)";
             IdentityLabel = Ui.Label(Root, "", 314, 5, Palette.Parchment, Align.Right);
 
             // Left panel: 6 Primary Ability Scores
@@ -82,6 +86,8 @@ namespace Obscure
             TooltipLabel = Ui.Label(Root, "", 28, 132, Palette.Bone);
 
             var menu = Root.gameObject.AddComponent<Menu>();
+            menu.Add(gearBtn);
+            menu.Add(itemsBtn);
             menu.onFocus = s => TooltipLabel.Set(PixelFont.Wrap(s?.tooltip ?? "", 284));
             menu.onBack = () => Game?.Go(returnState);
 

@@ -1569,6 +1569,222 @@ namespace Obscure
             },
         }, e => e.id);
 
+        // ---- 8. Affix Pool Registry (GDD Section 6) ----
+        public static readonly Dictionary<string, AffixDef> Affixes = Index(new[]
+        {
+            // Primary Stats
+            new AffixDef
+            {
+                id = "affix_str", name = "Strength", category = AffixCategory.PrimaryStats,
+                isAbility = true, ability = Ability.STR, baseMinValue = 1, baseMaxValue = 3,
+                descriptionFormat = "+{0} STR"
+            },
+            new AffixDef
+            {
+                id = "affix_dex", name = "Dexterity", category = AffixCategory.PrimaryStats,
+                isAbility = true, ability = Ability.DEX, baseMinValue = 1, baseMaxValue = 3,
+                descriptionFormat = "+{0} DEX"
+            },
+            new AffixDef
+            {
+                id = "affix_vit", name = "Vitality", category = AffixCategory.PrimaryStats,
+                isAbility = true, ability = Ability.VIT, baseMinValue = 1, baseMaxValue = 3,
+                descriptionFormat = "+{0} VIT"
+            },
+            new AffixDef
+            {
+                id = "affix_int", name = "Intelligence", category = AffixCategory.PrimaryStats,
+                isAbility = true, ability = Ability.INT, baseMinValue = 1, baseMaxValue = 3,
+                descriptionFormat = "+{0} INT"
+            },
+            new AffixDef
+            {
+                id = "affix_wis", name = "Wisdom", category = AffixCategory.PrimaryStats,
+                isAbility = true, ability = Ability.WIS, baseMinValue = 1, baseMaxValue = 3,
+                descriptionFormat = "+{0} WIS"
+            },
+            new AffixDef
+            {
+                id = "affix_cha", name = "Charisma", category = AffixCategory.PrimaryStats,
+                isAbility = true, ability = Ability.CHA, baseMinValue = 1, baseMaxValue = 3,
+                descriptionFormat = "+{0} CHA"
+            },
+
+            // Secondary Stats
+            new AffixDef
+            {
+                id = "affix_crit_chance", name = "Critical Chance", category = AffixCategory.SecondaryStats,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.CriticalChance,
+                baseMinValue = 3, baseMaxValue = 8, descriptionFormat = "+{0}% Critical Chance"
+            },
+            new AffixDef
+            {
+                id = "affix_crit_dmg", name = "Critical Damage", category = AffixCategory.SecondaryStats,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.CriticalDamage,
+                baseMinValue = 10, baseMaxValue = 25, descriptionFormat = "+{0}% Critical Damage"
+            },
+            new AffixDef
+            {
+                id = "affix_action_spd", name = "Action Speed", category = AffixCategory.SecondaryStats,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.ActionSpeed,
+                baseMinValue = 5, baseMaxValue = 15, descriptionFormat = "+{0} Action Speed"
+            },
+            new AffixDef
+            {
+                id = "affix_evasion", name = "Evasion", category = AffixCategory.SecondaryStats,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.Evasion,
+                baseMinValue = 2, baseMaxValue = 6, descriptionFormat = "+{0}% Evasion"
+            },
+            new AffixDef
+            {
+                id = "affix_block", name = "Block Power", category = AffixCategory.SecondaryStats,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.BlockPower,
+                baseMinValue = 5, baseMaxValue = 12, descriptionFormat = "+{0}% Block Power"
+            },
+
+            // Physical & Elemental Offense
+            new AffixDef
+            {
+                id = "affix_phys_pwr", name = "Physical Power", category = AffixCategory.Physical,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.PhysicalPower,
+                baseMinValue = 2, baseMaxValue = 6, descriptionFormat = "+{0} Physical Power"
+            },
+            new AffixDef
+            {
+                id = "affix_mag_pwr", name = "Magic Power", category = AffixCategory.Elemental,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.MagicPower,
+                baseMinValue = 2, baseMaxValue = 6, descriptionFormat = "+{0} Magic Power"
+            },
+            new AffixDef
+            {
+                id = "affix_armor_pen", name = "Armor Penetration", category = AffixCategory.Physical,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.ArmorPenetration,
+                baseMinValue = 1, baseMaxValue = 4, descriptionFormat = "+{0} Armor Penetration"
+            },
+            new AffixDef
+            {
+                id = "affix_mag_pen", name = "Magic Penetration", category = AffixCategory.Elemental,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.MagicPenetration,
+                baseMinValue = 1, baseMaxValue = 4, descriptionFormat = "+{0} Magic Penetration"
+            },
+            new AffixDef
+            {
+                id = "affix_phys_break", name = "Break Power", category = AffixCategory.Physical,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.PhysicalBreakPower,
+                baseMinValue = 2, baseMaxValue = 5, descriptionFormat = "+{0} Physical Break Power"
+            },
+
+            // Defenses & Resistances
+            new AffixDef
+            {
+                id = "affix_phys_def", name = "Physical Defense", category = AffixCategory.Defense,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.PhysicalDefense,
+                baseMinValue = 2, baseMaxValue = 6, descriptionFormat = "+{0} Physical Defense"
+            },
+            new AffixDef
+            {
+                id = "affix_mag_def", name = "Magic Defense", category = AffixCategory.Defense,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.MagicDefense,
+                baseMinValue = 2, baseMaxValue = 6, descriptionFormat = "+{0} Magic Defense"
+            },
+            new AffixDef
+            {
+                id = "affix_status_res", name = "Status Resistance", category = AffixCategory.StatusResistance,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.StatusResistance,
+                baseMinValue = 5, baseMaxValue = 15, descriptionFormat = "+{0}% Status Resistance"
+            },
+            new AffixDef
+            {
+                id = "affix_max_hp", name = "Max HP", category = AffixCategory.Defense,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.MaxHP,
+                baseMinValue = 10, baseMaxValue = 30, descriptionFormat = "+{0} Max HP"
+            },
+            new AffixDef
+            {
+                id = "affix_max_mp", name = "Max MP", category = AffixCategory.Defense,
+                modifierType = AffixModifierType.Flat, derivedStat = DerivedStatId.MaxMP,
+                baseMinValue = 5, baseMaxValue = 15, descriptionFormat = "+{0} Max MP"
+            }
+        }, a => a.id);
+
+        // ---- 9. Special Effects Registry (GDD Section 7) ----
+        public static readonly Dictionary<string, SpecialEffectDef> SpecialEffects = Index(new[]
+        {
+            // Legendary Effects
+            new SpecialEffectDef
+            {
+                id = "infernal_resonance", name = "Infernal Resonance",
+                description = "Physical attacks have a 25% chance to apply Burn.",
+                rarity = EquipmentRarity.Legendary,
+                burnChance = 0.25f,
+                statModifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 3, ModifierKind.Flat, ModifierSource.Equipment, "Infernal Resonance") }
+            },
+            new SpecialEffectDef
+            {
+                id = "aegis_ward", name = "Aegis Ward",
+                description = "Grants +10 Physical Defense and +10 Magic Defense.",
+                rarity = EquipmentRarity.Legendary,
+                statModifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.PhysicalDefense, 10, ModifierKind.Flat, ModifierSource.Equipment, "Aegis Ward"),
+                    StatModifier.ForDerived(DerivedStatId.MagicDefense, 10, ModifierKind.Flat, ModifierSource.Equipment, "Aegis Ward")
+                }
+            },
+            new SpecialEffectDef
+            {
+                id = "warlords_fury", name = "Warlord's Fury",
+                description = "+6 Weapon Power and +4 Break Power.",
+                rarity = EquipmentRarity.Legendary,
+                bonusBreakPower = 4,
+                statModifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 6, ModifierKind.Flat, ModifierSource.Equipment, "Warlord's Fury") }
+            },
+            new SpecialEffectDef
+            {
+                id = "wind_step", name = "Wind Step",
+                description = "+10% Evasion and +10 Action Speed.",
+                rarity = EquipmentRarity.Legendary,
+                statModifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.Evasion, 10, ModifierKind.Flat, ModifierSource.Equipment, "Wind Step"),
+                    StatModifier.ForDerived(DerivedStatId.ActionSpeed, 10, ModifierKind.Flat, ModifierSource.Equipment, "Wind Step")
+                }
+            },
+
+            // Mythic Effects
+            new SpecialEffectDef
+            {
+                id = "absolute_zero", name = "Absolute Zero",
+                description = "Elemental damage dealt to Frozen targets gains +30% damage bonus.",
+                rarity = EquipmentRarity.Mythic,
+                freezeBonusDamage = 0.30f,
+                statModifiers = new[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 8, ModifierKind.Flat, ModifierSource.Equipment, "Absolute Zero") }
+            },
+            new SpecialEffectDef
+            {
+                id = "titans_bulwark", name = "Titan's Bulwark",
+                description = "+20 Physical Defense, +20 Magic Defense, and +15 Stagger Resistance.",
+                rarity = EquipmentRarity.Mythic,
+                statModifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.PhysicalDefense, 20, ModifierKind.Flat, ModifierSource.Equipment, "Titan's Bulwark"),
+                    StatModifier.ForDerived(DerivedStatId.MagicDefense, 20, ModifierKind.Flat, ModifierSource.Equipment, "Titan's Bulwark"),
+                    StatModifier.ForDerived(DerivedStatId.StaggerResistance, 15, ModifierKind.Flat, ModifierSource.Equipment, "Titan's Bulwark")
+                }
+            },
+            new SpecialEffectDef
+            {
+                id = "chronos_mastery", name = "Chronos Mastery",
+                description = "+25 Action Speed and +10% QTE timing bonus.",
+                rarity = EquipmentRarity.Mythic,
+                qteTimingWindowBonus = 10,
+                statModifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.ActionSpeed, 25, ModifierKind.Flat, ModifierSource.Equipment, "Chronos Mastery"),
+                    StatModifier.ForDerived(DerivedStatId.QteTimingBonus, 10, ModifierKind.Flat, ModifierSource.Equipment, "Chronos Mastery")
+                }
+            }
+        }, s => s.id);
+
         // Exports the stat system configuration as JSON matching the PRD schemas.
         public static string ExportStatConfigJson()
         {

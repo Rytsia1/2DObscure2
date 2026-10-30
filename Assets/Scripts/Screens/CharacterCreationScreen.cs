@@ -79,7 +79,7 @@ namespace Obscure
                 Builder = builder;
             else if (session != null)
                 Builder = new NewGamePartyBuilder(session);
-            else if (Game?.NewGameBuilder != null)
+            else if (Game?.NewGameBuilder != null && Application.isPlaying)
                 Builder = Game.NewGameBuilder;
             else
                 Builder = new NewGamePartyBuilder();
