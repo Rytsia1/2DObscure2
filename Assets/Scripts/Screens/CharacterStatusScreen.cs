@@ -62,14 +62,14 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 6, Palette.Void, Palette.Night, Palette.Dusk);
 
-            // Top bar: Hero selector & Class/Race/Background summary
+            // Top bar: Hero selector & Class/Race summary, plus GEAR & ITEMS shortcuts
             Ui.Panel(Root, 0, 0, Ui.Width, 18);
             HeaderLabel = Ui.Label(Root, "", 6, 5, Palette.Gold);
-            var gearBtn = Ui.Button(Root, "GEAR", 175, 2, 40, () => Game?.Go(GameState.Equipment), 14, showCursor: false);
+            IdentityLabel = Ui.Label(Root, "", 94, 5, Palette.Parchment);
+            var gearBtn = Ui.Button(Root, "GEAR", 224, 2, 40, () => Game?.Go(GameState.Equipment), 14, showCursor: false);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT LOADOUT";
-            var itemsBtn = Ui.Button(Root, "ITEMS", 220, 2, 44, () => Game?.Go(GameState.Inventory), 14, showCursor: false);
+            var itemsBtn = Ui.Button(Root, "ITEMS", 268, 2, 46, () => Game?.Go(GameState.Inventory), 14, showCursor: false);
             itemsBtn.tooltip = "INVENTORY (EQUIPMENT, CONSUMABLES, MATERIALS, KEYS)";
-            IdentityLabel = Ui.Label(Root, "", 314, 5, Palette.Parchment, Align.Right);
 
             // Left panel: 6 Primary Ability Scores
             Ui.Panel(Root, 2, 19, 108, 108);
@@ -86,8 +86,6 @@ namespace Obscure
             TooltipLabel = Ui.Label(Root, "", 28, 132, Palette.Bone);
 
             var menu = Root.gameObject.AddComponent<Menu>();
-            menu.Add(gearBtn);
-            menu.Add(itemsBtn);
             menu.onFocus = s => TooltipLabel.Set(PixelFont.Wrap(s?.tooltip ?? "", 284));
             menu.onBack = () => Game?.Go(returnState);
 
@@ -101,12 +99,15 @@ namespace Obscure
             backBtn.tooltip = "RETURN TO PREVIOUS SCREEN";
             menu.Add(backBtn);
 
-            // Primary Ability Score interactive rows (x=10 keeps '>' cursor at x=3 inside left panel border)
+            menu.Add(gearBtn);
+            menu.Add(itemsBtn);
+
+            // Primary Ability Score interactive rows (x=10 keeps '>' cursor at x=3 inside left panel border; h=12 prevents drop-shadow border clipping)
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
             {
                 var a = AbilityScores.AllAbilities[i];
                 int y = 34 + i * 12;
-                var btn = Ui.Button(Root, "", 10, y, 96, () => TooltipLabel.Set(PixelFont.Wrap(CurrentUnit.ExplainAbility(a), 284)), 11);
+                var btn = Ui.Button(Root, "", 10, y, 96, () => TooltipLabel.Set(PixelFont.Wrap(CurrentUnit.ExplainAbility(a), 284)), 12);
                 PrimaryStatLabels[a] = btn.label;
                 menu.Add(btn);
             }
@@ -155,11 +156,11 @@ namespace Obscure
             var u = CurrentUnit;
             u.RecalculateStats();
 
-            HeaderLabel.Set(PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 140));
+            HeaderLabel.Set(PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 84));
             vitals.Set($"HP {u.hp}/{u.stats.maxHp}  MP {u.mp}/{u.stats.maxMp}");
             string raceName = u.race?.name ?? "Human";
             string className = u.classDef?.name ?? u.role;
-            IdentityLabel.Set(PixelFont.Fit($"{raceName} {className}".ToUpperInvariant(), 160));
+            IdentityLabel.Set(PixelFont.Fit($"{raceName} {className}".ToUpperInvariant(), 125));
 
             if (portrait != null && u.sprite != null)
                 portrait.sprite = PixelArt.FromRows(u.sprite);

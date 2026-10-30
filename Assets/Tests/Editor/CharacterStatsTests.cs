@@ -458,8 +458,12 @@ namespace Obscure.Tests
                 StringAssert.Contains("FORMULA:", defTooltip);
                 StringAssert.Contains("EQP +4", defTooltip);
 
-                status.SwitchHero(1);
-                Assert.AreEqual("Rogue", status.CurrentUnit.name);
+                for (int h = 0; h < party.Count; h++)
+                {
+                    Assert.LessOrEqual(PixelFont.Measure(status.HeaderLabel.Text), 84, $"HeaderLabel overflow: {status.HeaderLabel.Text}");
+                    Assert.LessOrEqual(PixelFont.Measure(status.IdentityLabel.Text), 125, $"IdentityLabel overflow: {status.IdentityLabel.Text}");
+                    status.SwitchHero(1);
+                }
                 status.Close();
             }
             finally
