@@ -39,14 +39,14 @@ namespace Obscure
             Image(parent, PixelArt.Box(w, h, fill ?? Palette.Night, border ?? Palette.Shade), x, y, Panels);
 
         // Framed text button with selection cursor.
-        public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 13, bool interactable = true)
+        public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 13, bool interactable = true, bool showCursor = true)
         {
             var go = new GameObject("Button:" + text);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(x, -y, 0);
             var box = Image(go.transform, null, 0, 0, Widget);
             var label = Label(go.transform, text, w / 2, (h - PixelFont.GlyphHeight) / 2, Palette.Parchment, Align.Center, order: Widget + 1);
-            var cursor = Label(go.transform, ">", -7, (h - PixelFont.GlyphHeight) / 2, Palette.Gold, order: Widget + 1);
+            var cursor = showCursor ? Label(go.transform, ">", -7, (h - PixelFont.GlyphHeight) / 2, Palette.Gold, order: Widget + 1) : null;
             var sel = go.AddComponent<Selectable>();
             sel.size = new Vector2Int(w, h);
             sel.onClick = onClick;
@@ -56,7 +56,7 @@ namespace Obscure
             {
                 box.sprite = PixelArt.Box(w, h, on ? Palette.Dusk : Palette.Night, on ? Palette.Gold : Palette.Shade);
                 label.Color = !sel.interactable ? Palette.Ash : on ? Palette.Bone : Palette.Parchment;
-                cursor.gameObject.SetActive(on);
+                if (cursor != null) cursor.gameObject.SetActive(on);
             };
             sel.visual(false);
             return sel;

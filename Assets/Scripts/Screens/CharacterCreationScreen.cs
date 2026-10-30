@@ -158,21 +158,21 @@ namespace Obscure
                 menu.Add(btn);
             }
 
-            // 6. Action Buttons spaced with >=8px gaps so the '>' focus cursor never overlaps adjacent buttons
-            resetOrEditBtn = Ui.Button(Root, "RESET", 10, 135, 34, OnResetOrEditClicked, 12);
+            // 6. Action Buttons: using framed box highlight without external cursor to prevent overlap in tight horizontal bars
+            resetOrEditBtn = Ui.Button(Root, "RESET", 10, 135, 34, OnResetOrEditClicked, 12, showCursor: false);
             resetOrEditBtn.tooltip = "RESET ABILITY SCORES TO 8 (OR EDIT SELECTED HERO)";
             menu.Add(resetOrEditBtn);
 
-            randOrRerollBtn = Ui.Button(Root, "RND 1", 52, 135, 34, () => OnRandomOrRerollSelected(), 12);
+            randOrRerollBtn = Ui.Button(Root, "RND 1", 52, 135, 34, () => OnRandomOrRerollSelected(), 12, showCursor: false);
             randOrRerollBtn.tooltip = "RANDOMIZE CURRENT HERO OR REROLL SELECTED PARTY HERO";
             menu.Add(randOrRerollBtn);
 
-            confirmBtn = Ui.Button(Root, "ADD HERO", 94, 135, 48, ConfirmAndAddToParty, 12);
+            confirmBtn = Ui.Button(Root, "ADD HERO", 94, 135, 48, ConfirmAndAddToParty, 12, showCursor: false);
             confirmBtn.onAdjust = d => CycleReviewSlot(d);
             confirmBtn.tooltip = "CONFIRM HERO (1-4) OR SELECT PARTY MEMBER IN REVIEW";
             menu.Add(confirmBtn);
 
-            var backBtn = Ui.Button(Root, "BACK", 150, 135, 24, OnBackPressed, 12);
+            var backBtn = Ui.Button(Root, "BACK", 150, 135, 24, OnBackPressed, 12, showCursor: false);
             backBtn.tooltip = "PREVIOUS STEP OR RETURN TO TITLE SCREEN";
             menu.Add(backBtn);
             menu.onBack = OnBackPressed;
@@ -194,11 +194,11 @@ namespace Obscure
                 PreviewStatLabels[st] = Ui.Label(Root, "", x, y, Palette.Bone);
             }
 
-            randAllBtn = Ui.Button(Root, "RND ALL", 188, 135, 48, () => RandomizeAll(), 12);
+            randAllBtn = Ui.Button(Root, "RND ALL", 188, 135, 48, () => RandomizeAll(), 12, showCursor: false);
             randAllBtn.tooltip = "RANDOMIZE ALL 4 PENDING PARTY HEROES FOR REVIEW";
             menu.Add(randAllBtn);
 
-            startBtn = Ui.Button(Root, "CONFIRM 4", 244, 135, 70, () => TryConfirmPartyAndBegin(out _), 12);
+            startBtn = Ui.Button(Root, "CONFIRM 4", 244, 135, 70, () => TryConfirmPartyAndBegin(out _), 12, showCursor: false);
             startBtn.tooltip = "CONFIRM 4-HERO PARTY, SAVE GAME & START PROLOGUE";
             menu.Add(startBtn);
 
