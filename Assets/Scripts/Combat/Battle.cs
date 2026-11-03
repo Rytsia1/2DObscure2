@@ -153,6 +153,9 @@ namespace Obscure
                     if (a.skill == null || !a.actor.unit.HasActiveSkill(a.skill.id)) return "Unknown skill.";
                     if (a.actor.Cooldown(a.skill.id) > 0) return "On cooldown.";
                     if (a.actor.unit.mp < a.actor.GetEffectiveMpCost(a.skill)) return "Not enough MP.";
+                    if (a.skill.requiresShield && a.actor.unit != null && !a.actor.unit.HasEquippedShield()) return "Requires an equipped shield.";
+                    if (a.skill.requiredWeaponType != WeaponType.None && a.actor.unit != null && !a.actor.unit.HasEquippedWeaponType(a.skill.requiredWeaponType))
+                        return $"Requires a {a.skill.requiredWeaponType}.";
                     return a.skill.target switch
                     {
                         TargetType.Enemy => IsFoe(a.actor, a.target) ? null : "Invalid target.",
@@ -295,9 +298,11 @@ namespace Obscure
                         }
                         else
                         {
+                            int rank = actor.unit != null ? Math.Max(1, actor.unit.skillLoadout.GetRank(s.id)) : 1;
+                            float scaledPower = s.GetPower(rank);
                             for (int i = 0; i < s.hits && t.Alive; i++)
                             {
-                                float skillPwr = s.power * power;
+                                float skillPwr = scaledPower * power;
                                 switch (s.kind)
                                 {
                                     case SkillKind.Physical:

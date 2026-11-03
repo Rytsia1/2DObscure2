@@ -54,6 +54,8 @@ namespace Obscure
         public int requiredLevel = 1;
         public int skillPointCost = 1;
         public int maxRank = 3;
+        public int branchIndex = 0;
+        public string[] prerequisites = Array.Empty<string>();
     }
 
     // 3 Active Skill Slots + 3 Passive Skill Slots + Hybrid Unlock & Rank progression (Section 7).
@@ -106,7 +108,10 @@ namespace Obscure
         }
 
         public static int GetMaxUnlockedTier(int characterLevel) =>
-            characterLevel >= 5 ? 3 : characterLevel >= 3 ? 2 : 1;
+            characterLevel >= 13 ? 5 :
+            characterLevel >= 10 ? 4 :
+            characterLevel >= 7 ? 3 :
+            characterLevel >= 4 ? 2 : 1;
 
         public void UnlockActive(string skillId)
         {
@@ -124,10 +129,11 @@ namespace Obscure
 
         public void SyncLevelUnlocks(ClassDef classDef, int level)
         {
-            SkillPoints++;
+            // Award 2 Skill Points per level
+            SkillPoints += 2;
         }
 
-        public bool TryUnlockSkill(string id, int characterLevel, ClassDef classDef, out string error)
+        public bool CanUnlockSkill(string id, int characterLevel, ClassDef classDef, out string error)
         {
             error = null;
             if (string.IsNullOrEmpty(id)) { error = "Skill ID is empty."; return false; }
@@ -141,18 +147,44 @@ namespace Obscure
             int reqLevel = node?.requiredLevel ?? 1;
             int reqTier = node?.tier ?? 1;
             int cost = node?.skillPointCost ?? 1;
-            bool isPassive = node?.isPassive ?? Database.Passives.ContainsKey(id);
 
             if (characterLevel < reqLevel || GetMaxUnlockedTier(characterLevel) < reqTier)
             {
                 error = $"Requires character level {reqLevel} (Tier {reqTier}).";
                 return false;
             }
+
+            if (node?.prerequisites != null && node.prerequisites.Length > 0)
+            {
+                foreach (var pre in node.prerequisites)
+                {
+                    if (!UnlockedActiveSkills.Contains(pre) && !UnlockedPassiveSkills.Contains(pre))
+                    {
+                        string preName = Database.Skills.TryGetValue(pre, out var s) ? s.name
+                            : Database.Passives.TryGetValue(pre, out var p) ? p.name : pre;
+                        error = $"Requires prerequisite skill '{preName}'.";
+                        return false;
+                    }
+                }
+            }
+
             if (SkillPoints < cost)
             {
                 error = $"Requires {cost} Skill Points (available: {SkillPoints}).";
                 return false;
             }
+
+            return true;
+        }
+
+        public bool TryUnlockSkill(string id, int characterLevel, ClassDef classDef, out string error)
+        {
+            if (!CanUnlockSkill(id, characterLevel, classDef, out error))
+                return false;
+
+            var node = classDef?.skillUnlockProgression?.FirstOrDefault(n => n.skillId == id);
+            int cost = node?.skillPointCost ?? 1;
+            bool isPassive = node?.isPassive ?? Database.Passives.ContainsKey(id);
 
             SkillPoints -= cost;
             if (isPassive) UnlockedPassiveSkills.Add(id);
@@ -219,7 +251,12 @@ namespace Obscure
             return true;
         }
 
-        public bool TryUpgradeRank(string id, out string error)
+        public int GetUpgradeCost(string id, int currentRank)
+        {
+            return currentRank >= 2 ? 2 : 1;
+        }
+
+        public bool CanUpgradeRank(string id, out string error)
         {
             error = null;
             if (!SkillRanks.TryGetValue(id, out int curRank))
@@ -234,14 +271,57 @@ namespace Obscure
                 error = $"Skill '{id}' is already at max rank ({maxRank}).";
                 return false;
             }
-            if (SkillPoints < 1)
+            int cost = GetUpgradeCost(id, curRank);
+            if (SkillPoints < cost)
             {
-                error = "Not enough Skill Points to upgrade rank.";
+                error = $"Requires {cost} Skill Points to upgrade to Rank {curRank + 1} (available: {SkillPoints}).";
                 return false;
             }
-            SkillPoints--;
+            return true;
+        }
+
+        public bool TryUpgradeRank(string id, out string error)
+        {
+            if (!CanUpgradeRank(id, out error))
+                return false;
+            int curRank = SkillRanks[id];
+            int cost = GetUpgradeCost(id, curRank);
+            SkillPoints -= cost;
             SkillRanks[id] = curRank + 1;
             return true;
+        }
+
+        public void Respec(ClassDef classDef, int characterLevel)
+        {
+            int totalBaseSp = 2 + Math.Max(0, characterLevel - 1) * 2;
+            SkillPoints = totalBaseSp;
+
+            UnlockedActiveSkills.Clear();
+            UnlockedPassiveSkills.Clear();
+            SkillRanks.Clear();
+            Array.Clear(ActiveSlots, 0, ActiveSlotCount);
+            Array.Clear(PassiveSlots, 0, PassiveSlotCount);
+
+            InitializeForClass(classDef, characterLevel);
+        }
+
+        public int GetTotalSpentSkillPoints(ClassDef classDef)
+        {
+            int spent = 0;
+            if (classDef?.skillUnlockProgression != null)
+            {
+                foreach (var node in classDef.skillUnlockProgression)
+                {
+                    if (UnlockedActiveSkills.Contains(node.skillId) || UnlockedPassiveSkills.Contains(node.skillId))
+                    {
+                        spent += node.skillPointCost;
+                        int r = GetRank(node.skillId);
+                        if (r >= 2) spent += 1;
+                        if (r >= 3) spent += 2;
+                    }
+                }
+            }
+            return spent;
         }
 
         public int GetRank(string id) => SkillRanks.TryGetValue(id, out int r) ? r : 0;

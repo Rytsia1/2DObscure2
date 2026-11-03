@@ -258,13 +258,57 @@ namespace Obscure
                 gameplayIdentity = "Weapon Techniques",
                 starterPassiveId = "weapon_proficiency",
                 description = "Disciplined master of arms who excels at weapon techniques and frontline defense.",
-                startingSkills = new[] { "shield_bash", "fortify", "interpose" },
-                activeSkillPool = new[] { "shield_bash", "fortify", "interpose", "cleaving_strike" },
-                passiveSkillPool = new[] { "weapon_proficiency", "iron_will", "battle_focus" },
+                startingSkills = new[] { "shield_bash", "power_strike", "guard_stance" },
+                activeSkillPool = new[]
+                {
+                    "shield_bash", "power_strike", "guard_stance",
+                    "cleaving_strike", "shield_wall", "weapon_disarm",
+                    "counterattack", "armor_break", "tactical_strike",
+                    "whirlwind", "iron_fortress", "execution_strike",
+                    "blade_tempest", "unbreakable", "final_verdict",
+                    "fortify", "interpose"
+                },
+                passiveSkillPool = new[]
+                {
+                    "weapon_proficiency", "defensive_training",
+                    "combat_discipline", "shield_mastery",
+                    "tactical_awareness", "weapon_adaptation",
+                    "iron_will", "counter_specialist",
+                    "master_of_arms", "unyielding_defense",
+                    "battle_focus"
+                },
                 skillUnlockProgression = new[]
                 {
-                    new SkillUnlockNode { skillId = "cleaving_strike", tier = 2, requiredLevel = 3, skillPointCost = 1 },
-                    new SkillUnlockNode { skillId = "iron_will", isPassive = true, tier = 2, requiredLevel = 3, skillPointCost = 1 }
+                    // Tier 1
+                    new SkillUnlockNode { skillId = "defensive_training", isPassive = true, tier = 1, requiredLevel = 1, skillPointCost = 1, branchIndex = 1 },
+
+                    // Tier 2 (Level 4)
+                    new SkillUnlockNode { skillId = "cleaving_strike", tier = 2, requiredLevel = 4, skillPointCost = 1, branchIndex = 0, prerequisites = new[] { "power_strike" } },
+                    new SkillUnlockNode { skillId = "shield_wall", tier = 2, requiredLevel = 4, skillPointCost = 1, branchIndex = 1, prerequisites = new[] { "guard_stance" } },
+                    new SkillUnlockNode { skillId = "weapon_disarm", tier = 2, requiredLevel = 4, skillPointCost = 1, branchIndex = 2 },
+                    new SkillUnlockNode { skillId = "combat_discipline", isPassive = true, tier = 2, requiredLevel = 4, skillPointCost = 1, branchIndex = 0 },
+                    new SkillUnlockNode { skillId = "shield_mastery", isPassive = true, tier = 2, requiredLevel = 4, skillPointCost = 1, branchIndex = 1 },
+
+                    // Tier 3 (Level 7)
+                    new SkillUnlockNode { skillId = "counterattack", tier = 3, requiredLevel = 7, skillPointCost = 1, branchIndex = 2, prerequisites = new[] { "weapon_disarm" } },
+                    new SkillUnlockNode { skillId = "armor_break", tier = 3, requiredLevel = 7, skillPointCost = 1, branchIndex = 0, prerequisites = new[] { "cleaving_strike" } },
+                    new SkillUnlockNode { skillId = "tactical_strike", tier = 3, requiredLevel = 7, skillPointCost = 1, branchIndex = 2, prerequisites = new[] { "weapon_disarm" } },
+                    new SkillUnlockNode { skillId = "tactical_awareness", isPassive = true, tier = 3, requiredLevel = 7, skillPointCost = 1, branchIndex = 2 },
+                    new SkillUnlockNode { skillId = "weapon_adaptation", isPassive = true, tier = 3, requiredLevel = 7, skillPointCost = 1, branchIndex = 0 },
+
+                    // Tier 4 (Level 10)
+                    new SkillUnlockNode { skillId = "whirlwind", tier = 4, requiredLevel = 10, skillPointCost = 1, branchIndex = 0, prerequisites = new[] { "armor_break" } },
+                    new SkillUnlockNode { skillId = "iron_fortress", tier = 4, requiredLevel = 10, skillPointCost = 1, branchIndex = 1, prerequisites = new[] { "shield_wall" } },
+                    new SkillUnlockNode { skillId = "execution_strike", tier = 4, requiredLevel = 10, skillPointCost = 1, branchIndex = 2, prerequisites = new[] { "tactical_strike" } },
+                    new SkillUnlockNode { skillId = "iron_will", isPassive = true, tier = 4, requiredLevel = 10, skillPointCost = 1, branchIndex = 1 },
+                    new SkillUnlockNode { skillId = "counter_specialist", isPassive = true, tier = 4, requiredLevel = 10, skillPointCost = 1, branchIndex = 2 },
+
+                    // Tier 5 (Level 13)
+                    new SkillUnlockNode { skillId = "blade_tempest", tier = 5, requiredLevel = 13, skillPointCost = 2, branchIndex = 0, prerequisites = new[] { "whirlwind" } },
+                    new SkillUnlockNode { skillId = "unbreakable", tier = 5, requiredLevel = 13, skillPointCost = 2, branchIndex = 1, maxRank = 1, prerequisites = new[] { "iron_fortress" } },
+                    new SkillUnlockNode { skillId = "final_verdict", tier = 5, requiredLevel = 13, skillPointCost = 2, branchIndex = 2, prerequisites = new[] { "execution_strike" } },
+                    new SkillUnlockNode { skillId = "master_of_arms", isPassive = true, tier = 5, requiredLevel = 13, skillPointCost = 2, branchIndex = 0 },
+                    new SkillUnlockNode { skillId = "unyielding_defense", isPassive = true, tier = 5, requiredLevel = 13, skillPointCost = 2, branchIndex = 1 }
                 },
                 mainHandWeapons = new[] { WeaponType.Sword, WeaponType.Axe, WeaponType.Mace, WeaponType.Spear },
                 secondHandWeapons = new[] { WeaponType.Shield, WeaponType.Buckler },
@@ -1172,13 +1216,87 @@ namespace Obscure
                 description = "Increases Nature Magic Power and Healing Power from Nature-based skills."
             },
 
-            // Additional unlockable passives
+            // Additional unlockable passives — Fighter Tree
             new PassiveDef
             {
-                id = "iron_will", name = "Iron Will", tier = 2,
-                description = "+1 VIT, +5 Status Resistance.",
+                id = "defensive_training", name = "Defensive Training", classId = "fighter", tier = 1,
+                description = "+4 Physical Defense.",
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalDefense, 4, ModifierKind.Flat, ModifierSource.Passive, "Defensive Training") }
+            },
+            new PassiveDef
+            {
+                id = "combat_discipline", name = "Combat Discipline", classId = "fighter", tier = 2,
+                description = "+5% QTE Timing Window bonus.",
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.QteTimingBonus, 5, ModifierKind.Flat, ModifierSource.Passive, "Combat Discipline") }
+            },
+            new PassiveDef
+            {
+                id = "shield_mastery", name = "Shield Mastery", classId = "fighter", tier = 2,
+                description = "+15 Block Power, +3 Physical Defense.",
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.BlockPower, 15, ModifierKind.Flat, ModifierSource.Passive, "Shield Mastery"),
+                    StatModifier.ForDerived(DerivedStatId.PhysicalDefense, 3, ModifierKind.Flat, ModifierSource.Passive, "Shield Mastery")
+                }
+            },
+            new PassiveDef
+            {
+                id = "tactical_awareness", name = "Tactical Awareness", classId = "fighter", tier = 3,
+                description = "+4 Initiative, +5% Critical Chance.",
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.Initiative, 4, ModifierKind.Flat, ModifierSource.Passive, "Tactical Awareness"),
+                    StatModifier.ForDerived(DerivedStatId.CriticalChance, 5, ModifierKind.Flat, ModifierSource.Passive, "Tactical Awareness")
+                }
+            },
+            new PassiveDef
+            {
+                id = "weapon_adaptation", name = "Weapon Adaptation", classId = "fighter", tier = 3,
+                description = "+5 Physical Power, +4 Physical Break.",
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.PhysicalPower, 5, ModifierKind.Flat, ModifierSource.Passive, "Weapon Adaptation"),
+                    StatModifier.ForDerived(DerivedStatId.PhysicalBreakPower, 4, ModifierKind.Flat, ModifierSource.Passive, "Weapon Adaptation")
+                }
+            },
+            new PassiveDef
+            {
+                id = "iron_will", name = "Iron Will", classId = "fighter", tier = 4,
+                description = "+1 VIT, +10 Status Resistance.",
                 abilityBonuses = new AbilityScores(0, 0, 1, 0, 0, 0),
-                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 5, ModifierKind.Flat, ModifierSource.Passive, "Iron Will") }
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 10, ModifierKind.Flat, ModifierSource.Passive, "Iron Will") }
+            },
+            new PassiveDef
+            {
+                id = "counter_specialist", name = "Counter Specialist", classId = "fighter", tier = 4,
+                description = "+8 Counter Power, +4 Physical Power.",
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.CounterPower, 8, ModifierKind.Flat, ModifierSource.Passive, "Counter Specialist"),
+                    StatModifier.ForDerived(DerivedStatId.PhysicalPower, 4, ModifierKind.Flat, ModifierSource.Passive, "Counter Specialist")
+                }
+            },
+            new PassiveDef
+            {
+                id = "master_of_arms", name = "Master of Arms", classId = "fighter", tier = 5,
+                description = "+10 Physical Power, +8 Physical Break, +5% Critical Chance.",
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.PhysicalPower, 10, ModifierKind.Flat, ModifierSource.Passive, "Master of Arms"),
+                    StatModifier.ForDerived(DerivedStatId.PhysicalBreakPower, 8, ModifierKind.Flat, ModifierSource.Passive, "Master of Arms"),
+                    StatModifier.ForDerived(DerivedStatId.CriticalChance, 5, ModifierKind.Flat, ModifierSource.Passive, "Master of Arms")
+                }
+            },
+            new PassiveDef
+            {
+                id = "unyielding_defense", name = "Unyielding Defense", classId = "fighter", tier = 5,
+                description = "+12 Physical Defense, +25 Max HP, +10 Status Resistance.",
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.PhysicalDefense, 12, ModifierKind.Flat, ModifierSource.Passive, "Unyielding Defense"),
+                    StatModifier.ForDerived(DerivedStatId.MaxHP, 25, ModifierKind.Flat, ModifierSource.Passive, "Unyielding Defense"),
+                    StatModifier.ForDerived(DerivedStatId.StatusResistance, 10, ModifierKind.Flat, ModifierSource.Passive, "Unyielding Defense")
+                }
             },
             new PassiveDef
             {
@@ -1213,18 +1331,72 @@ namespace Obscure
         // ---- 10. Active Skills ----
         public static readonly Dictionary<string, SkillDef> Skills = Index(new[]
         {
-            // Fighter / Knight
-            new SkillDef { id = "shield_bash", name = "Shield Bash", kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 4, power = 1.0f,
-                scalingAbility = Ability.STR, breakMultiplier = 1.35f, bonusVsBroken = 0.25f,
-                apply = new[] { Status(StatusId.DefenseDown, 2, 0.3f) }, description = "Bash a foe and crack its guard (DEF-)." },
-            new SkillDef { id = "fortify", name = "Fortify", kind = SkillKind.Support, target = TargetType.Self, mpCost = 5, cooldown = 3,
-                scalingAbility = Ability.CHA,
-                apply = new[] { Status(StatusId.DefenseUp, 2, 0.6f) }, description = "Brace behind the shield (DEF+ 2 turns)." },
-            new SkillDef { id = "interpose", name = "Interpose", kind = SkillKind.Support, target = TargetType.Ally, mpCost = 4, cooldown = 2,
-                scalingAbility = Ability.CHA,
-                apply = new[] { Status(StatusId.Guardian, 1, 1f, onSelf: true) }, description = "Take an ally's single-target hits until next turn." },
-            new SkillDef { id = "cleaving_strike", name = "Cleaving Strike", kind = SkillKind.Physical, target = TargetType.AllEnemies, mpCost = 6, power = 0.9f,
-                scalingAbility = Ability.STR, tier = 2, breakMultiplier = 1.2f, description = "Sweeping weapon technique hitting all foes." },
+            // Fighter / Knight (Complete 15-Skill Tree)
+            // Tier 1 (Level 1)
+            new SkillDef { id = "shield_bash", name = "Shield Bash", classId = "fighter", branchIndex = 1, tier = 1, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 4, power = 1.0f,
+                scalingAbility = Ability.STR, breakMultiplier = 1.4f, bonusVsBroken = 0.25f, requiresShield = true, cooldown = 1,
+                apply = new[] { Status(StatusId.DefenseDown, 2, 0.25f), Status(StatusId.Stun, 1, 1f, chance: 0.35f) },
+                description = "Strike with shield dealing Break damage with a chance to stun and reduce defense." },
+            new SkillDef { id = "power_strike", name = "Power Strike", classId = "fighter", branchIndex = 0, tier = 1, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 3, power = 1.35f,
+                scalingAbility = Ability.STR, breakMultiplier = 1.15f, perfectPower = 1.75f, critChanceBonus = 0.10f, cooldown = 0,
+                description = "Committed weapon strike dealing heavy Physical damage with high critical potential." },
+            new SkillDef { id = "guard_stance", name = "Guard Stance", classId = "fighter", branchIndex = 1, tier = 1, kind = SkillKind.Support, target = TargetType.Self, mpCost = 4, cooldown = 3,
+                scalingAbility = Ability.VIT, apply = new[] { Status(StatusId.DefenseUp, 2, 0.45f) },
+                description = "Brace in a defensive stance (DEF+ and mitigation for 2 turns)." },
+            new SkillDef { id = "fortify", name = "Fortify", classId = "fighter", kind = SkillKind.Support, target = TargetType.Self, mpCost = 5, cooldown = 3,
+                scalingAbility = Ability.CHA, apply = new[] { Status(StatusId.DefenseUp, 2, 0.6f) }, description = "Brace behind the shield (DEF+ 2 turns)." },
+            new SkillDef { id = "interpose", name = "Interpose", classId = "fighter", kind = SkillKind.Support, target = TargetType.Ally, mpCost = 4, cooldown = 2,
+                scalingAbility = Ability.CHA, apply = new[] { Status(StatusId.Guardian, 1, 1f, onSelf: true) }, description = "Take an ally's single-target hits until next turn." },
+
+            // Tier 2 (Level 4)
+            new SkillDef { id = "cleaving_strike", name = "Cleaving Strike", classId = "fighter", branchIndex = 0, tier = 2, kind = SkillKind.Physical, target = TargetType.AllEnemies, mpCost = 6, power = 1.0f,
+                scalingAbility = Ability.STR, breakMultiplier = 1.2f, cooldown = 1, prerequisites = new[] { "power_strike" },
+                description = "Sweeping weapon technique hitting all foes with crushing force." },
+            new SkillDef { id = "shield_wall", name = "Shield Wall", classId = "fighter", branchIndex = 1, tier = 2, kind = SkillKind.Support, target = TargetType.AllAllies, mpCost = 6, cooldown = 3,
+                scalingAbility = Ability.VIT, requiresShield = true, prerequisites = new[] { "guard_stance" },
+                apply = new[] { Status(StatusId.DefenseUp, 2, 0.35f), Status(StatusId.Guardian, 1, 1f, onSelf: true) },
+                description = "Plant shield to protect the party (DEF+ and intercept ally hits)." },
+            new SkillDef { id = "weapon_disarm", name = "Weapon Disarm", classId = "fighter", branchIndex = 2, tier = 2, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 5, power = 0.9f,
+                scalingAbility = Ability.STR, cooldown = 2,
+                apply = new[] { Status(StatusId.AttackDown, 2, 0.40f, chance: 0.85f) },
+                description = "Target enemy weapon arm, dealing damage and heavily reducing Physical attack (ATK-)." },
+
+            // Tier 3 (Level 7)
+            new SkillDef { id = "counterattack", name = "Counterattack", classId = "fighter", branchIndex = 2, tier = 3, kind = SkillKind.Support, target = TargetType.Self, mpCost = 5, cooldown = 2,
+                scalingAbility = Ability.STR, prerequisites = new[] { "weapon_disarm" },
+                apply = new[] { Status(StatusId.Evasion, 2, 1.5f), Status(StatusId.AttackUp, 2, 0.25f) },
+                description = "Enter a retaliatory guard, widening reaction parry window and boosting counter power." },
+            new SkillDef { id = "armor_break", name = "Armor Break", classId = "fighter", branchIndex = 0, tier = 3, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 6, power = 1.25f,
+                scalingAbility = Ability.STR, breakMultiplier = 1.5f, cooldown = 2, prerequisites = new[] { "cleaving_strike" },
+                apply = new[] { Status(StatusId.DefenseDown, 3, 0.45f) },
+                description = "Shatter enemy armor dealing high damage and severely crippling Physical Defense (DEF- 3 turns)." },
+            new SkillDef { id = "tactical_strike", name = "Tactical Strike", classId = "fighter", branchIndex = 2, tier = 3, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 5, power = 1.35f,
+                scalingAbility = Ability.STR, bonusVsBroken = 0.5f, cooldown = 1, prerequisites = new[] { "weapon_disarm" },
+                description = "Precise tactical strike dealing massive bonus damage against Broken or debuffed foes." },
+
+            // Tier 4 (Level 10)
+            new SkillDef { id = "whirlwind", name = "Whirlwind", classId = "fighter", branchIndex = 0, tier = 4, kind = SkillKind.Physical, target = TargetType.AllEnemies, mpCost = 9, power = 1.4f,
+                scalingAbility = Ability.STR, breakMultiplier = 1.35f, cooldown = 2, prerequisites = new[] { "armor_break" },
+                description = "Spinning 360-degree blade tempest dealing crushing Physical damage to all foes." },
+            new SkillDef { id = "iron_fortress", name = "Iron Fortress", classId = "fighter", branchIndex = 1, tier = 4, kind = SkillKind.Support, target = TargetType.Self, mpCost = 8, cooldown = 4,
+                scalingAbility = Ability.VIT, requiresShield = true, prerequisites = new[] { "shield_wall" },
+                apply = new[] { Status(StatusId.DefenseUp, 2, 0.75f), Status(StatusId.Guardian, 2, 1f, onSelf: true) },
+                description = "Become an immovable fortress: massive Physical Defense (+75%) and intercepts hits for 2 turns." },
+            new SkillDef { id = "execution_strike", name = "Execution Strike", classId = "fighter", branchIndex = 2, tier = 4, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 7, power = 1.7f,
+                scalingAbility = Ability.STR, breakMultiplier = 1.4f, bonusVsBroken = 0.6f, cooldown = 2, prerequisites = new[] { "tactical_strike" },
+                description = "Brutal execution strike that annihilates vulnerable or Broken targets." },
+
+            // Tier 5 (Level 13)
+            new SkillDef { id = "blade_tempest", name = "Blade Tempest", classId = "fighter", branchIndex = 0, tier = 5, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 12, power = 0.6f, hits = 5,
+                scalingAbility = Ability.STR, breakMultiplier = 1.6f, perfectPower = 2.0f, cooldown = 3, prerequisites = new[] { "whirlwind" },
+                description = "Unleash a flurry of 5 rapid, devastating weapon strikes with high critical multiplier." },
+            new SkillDef { id = "unbreakable", name = "Unbreakable", classId = "fighter", branchIndex = 1, tier = 5, kind = SkillKind.Support, target = TargetType.Self, mpCost = 10, cooldown = 5,
+                scalingAbility = Ability.VIT, maxRank = 1, prerequisites = new[] { "iron_fortress" },
+                apply = new[] { Status(StatusId.DefenseUp, 3, 1.0f) },
+                description = "Apex defensive mastery: doubles Physical Defense (+100%) and withstands extreme pressure for 3 turns." },
+            new SkillDef { id = "final_verdict", name = "Final Verdict", classId = "fighter", branchIndex = 2, tier = 5, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 14, power = 2.8f,
+                scalingAbility = Ability.STR, breakMultiplier = 2.0f, bonusVsBroken = 0.75f, cooldown = 4, prerequisites = new[] { "execution_strike" },
+                description = "Cataclysmic single-target finisher dealing immense Physical and Break damage." },
 
             // Barbarian
             new SkillDef { id = "reckless_cleave", name = "Reckless Cleave", kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 4, power = 1.35f,

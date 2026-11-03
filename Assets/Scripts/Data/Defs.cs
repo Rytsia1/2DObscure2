@@ -153,6 +153,21 @@ namespace Obscure
         public float perfectPower; // overrides the Perfect QTE multiplier (critical hits), 0 = default
         public StatusApply[] apply;
 
+        // Skill Progression & Equipment integration
+        public string classId;
+        public int branchIndex;
+        public string[] prerequisites = Array.Empty<string>();
+        public bool requiresShield;
+        public WeaponType requiredWeaponType = WeaponType.None;
+        public float critChanceBonus = 0f;
+        public float powerPerRank = 0.25f;
+        public float breakMultiplierPerRank = 0.2f;
+        public int mpCostPerRank = 0;
+
+        public float GetPower(int rank) => power + Math.Max(0, rank - 1) * powerPerRank;
+        public float GetBreakMultiplier(int rank) => breakMultiplier + Math.Max(0, rank - 1) * breakMultiplierPerRank;
+        public int GetMpCost(int rank) => Math.Max(0, mpCost + Math.Max(0, rank - 1) * mpCostPerRank);
+
         // Modular Damage System configuration (Prompt Sections 3, 8.3, 10, 11, 12).
         public int skillLevel = 1;
         public DamageComponent[] damageComponents = Array.Empty<DamageComponent>();

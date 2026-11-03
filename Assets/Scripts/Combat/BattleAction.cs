@@ -92,7 +92,8 @@ namespace Obscure
             if (effect == Effectiveness.Immune) return 0;
             bool isMagic = skill != null && skill.kind == SkillKind.Magic;
             int baseBreak = isMagic ? a.MagicBreak : a.PhysicalBreak;
-            float skillMult = skill != null ? skill.breakMultiplier : 1f;
+            int rank = (skill != null && a?.unit != null) ? Math.Max(1, a.unit.skillLoadout.GetRank(skill.id)) : 1;
+            float skillMult = skill != null ? skill.GetBreakMultiplier(rank) : 1f;
             float elemMult = effect == Effectiveness.Weak ? 1.5f : effect == Effectiveness.Resist ? 0.75f : 1f;
             return Math.Max(1, (int)Math.Round(baseBreak * skillMult * elemMult));
         }

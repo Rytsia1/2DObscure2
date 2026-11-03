@@ -511,6 +511,46 @@ namespace Obscure
             abilities.baseScores = newBaseScores;
             RecalculateStats();
         }
+
+        public bool HasEquippedShield()
+        {
+            if (equipped != null && equipped.TryGetValue(EquipmentSlot.SecondHand, out var eq) && eq != null)
+                return eq.weaponType == WeaponType.Shield || eq.weaponType == WeaponType.Buckler;
+
+            if (equipped == null || equipped.Count == 0)
+            {
+                if (classDef != null && classDef.secondHandWeapons != null)
+                {
+                    foreach (var wt in classDef.secondHandWeapons)
+                    {
+                        if (wt == WeaponType.Shield || wt == WeaponType.Buckler)
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public bool HasEquippedWeaponType(WeaponType type)
+        {
+            if (type == WeaponType.None) return true;
+            if (equipped != null && equipped.TryGetValue(EquipmentSlot.MainHand, out var mh) && mh != null)
+                if (mh.weaponType == type) return true;
+            if (equipped != null && equipped.TryGetValue(EquipmentSlot.SecondHand, out var sh) && sh != null)
+                if (sh.weaponType == type) return true;
+
+            if (equipped == null || equipped.Count == 0)
+            {
+                if (classDef != null)
+                {
+                    if (classDef.mainHandWeapons != null && Array.IndexOf(classDef.mainHandWeapons, type) >= 0)
+                        return true;
+                    if (classDef.secondHandWeapons != null && Array.IndexOf(classDef.secondHandWeapons, type) >= 0)
+                        return true;
+                }
+            }
+            return false;
+        }
     }
 
     public enum RunStatus { Active, Victory, Defeat }

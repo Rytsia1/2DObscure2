@@ -80,6 +80,7 @@ namespace Obscure
             int total = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
             Option(m, $"RECOVER +{total} HP", Recover, $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES");
             Option(m, "IMPROVE A HERO", ShowImprove, "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE");
+            Option(m, "DEVELOP SKILLS", () => Game?.Go(GameState.Skills), "VIEW HERO SKILL TREES AND ALLOCATE SKILL POINTS");
         }
 
         void ShowImprove()

@@ -67,11 +67,13 @@ namespace Obscure
             Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
             HeaderLabel = Ui.Label(Root, "", 14, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
             IdentityLabel = Ui.Label(Root, "", 120, 7, Palette.WarmIvory);
-            vitals = Ui.Label(Root, "", 370, 7, Palette.MutedGray);
+            vitals = Ui.Label(Root, "", 300, 7, Palette.MutedGray);
 
-            var gearBtn = Ui.Button(Root, "LOADOUT", 480, 4, 72, () => Game?.Go(GameState.Equipment), 18, showCursor: false);
+            var skillsBtn = Ui.Button(Root, "SKILLS", 402, 4, 72, () => Game?.Go(GameState.Skills), 18, showCursor: false);
+            skillsBtn.tooltip = "VIEW & UPGRADE SKILL TREES AND SP";
+            var gearBtn = Ui.Button(Root, "LOADOUT", 478, 4, 72, () => Game?.Go(GameState.Equipment), 18, showCursor: false);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT LOADOUT";
-            var itemsBtn = Ui.Button(Root, "SATCHEL", 558, 4, 72, () => Game?.Go(GameState.Inventory), 18, showCursor: false);
+            var itemsBtn = Ui.Button(Root, "SATCHEL", 554, 4, 72, () => Game?.Go(GameState.Inventory), 18, showCursor: false);
             itemsBtn.tooltip = "INVENTORY (EQUIPMENT, CONSUMABLES, MATERIALS, KEYS)";
 
             // 2. Left Panel: 6 Primary Ability Scores
