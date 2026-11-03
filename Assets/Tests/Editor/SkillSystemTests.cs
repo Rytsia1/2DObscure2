@@ -25,6 +25,74 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void AllNineClasses_HaveCompleteTwentyFiveSkillDefinitionsAndProgressionTrees()
+        {
+            string[] classIds = { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" };
+
+            foreach (var cid in classIds)
+            {
+                Assert.IsTrue(Database.Classes.ContainsKey(cid), $"Class '{cid}' missing from Database.Classes");
+                var cDef = Database.Classes[cid];
+
+                // 3 Branch names
+                Assert.AreEqual(3, cDef.branchNames.Length, $"Class '{cid}' should have 3 branch names");
+
+                // 3 Starting active skills
+                Assert.AreEqual(3, cDef.startingSkills.Length, $"Class '{cid}' should have 3 starting skills");
+                foreach (var sid in cDef.startingSkills)
+                {
+                    Assert.IsTrue(Database.Skills.ContainsKey(sid), $"Starting skill '{sid}' of class '{cid}' missing from Database.Skills");
+                }
+
+                // 1 Starter passive
+                Assert.IsFalse(string.IsNullOrEmpty(cDef.starterPassiveId), $"Class '{cid}' missing starter passive");
+                Assert.IsTrue(Database.Passives.ContainsKey(cDef.starterPassiveId), $"Starter passive '{cDef.starterPassiveId}' of class '{cid}' missing from Database.Passives");
+
+                // 15 Active skills in pool
+                Assert.GreaterOrEqual(cDef.activeSkillPool.Length, 15, $"Class '{cid}' should have at least 15 active skills");
+                foreach (var sid in cDef.activeSkillPool)
+                {
+                    Assert.IsTrue(Database.Skills.ContainsKey(sid), $"Active skill '{sid}' of class '{cid}' missing from Database.Skills");
+                    var s = Database.Skills[sid];
+                    Assert.AreEqual(cid, s.classId, $"Skill '{sid}' classId mismatch");
+                    Assert.GreaterOrEqual(s.tier, 1);
+                    Assert.LessOrEqual(s.tier, 5);
+                    Assert.GreaterOrEqual(s.branchIndex, 0);
+                    Assert.LessOrEqual(s.branchIndex, 2);
+                }
+
+                // 10 Passives in pool
+                Assert.GreaterOrEqual(cDef.passiveSkillPool.Length, 10, $"Class '{cid}' should have at least 10 passives");
+                foreach (var pid in cDef.passiveSkillPool)
+                {
+                    Assert.IsTrue(Database.Passives.ContainsKey(pid), $"Passive '{pid}' of class '{cid}' missing from Database.Passives");
+                    var p = Database.Passives[pid];
+                    if (!p.isStarterPassive)
+                        Assert.AreEqual(cid, p.classId, $"Passive '{pid}' classId mismatch");
+                }
+
+                // 21 Unlock progression nodes (25 total skills - 3 starting actives - 1 starter passive)
+                Assert.AreEqual(21, cDef.skillUnlockProgression.Length, $"Class '{cid}' should have exactly 21 unlock nodes");
+                foreach (var node in cDef.skillUnlockProgression)
+                {
+                    if (node.isPassive)
+                        Assert.IsTrue(Database.Passives.ContainsKey(node.skillId), $"Node passive '{node.skillId}' of class '{cid}' missing from Database.Passives");
+                    else
+                        Assert.IsTrue(Database.Skills.ContainsKey(node.skillId), $"Node active '{node.skillId}' of class '{cid}' missing from Database.Skills");
+
+                    if (node.prerequisites != null && node.prerequisites.Length > 0)
+                    {
+                        foreach (var prereq in node.prerequisites)
+                        {
+                            bool exists = Database.Skills.ContainsKey(prereq) || Database.Passives.ContainsKey(prereq);
+                            Assert.IsTrue(exists, $"Prerequisite '{prereq}' for node '{node.skillId}' in class '{cid}' does not exist");
+                        }
+                    }
+                }
+            }
+        }
+
+        [Test]
         public void FighterClass_HasCompleteTwentyFiveSkillDefinitions()
         {
             var fighterDef = Database.Classes["fighter"];

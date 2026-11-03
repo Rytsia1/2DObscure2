@@ -341,6 +341,7 @@ namespace Obscure
         public string[] startingSkills = Array.Empty<string>();
         public string[] activeSkillPool = Array.Empty<string>();
         public string[] passiveSkillPool = Array.Empty<string>();
+        public string[] branchNames = Array.Empty<string>();
         public SkillUnlockNode[] skillUnlockProgression = Array.Empty<SkillUnlockNode>();
 
         // Strict Weapon Compatibility lists (Section 8)

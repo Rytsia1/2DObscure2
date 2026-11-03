@@ -81,7 +81,8 @@ namespace Obscure
 
             var components = skill.GetDamageComponents(levelOverride);
             int hitCount = skill.GetDamageHitCount(levelOverride);
-            Func<float> rollProvider = rng != null ? () => (float)rng.NextDouble() : null;
+            Func<float> rollProvider = null;
+            if (rng != null) rollProvider = () => (float)rng.NextDouble();
             var context = attacker.CreateDamageContext(target, components, hitCount, qteResult, rollProvider);
             return DamageCalculator.Calculate(context);
         }

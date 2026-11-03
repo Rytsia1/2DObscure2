@@ -138,9 +138,15 @@ namespace Obscure
             if (cDef == null) return;
 
             // Branch Header labels
-            Ui.Label(Root, "VANGUARD", 20, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
-            Ui.Label(Root, "BULWARK", 160, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
-            Ui.Label(Root, "TACTICAL", 300, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
+            string b0 = (cDef.branchNames != null && cDef.branchNames.Length > 0) ? cDef.branchNames[0].ToUpper() : "BRANCH I";
+            string b1 = (cDef.branchNames != null && cDef.branchNames.Length > 1) ? cDef.branchNames[1].ToUpper() : "BRANCH II";
+            string b2 = (cDef.branchNames != null && cDef.branchNames.Length > 2) ? cDef.branchNames[2].ToUpper() : "BRANCH III";
+            if (b0.Length > 12) b0 = b0.Substring(0, 12);
+            if (b1.Length > 12) b1 = b1.Substring(0, 12);
+            if (b2.Length > 12) b2 = b2.Substring(0, 12);
+            Ui.Label(Root, b0, 20, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
+            Ui.Label(Root, b1, 160, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
+            Ui.Label(Root, b2, 300, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
             Ui.Divider(Root, 16, 45, 408, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             // Populate all unlockable nodes from the hero's class definition
