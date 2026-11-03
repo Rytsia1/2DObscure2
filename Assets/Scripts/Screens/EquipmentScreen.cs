@@ -204,8 +204,8 @@ namespace Obscure
             var slot = SelectedSlot;
             return inventory.equipment
                 .Where(e => !e.isEquipped &&
-                            EquipmentValidator.SlotMatches(e.Definition, slot) &&
-                            EquipmentValidator.Validate(e.Definition, slot, hero.classDef, hero.race, hero.level, hero.FinalScores) == null)
+                            EquipmentValidator.SlotMatches(e.Definition, slot, hero.classDef) &&
+                            EquipmentValidator.Validate(e.Definition, slot, hero.classDef, hero.race, hero.level, hero.FinalScores, hero.id) == null)
                 .ToList();
         }
 

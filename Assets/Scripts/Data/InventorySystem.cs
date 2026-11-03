@@ -533,12 +533,15 @@ namespace Obscure
         public bool HasKeyItem(string keyItemId) =>
             !string.IsNullOrEmpty(keyItemId) && keyItems.Contains(keyItemId);
 
-        public IEnumerable<EquipmentInstance> GetFilteredEquipment(EquipmentSlot? slotFilter = null, EquipmentRarity? rarityFilter = null)
+        public IEnumerable<EquipmentInstance> GetFilteredEquipment(
+            EquipmentSlot? slotFilter = null,
+            EquipmentRarity? rarityFilter = null,
+            ClassDef classFilter = null)
         {
             var query = equipment.Where(e => !e.isEquipped);
             if (slotFilter.HasValue)
             {
-                query = query.Where(e => e.Definition != null && EquipmentValidator.SlotMatches(e.Definition, slotFilter.Value));
+                query = query.Where(e => e.Definition != null && EquipmentValidator.SlotMatches(e.Definition, slotFilter.Value, classFilter));
             }
             if (rarityFilter.HasValue)
             {
@@ -547,9 +550,13 @@ namespace Obscure
             return query;
         }
 
-        public List<EquipmentInstance> GetSortedEquipment(EquipmentSortMode mode, EquipmentSlot? slotFilter = null, EquipmentRarity? rarityFilter = null)
+        public List<EquipmentInstance> GetSortedEquipment(
+            EquipmentSortMode mode,
+            EquipmentSlot? slotFilter = null,
+            EquipmentRarity? rarityFilter = null,
+            ClassDef classFilter = null)
         {
-            var list = GetFilteredEquipment(slotFilter, rarityFilter).ToList();
+            var list = GetFilteredEquipment(slotFilter, rarityFilter, classFilter).ToList();
             switch (mode)
             {
                 case EquipmentSortMode.RarityDesc:
@@ -645,16 +652,31 @@ namespace Obscure
             if (unit == null) { error = "Unit is null."; return false; }
             if (instance == null) { error = "Item is null."; return false; }
 
-            if (!EquipmentValidator.SlotMatches(instance.Definition, slot))
+            if (!EquipmentValidator.SlotMatches(instance.Definition, slot, unit.classDef))
             {
                 error = $"{instance.Definition?.name ?? "Item"} cannot be equipped in {EquipmentSlots.DisplayName(slot)}.";
                 return false;
             }
 
-            var valErr = EquipmentValidator.Validate(instance.Definition, slot, unit.classDef, unit.race, unit.level, unit.FinalScores);
+            var valErr = EquipmentValidator.Validate(instance.Definition, slot, unit.classDef, unit.race, unit.level, unit.FinalScores, unit.id);
             if (valErr != null)
             {
                 error = valErr;
+                return false;
+            }
+
+            // Exclusive ownership check across characters:
+            if (instance.isEquipped && !string.IsNullOrEmpty(instance.boundCharacterId) && instance.boundCharacterId != unit.id)
+            {
+                error = $"Item '{instance.Definition?.name ?? instance.definitionId}' is already equipped by another character ({instance.boundCharacterId}).";
+                return false;
+            }
+
+            // Prevent equipping same instance in another slot on the same character:
+            if (unit.equippedInstances.Any(kv => kv.Key != slot && kv.Value != null && kv.Value.instanceId == instance.instanceId))
+            {
+                var otherSlot = unit.equippedInstances.First(kv => kv.Key != slot && kv.Value != null && kv.Value.instanceId == instance.instanceId).Key;
+                error = $"Item '{instance.Definition?.name ?? instance.definitionId}' is already equipped in another slot ({EquipmentSlots.DisplayName(otherSlot)}).";
                 return false;
             }
 
@@ -670,7 +692,11 @@ namespace Obscure
                 }
             }
 
-            unit.TryEquip(slot, instance, out error);
+            if (!unit.TryEquip(slot, instance, out error))
+            {
+                return false;
+            }
+
             if (inventory != null && !inventory.equipment.Contains(instance))
             {
                 inventory.equipment.Add(instance);
@@ -705,6 +731,126 @@ namespace Obscure
                 if (!inventory.equipment.Contains(current))
                     inventory.equipment.Add(current);
             }
+            error = null;
+            return true;
+        }
+
+        public static bool AutoEquipAccessory(Unit unit, EquipmentInstance instance, InventoryRuntime inventory, out string error)
+        {
+            if (unit == null) { error = "Unit is null."; return false; }
+            if (instance?.Definition == null) { error = "Item is null."; return false; }
+
+            if (instance.Definition.GetEquipmentCategory() != EquipmentType.Accessory &&
+                !EquipmentValidator.IsAccessorySlot(instance.Definition.slot))
+            {
+                error = $"{instance.Definition.name} is not an accessory.";
+                return false;
+            }
+
+            EquipmentSlot targetSlot;
+            bool hasSlot1 = unit.equippedInstances.ContainsKey(EquipmentSlot.Accessory1) || unit.equipped.ContainsKey(EquipmentSlot.Accessory1);
+            bool hasSlot2 = unit.equippedInstances.ContainsKey(EquipmentSlot.Accessory2) || unit.equipped.ContainsKey(EquipmentSlot.Accessory2);
+
+            if (!hasSlot1)
+            {
+                targetSlot = EquipmentSlot.Accessory1;
+            }
+            else if (!hasSlot2)
+            {
+                targetSlot = EquipmentSlot.Accessory2;
+            }
+            else
+            {
+                targetSlot = EquipmentSlot.Accessory1;
+            }
+
+            return EquipFromInventory(unit, targetSlot, instance, inventory, out error);
+        }
+
+        public static bool SwapEquipmentBetweenUnits(
+            Unit unitA,
+            EquipmentSlot slotA,
+            Unit unitB,
+            EquipmentSlot slotB,
+            out string error)
+        {
+            if (unitA == null) { error = "Unit A is null."; return false; }
+            if (unitB == null) { error = "Unit B is null."; return false; }
+
+            if (unitA == unitB && slotA == slotB)
+            {
+                error = null;
+                return true;
+            }
+
+            if (!unitA.equippedInstances.TryGetValue(slotA, out var instA) || instA == null)
+            {
+                if (unitA.equipped.TryGetValue(slotA, out var defA) && defA != null)
+                {
+                    instA = new EquipmentInstance(defA, defA.rarity, defA.equipmentLevel) { boundCharacterId = unitA.id, isEquipped = true };
+                    unitA.equippedInstances[slotA] = instA;
+                }
+            }
+            if (!unitB.equippedInstances.TryGetValue(slotB, out var instB) || instB == null)
+            {
+                if (unitB.equipped.TryGetValue(slotB, out var defB) && defB != null)
+                {
+                    instB = new EquipmentInstance(defB, defB.rarity, defB.equipmentLevel) { boundCharacterId = unitB.id, isEquipped = true };
+                    unitB.equippedInstances[slotB] = instB;
+                }
+            }
+
+            if (instA == null && instB == null)
+            {
+                error = "Both slots are empty.";
+                return false;
+            }
+
+            // Validate instA on unitB in slotB
+            if (instA != null)
+            {
+                var valErrA = EquipmentValidator.Validate(instA.Definition, slotB, unitB.classDef, unitB.race, unitB.level, unitB.FinalScores, unitB.id);
+                if (valErrA != null)
+                {
+                    error = $"Cannot equip {instA.Definition.name} to {unitB.name}: {valErrA}";
+                    return false;
+                }
+                if (unitB.equippedInstances.Any(kv => kv.Key != slotB && (unitA != unitB || kv.Key != slotA) && kv.Value != null && kv.Value.instanceId == instA.instanceId))
+                {
+                    error = $"Item '{instA.Definition.name}' is already equipped in another slot on {unitB.name}.";
+                    return false;
+                }
+            }
+
+            // Validate instB on unitA in slotA
+            if (instB != null)
+            {
+                var valErrB = EquipmentValidator.Validate(instB.Definition, slotA, unitA.classDef, unitA.race, unitA.level, unitA.FinalScores, unitA.id);
+                if (valErrB != null)
+                {
+                    error = $"Cannot equip {instB.Definition.name} to {unitA.name}: {valErrB}";
+                    return false;
+                }
+                if (unitA.equippedInstances.Any(kv => kv.Key != slotA && (unitA != unitB || kv.Key != slotB) && kv.Value != null && kv.Value.instanceId == instB.instanceId))
+                {
+                    error = $"Item '{instB.Definition.name}' is already equipped in another slot on {unitA.name}.";
+                    return false;
+                }
+            }
+
+            // Perform atomic swap
+            unitA.Unequip(slotA);
+            unitB.Unequip(slotB);
+
+            if (instA != null)
+            {
+                unitB.TryEquip(slotB, instA, out _);
+            }
+            if (instB != null)
+            {
+                unitA.TryEquip(slotA, instB, out _);
+            }
+
             error = null;
             return true;
         }
@@ -746,6 +892,79 @@ namespace Obscure
                 unit.passives);
 
             return simDerived.Get(statId) - currentVal;
+        }
+
+        public static Dictionary<DerivedStatId, int> CalculateAllStatDeltas(Unit unit, EquipmentSlot slot, EquipmentInstance candidate)
+        {
+            var result = new Dictionary<DerivedStatId, int>();
+            if (unit == null) return result;
+
+            var candidateDef = candidate != null ? candidate.ToEffectiveDef() : null;
+            var simEquipped = new Dictionary<EquipmentSlot, EquipmentDef>(unit.equipped);
+            if (candidateDef != null)
+                simEquipped[slot] = candidateDef;
+            else
+                simEquipped.Remove(slot);
+
+            var simAbil = AbilityScores.Zero;
+            foreach (var eq in simEquipped.Values)
+                if (eq != null) simAbil = simAbil.Plus(eq.abilityBonuses);
+            foreach (var p in unit.passives)
+                if (p != null) simAbil = simAbil.Plus(p.abilityBonuses);
+
+            var tempSheet = new AbilityScoreSheet
+            {
+                baseScores = unit.BaseScores,
+                racialModifiers = unit.RacialModifiers,
+                permanentBonuses = unit.PermanentAbilityBonuses,
+                equipmentBonuses = simAbil,
+                temporaryModifiers = unit.TemporaryAbilityModifiers
+            };
+
+            var simDerived = StatCalculator.Calculate(
+                tempSheet,
+                unit.classDef,
+                unit.level,
+                simEquipped.Values,
+                unit.GatherAllDerivedModifiers(),
+                default,
+                unit.passives);
+
+            foreach (DerivedStatId statId in Enum.GetValues(typeof(DerivedStatId)))
+            {
+                result[statId] = simDerived.Get(statId) - unit.Derived.Get(statId);
+            }
+            return result;
+        }
+
+        public static int CalculateAbilityScoreDelta(Unit unit, EquipmentSlot slot, EquipmentInstance candidate, Ability ability)
+        {
+            if (unit == null) return 0;
+            int currentVal = unit.FinalScores[ability];
+
+            var candidateDef = candidate != null ? candidate.ToEffectiveDef() : null;
+            var simEquipped = new Dictionary<EquipmentSlot, EquipmentDef>(unit.equipped);
+            if (candidateDef != null)
+                simEquipped[slot] = candidateDef;
+            else
+                simEquipped.Remove(slot);
+
+            var simAbil = AbilityScores.Zero;
+            foreach (var eq in simEquipped.Values)
+                if (eq != null) simAbil = simAbil.Plus(eq.abilityBonuses);
+            foreach (var p in unit.passives)
+                if (p != null) simAbil = simAbil.Plus(p.abilityBonuses);
+
+            var tempSheet = new AbilityScoreSheet
+            {
+                baseScores = unit.BaseScores,
+                racialModifiers = unit.RacialModifiers,
+                permanentBonuses = unit.PermanentAbilityBonuses,
+                equipmentBonuses = simAbil,
+                temporaryModifiers = unit.TemporaryAbilityModifiers
+            };
+
+            return tempSheet.Score(ability) - currentVal;
         }
     }
 

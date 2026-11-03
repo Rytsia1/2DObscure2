@@ -317,6 +317,11 @@ namespace Obscure
         public void Equip(EquipmentDef item)
         {
             if (item == null) throw new ArgumentNullException(nameof(item));
+            if (equippedInstances.TryGetValue(item.slot, out var oldInst) && oldInst != null)
+            {
+                oldInst.isEquipped = false;
+                oldInst.boundCharacterId = null;
+            }
             var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
             equippedInstances[item.slot] = inst;
             equipped[item.slot] = item;
@@ -328,6 +333,13 @@ namespace Obscure
         {
             error = EquipmentValidator.Validate(item, slot, classDef, race, level, FinalScores, id);
             if (error != null) return false;
+
+            if (equippedInstances.TryGetValue(slot, out var oldInst) && oldInst != null)
+            {
+                oldInst.isEquipped = false;
+                oldInst.boundCharacterId = null;
+            }
+
             var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
             equippedInstances[slot] = inst;
             equipped[slot] = item;
@@ -348,6 +360,22 @@ namespace Obscure
                 error = $"Unknown equipment definition '{instance.definitionId}'.";
                 return false;
             }
+
+            // 1. Exclusive Ownership Check across characters:
+            if (instance.isEquipped && !string.IsNullOrEmpty(instance.boundCharacterId) && instance.boundCharacterId != id)
+            {
+                error = $"Item '{def.name}' is already equipped by another character ({instance.boundCharacterId}).";
+                return false;
+            }
+
+            // 2. Duplicate Check on the same character across different slots:
+            if (equippedInstances.Any(kv => kv.Key != slot && kv.Value != null && kv.Value.instanceId == instance.instanceId))
+            {
+                var otherSlot = equippedInstances.First(kv => kv.Key != slot && kv.Value != null && kv.Value.instanceId == instance.instanceId).Key;
+                error = $"Item '{def.name}' is already equipped in another slot ({EquipmentSlots.DisplayName(otherSlot)}).";
+                return false;
+            }
+
             error = EquipmentValidator.Validate(def, slot, classDef, race, level, FinalScores, id);
             if (error != null) return false;
 
@@ -387,13 +415,16 @@ namespace Obscure
 
         public bool Unequip(EquipmentSlot slot)
         {
+            bool removedInst = false;
             if (equippedInstances.TryGetValue(slot, out var inst) && inst != null)
             {
                 inst.isEquipped = false;
                 inst.boundCharacterId = null;
                 equippedInstances.Remove(slot);
+                removedInst = true;
             }
-            if (!equipped.Remove(slot)) return false;
+            bool removedDef = equipped.Remove(slot);
+            if (!removedInst && !removedDef) return false;
             RecalculateStats();
             return true;
         }

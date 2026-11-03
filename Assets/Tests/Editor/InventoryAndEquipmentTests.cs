@@ -155,7 +155,8 @@ namespace Obscure.Tests
             // 1. Sword in MainHand for Knight succeeds; for Mage fails strict weapon compatibility
             var swordInst = new EquipmentInstance(swordDef, EquipmentRarity.Common, 1);
             Assert.IsTrue(knight.TryEquip(EquipmentSlot.MainHand, swordInst, out string err1), err1);
-            Assert.IsFalse(mage.TryEquip(EquipmentSlot.MainHand, swordInst, out string err2), "Mage cannot equip Broadsword.");
+            var swordInstMage = new EquipmentInstance(swordDef, EquipmentRarity.Common, 1);
+            Assert.IsFalse(mage.TryEquip(EquipmentSlot.MainHand, swordInstMage, out string err2), "Mage cannot equip Broadsword.");
             StringAssert.Contains("Incompatible", err2);
 
             // Mage can equip Oak Staff
@@ -490,6 +491,235 @@ namespace Obscure.Tests
             var otherHero = new Unit(otherDef);
             Assert.IsFalse(otherHero.TryEquip(EquipmentSlot.Accessory1, boundItemDef, out string err2));
             StringAssert.Contains("restricted to specific characters", err2);
+        }
+
+        // =====================================================================
+        // 9. Stage 4 — Equipment Core Logic Unit Tests
+        // =====================================================================
+
+        [Test]
+        public void EquipmentCoreLogic_Equip_Unequip_And_SlotReplacement()
+        {
+            var hero = new Unit(Database.Characters["knight"]);
+            hero.Unequip(EquipmentSlot.MainHand);
+            int baseAtk = hero.Derived.physicalPower;
+
+            var swordDef1 = Database.Equipment["iron_broadsword"];
+            var swordDef2 = Database.Equipment["sanctified_mace"];
+
+            var item1 = new EquipmentInstance(swordDef1, EquipmentRarity.Common, 1);
+            var item2 = new EquipmentInstance(swordDef2, EquipmentRarity.Rare, 1);
+
+            // 1. Equip item1
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.MainHand, item1, out string err1), err1);
+            Assert.IsTrue(item1.isEquipped);
+            Assert.AreEqual(hero.id, item1.boundCharacterId);
+            Assert.AreEqual(item1, hero.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.Greater(hero.Derived.physicalPower, baseAtk);
+
+            // 2. Replacing slot with item2 unbinds item1
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.MainHand, item2, out string err2), err2);
+            Assert.IsFalse(item1.isEquipped);
+            Assert.IsNull(item1.boundCharacterId);
+            Assert.IsTrue(item2.isEquipped);
+            Assert.AreEqual(hero.id, item2.boundCharacterId);
+            Assert.AreEqual(item2, hero.equippedInstances[EquipmentSlot.MainHand]);
+
+            // 3. Unequip unbinds item2 and restores base stats
+            Assert.IsTrue(hero.Unequip(EquipmentSlot.MainHand));
+            Assert.IsFalse(item2.isEquipped);
+            Assert.IsNull(item2.boundCharacterId);
+            Assert.IsFalse(hero.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+            Assert.IsFalse(hero.equipped.ContainsKey(EquipmentSlot.MainHand));
+            Assert.AreEqual(baseAtk, hero.Derived.physicalPower);
+        }
+
+        [Test]
+        public void EquipmentCoreLogic_ExclusiveOwnership_PreventsMultipleCharactersEquippingSameInstance()
+        {
+            var heroA = new Unit(Database.Characters["knight"]);
+            var charB = new CharacterDef { id = "knight_clone", name = "Knight Clone", classId = "fighter", raceId = "human" };
+            var heroB = new Unit(charB);
+
+            var swordDef = Database.Equipment["iron_broadsword"];
+            var uniqueSword = new EquipmentInstance(swordDef, EquipmentRarity.Epic, 1);
+
+            // Hero A equips unique sword
+            Assert.IsTrue(heroA.TryEquip(EquipmentSlot.MainHand, uniqueSword, out string errA), errA);
+            Assert.IsTrue(uniqueSword.isEquipped);
+            Assert.AreEqual(heroA.id, uniqueSword.boundCharacterId);
+
+            // Hero B attempts to equip the exact same instance -> must be rejected
+            Assert.IsFalse(heroB.TryEquip(EquipmentSlot.MainHand, uniqueSword, out string errB));
+            StringAssert.Contains("already equipped by another character", errB);
+
+            // Hero A unequips it
+            Assert.IsTrue(heroA.Unequip(EquipmentSlot.MainHand));
+            Assert.IsFalse(uniqueSword.isEquipped);
+            Assert.IsNull(uniqueSword.boundCharacterId);
+
+            // Now Hero B can equip it
+            Assert.IsTrue(heroB.TryEquip(EquipmentSlot.MainHand, uniqueSword, out string errBSuccess), errBSuccess);
+            Assert.IsTrue(uniqueSword.isEquipped);
+            Assert.AreEqual(heroB.id, uniqueSword.boundCharacterId);
+        }
+
+        [Test]
+        public void EquipmentCoreLogic_SameCharacter_CannotEquipSameInstanceInMultipleSlots()
+        {
+            var hero = new Unit(Database.Characters["knight"]);
+
+            var ringDef = new EquipmentDef
+            {
+                id = "silver_ring",
+                name = "Silver Ring",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory
+            };
+            var ringInstance = new EquipmentInstance(ringDef, EquipmentRarity.Common, 1);
+
+            // Equip to Accessory 1
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.Accessory1, ringInstance, out string err1), err1);
+
+            // Attempt to equip same instance to Accessory 2 -> must be rejected
+            Assert.IsFalse(hero.TryEquip(EquipmentSlot.Accessory2, ringInstance, out string err2));
+            StringAssert.Contains("already equipped in another slot", err2);
+        }
+
+        [Test]
+        public void EquipmentCoreLogic_UnequipToInventory_Enforces100SlotLimit()
+        {
+            var hero = new Unit(Database.Characters["knight"]);
+            var inv = new InventoryRuntime();
+
+            var swordDef = Database.Equipment["iron_broadsword"];
+            var equippedSword = new EquipmentInstance(swordDef, EquipmentRarity.Common, 1);
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.MainHand, equippedSword, out _));
+
+            // Fill inventory up to 100 capacity
+            for (int i = 0; i < InventoryRuntime.MaxEquipmentCapacity; i++)
+            {
+                var dummy = new EquipmentInstance(swordDef, EquipmentRarity.Common, 1);
+                Assert.IsTrue(inv.TryAddEquipment(dummy, out _));
+            }
+            Assert.IsTrue(inv.IsEquipmentFull);
+
+            // Unequipping to full inventory must fail
+            Assert.IsFalse(EquipmentManager.UnequipToInventory(hero, EquipmentSlot.MainHand, inv, out string errFull));
+            StringAssert.Contains("Inventory is full", errFull);
+
+            // Item remains equipped
+            Assert.IsTrue(hero.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+            Assert.IsTrue(equippedSword.isEquipped);
+
+            // Free 1 inventory slot
+            var firstId = inv.equipment.First(e => !e.isEquipped).instanceId;
+            inv.RemoveEquipment(firstId);
+            Assert.IsFalse(inv.IsEquipmentFull);
+
+            // Now UnequipToInventory succeeds
+            Assert.IsTrue(EquipmentManager.UnequipToInventory(hero, EquipmentSlot.MainHand, inv, out string errSuccess), errSuccess);
+            Assert.IsFalse(hero.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+            Assert.IsFalse(equippedSword.isEquipped);
+            Assert.IsTrue(inv.equipment.Contains(equippedSword));
+        }
+
+        [Test]
+        public void EquipmentCoreLogic_SwapEquipmentBetweenUnits_PerformsAtomicExchange()
+        {
+            var charFighter = new CharacterDef { id = "hero_fighter", name = "Fighter Hero", classId = "fighter", raceId = "human" };
+            var fighter = new Unit(charFighter);
+            var charBarbarian = new CharacterDef { id = "hero_barbarian", name = "Barbarian Hero", classId = "barbarian", raceId = "human" };
+            var barbarian = new Unit(charBarbarian);
+
+            var sword = new EquipmentInstance(Database.Equipment["iron_broadsword"], EquipmentRarity.Common, 1);
+            var axe = new EquipmentInstance(Database.Equipment["battle_greataxe"], EquipmentRarity.Common, 1);
+
+            fighter.TryEquip(EquipmentSlot.MainHand, sword, out _);
+            barbarian.TryEquip(EquipmentSlot.MainHand, axe, out _);
+
+            // Incompatible swap fails atomically
+            Assert.IsFalse(EquipmentManager.SwapEquipmentBetweenUnits(fighter, EquipmentSlot.MainHand, barbarian, EquipmentSlot.MainHand, out string swapErr));
+            StringAssert.Contains("Cannot equip", swapErr);
+
+            // Verify neither character had their gear swapped
+            Assert.AreEqual(sword, fighter.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(axe, barbarian.equippedInstances[EquipmentSlot.MainHand]);
+
+            // Compatible swap between two Fighters
+            var charFighter2 = new CharacterDef { id = "hero_fighter2", name = "Fighter 2", classId = "fighter", raceId = "human" };
+            var fighter2 = new Unit(charFighter2);
+            var mace = new EquipmentInstance(Database.Equipment["sanctified_mace"], EquipmentRarity.Rare, 1);
+            fighter2.TryEquip(EquipmentSlot.MainHand, mace, out _);
+
+            Assert.IsTrue(EquipmentManager.SwapEquipmentBetweenUnits(fighter, EquipmentSlot.MainHand, fighter2, EquipmentSlot.MainHand, out string okErr), okErr);
+            Assert.AreEqual(mace, fighter.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(sword, fighter2.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(fighter.id, mace.boundCharacterId);
+            Assert.AreEqual(fighter2.id, sword.boundCharacterId);
+        }
+
+        [Test]
+        public void EquipmentCoreLogic_AutoEquipAccessory_FillsEmptySlotFirst()
+        {
+            var hero = new Unit(Database.Characters["knight"]);
+            hero.Unequip(EquipmentSlot.Accessory1);
+            hero.Unequip(EquipmentSlot.Accessory2);
+
+            var inv = new InventoryRuntime();
+
+            var ringDef = new EquipmentDef
+            {
+                id = "gold_ring",
+                name = "Gold Ring",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory
+            };
+            var acc1 = new EquipmentInstance(ringDef, EquipmentRarity.Common, 1);
+            var acc2 = new EquipmentInstance(ringDef, EquipmentRarity.Uncommon, 1);
+            var acc3 = new EquipmentInstance(ringDef, EquipmentRarity.Rare, 1);
+
+            // 1. First accessory goes to Accessory 1
+            Assert.IsTrue(EquipmentManager.AutoEquipAccessory(hero, acc1, inv, out string err1), err1);
+            Assert.AreEqual(acc1, hero.equippedInstances[EquipmentSlot.Accessory1]);
+            Assert.IsFalse(hero.equippedInstances.ContainsKey(EquipmentSlot.Accessory2));
+
+            // 2. Second accessory goes to empty Accessory 2
+            Assert.IsTrue(EquipmentManager.AutoEquipAccessory(hero, acc2, inv, out string err2), err2);
+            Assert.AreEqual(acc1, hero.equippedInstances[EquipmentSlot.Accessory1]);
+            Assert.AreEqual(acc2, hero.equippedInstances[EquipmentSlot.Accessory2]);
+
+            // 3. Third accessory replaces Accessory 1 by default
+            Assert.IsTrue(EquipmentManager.AutoEquipAccessory(hero, acc3, inv, out string err3), err3);
+            Assert.AreEqual(acc3, hero.equippedInstances[EquipmentSlot.Accessory1]);
+            Assert.AreEqual(acc2, hero.equippedInstances[EquipmentSlot.Accessory2]);
+        }
+
+        [Test]
+        public void EquipmentCoreLogic_StatDeltaCalculations()
+        {
+            var hero = new Unit(Database.Characters["knight"]);
+            hero.Unequip(EquipmentSlot.MainHand);
+
+            var swordDef = new EquipmentDef
+            {
+                id = "high_power_sword",
+                name = "High Power Sword",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Sword,
+                weaponPower = 30,
+                abilityBonuses = AbilityScores.Zero.Add(Ability.STR, 5)
+            };
+            var swordInst = new EquipmentInstance(swordDef, EquipmentRarity.Common, 1);
+
+            int deltaPower = EquipmentManager.CalculateStatDelta(hero, EquipmentSlot.MainHand, swordInst, DerivedStatId.PhysicalPower);
+            Assert.Greater(deltaPower, 0);
+
+            var allDeltas = EquipmentManager.CalculateAllStatDeltas(hero, EquipmentSlot.MainHand, swordInst);
+            Assert.AreEqual(deltaPower, allDeltas[DerivedStatId.PhysicalPower]);
+
+            int deltaStr = EquipmentManager.CalculateAbilityScoreDelta(hero, EquipmentSlot.MainHand, swordInst, Ability.STR);
+            Assert.AreEqual(5, deltaStr);
         }
     }
 }
