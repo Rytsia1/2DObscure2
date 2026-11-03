@@ -102,6 +102,7 @@ namespace Obscure
                     if (Database.Passives.TryGetValue(pid, out var p) && !passives.Contains(p)) passives.Add(p);
 
             if (d.startingEquipment != null)
+            {
                 foreach (var eid in d.startingEquipment)
                     if (Database.Equipment.TryGetValue(eid, out var eq))
                     {
@@ -111,8 +112,10 @@ namespace Obscure
                         equipped[eq.slot] = effDef;
                         equippedInstances[eq.slot] = inst;
                     }
+            }
 
             if (d.equipmentLoadout != null)
+            {
                 foreach (var assign in d.equipmentLoadout)
                     if (!string.IsNullOrEmpty(assign.equipmentId) && Database.Equipment.TryGetValue(assign.equipmentId, out var eq))
                     {
@@ -122,6 +125,7 @@ namespace Obscure
                         equipped[assign.slot] = effDef;
                         equippedInstances[assign.slot] = inst;
                     }
+            }
 
             RecalculateStats(fillResources: true);
         }
@@ -522,7 +526,8 @@ namespace Obscure
         public readonly int Seed;
         public string RunId => Seed.ToString("X8");
         public int Act => Map.act;
-        public readonly MapDef Map;
+        public MapDef Map { get; private set; }
+        public ShopInventory CurrentShop { get; set; }
         public readonly List<Unit> Party;
         public readonly List<string> Items = new List<string>();
         public readonly List<string> Relics = new List<string>();
@@ -550,6 +555,7 @@ namespace Obscure
             foreach (var itm in Database.StartingItems)
                 Inventory.AddConsumable(itm, 1);
             Rng = new Random(seed);
+            CurrentShop = EquipmentShopManager.GenerateShop(Map?.act ?? 1, Rng);
         }
 
         public int Floor => Current == null ? 0 : Current.floor + 1;
@@ -834,6 +840,72 @@ namespace Obscure
                     if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);
                 }
             }
+
+            if (data.currentShopStock != null && data.currentShopStock.Length > 0)
+            {
+                CurrentShop = new ShopInventory(Act);
+                foreach (var s in data.currentShopStock)
+                {
+                    var item = ShopItem.FromSaveData(s);
+                    if (item != null) CurrentShop.items.Add(item);
+                }
+            }
+            else
+            {
+                CurrentShop = EquipmentShopManager.GenerateShop(Act, Rng);
+            }
+        }
+
+        // Advances progression to the next sequential dungeon (Act 1 -> Act 8).
+        // Preserves party levels, HP/MP, ability scores, equipped items, inventory equipment, consumables, and gold.
+        // Regenerates the shop stock for the new dungeon tier.
+        public bool AdvanceToNextDungeon(MapDef nextMap)
+        {
+            if (nextMap == null) return false;
+            Map = nextMap;
+            Current = null;
+            Cleared.Clear();
+            Status = RunStatus.Active;
+            EndedUtc = null;
+            PendingReward = null;
+            BattleBuffs.Clear();
+            CurrentShop = EquipmentShopManager.GenerateShop(nextMap.act, Rng);
+            return true;
+        }
+
+        // Resets the entire run progression following a party defeat or new game start.
+        // Wipes all run-acquired equipment clean from both inventory and party slots, restoring starting equipment only.
+        public void ResetToNewGame(IReadOnlyList<CharacterDef> initialPartyDefs, MapDef startingMap = null)
+        {
+            Status = RunStatus.Active;
+            EndedUtc = null;
+            Current = null;
+            PendingReward = null;
+            Gold = 0;
+            Items.Clear();
+            Items.AddRange(Database.StartingItems);
+            Relics.Clear();
+            Cleared.Clear();
+            BattleBuffs.Clear();
+
+            Inventory.equipment.Clear();
+            Inventory.consumables.Clear();
+            foreach (var itm in Database.StartingItems)
+                Inventory.AddConsumable(itm, 1);
+            Inventory.materials.Clear();
+            Inventory.keyItems.Clear();
+
+            Party.Clear();
+            if (initialPartyDefs != null)
+            {
+                foreach (var def in initialPartyDefs)
+                    Party.Add(new Unit(def));
+            }
+
+            if (startingMap != null)
+                Map = startingMap;
+
+            CurrentShop = EquipmentShopManager.GenerateShop(Map != null ? Map.act : 1, Rng);
         }
     }
 }

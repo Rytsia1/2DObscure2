@@ -1651,6 +1651,7 @@ namespace Obscure
         public string[] unlockedSkills;
         public EquipmentSlotAssignment[] equipmentLoadout;
         public EquipmentInstanceSaveData[] equippedInstances = Array.Empty<EquipmentInstanceSaveData>();
+        public Stats stats;
         public int level = 1;
         public int hp;
         public int mp;
@@ -1682,6 +1683,7 @@ namespace Obscure
                 equippedInstances = runtimeUnit != null
                     ? runtimeUnit.equippedInstances.Where(kv => kv.Value != null).Select(kv => kv.Value.ToSaveData(kv.Key)).ToArray()
                     : Array.Empty<EquipmentInstanceSaveData>(),
+                stats = runtimeUnit != null ? runtimeUnit.stats : d.stats,
                 level = runtimeUnit != null ? runtimeUnit.level : 1,
                 hp = runtimeUnit != null ? runtimeUnit.hp : 0,
                 mp = runtimeUnit != null ? runtimeUnit.mp : 0,
@@ -1735,7 +1737,7 @@ namespace Obscure
                     }
                 }
             }
-            def.stats = unit.Derived.ToLegacyStats();
+            def.stats = stats.maxHp > 0 ? stats : unit.Derived.ToLegacyStats();
             return def;
         }
     }
@@ -1758,6 +1760,7 @@ namespace Obscure
         public ConsumableStackSaveData[] inventoryConsumables = Array.Empty<ConsumableStackSaveData>();
         public MaterialEntrySaveData[] inventoryMaterials = Array.Empty<MaterialEntrySaveData>();
         public string[] inventoryKeyItems = Array.Empty<string>();
+        public ShopItemSaveData[] currentShopStock = Array.Empty<ShopItemSaveData>();
     }
 
     // Persistent Save Manager using the existing PlayerPrefs + JsonUtility architecture (Sections 2 & 12).
@@ -1824,6 +1827,7 @@ namespace Obscure
                 classId = u.classDef?.id ?? "fighter",
                 backgroundId = u.background?.id ?? "oathsworn",
                 baseScores = u.BaseScores,
+                stats = u.stats,
                 starterPassiveId = u.starterPassiveId,
                 activeSkillLoadout = u.skillLoadout.ActiveSlots.ToArray(),
                 passiveSkillLoadout = u.skillLoadout.PassiveSlots.ToArray(),
@@ -1846,7 +1850,10 @@ namespace Obscure
                 inventoryEquipment = invData.equipment ?? Array.Empty<EquipmentInstanceSaveData>(),
                 inventoryConsumables = invData.consumables ?? Array.Empty<ConsumableStackSaveData>(),
                 inventoryMaterials = invData.materials ?? Array.Empty<MaterialEntrySaveData>(),
-                inventoryKeyItems = invData.keyItems ?? Array.Empty<string>()
+                inventoryKeyItems = invData.keyItems ?? Array.Empty<string>(),
+                currentShopStock = run.CurrentShop != null && run.CurrentShop.items != null
+                    ? run.CurrentShop.items.Select(i => i.ToSaveData()).ToArray()
+                    : Array.Empty<ShopItemSaveData>()
             };
             WriteSaveData(data);
             return data;

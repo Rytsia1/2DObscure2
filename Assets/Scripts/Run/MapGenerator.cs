@@ -11,17 +11,30 @@ namespace Obscure
         public const int Floors = 8;          // 0..6 regular, 7 = boss
         public const int MinLanes = 2, MaxLanes = 4, StartLanes = 3;
 
-        public static MapDef Generate(int seed)
+        public static readonly string[] DungeonNames =
         {
+            "The Sunken Crypt",      // Dungeon 1
+            "The Ashen Catacombs",   // Dungeon 2
+            "The Forgotten Mines",   // Dungeon 3
+            "The Abyssal Labyrinth", // Dungeon 4
+            "The Sunless Spire",     // Dungeon 5
+            "The Cursed Citadel",    // Dungeon 6
+            "The Shadow Bastion",    // Dungeon 7
+            "The Void Sanctum"       // Dungeon 8
+        };
+
+        public static MapDef Generate(int seed, int act = 1)
+        {
+            int safeAct = Math.Clamp(act, 1, 8);
             for (int attempt = 0; attempt < 100; attempt++)
             {
-                var map = Build(new Random(unchecked(seed * 7919 + attempt)));
+                var map = Build(new Random(unchecked(seed * 7919 + attempt + safeAct * 1013)), safeAct);
                 if (Validate(map) == null) return map;
             }
-            throw new InvalidOperationException($"No valid map for seed {seed}");
+            throw new InvalidOperationException($"No valid map for seed {seed} act {act}");
         }
 
-        static MapDef Build(Random rng)
+        static MapDef Build(Random rng, int act = 1)
         {
             var floors = new List<List<NodeDef>>();
             for (int f = 0; f < Floors; f++)
@@ -41,7 +54,8 @@ namespace Obscure
                     if (n.IsCombat) n.encounter = PickEncounter(n, rng);
                     if (n.type == NodeType.Event) n.eventId = events[nextEvent++ % events.Count]; // spread events before repeating
                 }
-            return new MapDef { name = "The Sunken Crypt", act = 1, nodes = floors.SelectMany(x => x).ToArray() };
+            string dungeonName = (act >= 1 && act <= DungeonNames.Length) ? DungeonNames[act - 1] : $"Dungeon {act}";
+            return new MapDef { name = dungeonName, act = act, nodes = floors.SelectMany(x => x).ToArray() };
         }
 
         // Each source gets a contiguous range of targets; consecutive ranges touch but never cross,

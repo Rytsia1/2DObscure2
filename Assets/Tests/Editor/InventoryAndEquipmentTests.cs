@@ -1198,5 +1198,455 @@ namespace Obscure.Tests
             float expectedHitChance = Math.Clamp(AccuracyConfig.Default.baseHitChance + newAcc - newEva, AccuracyConfig.Default.minHitChance, AccuracyConfig.Default.maxHitChance);
             Assert.AreEqual(expectedHitChance, hitChance, 0.001f);
         }
+
+        // =====================================================================
+        // 12. Roguelike Persistence & Progression Tests (Tahap 7)
+        // =====================================================================
+
+        [Test]
+        public void RoguelikePersistence_EquipmentShop_BuyingDeductsGoldAndAddsToInventory()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+            run.Gold = 500;
+
+            var shop = EquipmentShopManager.GenerateShop(1, run.Rng, itemCount: 4);
+            Assert.AreEqual(4, shop.items.Count);
+            var targetItem = shop.items[0];
+            int itemCost = targetItem.cost;
+            Assert.Greater(itemCost, 0);
+
+            // 1. Successful purchase
+            Assert.IsTrue(EquipmentShopManager.TryBuyEquipment(run, shop, targetItem.shopItemId, out var boughtItem, out string errBuy), errBuy);
+            Assert.IsNotNull(boughtItem);
+            Assert.AreEqual(targetItem.item, boughtItem);
+            Assert.IsTrue(targetItem.isSold);
+            Assert.AreEqual(500 - itemCost, run.Gold);
+            Assert.IsTrue(run.Inventory.equipment.Contains(boughtItem));
+
+            // 2. Buying sold-out item fails
+            Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, targetItem.shopItemId, out _, out string errSoldOut));
+            StringAssert.Contains("sold out", errSoldOut);
+
+            // 3. Buying with insufficient gold fails
+            run.Gold = 1;
+            var item2 = shop.items[1];
+            Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, item2.shopItemId, out _, out string errNoGold));
+            StringAssert.Contains("Not enough gold", errNoGold);
+
+            // 4. Buying when inventory is full fails
+            run.Gold = 1000;
+            while (!run.Inventory.IsEquipmentFull)
+            {
+                run.Inventory.equipment.Add(new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1));
+            }
+            Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, item2.shopItemId, out _, out string errFull));
+            StringAssert.Contains("Inventory is full", errFull);
+        }
+
+        [Test]
+        public void RoguelikePersistence_EquipmentShop_SellingGrantsGoldAndRemovesFromInventory()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+            run.Gold = 100;
+
+            var extraAxe = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Rare, 3);
+            run.Inventory.TryAddEquipment(extraAxe, out _);
+            int sellValue = extraAxe.CalculateSellValue();
+            Assert.Greater(sellValue, 0);
+
+            // 1. Sell unequipped item
+            Assert.IsTrue(EquipmentShopManager.TrySellEquipment(run, extraAxe.instanceId, out int goldGained, out string errSell), errSell);
+            Assert.AreEqual(sellValue, goldGained);
+            Assert.AreEqual(100 + sellValue, run.Gold);
+            Assert.IsFalse(run.Inventory.equipment.Contains(extraAxe));
+
+            // 2. Cannot sell currently equipped item
+            var knight = run.Party[0];
+            var sword = new EquipmentInstance(Database.Equipment["iron_broadsword"], EquipmentRarity.Common, 1);
+            Assert.IsTrue(knight.TryEquip(EquipmentSlot.MainHand, sword, out string errEqSword), errEqSword);
+            var equippedWeapon = knight.equippedInstances[EquipmentSlot.MainHand];
+            run.Inventory.equipment.Add(equippedWeapon); // placed in bag reference while equipped
+            Assert.IsFalse(EquipmentShopManager.TrySellEquipment(run, equippedWeapon.instanceId, out _, out string errEquipped));
+            StringAssert.Contains("Unequip it first", errEquipped);
+            Assert.AreEqual(100 + sellValue, run.Gold, "Gold must not change when selling equipped item fails.");
+        }
+
+        [Test]
+        public void RoguelikePersistence_SaveAndRestore_FullEquipmentAndShopAcrossSessions()
+        {
+            GameSave.ClearSave();
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+
+            var hero = run.Party[0];
+            var ring = new EquipmentDef
+            {
+                id = "ring_power",
+                name = "Ring of Ancient Power",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory,
+                abilityBonuses = AbilityScores.Zero.Add(Ability.STR, 3),
+                physicalDefense = 5
+            };
+            Database.Equipment["ring_power"] = ring;
+            var ringInst = new EquipmentInstance(ring, EquipmentRarity.Epic, 3);
+            ringInst.TryUpgrade(out _); // +1 upgrade
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.Accessory1, ringInst, out string errRing), errRing);
+
+            // Add unequipped loot in inventory
+            var bagWeapon = new EquipmentInstance(Database.Equipment["battle_greataxe"], EquipmentRarity.Rare, 2);
+            run.Inventory.TryAddEquipment(bagWeapon, out _);
+
+            // Setup custom shop item
+            run.CurrentShop = new ShopInventory(1);
+            var shopInst = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Uncommon, 1);
+            run.CurrentShop.items.Add(new ShopItem(shopInst, 75));
+
+            int heroAtk = hero.Derived.physicalPower;
+            int heroDef = hero.Derived.physicalDefense;
+
+            // Save run state
+            GameSave.SaveRunState(run);
+
+            // Restore in fresh session
+            Assert.IsTrue(GameSave.TryLoadContinue(out var roster, out var restoredRun));
+            Assert.IsNotNull(restoredRun);
+            Assert.AreEqual(run.Party.Count, restoredRun.Party.Count);
+
+            var restoredHero = restoredRun.Party[0];
+            Assert.IsTrue(restoredHero.equippedInstances.ContainsKey(EquipmentSlot.Accessory1));
+            var restoredRing = restoredHero.equippedInstances[EquipmentSlot.Accessory1];
+            Assert.AreEqual("Ring of Ancient Power", restoredRing.Definition.name);
+            Assert.AreEqual(1, restoredRing.upgradeLevel);
+            Assert.AreEqual(EquipmentRarity.Epic, restoredRing.rarity);
+            Assert.AreEqual(heroAtk, restoredHero.Derived.physicalPower);
+            Assert.AreEqual(heroDef, restoredHero.Derived.physicalDefense);
+
+            // Verify inventory bag equipment
+            Assert.AreEqual(1, restoredRun.Inventory.EquipmentCount);
+            Assert.AreEqual(bagWeapon.instanceId, restoredRun.Inventory.equipment[0].instanceId);
+
+            // Verify shop persistence
+            Assert.IsNotNull(restoredRun.CurrentShop);
+            Assert.AreEqual(1, restoredRun.CurrentShop.items.Count);
+            Assert.AreEqual(75, restoredRun.CurrentShop.items[0].cost);
+        }
+
+        [Test]
+        public void RoguelikePersistence_EightDungeonProgression_EquipmentPreservedBetweenDungeons()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101, 1), partyDefs, 101);
+            Assert.AreEqual(1, run.Act);
+            Assert.AreEqual("The Sunken Crypt", run.Map.name);
+
+            // Equip Dungeon 1 loot on hero and store item in bag
+            var hero = run.Party[0];
+            var lootSword = new EquipmentInstance(Database.Equipment["iron_broadsword"], EquipmentRarity.Rare, 2);
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.MainHand, lootSword, out string errLootEq), errLootEq);
+
+            var bagItem = new EquipmentInstance(Database.Equipment["iron_shield"], EquipmentRarity.Uncommon, 1);
+            run.Inventory.TryAddEquipment(bagItem, out _);
+
+            int d1Atk = hero.Derived.physicalPower;
+            int d1BagCount = run.Inventory.EquipmentCount;
+
+            // Advance through all 8 sequential dungeons
+            for (int act = 2; act <= 8; act++)
+            {
+                var nextDungeon = MapGenerator.Generate(101 + act, act);
+                Assert.IsTrue(run.AdvanceToNextDungeon(nextDungeon));
+                Assert.AreEqual(act, run.Act);
+                Assert.AreEqual(MapGenerator.DungeonNames[act - 1], run.Map.name);
+                Assert.AreEqual(RunStatus.Active, run.Status);
+                Assert.IsNull(run.Current);
+                Assert.AreEqual(0, run.Cleared.Count);
+
+                // Verify party equipped items and derived stats remain 100% preserved
+                Assert.AreEqual(lootSword.instanceId, hero.equippedInstances[EquipmentSlot.MainHand].instanceId);
+                Assert.AreEqual(d1Atk, hero.Derived.physicalPower);
+
+                // Verify bag equipment preserved
+                Assert.AreEqual(d1BagCount, run.Inventory.EquipmentCount);
+                Assert.AreEqual(bagItem.instanceId, run.Inventory.equipment[0].instanceId);
+
+                // Verify shop was regenerated for the new dungeon tier
+                Assert.IsNotNull(run.CurrentShop);
+                Assert.AreEqual(act, run.CurrentShop.dungeonTier);
+            }
+        }
+
+        [Test]
+        public void RoguelikePersistence_RunDefeat_NewGameWipesRunEquipmentClean()
+        {
+            var customHeroDef = new CharacterDef
+            {
+                id = "hero_fighter",
+                name = "Fighter Hero",
+                classId = "fighter",
+                raceId = "human",
+                backgroundId = "oathsworn",
+                baseScores = AbilityScores.DefaultBase,
+                stats = new Stats(100, 20, 10, 10, 5, 5),
+                startingEquipment = new[] { "iron_broadsword", "iron_shield" }
+            };
+            var customParty = new List<CharacterDef> { customHeroDef, customHeroDef, customHeroDef, customHeroDef };
+            var run = new RunState(MapGenerator.Generate(101), customParty, 101);
+
+            // Hero starts with initial starting equipment
+            var hero = run.Party[0];
+            Assert.IsTrue(hero.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+            var initialSword = hero.equippedInstances[EquipmentSlot.MainHand];
+            Assert.AreEqual("iron_broadsword", initialSword.definitionId);
+
+            // Hero equips high-tier run loot and bags multiple items
+            var epicWeapon = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Epic, 5);
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.MainHand, epicWeapon, out string errEpic), errEpic);
+
+            run.Inventory.TryAddEquipment(new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Rare, 3), out _);
+            run.Inventory.TryAddEquipment(new EquipmentInstance(Database.Equipment["iron_shield"], EquipmentRarity.Rare, 3), out _);
+            run.Gold = 350;
+
+            Assert.AreEqual(2, run.Inventory.EquipmentCount);
+            Assert.AreEqual(epicWeapon.instanceId, hero.equippedInstances[EquipmentSlot.MainHand].instanceId);
+
+            // Run Defeat occurs
+            run.LoseCombat();
+            Assert.AreEqual(RunStatus.Defeat, run.Status);
+            Assert.AreEqual(0, run.Gold);
+
+            // Starting New Game resets progression and wipes all run equipment
+            run.ResetToNewGame(customParty, MapGenerator.Generate(202, 1));
+            Assert.AreEqual(RunStatus.Active, run.Status);
+            Assert.AreEqual(0, run.Gold);
+            Assert.AreEqual(1, run.Act);
+
+            // All acquired run equipment in inventory bag is wiped clean
+            Assert.AreEqual(0, run.Inventory.EquipmentCount, "Inventory bag equipment must be wiped clean upon New Game reset.");
+
+            // Hero equipped items return strictly to initial starting equipment
+            var resetHero = run.Party[0];
+            Assert.AreNotEqual(epicWeapon.instanceId, resetHero.equippedInstances[EquipmentSlot.MainHand].instanceId);
+            Assert.AreEqual("iron_broadsword", resetHero.equippedInstances[EquipmentSlot.MainHand].definitionId);
+            Assert.AreEqual(EquipmentRarity.Common, resetHero.equippedInstances[EquipmentSlot.MainHand].rarity);
+        }
+
+        // =====================================================================
+        // 12. Roguelike Persistence & Progression Tests (Tahap 7)
+        // =====================================================================
+
+        [Test]
+        public void RoguelikePersistence_EquipmentShop_BuyingDeductsGoldAndAddsToInventory()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+            run.Gold = 500;
+
+            var shop = EquipmentShopManager.GenerateShop(1, run.Rng, itemCount: 4);
+            Assert.AreEqual(4, shop.items.Count);
+            var targetItem = shop.items[0];
+            int itemCost = targetItem.cost;
+            Assert.Greater(itemCost, 0);
+
+            // 1. Successful purchase
+            Assert.IsTrue(EquipmentShopManager.TryBuyEquipment(run, shop, targetItem.shopItemId, out var boughtItem, out string errBuy), errBuy);
+            Assert.IsNotNull(boughtItem);
+            Assert.AreEqual(targetItem.item, boughtItem);
+            Assert.IsTrue(targetItem.isSold);
+            Assert.AreEqual(500 - itemCost, run.Gold);
+            Assert.IsTrue(run.Inventory.equipment.Contains(boughtItem));
+
+            // 2. Buying sold-out item fails
+            Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, targetItem.shopItemId, out _, out string errSoldOut));
+            StringAssert.Contains("sold out", errSoldOut);
+
+            // 3. Buying with insufficient gold fails
+            run.Gold = 1;
+            var item2 = shop.items[1];
+            Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, item2.shopItemId, out _, out string errNoGold));
+            StringAssert.Contains("Not enough gold", errNoGold);
+
+            // 4. Buying when inventory is full fails
+            run.Gold = 1000;
+            while (!run.Inventory.IsEquipmentFull)
+            {
+                run.Inventory.equipment.Add(new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1));
+            }
+            Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, item2.shopItemId, out _, out string errFull));
+            StringAssert.Contains("Inventory is full", errFull);
+        }
+
+        [Test]
+        public void RoguelikePersistence_EquipmentShop_SellingGrantsGoldAndRemovesFromInventory()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+            run.Gold = 100;
+
+            var extraAxe = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Rare, 3);
+            run.Inventory.TryAddEquipment(extraAxe, out _);
+            int sellValue = extraAxe.CalculateSellValue();
+            Assert.Greater(sellValue, 0);
+
+            // 1. Sell unequipped item
+            Assert.IsTrue(EquipmentShopManager.TrySellEquipment(run, extraAxe.instanceId, out int goldGained, out string errSell), errSell);
+            Assert.AreEqual(sellValue, goldGained);
+            Assert.AreEqual(100 + sellValue, run.Gold);
+            Assert.IsFalse(run.Inventory.equipment.Contains(extraAxe));
+
+            // 2. Cannot sell currently equipped item
+            var knight = run.Party[0];
+            Assert.IsTrue(knight.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+            var equippedWeapon = knight.equippedInstances[EquipmentSlot.MainHand];
+            run.Inventory.equipment.Add(equippedWeapon); // placed in bag reference while equipped
+            Assert.IsFalse(EquipmentShopManager.TrySellEquipment(run, equippedWeapon.instanceId, out _, out string errEquipped));
+            StringAssert.Contains("Unequip it first", errEquipped);
+            Assert.AreEqual(100 + sellValue, run.Gold, "Gold must not change when selling equipped item fails.");
+        }
+
+        [Test]
+        public void RoguelikePersistence_SaveAndRestore_FullEquipmentAndShopAcrossSessions()
+        {
+            GameSave.ClearSave();
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+
+            var hero = run.Party[0];
+            var ring = new EquipmentDef
+            {
+                id = "ring_power",
+                name = "Ring of Ancient Power",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory,
+                abilityBonuses = AbilityScores.Zero.Add(Ability.STR, 3),
+                physicalDefense = 5
+            };
+            var ringInst = new EquipmentInstance(ring, EquipmentRarity.Epic, 3);
+            ringInst.TryUpgrade(out _); // +1 upgrade
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.Accessory1, ringInst, out string errRing), errRing);
+
+            // Add unequipped loot in inventory
+            var bagWeapon = new EquipmentInstance(Database.Equipment["battle_greataxe"], EquipmentRarity.Rare, 2);
+            run.Inventory.TryAddEquipment(bagWeapon, out _);
+
+            // Setup custom shop item
+            run.CurrentShop = new ShopInventory(1);
+            var shopInst = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Uncommon, 1);
+            run.CurrentShop.items.Add(new ShopItem(shopInst, 75));
+
+            int heroAtk = hero.Derived.physicalPower;
+            int heroDef = hero.Derived.physicalDefense;
+
+            // Save run state
+            GameSave.SaveRunState(run);
+
+            // Restore in fresh session
+            Assert.IsTrue(GameSave.TryLoadContinue(out var roster, out var restoredRun));
+            Assert.IsNotNull(restoredRun);
+            Assert.AreEqual(run.Party.Count, restoredRun.Party.Count);
+
+            var restoredHero = restoredRun.Party[0];
+            Assert.IsTrue(restoredHero.equippedInstances.ContainsKey(EquipmentSlot.Accessory1));
+            var restoredRing = restoredHero.equippedInstances[EquipmentSlot.Accessory1];
+            Assert.AreEqual("Ring of Ancient Power", restoredRing.Definition.name);
+            Assert.AreEqual(1, restoredRing.upgradeLevel);
+            Assert.AreEqual(EquipmentRarity.Epic, restoredRing.rarity);
+            Assert.AreEqual(heroAtk, restoredHero.Derived.physicalPower);
+            Assert.AreEqual(heroDef, restoredHero.Derived.physicalDefense);
+
+            // Verify inventory bag equipment
+            Assert.AreEqual(1, restoredRun.Inventory.EquipmentCount);
+            Assert.AreEqual(bagWeapon.instanceId, restoredRun.Inventory.equipment[0].instanceId);
+
+            // Verify shop persistence
+            Assert.IsNotNull(restoredRun.CurrentShop);
+            Assert.AreEqual(1, restoredRun.CurrentShop.items.Count);
+            Assert.AreEqual(75, restoredRun.CurrentShop.items[0].cost);
+        }
+
+        [Test]
+        public void RoguelikePersistence_EightDungeonProgression_EquipmentPreservedBetweenDungeons()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101, 1), partyDefs, 101);
+            Assert.AreEqual(1, run.Act);
+            Assert.AreEqual("The Sunken Crypt", run.Map.name);
+
+            // Equip Dungeon 1 loot on hero and store item in bag
+            var hero = run.Party[0];
+            var lootAxe = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Rare, 2);
+            hero.TryEquip(EquipmentSlot.MainHand, lootAxe, out _);
+
+            var bagItem = new EquipmentInstance(Database.Equipment["iron_shield"], EquipmentRarity.Uncommon, 1);
+            run.Inventory.TryAddEquipment(bagItem, out _);
+
+            int d1Atk = hero.Derived.physicalPower;
+            int d1BagCount = run.Inventory.EquipmentCount;
+
+            // Advance through all 8 sequential dungeons
+            for (int act = 2; act <= 8; act++)
+            {
+                var nextDungeon = MapGenerator.Generate(101 + act, act);
+                Assert.IsTrue(run.AdvanceToNextDungeon(nextDungeon));
+                Assert.AreEqual(act, run.Act);
+                Assert.AreEqual(MapGenerator.DungeonNames[act - 1], run.Map.name);
+                Assert.AreEqual(RunStatus.Active, run.Status);
+                Assert.IsNull(run.Current);
+                Assert.AreEqual(0, run.Cleared.Count);
+
+                // Verify party equipped items and derived stats remain 100% preserved
+                Assert.AreEqual(lootAxe.instanceId, hero.equippedInstances[EquipmentSlot.MainHand].instanceId);
+                Assert.AreEqual(d1Atk, hero.Derived.physicalPower);
+
+                // Verify bag equipment preserved
+                Assert.AreEqual(d1BagCount, run.Inventory.EquipmentCount);
+                Assert.AreEqual(bagItem.instanceId, run.Inventory.equipment[0].instanceId);
+
+                // Verify shop was regenerated for the new dungeon tier
+                Assert.IsNotNull(run.CurrentShop);
+                Assert.AreEqual(act, run.CurrentShop.dungeonTier);
+            }
+        }
+
+        [Test]
+        public void RoguelikePersistence_RunDefeat_NewGameWipesRunEquipmentClean()
+        {
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(MapGenerator.Generate(101), partyDefs, 101);
+
+            // Hero equips high-tier run loot and bags multiple items
+            var hero = run.Party[0];
+            var epicWeapon = new EquipmentInstance(Database.Equipment["battle_greataxe"], EquipmentRarity.Epic, 5);
+            hero.TryEquip(EquipmentSlot.MainHand, epicWeapon, out _);
+
+            run.Inventory.TryAddEquipment(new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Rare, 3), out _);
+            run.Inventory.TryAddEquipment(new EquipmentInstance(Database.Equipment["iron_shield"], EquipmentRarity.Rare, 3), out _);
+            run.Gold = 350;
+
+            Assert.AreEqual(2, run.Inventory.EquipmentCount);
+            Assert.AreEqual(epicWeapon.instanceId, hero.equippedInstances[EquipmentSlot.MainHand].instanceId);
+
+            // Run Defeat occurs
+            run.LoseCombat();
+            Assert.AreEqual(RunStatus.Defeat, run.Status);
+            Assert.AreEqual(0, run.Gold);
+
+            // Starting New Game resets progression and wipes all run equipment
+            run.ResetToNewGame(partyDefs, MapGenerator.Generate(202, 1));
+            Assert.AreEqual(RunStatus.Active, run.Status);
+            Assert.AreEqual(0, run.Gold);
+            Assert.AreEqual(1, run.Act);
+
+            // All acquired run equipment in inventory bag is wiped clean
+            Assert.AreEqual(0, run.Inventory.EquipmentCount, "Inventory bag equipment must be wiped clean upon New Game reset.");
+
+            // Hero equipped items return strictly to initial starting equipment
+            var resetHero = run.Party[0];
+            Assert.AreNotEqual(epicWeapon.instanceId, resetHero.equippedInstances[EquipmentSlot.MainHand].instanceId);
+            Assert.AreEqual("iron_broadsword", resetHero.equippedInstances[EquipmentSlot.MainHand].definitionId);
+            Assert.AreEqual(EquipmentRarity.Common, resetHero.equippedInstances[EquipmentSlot.MainHand].rarity);
+        }
     }
 }

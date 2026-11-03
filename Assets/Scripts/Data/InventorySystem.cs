@@ -1310,6 +1310,164 @@ namespace Obscure
     }
 
     [Serializable]
+    public class ShopItemSaveData
+    {
+        public string shopItemId;
+        public EquipmentInstanceSaveData item;
+        public int cost;
+        public bool isSold;
+    }
+
+    [Serializable]
+    public class ShopItem
+    {
+        public string shopItemId;
+        public EquipmentInstance item;
+        public int cost;
+        public bool isSold;
+
+        public ShopItem()
+        {
+            shopItemId = Guid.NewGuid().ToString("N");
+        }
+
+        public ShopItem(EquipmentInstance item, int cost)
+        {
+            shopItemId = Guid.NewGuid().ToString("N");
+            this.item = item;
+            this.cost = Math.Max(1, cost);
+            this.isSold = false;
+        }
+
+        public ShopItemSaveData ToSaveData() => new ShopItemSaveData
+        {
+            shopItemId = shopItemId,
+            item = item?.ToSaveData(),
+            cost = cost,
+            isSold = isSold
+        };
+
+        public static ShopItem FromSaveData(ShopItemSaveData data)
+        {
+            if (data == null) return null;
+            return new ShopItem
+            {
+                shopItemId = !string.IsNullOrEmpty(data.shopItemId) ? data.shopItemId : Guid.NewGuid().ToString("N"),
+                item = EquipmentInstance.FromSaveData(data.item),
+                cost = Math.Max(1, data.cost),
+                isSold = data.isSold
+            };
+        }
+    }
+
+    [Serializable]
+    public class ShopInventory
+    {
+        public int dungeonTier = 1;
+        public List<ShopItem> items = new List<ShopItem>();
+
+        public ShopInventory() { }
+        public ShopInventory(int dungeonTier)
+        {
+            this.dungeonTier = dungeonTier;
+        }
+
+        public ShopItem FindItem(string shopItemId) =>
+            items.FirstOrDefault(i => i.shopItemId == shopItemId);
+    }
+
+    public static class EquipmentShopManager
+    {
+        public const float DefaultBuyMarkup = 1.6f;
+
+        public static ShopInventory GenerateShop(int dungeonTier, System.Random rng = null, int itemCount = 6)
+        {
+            var rand = rng ?? new System.Random();
+            var shop = new ShopInventory(dungeonTier);
+            int count = Math.Max(1, itemCount);
+
+            for (int i = 0; i < count; i++)
+            {
+                var loot = EquipmentLootGenerator.GenerateLoot(dungeonTier, Tier.Normal, rand);
+                int baseVal = loot.CalculateSellValue();
+                int buyCost = Math.Max(25, (int)Math.Round(baseVal * DefaultBuyMarkup));
+                shop.items.Add(new ShopItem(loot, buyCost));
+            }
+            return shop;
+        }
+
+        public static bool TryBuyEquipment(
+            RunState run,
+            ShopInventory shop,
+            string shopItemId,
+            out EquipmentInstance boughtItem,
+            out string error)
+        {
+            boughtItem = null;
+            if (run == null) { error = "RunState is null."; return false; }
+            if (shop == null) { error = "Shop is null."; return false; }
+
+            var shopItem = shop.FindItem(shopItemId);
+            if (shopItem == null)
+            {
+                error = "Item not found in shop.";
+                return false;
+            }
+
+            if (shopItem.isSold)
+            {
+                error = "Item is already sold out.";
+                return false;
+            }
+
+            if (run.Gold < shopItem.cost)
+            {
+                error = $"Not enough gold. Requires {shopItem.cost} Gold, but party only has {run.Gold} Gold.";
+                return false;
+            }
+
+            if (run.Inventory != null && run.Inventory.IsEquipmentFull)
+            {
+                error = "Cannot buy: Inventory is full (100/100 slots).";
+                return false;
+            }
+
+            run.Gold -= shopItem.cost;
+            shopItem.isSold = true;
+            boughtItem = shopItem.item;
+
+            if (run.Inventory != null)
+            {
+                run.Inventory.TryAddEquipment(boughtItem, out _);
+            }
+
+            error = null;
+            return true;
+        }
+
+        public static bool TrySellEquipment(
+            RunState run,
+            string instanceId,
+            out int goldGained,
+            out string error)
+        {
+            goldGained = 0;
+            if (run == null) { error = "RunState is null."; return false; }
+            if (run.Inventory == null) { error = "Inventory is null."; return false; }
+
+            if (!run.Inventory.TrySellEquipment(instanceId, out goldGained, out error))
+            {
+                return false;
+            }
+
+            run.Gold += goldGained;
+            run.Stats.goldEarned += goldGained;
+            error = null;
+            return true;
+        }
+    }
+
+    [Serializable]
     public class InventorySaveData
     {
         public EquipmentInstanceSaveData[] equipment;
