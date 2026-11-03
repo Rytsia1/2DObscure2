@@ -1210,7 +1210,8 @@ namespace Obscure
             IEnumerable<EquipmentDef> equipment = null,
             IEnumerable<StatModifier> modifiers = null,
             Stats permanentLegacyBonuses = default,
-            IEnumerable<PassiveDef> passives = null)
+            IEnumerable<PassiveDef> passives = null,
+            IReadOnlyDictionary<EquipmentSlot, EquipmentDef> equippedSlots = null)
         {
             var mods = abilities.AbilityModifiers;
             var c = classDef ?? Database.Classes["knight"];
@@ -1222,7 +1223,9 @@ namespace Obscure
             foreach (var eq in eqList)
                 if (eq.modifiers != null) allMods.AddRange(eq.modifiers);
 
-            var mainHand = eqList.FirstOrDefault(e => e.slot == EquipmentSlot.MainHand);
+            var mainHand = equippedSlots != null && equippedSlots.TryGetValue(EquipmentSlot.MainHand, out var mh)
+                ? mh
+                : eqList.FirstOrDefault(e => e.slot == EquipmentSlot.MainHand);
             bool hasWeapon = mainHand != null && !mainHand.isUnarmed && mainHand.weaponType != WeaponType.None;
             bool isUnarmed = mainHand == null || mainHand.isUnarmed || mainHand.weaponType == WeaponType.Fist;
 
@@ -1243,11 +1246,55 @@ namespace Obscure
                 }
             }
 
-            int eqWeaponPower = eqList.Sum(e => e.weaponPower);
-            float eqWeaponScaling = eqList.Sum(e => e.weaponScaling);
-            int eqBreakBonus = eqList.Sum(e => e.breakPowerModifier);
-            int eqPhysDef = eqList.Sum(e => e.physicalDefense);
-            int eqMagDef = eqList.Sum(e => e.magicDefense);
+            int eqWeaponPower = 0;
+            float eqWeaponScaling = 0f;
+            int eqBreakBonus = 0;
+            int eqPhysDef = 0;
+            int eqMagDef = 0;
+
+            if (equippedSlots != null)
+            {
+                foreach (var kvp in equippedSlots)
+                {
+                    var slot = kvp.Key;
+                    var e = kvp.Value;
+                    if (e == null) continue;
+
+                    if (slot == EquipmentSlot.SecondHand)
+                    {
+                        // Off-hand weapon penalty: 50% weapon power
+                        eqWeaponPower += (int)Math.Round(e.weaponPower * 0.5f);
+                    }
+                    else
+                    {
+                        eqWeaponPower += e.weaponPower;
+                    }
+
+                    eqWeaponScaling += e.weaponScaling;
+                    eqBreakBonus += e.breakPowerModifier; // Off-hand contributes 100% to break power
+                    eqPhysDef += e.physicalDefense;
+                    eqMagDef += e.magicDefense;
+                }
+            }
+            else
+            {
+                foreach (var e in eqList)
+                {
+                    if (e.slot == EquipmentSlot.SecondHand)
+                    {
+                        eqWeaponPower += (int)Math.Round(e.weaponPower * 0.5f);
+                    }
+                    else
+                    {
+                        eqWeaponPower += e.weaponPower;
+                    }
+
+                    eqWeaponScaling += e.weaponScaling;
+                    eqBreakBonus += e.breakPowerModifier;
+                    eqPhysDef += e.physicalDefense;
+                    eqMagDef += e.magicDefense;
+                }
+            }
 
             int Eval(DerivedStatId id, float baseVal, int minVal = 0, int maxVal = 9999)
             {
@@ -1338,7 +1385,8 @@ namespace Obscure
             IEnumerable<EquipmentDef> equipment = null,
             IEnumerable<StatModifier> modifiers = null,
             Stats permanentLegacyBonuses = default,
-            IEnumerable<PassiveDef> passives = null)
+            IEnumerable<PassiveDef> passives = null,
+            IReadOnlyDictionary<EquipmentSlot, EquipmentDef> equippedSlots = null)
         {
             var def = Database.DerivedStatDefs[statId];
             var formula = Database.Formulas[def.formulaId];
@@ -1351,12 +1399,33 @@ namespace Obscure
             foreach (var eq in eqList)
                 if (eq.modifiers != null) allMods.AddRange(eq.modifiers);
 
-            var derived = Calculate(abilities, c, lvl, eqList, modifiers, permanentLegacyBonuses, passives);
+            var derived = Calculate(abilities, c, lvl, eqList, modifiers, permanentLegacyBonuses, passives, equippedSlots);
 
             int baseVal = 0;
             int abilityContrib = 0;
             int eqContrib = 0;
             int permContrib = 0;
+
+            int CalculateEqPower()
+            {
+                int total = 0;
+                if (equippedSlots != null)
+                {
+                    foreach (var kvp in equippedSlots)
+                    {
+                        if (kvp.Value == null) continue;
+                        total += kvp.Key == EquipmentSlot.SecondHand ? (int)Math.Round(kvp.Value.weaponPower * 0.5f) : kvp.Value.weaponPower;
+                    }
+                }
+                else
+                {
+                    foreach (var e in eqList)
+                    {
+                        total += e.slot == EquipmentSlot.SecondHand ? (int)Math.Round(e.weaponPower * 0.5f) : e.weaponPower;
+                    }
+                }
+                return total;
+            }
 
             switch (statId)
             {
@@ -1376,13 +1445,13 @@ namespace Obscure
                     break;
                 case DerivedStatId.PhysicalPower:
                     baseVal = c.baseWeaponPower;
-                    eqContrib = eqList.Sum(e => e.weaponPower);
+                    eqContrib = CalculateEqPower();
                     abilityContrib = (int)Math.Round(mods.str * (c.weaponScaling + eqList.Sum(e => e.weaponScaling)));
                     permContrib = permanentLegacyBonuses.atk;
                     break;
                 case DerivedStatId.RangedPower:
                     baseVal = c.baseRangedPower;
-                    eqContrib = eqList.Sum(e => e.weaponPower);
+                    eqContrib = CalculateEqPower();
                     abilityContrib = (int)Math.Round(mods.dex * c.rangedScaling);
                     break;
                 case DerivedStatId.MagicPower:

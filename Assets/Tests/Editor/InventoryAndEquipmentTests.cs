@@ -939,5 +939,264 @@ namespace Obscure.Tests
             Assert.AreEqual(sword, heroA.equippedInstances[EquipmentSlot.MainHand], "Hero A must retain sword after failed transfer.");
             Assert.IsFalse(wizard.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
         }
+
+        // =====================================================================
+        // 11. Combat Integration Tests (Tahap 6)
+        // =====================================================================
+
+        [Test]
+        public void CombatIntegration_DualWielding_OffHandWeaponPowerPenalty_50Percent()
+        {
+            var charBarb = new CharacterDef { id = "hero_barb", name = "Barb Hero", classId = "barbarian", raceId = "human" };
+            var barb = new Unit(charBarb);
+            barb.Unequip(EquipmentSlot.MainHand);
+            barb.Unequip(EquipmentSlot.SecondHand);
+
+            int unarmedPower = barb.Derived.physicalPower;
+
+            var axeMain = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1);
+            var axeOff = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1);
+
+            // 1. Equip Main Hand Steel Axe (weaponPower = 4)
+            Assert.IsTrue(barb.TryEquip(EquipmentSlot.MainHand, axeMain, out string errMain), errMain);
+            int mainOnlyPower = barb.Derived.physicalPower;
+            Assert.AreEqual(unarmedPower + 4, mainOnlyPower, "Main hand weapon contributes 100% of weaponPower (+4).");
+
+            // 2. Equip Second Hand Steel Axe (weaponPower = 4, off-hand penalty 50% = +2)
+            Assert.IsTrue(barb.TryEquip(EquipmentSlot.SecondHand, axeOff, out string errOff), errOff);
+            int dualWieldPower = barb.Derived.physicalPower;
+            Assert.AreEqual(mainOnlyPower + 2, dualWieldPower, "Second hand weapon contributes exactly 50% of weaponPower (4 * 0.5 = +2).");
+            Assert.AreEqual(unarmedPower + 6, dualWieldPower, "Dual wielding 2 steel axes (4 + 4) yields +6 total physical power.");
+
+            // 3. Stat Delta calculation reflects the 50% off-hand penalty
+            int deltaOff = EquipmentManager.CalculateStatDelta(barb, EquipmentSlot.SecondHand, axeOff, DerivedStatId.PhysicalPower);
+            Assert.AreEqual(0, deltaOff, "Delta when replacing equipped off-hand with identical axe is 0.");
+
+            barb.Unequip(EquipmentSlot.SecondHand);
+            int deltaOffEmpty = EquipmentManager.CalculateStatDelta(barb, EquipmentSlot.SecondHand, axeOff, DerivedStatId.PhysicalPower);
+            Assert.AreEqual(2, deltaOffEmpty, "Candidate off-hand axe delta must be +2 (50% of 4).");
+
+            // 4. Combatant attack reflects dual wielding derived stat
+            barb.TryEquip(EquipmentSlot.SecondHand, axeOff, out _);
+            var combatant = new Combatant(barb, Side.Party, 0, "Barbarian", "BRB");
+            Assert.AreEqual(dualWieldPower, combatant.Atk);
+        }
+
+        [Test]
+        public void CombatIntegration_OffHandBreakPower_Contributes100Percent()
+        {
+            var charBarb = new CharacterDef { id = "hero_barb", name = "Barb Hero", classId = "barbarian", raceId = "human", baseScores = AbilityScores.Uniform(10) };
+            var barb = new Unit(charBarb);
+            barb.Unequip(EquipmentSlot.MainHand);
+            barb.Unequip(EquipmentSlot.SecondHand);
+
+            int baseBreak = barb.Derived.physicalBreakPower;
+
+            // Greataxe (+3 break power)
+            var greataxe = new EquipmentInstance(Database.Equipment["battle_greataxe"], EquipmentRarity.Common, 1);
+            Assert.IsTrue(barb.TryEquip(EquipmentSlot.MainHand, greataxe, out string errMain), errMain);
+            Assert.AreEqual(baseBreak + 3, barb.Derived.physicalBreakPower);
+
+            // Off-hand steel axe (+2 break power)
+            var offAxe = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1);
+            Assert.IsTrue(barb.TryEquip(EquipmentSlot.SecondHand, offAxe, out string errOff), errOff);
+
+            // Off-hand break power is 100% full value (not penalized): 3 + 2 = 5
+            Assert.AreEqual(baseBreak + 5, barb.Derived.physicalBreakPower, "Break power from off-hand must contribute 100% full value.");
+
+            var combatant = new Combatant(barb, Side.Party, 0, "Barbarian", "BRB");
+            Assert.AreEqual(barb.Derived.physicalBreakPower, combatant.PhysicalBreak);
+        }
+
+        [Test]
+        public void CombatIntegration_EquipmentDefense_MitigatesPhysicalDamagePointForPoint()
+        {
+            var targetChar = new CharacterDef { id = "target_hero", name = "Target Hero", classId = "fighter", raceId = "human" };
+            var targetUnit = new Unit(targetChar);
+            targetUnit.Unequip(EquipmentSlot.BodyArmor);
+            targetUnit.Unequip(EquipmentSlot.SecondHand);
+
+            var targetCombatant = new Combatant(targetUnit, Side.Party, 0, "Target", "TGT");
+            float unarmoredDef = targetCombatant.Def;
+
+            var attackerChar = new CharacterDef { id = "attacker_hero", name = "Attacker Hero", classId = "fighter", raceId = "human" };
+            var attackerUnit = new Unit(attackerChar);
+            var attackerCombatant = new Combatant(attackerUnit, Side.Party, 1, "Attacker", "ATK");
+
+            var slashComponent = new[] { DamageComponent.Physical(skillPower: 50f, scaling: 0f) };
+
+            // Attack unarmored target
+            var ctxUnarmored = attackerCombatant.CreateDamageContext(targetCombatant, slashComponent, hitCount: 1, qteResult: QteResult.Good);
+            ctxUnarmored.forcedCriticalHit = false;
+            var resUnarmored = DamageCalculator.Calculate(ctxUnarmored);
+
+            // Equip Plate Armor with +15 physical defense
+            var plateArmor = new EquipmentDef
+            {
+                id = "heavy_plate",
+                name = "Heavy Plate",
+                slot = EquipmentSlot.BodyArmor,
+                equipmentType = EquipmentType.Body,
+                physicalDefense = 15
+            };
+            targetUnit.TryEquip(EquipmentSlot.BodyArmor, new EquipmentInstance(plateArmor, EquipmentRarity.Rare, 1), out _);
+
+            Assert.AreEqual(unarmoredDef + 15, targetCombatant.Def, "Target physical defense must increase by 15.");
+
+            // Attack armored target
+            var ctxArmored = attackerCombatant.CreateDamageContext(targetCombatant, slashComponent, hitCount: 1, qteResult: QteResult.Good);
+            ctxArmored.forcedCriticalHit = false;
+            var resArmored = DamageCalculator.Calculate(ctxArmored);
+
+            // Physical defense subtracts flat from damage point-for-point
+            Assert.AreEqual(resUnarmored.totalDamage - 15, resArmored.totalDamage, "Heavy Plate must mitigate exactly 15 damage point-for-point.");
+        }
+
+        [Test]
+        public void CombatIntegration_EquipmentCriticalHitAndModifiers_ScaleCombatDamage()
+        {
+            var charRogue = new CharacterDef { id = "hero_rogue", name = "Rogue Hero", classId = "rogue", raceId = "human" };
+            var rogue = new Unit(charRogue);
+            rogue.Unequip(EquipmentSlot.Accessory1);
+
+            int baseCritChance = rogue.Derived.criticalChance;
+            int baseCritDamage = rogue.Derived.criticalDamage;
+
+            // Custom accessory with +20% Crit Chance and +50% Crit Damage (200% total)
+            var deadlyRing = new EquipmentDef
+            {
+                id = "deadly_ring",
+                name = "Ring of the Assassin",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory,
+                modifiers = new[]
+                {
+                    StatModifier.ForDerived(DerivedStatId.CriticalChance, 20, ModifierKind.Flat, ModifierSource.Equipment, "Deadly Ring"),
+                    StatModifier.ForDerived(DerivedStatId.CriticalDamage, 50, ModifierKind.Flat, ModifierSource.Equipment, "Deadly Ring")
+                }
+            };
+
+            rogue.TryEquip(EquipmentSlot.Accessory1, new EquipmentInstance(deadlyRing, EquipmentRarity.Epic, 1), out _);
+
+            Assert.AreEqual(baseCritChance + 20, rogue.Derived.criticalChance);
+            Assert.AreEqual(baseCritDamage + 50, rogue.Derived.criticalDamage);
+
+            var rogueCombatant = new Combatant(rogue, Side.Party, 0, "Rogue", "ROG");
+            var enemy = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
+
+            var ctx = rogueCombatant.CreateDamageContext(
+                enemy,
+                new[] { DamageComponent.Physical(skillPower: 100f, scaling: 0f) },
+                hitCount: 1,
+                qteResult: QteResult.Good);
+            ctx.forcedCriticalHit = true;
+
+            // 150% base -> 200% with +50% Crit Damage
+            Assert.AreEqual(2.0f, ctx.criticalHitConfig.FinalCriticalDamage, 0.001f);
+
+            var res = DamageCalculator.Calculate(ctx);
+            // Base 100 * QTE Good (1.0) * Crit (2.0) = 200 - Skeleton Def (3) = 197
+            Assert.AreEqual(197, res.totalDamage);
+            Assert.IsTrue(res.FirstHit.anyComponentCriticalHit);
+        }
+
+        [Test]
+        public void CombatIntegration_EquipmentAbilityScoreBonuses_ScaleAttackAndSpellPower()
+        {
+            var charHero = new CharacterDef { id = "hero_paladin", name = "Paladin", classId = "fighter", raceId = "human" };
+            var hero = new Unit(charHero);
+            hero.Unequip(EquipmentSlot.Accessory1);
+            hero.Unequip(EquipmentSlot.Accessory2);
+
+            int baseStr = hero.FinalScores.str;
+            int baseInt = hero.FinalScores.intel;
+            int baseAtk = hero.Derived.physicalPower;
+            int baseMag = hero.Derived.magicPower;
+
+            var strBracers = new EquipmentDef
+            {
+                id = "bracers_might",
+                name = "Bracers of Might",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory,
+                abilityBonuses = AbilityScores.Zero.Add(Ability.STR, 4)
+            };
+
+            var intAmulet = new EquipmentDef
+            {
+                id = "amulet_lore",
+                name = "Amulet of Lore",
+                slot = EquipmentSlot.Accessory2,
+                equipmentType = EquipmentType.Accessory,
+                abilityBonuses = AbilityScores.Zero.Add(Ability.INT, 4)
+            };
+
+            hero.TryEquip(EquipmentSlot.Accessory1, new EquipmentInstance(strBracers, EquipmentRarity.Rare, 1), out _);
+            hero.TryEquip(EquipmentSlot.Accessory2, new EquipmentInstance(intAmulet, EquipmentRarity.Rare, 1), out _);
+
+            Assert.AreEqual(baseStr + 4, hero.FinalScores.str);
+            Assert.AreEqual(baseInt + 4, hero.FinalScores.intel);
+
+            // Fighter has weaponScaling = 1.0 for STR and spellScaling = 1.0 for INT
+            // Ability mod increases by +2 for +4 score (e.g. 10->14 is mod 0->+2)
+            Assert.Greater(hero.Derived.physicalPower, baseAtk);
+            Assert.Greater(hero.Derived.magicPower, baseMag);
+
+            var combatant = new Combatant(hero, Side.Party, 0, "Fighter", "FTR");
+            var enemy = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
+
+            var ctx = combatant.CreateDamageContext(enemy, new[] { DamageComponent.Physical(skillPower: 10f, scaling: 1f) });
+            Assert.AreEqual(hero.FinalScores.str, ctx.attackerStr);
+            Assert.AreEqual(hero.FinalScores.intel, ctx.attackerInt);
+        }
+
+        [Test]
+        public void CombatIntegration_AccuracyAndEvasion_EquipmentModifiersApplied()
+        {
+            var charFighter = new CharacterDef { id = "hero_fighter_acc", name = "Fighter Hero", classId = "fighter", raceId = "human" };
+            var fighter = new Unit(charFighter);
+            fighter.Unequip(EquipmentSlot.MainHand);
+
+            var charEnemy = new CharacterDef { id = "hero_dodger", name = "Dodger Hero", classId = "rogue", raceId = "human" };
+            var dodger = new Unit(charEnemy);
+            dodger.Unequip(EquipmentSlot.FootArmor);
+
+            int baseAcc = (int)AccuracySystem.CalculateAttackerAccuracy(fighter, AttackCategory.Melee);
+            int baseEva = dodger.Derived.evasion;
+
+            // Accurate Sword (+12 accuracy)
+            var accurateSword = new EquipmentDef
+            {
+                id = "accurate_blade",
+                name = "Precision Blade",
+                slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Sword,
+                accuracyModifier = 12
+            };
+            Assert.IsTrue(fighter.TryEquip(EquipmentSlot.MainHand, new EquipmentInstance(accurateSword, EquipmentRarity.Rare, 1), out string errAcc), errAcc);
+
+            // Elven Boots (+15 Evasion)
+            var elvenBoots = new EquipmentDef
+            {
+                id = "elven_boots",
+                name = "Elven Boots",
+                slot = EquipmentSlot.FootArmor,
+                equipmentType = EquipmentType.Feet,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.Evasion, 15, ModifierKind.Flat, ModifierSource.Equipment, "Elven Boots") }
+            };
+            Assert.IsTrue(dodger.TryEquip(EquipmentSlot.FootArmor, new EquipmentInstance(elvenBoots, EquipmentRarity.Rare, 1), out string errEva), errEva);
+
+            float newAcc = AccuracySystem.CalculateAttackerAccuracy(fighter, AttackCategory.Melee);
+            Assert.AreEqual(baseAcc + 12f, newAcc, "Attacker accuracy must include +12 weapon accuracy modifier.");
+
+            int newEva = dodger.Derived.evasion;
+            Assert.AreEqual(baseEva + 15, newEva, "Target evasion must include +15 boots evasion modifier.");
+
+            float hitChance = AccuracySystem.CalculateHitChance(fighter, newEva, AttackCategory.Melee);
+            // Hit chance formula = base (80) + acc (baseAcc + 12) - eva (baseEva + 15)
+            float expectedHitChance = Math.Clamp(AccuracyConfig.Default.baseHitChance + newAcc - newEva, AccuracyConfig.Default.minHitChance, AccuracyConfig.Default.maxHitChance);
+            Assert.AreEqual(expectedHitChance, hitChance, 0.001f);
+        }
     }
 }

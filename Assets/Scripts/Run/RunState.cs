@@ -105,8 +105,10 @@ namespace Obscure
                 foreach (var eid in d.startingEquipment)
                     if (Database.Equipment.TryGetValue(eid, out var eq))
                     {
-                        equipped[eq.slot] = eq;
                         var inst = new EquipmentInstance(eq, eq.rarity, eq.equipmentLevel) { boundCharacterId = id, isEquipped = true };
+                        var effDef = inst.ToEffectiveDef();
+                        effDef.slot = eq.slot;
+                        equipped[eq.slot] = effDef;
                         equippedInstances[eq.slot] = inst;
                     }
 
@@ -114,8 +116,10 @@ namespace Obscure
                 foreach (var assign in d.equipmentLoadout)
                     if (!string.IsNullOrEmpty(assign.equipmentId) && Database.Equipment.TryGetValue(assign.equipmentId, out var eq))
                     {
-                        equipped[assign.slot] = eq;
                         var inst = new EquipmentInstance(eq, eq.rarity, eq.equipmentLevel) { boundCharacterId = id, isEquipped = true };
+                        var effDef = inst.ToEffectiveDef();
+                        effDef.slot = assign.slot;
+                        equipped[assign.slot] = effDef;
                         equippedInstances[assign.slot] = inst;
                     }
 
@@ -227,7 +231,8 @@ namespace Obscure
                 equipped.Values,
                 GatherAllDerivedModifiers(),
                 permanentLegacyBonuses,
-                passives);
+                passives,
+                equipped);
 
             stats = Derived.ToLegacyStats();
 
@@ -254,7 +259,7 @@ namespace Obscure
         {
             var mods = GatherAllDerivedModifiers();
             if (extraCombatModifiers != null) mods.AddRange(extraCombatModifiers);
-            return StatCalculator.Explain(statId, abilities, classDef, level, equipped.Values, mods, permanentLegacyBonuses, passives);
+            return StatCalculator.Explain(statId, abilities, classDef, level, equipped.Values, mods, permanentLegacyBonuses, passives, equipped);
         }
 
         public bool HasActiveSkill(string skillId) =>
@@ -324,7 +329,9 @@ namespace Obscure
             }
             var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
             equippedInstances[item.slot] = inst;
-            equipped[item.slot] = item;
+            var effDef = inst.ToEffectiveDef();
+            effDef.slot = item.slot;
+            equipped[item.slot] = effDef;
             RecalculateStats();
         }
 
@@ -342,7 +349,9 @@ namespace Obscure
 
             var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
             equippedInstances[slot] = inst;
-            equipped[slot] = item;
+            var effDef = inst.ToEffectiveDef();
+            effDef.slot = slot;
+            equipped[slot] = effDef;
             RecalculateStats();
             return true;
         }
@@ -388,7 +397,9 @@ namespace Obscure
             instance.isEquipped = true;
             instance.boundCharacterId = id;
             equippedInstances[slot] = instance;
-            equipped[slot] = instance.ToEffectiveDef();
+            var effDef = instance.ToEffectiveDef();
+            effDef.slot = slot;
+            equipped[slot] = effDef;
             RecalculateStats();
             return true;
         }

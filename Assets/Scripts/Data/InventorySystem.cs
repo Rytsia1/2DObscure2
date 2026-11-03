@@ -1012,7 +1012,10 @@ namespace Obscure
             var candidateDef = candidate != null ? candidate.ToEffectiveDef() : null;
             var simEquipped = new Dictionary<EquipmentSlot, EquipmentDef>(unit.equipped);
             if (candidateDef != null)
+            {
+                candidateDef.slot = slot;
                 simEquipped[slot] = candidateDef;
+            }
             else
                 simEquipped.Remove(slot);
 
@@ -1038,7 +1041,8 @@ namespace Obscure
                 simEquipped.Values,
                 unit.GatherAllDerivedModifiers(),
                 default,
-                unit.passives);
+                unit.passives,
+                simEquipped);
 
             return simDerived.Get(statId) - currentVal;
         }
@@ -1051,7 +1055,10 @@ namespace Obscure
             var candidateDef = candidate != null ? candidate.ToEffectiveDef() : null;
             var simEquipped = new Dictionary<EquipmentSlot, EquipmentDef>(unit.equipped);
             if (candidateDef != null)
+            {
+                candidateDef.slot = slot;
                 simEquipped[slot] = candidateDef;
+            }
             else
                 simEquipped.Remove(slot);
 
@@ -1077,7 +1084,8 @@ namespace Obscure
                 simEquipped.Values,
                 unit.GatherAllDerivedModifiers(),
                 default,
-                unit.passives);
+                unit.passives,
+                simEquipped);
 
             foreach (DerivedStatId statId in Enum.GetValues(typeof(DerivedStatId)))
             {
