@@ -79,6 +79,18 @@ namespace Obscure
         Debuff
     }
 
+    // Major equipment categories defined in GDD Section 2 & 15.1
+    public enum EquipmentType
+    {
+        Weapon = 0,
+        OffHand = 1,
+        Head = 2,
+        Body = 3,
+        Legs = 4,
+        Feet = 5,
+        Accessory = 6
+    }
+
     // The 8 Equipment Slots defined in the Character Creation System specification.
     // Includes legacy aliases (Weapon, Armor, Accessory) for backward compatibility.
     public enum EquipmentSlot
@@ -139,7 +151,7 @@ namespace Obscure
         };
     }
 
-    // Weapon Types for strict Main Hand and Second Hand class compatibility.
+    // Weapon Types for strict Main Hand and Second Hand class compatibility (GDD Section 3.1 & Class Compatibility Matrix).
     public enum WeaponType
     {
         None = 0,
@@ -148,22 +160,32 @@ namespace Obscure
         Greatsword,
         Axe,
         Greataxe,
+        Warhammer,
         Mace,
+        Gauntlet,
         Fist,
+        Rapier,
         Dagger,
         Bow,
         Crossbow,
-        Staff,
         Wand,
+        RitualBlade,
+        Staff,
         Rod,
         Spear,
+
         // Second Hand Weapon / Off-Hand Types
         Shield,
         Buckler,
+        FistWeapon,
         ParryingDagger,
         Warhorn,
         MartialFocus,
         Quiver,
+        HolySymbol,
+        Orb,
+        Grimoire,
+        Totem,
         RelicSymbol,
         ArcaneTome,
         PactGrimoire,
@@ -778,8 +800,9 @@ namespace Obscure
     [Serializable]
     public class EquipmentRestriction
     {
-        public string[] allowedClasses = Array.Empty<string>(); // empty = cross-class
-        public string[] allowedRaces = Array.Empty<string>();   // empty = all races
+        public string[] allowedClasses = Array.Empty<string>();       // empty = cross-class
+        public string[] allowedRaces = Array.Empty<string>();         // empty = all races
+        public string[] allowedCharacterIds = Array.Empty<string>();   // empty = any character (GDD Section 3.1)
         public int minLevel = 1;
         public AbilityScores minAbilityScores = AbilityScores.Zero;
     }
@@ -789,12 +812,14 @@ namespace Obscure
     public class EquipmentDef
     {
         public string id, name, description;
+        public EquipmentType equipmentType = EquipmentType.Weapon;
         public EquipmentSlot slot = EquipmentSlot.MainHand;
         public WeaponType weaponType = WeaponType.None;
         public AttackRangeType attackRangeType = AttackRangeType.Melee;
         public bool isUnarmed;
         public EquipmentRarity rarity = EquipmentRarity.Common;
         public string requiredProficiency;
+        public string iconPath;
 
         // Weapon & Armor properties
         public int weaponPower;            // Base Damage
@@ -817,6 +842,17 @@ namespace Obscure
         public string legendaryEffectId;
         public string mythicEffectId;
         public string affixPoolId;
+
+        public EquipmentType GetEquipmentCategory() => slot switch
+        {
+            EquipmentSlot.MainHand => EquipmentType.Weapon,
+            EquipmentSlot.SecondHand => EquipmentType.OffHand,
+            EquipmentSlot.HeadArmor => EquipmentType.Head,
+            EquipmentSlot.BodyArmor => EquipmentType.Body,
+            EquipmentSlot.LegArmor => EquipmentType.Legs,
+            EquipmentSlot.FootArmor => EquipmentType.Feet,
+            _ => EquipmentType.Accessory
+        };
     }
 
     // Reusable validator enforcing Strict Weapon Compatibility and Equipment Restrictions.
@@ -825,10 +861,19 @@ namespace Obscure
         public static bool IsAccessorySlot(EquipmentSlot slot) =>
             slot == EquipmentSlot.Accessory1 || slot == EquipmentSlot.Accessory2;
 
-        public static bool SlotMatches(EquipmentDef item, EquipmentSlot targetSlot)
+        public static bool SlotMatches(EquipmentDef item, EquipmentSlot targetSlot, ClassDef classDef = null)
         {
             if (item == null) return false;
             if (IsAccessorySlot(targetSlot) && IsAccessorySlot(item.slot)) return true;
+
+            // Off-hand / Dual-wielding weapon exception:
+            // e.g., Barbarian with 1-Handed Axe in Second Hand, or Rogue with Dagger in Second Hand
+            if (targetSlot == EquipmentSlot.SecondHand && item.slot == EquipmentSlot.MainHand)
+            {
+                if (classDef != null && classDef.secondHandWeapons != null && classDef.secondHandWeapons.Contains(item.weaponType))
+                    return true;
+            }
+
             return item.slot == targetSlot;
         }
 
@@ -840,10 +885,11 @@ namespace Obscure
             ClassDef classDef,
             RaceDef raceDef = null,
             int level = 1,
-            AbilityScores? finalScores = null)
+            AbilityScores? finalScores = null,
+            string characterId = null)
         {
             if (item == null) return "Equipment item is null.";
-            if (!SlotMatches(item, targetSlot))
+            if (!SlotMatches(item, targetSlot, classDef))
                 return $"{item.name} ({EquipmentSlots.DisplayName(item.slot)}) cannot be equipped in {EquipmentSlots.DisplayName(targetSlot)}.";
 
             // 1. Strict Weapon Compatibility for Main Hand and Second Hand (No exceptions, including Legendary)
@@ -864,11 +910,11 @@ namespace Obscure
                 }
             }
 
-            // 2. Item-specific restrictions (Class, Race, Level, Ability Score requirements)
+            // 2. Item-specific restrictions (Class, Race, Character, Level, Ability Score requirements)
             var r = item.restrictions;
             if (r != null)
             {
-                if (r.allowedClasses != null && r.allowedInterpolationClassesCount(r.allowedClasses) > 0)
+                if (r.allowedClasses != null && r.allowedClasses.Length > 0)
                 {
                     if (classDef == null || !r.allowedClasses.Contains(classDef.id))
                         return $"{item.name} requires class: {string.Join("/", r.allowedClasses)}.";
@@ -877,6 +923,11 @@ namespace Obscure
                 {
                     if (raceDef == null || !r.allowedRaces.Contains(raceDef.id))
                         return $"{item.name} requires race: {string.Join("/", r.allowedRaces)}.";
+                }
+                if (r.allowedCharacterIds != null && r.allowedCharacterIds.Length > 0)
+                {
+                    if (string.IsNullOrEmpty(characterId) || !r.allowedCharacterIds.Contains(characterId))
+                        return $"{item.name} is restricted to specific characters: {string.Join("/", r.allowedCharacterIds)}.";
                 }
                 if (level < r.minLevel)
                     return $"{item.name} requires level {r.minLevel} (current: {level}).";

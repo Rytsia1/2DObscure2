@@ -397,5 +397,99 @@ namespace Obscure.Tests
                 UnityEngine.Object.DestroyImmediate(root.gameObject);
             }
         }
+
+        // =====================================================================
+        // 8. Data Model Validation: 9 Classes & 8 Slots
+        // =====================================================================
+
+        [Test]
+        public void EquipmentDataModel_NineClassWeaponMatrix_IsEnforcedStrictly()
+        {
+            var session = new CharacterCreationSession();
+
+            // 1. Martial Artist: Gauntlet in MainHand, FistWeapon in SecondHand
+            session.SelectClass("martial_artist");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "iron_gauntlets", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "iron_knuckle", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "iron_broadsword", out string maErr));
+            StringAssert.Contains("Incompatible Main Hand weapon", maErr);
+
+            // 2. Rogue: Rapier in MainHand, Dagger/Buckler in SecondHand
+            session.SelectClass("rogue");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "duelist_rapier", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "iron_dagger", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "iron_buckler", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "battle_greataxe", out _));
+
+            // 3. Wizard: Wand in MainHand, Orb in SecondHand
+            session.SelectClass("wizard");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "apprentice_wand", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "arcane_orb", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "sanctified_mace", out _));
+
+            // 4. Cleric: Mace in MainHand, Holy Symbol / Shield in SecondHand
+            session.SelectClass("cleric");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "sanctified_mace", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "silver_holy_symbol", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "iron_shield", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "hunting_bow", out _));
+
+            // 5. Warlock: Ritual Blade in MainHand, Grimoire in SecondHand
+            session.SelectClass("warlock");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "ritual_dagger", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "pact_grimoire", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "battle_greataxe", out _));
+
+            // 6. Druid: Staff in MainHand, Totem in SecondHand
+            session.SelectClass("druid");
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "oak_staff", out _));
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "verdant_totem", out _));
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "heavy_crossbow", out _));
+        }
+
+        [Test]
+        public void Barbarian_CanEquip_OneHandedAxeInSecondHand_ForDualWielding()
+        {
+            var session = new CharacterCreationSession();
+            session.SelectClass("barbarian");
+
+            // Barbarian main hand: Great Axe or 1H Axe
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "battle_greataxe", out _));
+
+            // Barbarian second hand: One-Handed Axe (Dual-Wield exception)
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "steel_axe", out string errOffAxe), errOffAxe);
+
+            // Fighter cannot equip Axe in SecondHand (Fighter only allows Shield / Buckler in Second Hand)
+            session.SelectClass("fighter");
+            Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, "steel_axe", out string errFighterAxe));
+            StringAssert.Contains("cannot be equipped in Second Hand", errFighterAxe);
+        }
+
+        [Test]
+        public void EquipmentRestriction_EnforcesAllowedCharacterIds()
+        {
+            var heroDef = Database.Characters["knight"];
+            var hero = new Unit(heroDef); // id = "knight"
+
+            var boundItemDef = new EquipmentDef
+            {
+                id = "hero_exclusive_ring",
+                name = "Heirloom Ring",
+                slot = EquipmentSlot.Accessory1,
+                restrictions = new EquipmentRestriction
+                {
+                    allowedCharacterIds = new[] { "knight" }
+                }
+            };
+
+            // Hero with matching id succeeds
+            Assert.IsTrue(hero.TryEquip(EquipmentSlot.Accessory1, boundItemDef, out string err1), err1);
+
+            // Another hero with different id is rejected
+            var otherDef = Database.Characters["mage"]; // id = "mage"
+            var otherHero = new Unit(otherDef);
+            Assert.IsFalse(otherHero.TryEquip(EquipmentSlot.Accessory1, boundItemDef, out string err2));
+            StringAssert.Contains("restricted to specific characters", err2);
+        }
     }
 }

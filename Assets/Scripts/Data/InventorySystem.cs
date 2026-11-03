@@ -358,6 +358,8 @@ namespace Obscure
                 name = upgradeLevel > 0 ? $"{def.name} +{upgradeLevel}" : def.name,
                 description = def.description,
                 slot = def.slot,
+                equipmentType = def.equipmentType,
+                iconPath = def.iconPath,
                 weaponType = def.weaponType,
                 attackRangeType = def.attackRangeType,
                 isUnarmed = def.isUnarmed,

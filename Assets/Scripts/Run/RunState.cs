@@ -326,7 +326,7 @@ namespace Obscure
         // Validated equip that enforces Strict Weapon Compatibility and item restrictions for any of the 8 slots.
         public bool TryEquip(EquipmentSlot slot, EquipmentDef item, out string error)
         {
-            error = EquipmentValidator.Validate(item, slot, classDef, race, level, FinalScores);
+            error = EquipmentValidator.Validate(item, slot, classDef, race, level, FinalScores, id);
             if (error != null) return false;
             var inst = new EquipmentInstance(item, item.rarity, item.equipmentLevel) { boundCharacterId = id, isEquipped = true };
             equippedInstances[slot] = inst;
@@ -348,7 +348,7 @@ namespace Obscure
                 error = $"Unknown equipment definition '{instance.definitionId}'.";
                 return false;
             }
-            error = EquipmentValidator.Validate(def, slot, classDef, race, level, FinalScores);
+            error = EquipmentValidator.Validate(def, slot, classDef, race, level, FinalScores, id);
             if (error != null) return false;
 
             if (equippedInstances.TryGetValue(slot, out var oldInst) && oldInst != null)

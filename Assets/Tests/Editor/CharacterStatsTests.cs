@@ -702,9 +702,9 @@ namespace Obscure.Tests
             session.SelectClass("wizard"); // MainHand: Staff, Wand, Dagger | SecondHand: ArcaneTome, Buckler
             session.PointBuy.SetAllOrThrow(new AbilityScores(8, 12, 12, 15, 14, 11));
 
-            // 1. Equipping compatible Main Hand & Second Hand weapons succeeds
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "oak_staff", out string err1), err1);
-            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "apprentice_tome", out string err2), err2);
+            // 1. Equipping compatible Main Hand & Second Hand weapons succeeds (Wizard: Wand & Orb)
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, "apprentice_wand", out string err1), err1);
+            Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, "arcane_orb", out string err2), err2);
 
             // 2. Rejecting incompatible Main Hand weapons (e.g. Greataxe or Longbow on Wizard)
             Assert.IsFalse(session.TryEquip(EquipmentSlot.MainHand, "battle_greataxe", out string mainErr));
@@ -726,8 +726,8 @@ namespace Obscure.Tests
             Assert.IsFalse(session.TryEquip(EquipmentSlot.SecondHand, legendaryShield, out string legErr2));
             StringAssert.Contains("Incompatible Second Hand weapon", legErr2);
 
-            // Meanwhile, a Fighter CAN equip the Legendary Greatsword and Legendary Shield
-            session.SelectClass("fighter");
+            // Meanwhile, a Barbarian CAN equip the Legendary Greatsword and Legendary Shield
+            session.SelectClass("barbarian");
             Assert.IsTrue(session.TryEquip(EquipmentSlot.MainHand, legendaryGreatsword, out _));
             Assert.IsTrue(session.TryEquip(EquipmentSlot.SecondHand, legendaryShield, out _));
 

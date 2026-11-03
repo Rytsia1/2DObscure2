@@ -266,8 +266,8 @@ namespace Obscure
                     new SkillUnlockNode { skillId = "cleaving_strike", tier = 2, requiredLevel = 3, skillPointCost = 1 },
                     new SkillUnlockNode { skillId = "iron_will", isPassive = true, tier = 2, requiredLevel = 3, skillPointCost = 1 }
                 },
-                mainHandWeapons = new[] { WeaponType.Sword, WeaponType.Greatsword, WeaponType.Axe, WeaponType.Mace, WeaponType.Spear },
-                secondHandWeapons = new[] { WeaponType.Shield, WeaponType.Buckler, WeaponType.ParryingDagger },
+                mainHandWeapons = new[] { WeaponType.Sword, WeaponType.Axe, WeaponType.Mace, WeaponType.Spear },
+                secondHandWeapons = new[] { WeaponType.Shield, WeaponType.Buckler },
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "iron_broadsword"),
@@ -306,12 +306,12 @@ namespace Obscure
                 startingSkills = new[] { "reckless_cleave", "war_cry", "shield_bash" },
                 activeSkillPool = new[] { "reckless_cleave", "war_cry", "shield_bash" },
                 passiveSkillPool = new[] { "savage_instinct", "battle_focus" },
-                mainHandWeapons = new[] { WeaponType.Greataxe, WeaponType.Axe, WeaponType.Greatsword, WeaponType.Mace },
-                secondHandWeapons = new[] { WeaponType.Warhorn, WeaponType.Buckler },
+                mainHandWeapons = new[] { WeaponType.Greataxe, WeaponType.Greatsword, WeaponType.Warhammer, WeaponType.Axe },
+                secondHandWeapons = new[] { WeaponType.Shield, WeaponType.Buckler, WeaponType.Axe },
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "battle_greataxe"),
-                    Eq(EquipmentSlot.SecondHand, "bone_warhorn"),
+                    Eq(EquipmentSlot.SecondHand, "iron_buckler"),
                     Eq(EquipmentSlot.HeadArmor, "horned_helm"),
                     Eq(EquipmentSlot.BodyArmor, "hide_harness"),
                     Eq(EquipmentSlot.LegArmor, "fur_leggings"),
@@ -341,12 +341,12 @@ namespace Obscure
                 startingSkills = new[] { "palm_strike", "quick_strike", "evasion" },
                 activeSkillPool = new[] { "palm_strike", "quick_strike", "evasion" },
                 passiveSkillPool = new[] { "martial_discipline", "battle_focus" },
-                mainHandWeapons = new[] { WeaponType.Fist, WeaponType.Staff },
-                secondHandWeapons = new[] { WeaponType.MartialFocus, WeaponType.ParryingDagger },
+                mainHandWeapons = new[] { WeaponType.Gauntlet },
+                secondHandWeapons = new[] { WeaponType.FistWeapon },
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "hand_wraps"),
-                    Eq(EquipmentSlot.SecondHand, "ki_beads"),
+                    Eq(EquipmentSlot.MainHand, "iron_gauntlets"),
+                    Eq(EquipmentSlot.SecondHand, "iron_knuckle"),
                     Eq(EquipmentSlot.HeadArmor, "monk_headband"),
                     Eq(EquipmentSlot.BodyArmor, "cloth_tunic"),
                     Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
@@ -377,12 +377,12 @@ namespace Obscure
                 startingSkills = new[] { "quick_strike", "expose", "evasion" },
                 activeSkillPool = new[] { "quick_strike", "expose", "evasion" },
                 passiveSkillPool = new[] { "opportunist", "battle_focus" },
-                mainHandWeapons = new[] { WeaponType.Dagger, WeaponType.Sword, WeaponType.Crossbow },
-                secondHandWeapons = new[] { WeaponType.ParryingDagger, WeaponType.Buckler },
+                mainHandWeapons = new[] { WeaponType.Rapier },
+                secondHandWeapons = new[] { WeaponType.Dagger, WeaponType.Buckler },
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "iron_dagger"),
-                    Eq(EquipmentSlot.SecondHand, "parrying_dagger"),
+                    Eq(EquipmentSlot.MainHand, "duelist_rapier"),
+                    Eq(EquipmentSlot.SecondHand, "iron_dagger"),
                     Eq(EquipmentSlot.HeadArmor, "shadow_hood"),
                     Eq(EquipmentSlot.BodyArmor, "leather_jerkin"),
                     Eq(EquipmentSlot.LegArmor, "leather_greaves"),
@@ -419,8 +419,8 @@ namespace Obscure
                 startingSkills = new[] { "aimed_shot", "piercing_volley", "expose" },
                 activeSkillPool = new[] { "aimed_shot", "piercing_volley", "expose" },
                 passiveSkillPool = new[] { "hunters_instinct", "battle_focus" },
-                mainHandWeapons = new[] { WeaponType.Bow, WeaponType.Crossbow, WeaponType.Spear, WeaponType.Dagger },
-                secondHandWeapons = new[] { WeaponType.Quiver, WeaponType.ParryingDagger, WeaponType.Buckler },
+                mainHandWeapons = new[] { WeaponType.Bow, WeaponType.Crossbow },
+                secondHandWeapons = new[] { WeaponType.Quiver },
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "hunting_bow"),
@@ -457,12 +457,12 @@ namespace Obscure
                 startingSkills = new[] { "heal", "mend", "blessing" },
                 activeSkillPool = new[] { "heal", "mend", "blessing" },
                 passiveSkillPool = new[] { "divine_grace", "iron_will" },
-                mainHandWeapons = new[] { WeaponType.Mace, WeaponType.Staff, WeaponType.Rod },
-                secondHandWeapons = new[] { WeaponType.Shield, WeaponType.RelicSymbol, WeaponType.ArcaneTome },
+                mainHandWeapons = new[] { WeaponType.Mace },
+                secondHandWeapons = new[] { WeaponType.Shield, WeaponType.HolySymbol },
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "sanctified_mace"),
-                    Eq(EquipmentSlot.SecondHand, "sacred_chime"),
+                    Eq(EquipmentSlot.SecondHand, "silver_holy_symbol"),
                     Eq(EquipmentSlot.HeadArmor, "acolyte_circlet"),
                     Eq(EquipmentSlot.BodyArmor, "linen_vestments"),
                     Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
@@ -496,12 +496,12 @@ namespace Obscure
                 startingSkills = new[] { "firebolt", "frost_shard", "arcane_burst" },
                 activeSkillPool = new[] { "firebolt", "frost_shard", "arcane_burst", "arcane_missile" },
                 passiveSkillPool = new[] { "arcane_affinity", "iron_will" },
-                mainHandWeapons = new[] { WeaponType.Staff, WeaponType.Wand, WeaponType.Rod },
-                secondHandWeapons = new[] { WeaponType.ArcaneTome, WeaponType.RelicSymbol },
+                mainHandWeapons = new[] { WeaponType.Wand },
+                secondHandWeapons = new[] { WeaponType.Orb },
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "oak_staff"),
-                    Eq(EquipmentSlot.SecondHand, "apprentice_tome"),
+                    Eq(EquipmentSlot.MainHand, "apprentice_wand"),
+                    Eq(EquipmentSlot.SecondHand, "arcane_orb"),
                     Eq(EquipmentSlot.HeadArmor, "scholar_hood"),
                     Eq(EquipmentSlot.BodyArmor, "cloth_tunic"),
                     Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
@@ -535,11 +535,11 @@ namespace Obscure
                 startingSkills = new[] { "eldritch_pact", "soul_hex", "firebolt" },
                 activeSkillPool = new[] { "eldritch_pact", "soul_hex", "firebolt" },
                 passiveSkillPool = new[] { "pact_affinity", "iron_will" },
-                mainHandWeapons = new[] { WeaponType.Rod, WeaponType.Wand, WeaponType.Staff, WeaponType.Dagger },
-                secondHandWeapons = new[] { WeaponType.PactGrimoire, WeaponType.ArcaneTome },
+                mainHandWeapons = new[] { WeaponType.RitualBlade },
+                secondHandWeapons = new[] { WeaponType.Grimoire },
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "eldritch_rod"),
+                    Eq(EquipmentSlot.MainHand, "ritual_dagger"),
                     Eq(EquipmentSlot.SecondHand, "pact_grimoire"),
                     Eq(EquipmentSlot.HeadArmor, "cowl_of_whispers"),
                     Eq(EquipmentSlot.BodyArmor, "darkweave_robe"),
@@ -573,8 +573,8 @@ namespace Obscure
                 startingSkills = new[] { "thorn_whip", "regrowth", "blessing" },
                 activeSkillPool = new[] { "thorn_whip", "regrowth", "blessing" },
                 passiveSkillPool = new[] { "natures_attunement", "iron_will" },
-                mainHandWeapons = new[] { WeaponType.Staff, WeaponType.Spear, WeaponType.Mace },
-                secondHandWeapons = new[] { WeaponType.NatureTotem, WeaponType.Buckler },
+                mainHandWeapons = new[] { WeaponType.Staff },
+                secondHandWeapons = new[] { WeaponType.Totem },
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "oak_staff"),
@@ -662,7 +662,7 @@ namespace Obscure
                 starterPassiveId = "divine_grace",
                 description = "Keeps the party standing through long fights.",
                 startingSkills = new[] { "heal", "mend", "blessing" },
-                mainHandWeapons = new[] { WeaponType.Mace, WeaponType.Staff, WeaponType.Rod },
+                mainHandWeapons = new[] { WeaponType.Mace },
                 secondHandWeapons = new[] { WeaponType.Shield, WeaponType.RelicSymbol },
                 weaponProficiencies = new[] { "Mace", "Staff", "Chime" },
                 armorProficiencies = new[] { "Cloth", "Light" },
@@ -739,6 +739,97 @@ namespace Obscure
                 requiredProficiency = "Sword", weaponPower = 3, weaponScaling = 0.5f, accuracyModifier = 2,
                 weaponProperties = new[] { "Melee", "Versatile" },
                 description = "+3 Weapon Power, +0.5 STR scaling."
+            },
+            new EquipmentDef
+            {
+                id = "steel_axe", name = "Steel Battleaxe", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Axe, attackRangeType = AttackRangeType.Melee,
+                weaponPower = 4, breakPowerModifier = 2,
+                weaponProperties = new[] { "Melee", "Versatile", "Cleave" },
+                description = "+4 Weapon Power, +2 Break Power."
+            },
+            new EquipmentDef
+            {
+                id = "iron_warhammer", name = "Iron Warhammer", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Warhammer, attackRangeType = AttackRangeType.Melee,
+                weaponPower = 5, breakPowerModifier = 4,
+                weaponProperties = new[] { "Melee", "Heavy", "Blunt" },
+                description = "+5 Weapon Power, +4 Break Power."
+            },
+            new EquipmentDef
+            {
+                id = "iron_spear", name = "Iron Spear", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Spear, attackRangeType = AttackRangeType.Melee,
+                weaponPower = 3, accuracyModifier = 3,
+                weaponProperties = new[] { "Melee", "Reach", "Piercing" },
+                description = "+3 Weapon Power, +3 Accuracy."
+            },
+            new EquipmentDef
+            {
+                id = "iron_gauntlets", name = "Iron Gauntlets", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Gauntlet, attackRangeType = AttackRangeType.Melee, isUnarmed = true,
+                weaponPower = 3, breakPowerModifier = 3, accuracyModifier = 2,
+                weaponProperties = new[] { "Melee", "Gauntlet", "Strike" },
+                description = "Martial gauntlets: +3 Weapon Power, +3 Break Power."
+            },
+            new EquipmentDef
+            {
+                id = "iron_knuckle", name = "Iron Knuckle", slot = EquipmentSlot.SecondHand,
+                equipmentType = EquipmentType.OffHand,
+                weaponType = WeaponType.FistWeapon, attackRangeType = AttackRangeType.Melee, isUnarmed = true,
+                weaponPower = 2, breakPowerModifier = 2,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.Initiative, 1, ModifierKind.Flat, ModifierSource.Equipment, "Iron Knuckle") },
+                description = "Off-hand Fist Weapon: +2 Weapon Power, +2 Break Power, +1 Initiative."
+            },
+            new EquipmentDef
+            {
+                id = "duelist_rapier", name = "Duelist Rapier", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Rapier, attackRangeType = AttackRangeType.Melee,
+                weaponPower = 3, accuracyModifier = 4,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 5, ModifierKind.Flat, ModifierSource.Equipment, "Duelist Rapier") },
+                weaponProperties = new[] { "Melee", "Finesse", "Piercing" },
+                description = "Finesse rapier: +3 Weapon Power, +4 Accuracy, +5% Crit Chance."
+            },
+            new EquipmentDef
+            {
+                id = "apprentice_wand", name = "Apprentice Wand", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.Wand, attackRangeType = AttackRangeType.Ranged,
+                weaponPower = 2, accuracyModifier = 3,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 3, ModifierKind.Flat, ModifierSource.Equipment, "Apprentice Wand") },
+                weaponProperties = new[] { "Ranged", "Wand", "Arcane" },
+                description = "Arcane wand: +2 Weapon Power, +3 Magic Power."
+            },
+            new EquipmentDef
+            {
+                id = "arcane_orb", name = "Arcane Orb", slot = EquipmentSlot.SecondHand,
+                equipmentType = EquipmentType.OffHand,
+                weaponType = WeaponType.Orb, magicDefense = 2,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 2, ModifierKind.Flat, ModifierSource.Equipment, "Arcane Orb") },
+                description = "Off-hand Orb: +2 Magic Power, +2 Magic Defense."
+            },
+            new EquipmentDef
+            {
+                id = "silver_holy_symbol", name = "Silver Holy Symbol", slot = EquipmentSlot.SecondHand,
+                equipmentType = EquipmentType.OffHand,
+                weaponType = WeaponType.HolySymbol, magicDefense = 2,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.HealingPower, 3, ModifierKind.Flat, ModifierSource.Equipment, "Silver Holy Symbol") },
+                description = "Off-hand Holy Symbol: +3 Healing Power, +2 Magic Defense."
+            },
+            new EquipmentDef
+            {
+                id = "ritual_dagger", name = "Ritual Blade", slot = EquipmentSlot.MainHand,
+                equipmentType = EquipmentType.Weapon,
+                weaponType = WeaponType.RitualBlade, attackRangeType = AttackRangeType.Melee,
+                weaponPower = 3,
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 3, ModifierKind.Flat, ModifierSource.Equipment, "Ritual Blade") },
+                weaponProperties = new[] { "Melee", "Pact", "Occult" },
+                description = "Occult blade: +3 Weapon Power, +3 Magic Power."
             },
             new EquipmentDef
             {
@@ -898,14 +989,14 @@ namespace Obscure
             new EquipmentDef
             {
                 id = "pact_grimoire", name = "Grimoire of Shadows", slot = EquipmentSlot.SecondHand,
-                weaponType = WeaponType.PactGrimoire, magicDefense = 1,
+                weaponType = WeaponType.Grimoire, magicDefense = 1,
                 modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MagicPenetration, 2, ModifierKind.Flat, ModifierSource.Equipment, "Pact Grimoire") },
                 description = "Off-hand Pact Grimoire: +2 Magic Penetration, +1 Magic Defense."
             },
             new EquipmentDef
             {
                 id = "verdant_totem", name = "Verdant Totem", slot = EquipmentSlot.SecondHand,
-                weaponType = WeaponType.NatureTotem, magicDefense = 2,
+                weaponType = WeaponType.Totem, magicDefense = 2,
                 modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 8, ModifierKind.Flat, ModifierSource.Equipment, "Verdant Totem") },
                 description = "Off-hand Nature Totem: +8 Max HP, +2 Magic Defense."
             },
@@ -1300,7 +1391,7 @@ namespace Obscure
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "battle_greataxe"),
-                    Eq(EquipmentSlot.SecondHand, "bone_warhorn"),
+                    Eq(EquipmentSlot.SecondHand, "iron_buckler"),
                     Eq(EquipmentSlot.HeadArmor, "horned_helm"),
                     Eq(EquipmentSlot.BodyArmor, "hide_harness"),
                     Eq(EquipmentSlot.LegArmor, "fur_leggings"),
@@ -1318,8 +1409,8 @@ namespace Obscure
                 starterPassiveId = "martial_discipline",
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "hand_wraps"),
-                    Eq(EquipmentSlot.SecondHand, "ki_beads"),
+                    Eq(EquipmentSlot.MainHand, "iron_gauntlets"),
+                    Eq(EquipmentSlot.SecondHand, "iron_knuckle"),
                     Eq(EquipmentSlot.HeadArmor, "monk_headband"),
                     Eq(EquipmentSlot.BodyArmor, "cloth_tunic"),
                     Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
@@ -1337,8 +1428,8 @@ namespace Obscure
                 starterPassiveId = "opportunist",
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "iron_dagger"),
-                    Eq(EquipmentSlot.SecondHand, "parrying_dagger"),
+                    Eq(EquipmentSlot.MainHand, "duelist_rapier"),
+                    Eq(EquipmentSlot.SecondHand, "iron_dagger"),
                     Eq(EquipmentSlot.HeadArmor, "shadow_hood"),
                     Eq(EquipmentSlot.BodyArmor, "leather_jerkin"),
                     Eq(EquipmentSlot.LegArmor, "leather_greaves"),
@@ -1376,7 +1467,7 @@ namespace Obscure
                 startingEquipment = new[]
                 {
                     Eq(EquipmentSlot.MainHand, "sanctified_mace"),
-                    Eq(EquipmentSlot.SecondHand, "sacred_chime"),
+                    Eq(EquipmentSlot.SecondHand, "silver_holy_symbol"),
                     Eq(EquipmentSlot.HeadArmor, "acolyte_circlet"),
                     Eq(EquipmentSlot.BodyArmor, "linen_vestments"),
                     Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
@@ -1394,8 +1485,8 @@ namespace Obscure
                 starterPassiveId = "arcane_affinity",
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "oak_staff"),
-                    Eq(EquipmentSlot.SecondHand, "apprentice_tome"),
+                    Eq(EquipmentSlot.MainHand, "apprentice_wand"),
+                    Eq(EquipmentSlot.SecondHand, "arcane_orb"),
                     Eq(EquipmentSlot.HeadArmor, "scholar_hood"),
                     Eq(EquipmentSlot.BodyArmor, "cloth_tunic"),
                     Eq(EquipmentSlot.LegArmor, "cloth_trousers"),
@@ -1413,7 +1504,7 @@ namespace Obscure
                 starterPassiveId = "pact_affinity",
                 startingEquipment = new[]
                 {
-                    Eq(EquipmentSlot.MainHand, "eldritch_rod"),
+                    Eq(EquipmentSlot.MainHand, "ritual_dagger"),
                     Eq(EquipmentSlot.SecondHand, "pact_grimoire"),
                     Eq(EquipmentSlot.HeadArmor, "cowl_of_whispers"),
                     Eq(EquipmentSlot.BodyArmor, "darkweave_robe"),
