@@ -1820,6 +1820,7 @@ namespace Obscure
         public int seed = 1;
         public int act = 1;
         public int gold;
+        public int hubGold;
         public string currentNodeId;
         public string[] clearedNodeIds = Array.Empty<string>();
         public string[] items = Array.Empty<string>();
@@ -1913,6 +1914,7 @@ namespace Obscure
                 seed = run.Seed,
                 act = run.Act,
                 gold = run.Gold,
+                hubGold = run.HubGold,
                 currentNodeId = run.Current?.id ?? "",
                 clearedNodeIds = run.Cleared.ToArray(),
                 items = run.Items.ToArray(),

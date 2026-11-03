@@ -553,7 +553,11 @@ namespace Obscure
             {
                 var item = Database.Items[stack.Key];
                 Option(m, $"{item.name.ToUpperInvariant()} x{stack.Count()}",
-                    () => ChooseTarget(Battle.Allies(c), t => BattleAction.Item(c, item, t), () => ShowItems(c)),
+                    () =>
+                    {
+                        var candidates = item.isRevive ? Battle.Allies(c).Where(a => !a.Alive) : Battle.Allies(c).Where(a => a.Alive);
+                        ChooseTarget(candidates, t => BattleAction.Item(c, item, t), () => ShowItems(c));
+                    },
                     tooltip: item.description.ToUpperInvariant());
             }
             Option(m, "BACK", () => ShowActions(c));
@@ -563,10 +567,17 @@ namespace Obscure
         void ChooseTarget(IEnumerable<Combatant> candidates, Func<Combatant, BattleAction> make, Action back)
         {
             ClearPhase();
+            var list = candidates.ToList();
+            if (list.Count == 0)
+            {
+                Hint("NO VALID TARGETS");
+                back();
+                return;
+            }
             var m = phase.gameObject.AddComponent<Menu>();
             m.onFocus = s => Hint(s.tooltip);
             m.onBack = back;
-            foreach (var t in candidates.Where(c => c.Alive))
+            foreach (var t in list)
             {
                 var h = huds[t];
                 var go = new GameObject("Target:" + t.name);
@@ -576,7 +587,9 @@ namespace Obscure
                 var sel = go.AddComponent<Selectable>();
                 sel.size = h.size;
                 string brk = t.IsEnemy && t.HasBreakGauge ? $" SHIELD:{t.CurrentBreakGauge}/{t.MaxBreakGauge}" : "";
-                sel.tooltip = $"{t.name.ToUpperInvariant()} {t.unit.hp}/{t.Stats.maxHp}{brk} " + (t.IsEnemy ? t.Affinities.Describe() : t.StatusTags);
+                sel.tooltip = t.Alive
+                    ? $"{t.name.ToUpperInvariant()} {t.unit.hp}/{t.Stats.maxHp}{brk} " + (t.IsEnemy ? t.Affinities.Describe() : t.StatusTags)
+                    : $"{t.name.ToUpperInvariant()} - FALLEN (DEAD)";
                 sel.visual = on => arrow.enabled = on;
                 sel.visual(false);
                 sel.onClick = () => Choose(make(t));

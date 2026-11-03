@@ -5009,6 +5009,8 @@ namespace Obscure
 
             new ItemDef { id = "elixir", name = "Grave Elixir", heal = 80, mana = 30, description = "Restores 80 HP and 30 MP." },
 
+            new ItemDef { id = "phoenix_down", name = "Phoenix Plume", heal = 0, mana = 0, description = "A rare feather that revives a fallen ally with 30% HP. Usable in or out of combat.", isRevive = true, reviveHpPercent = 0.30f },
+
         }, i => i.id);
 
 

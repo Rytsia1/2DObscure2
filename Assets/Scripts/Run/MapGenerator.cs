@@ -82,12 +82,13 @@ namespace Obscure
             {
                 double r = rng.NextDouble();
                 var t = r < 0.45 ? NodeType.Battle
-                    : r < 0.68 ? NodeType.Event
-                    : r < 0.83 ? (floor >= 2 ? NodeType.Elite : NodeType.Battle)
-                    : r < 0.93 ? NodeType.Treasure
+                    : r < 0.65 ? NodeType.Event
+                    : r < 0.78 ? (floor >= 2 ? NodeType.Elite : NodeType.Battle)
+                    : r < 0.88 ? NodeType.Treasure
+                    : r < 0.94 && floor >= 1 && floor <= Floors - 3 ? NodeType.Shop
                     : floor >= 2 && floor <= Floors - 4 ? NodeType.Rest : NodeType.Event;
-                // No back-to-back elites or rests along any path.
-                if ((t == NodeType.Elite || t == NodeType.Rest) && parents.Any(p => p.type == t)) continue;
+                // No back-to-back elites, rests, or shops along any path.
+                if ((t == NodeType.Elite || t == NodeType.Rest || t == NodeType.Shop) && parents.Any(p => p.type == t)) continue;
                 return t;
             }
             return NodeType.Battle;
@@ -119,7 +120,7 @@ namespace Obscure
                 foreach (var id in n.next)
                 {
                     var m = byId[id];
-                    if ((n.type == NodeType.Elite || n.type == NodeType.Rest) && m.type == n.type) return $"{n.id}->{id} repeats {n.type}";
+                    if ((n.type == NodeType.Elite || n.type == NodeType.Rest || n.type == NodeType.Shop) && m.type == n.type) return $"{n.id}->{id} repeats {n.type}";
                 }
             }
 

@@ -584,6 +584,9 @@ namespace Obscure
         public readonly DateTime StartedUtc = DateTime.UtcNow;
         public DateTime? EndedUtc { get; private set; }
         public int Gold;
+        public int HubGold;
+        public int RunGold => Gold;
+        public DungeonShopData CurrentDungeonShop { get; set; }
 
         public RunStatus Status { get; private set; } = RunStatus.Active;
         public NodeDef Current { get; private set; }
@@ -600,7 +603,8 @@ namespace Obscure
             foreach (var itm in Database.StartingItems)
                 Inventory.AddConsumable(itm, 1);
             Rng = new Random(seed);
-            CurrentShop = EquipmentShopManager.GenerateShop(Map?.act ?? 1, Rng);
+            CurrentDungeonShop = DungeonShopData.Generate(Map?.act ?? 1, Rng);
+            CurrentShop = CurrentDungeonShop.equipmentShop;
         }
 
         public int Floor => Current == null ? 0 : Current.floor + 1;
@@ -631,6 +635,11 @@ namespace Obscure
             Current = n;
             if (n.type == NodeType.Boss) Stats.bossReached = true;
             if (n.type == NodeType.Treasure) PendingReward = RewardGenerator.ForTreasure(NodeRng(n), Relics);
+            if (n.type == NodeType.Shop)
+            {
+                CurrentDungeonShop = DungeonShopData.Generate(Map?.act ?? 1, NodeRng(n));
+                CurrentShop = CurrentDungeonShop.equipmentShop;
+            }
             if (n.type == NodeType.Event)
             {
                 CurrentEvent = Database.Events[n.eventId];
@@ -669,7 +678,11 @@ namespace Obscure
                 }
             }
 
-            foreach (var u in Party) if (!u.Alive) u.hp = 1; // the fallen rise after a won battle
+            if (enc.tier != Tier.Boss)
+            {
+                foreach (var u in Party) if (!u.Alive) u.hp = 1; // regular battle rise
+            }
+            // For Boss victory, fallen heroes remain dead and must be revived at Temple in Hub (GDD Section 6.3)
             float heal = Relics.Sum(id => Database.Relics[id].victoryHeal);
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));
             PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics);
@@ -847,6 +860,7 @@ namespace Obscure
         {
             if (data == null) return;
             Gold = data.gold;
+            HubGold = data.hubGold;
             Items.Clear();
             if (data.items != null) Items.AddRange(data.items);
             Relics.Clear();
@@ -931,8 +945,14 @@ namespace Obscure
             EndedUtc = null;
             PendingReward = null;
             BattleBuffs.Clear();
-            CurrentShop = EquipmentShopManager.GenerateShop(nextMap.act, Rng);
+            CurrentDungeonShop = DungeonShopData.Generate(nextMap.act, Rng);
+            CurrentShop = CurrentDungeonShop.equipmentShop;
             return true;
+        }
+
+        public int TransferRunGoldToHub()
+        {
+            return HubEconomy.TransferRunGoldToHub(this);
         }
 
         // Resets the entire run progression following a party defeat or new game start.

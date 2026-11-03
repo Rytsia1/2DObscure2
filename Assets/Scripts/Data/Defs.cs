@@ -6,7 +6,7 @@ using System.Linq;
 namespace Obscure
 {
     public enum Tier { Normal, Elite, Boss }
-    public enum NodeType { Battle, Elite, Event, Treasure, Rest, Boss }
+    public enum NodeType { Battle, Elite, Event, Treasure, Rest, Boss, Shop }
     public enum SkillKind { Physical, Magic, Heal, Support }
     public enum TargetType { Enemy, AllEnemies, Ally, AllAllies, Self }
 
@@ -207,6 +207,8 @@ namespace Obscure
     {
         public string id, name, description;
         public int heal, mana;
+        public bool isRevive;
+        public float reviveHpPercent = 0.30f;
     }
 
     public class EncounterDef

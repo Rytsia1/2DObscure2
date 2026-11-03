@@ -427,6 +427,19 @@ namespace Obscure
             "..r..",
         };
 
+        public static readonly string[] IconShop =
+        {
+            "..ggggg..",
+            ".ggggggg.",
+            "gg.ggg.gg",
+            "ggggggggg",
+            ".ggggggg.",
+            "..g.g.g..",
+            "..ggggg..",
+            "..ggggg..",
+            "...ggg...",
+        };
+
         public static string[] Icon(NodeType t) => t switch
         {
             NodeType.Battle => IconBattle,
@@ -434,6 +447,7 @@ namespace Obscure
             NodeType.Event => IconEvent,
             NodeType.Treasure => IconTreasure,
             NodeType.Rest => IconRest,
+            NodeType.Shop => IconShop,
             _ => IconBoss,
         };
 

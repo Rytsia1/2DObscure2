@@ -184,6 +184,8 @@ namespace Obscure
                     };
                 case ActionKind.Item:
                     if (a.item == null || !Items.Contains(a.item.id)) return "No such item.";
+                    if (a.item.isRevive)
+                        return (a.target != null && a.target.side == a.actor.side && !a.target.Alive) ? null : "Target is not a fallen ally.";
                     return IsAlly(a.actor, a.target) ? null : "Invalid target.";
             }
             return "Unknown action.";
@@ -361,12 +363,24 @@ namespace Obscure
                     var item = a.item;
                     Items.Remove(item.id);
                     Say($"{actor.name} uses {item.name} on {a.target.name}.");
-                    if (item.heal > 0) hits.Add(Heal(a.target, item.heal));
-                    if (item.mana > 0)
+                    if (item.isRevive && !a.target.Alive)
                     {
-                        int before = a.target.unit.mp;
-                        a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + item.mana);
-                        Say($"{a.target.name} recovers {a.target.unit.mp - before} MP.");
+                        int maxHp = a.target.Stats.maxHp;
+                        float pct = item.reviveHpPercent > 0 ? item.reviveHpPercent : 0.30f;
+                        int restoredHp = Math.Max(1, (int)Math.Round(maxHp * pct));
+                        a.target.unit.hp = Math.Min(maxHp, restoredHp);
+                        hits.Add(new Hit { target = a.target, amount = -a.target.unit.hp, heal = true });
+                        Say($"{a.target.name} rises from death with {a.target.unit.hp} HP!");
+                    }
+                    else if (a.target.Alive)
+                    {
+                        if (item.heal > 0) hits.Add(Heal(a.target, item.heal));
+                        if (item.mana > 0)
+                        {
+                            int before = a.target.unit.mp;
+                            a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + item.mana);
+                            Say($"{a.target.name} recovers {a.target.unit.mp - before} MP.");
+                        }
                     }
                     break;
             }

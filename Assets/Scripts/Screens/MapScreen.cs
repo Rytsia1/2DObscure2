@@ -64,7 +64,7 @@ namespace Obscure
             // Legend strip
             Ui.Rect(Root, MapX + 1, MapY + MapH - 24, MapW - 2, 1, Palette.Ink4, Ui.Panels + 1);
             Ui.Rect(Root, MapX + 1, MapY + MapH - 23, MapW - 2, 21, Palette.Ink1, Ui.Panels + 1);
-            var legend = new[] { (NodeType.Battle, "BATTLE"), (NodeType.Elite, "ELITE"), (NodeType.Event, "EVENT"), (NodeType.Treasure, "TREASURE"), (NodeType.Rest, "REST"), (NodeType.Boss, "BOSS") };
+            var legend = new[] { (NodeType.Battle, "BATTLE"), (NodeType.Elite, "ELITE"), (NodeType.Event, "EVENT"), (NodeType.Treasure, "TREASURE"), (NodeType.Shop, "SHOP"), (NodeType.Rest, "REST"), (NodeType.Boss, "BOSS") };
             int lx = MapX + 10;
             foreach (var (type, name) in legend)
             {
@@ -198,6 +198,7 @@ namespace Obscure
 
         static string Describe(NodeDef n) => n.type switch
         {
+            NodeType.Shop => "A WANDERING OUTPOST. TRADE RUN GOLD FOR SUPPLIES AND GEAR.",
             NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
             NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
             NodeType.Rest => "RECOVER THE PARTY OR IMPROVE A HERO.",

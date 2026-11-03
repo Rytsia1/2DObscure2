@@ -594,13 +594,33 @@ namespace Obscure
             if (selectedIndex < inventory.consumables.Count && party != null && party.Count > 0)
             {
                 var c = inventory.consumables[selectedIndex];
-                var target = party.FirstOrDefault(u => u.Alive && (u.hp < u.stats.maxHp || u.mp < u.stats.maxMp)) ?? party[0];
                 var itemDef = c.Definition;
                 if (itemDef != null)
                 {
+                    if (itemDef.isRevive)
+                    {
+                        var deadTarget = party.FirstOrDefault(u => !u.Alive);
+                        if (deadTarget == null)
+                        {
+                            feedbackLabel?.Set("NO FALLEN ALLY TO REVIVE.");
+                            return;
+                        }
+                        int maxHp = deadTarget.stats.maxHp;
+                        float pct = itemDef.reviveHpPercent > 0 ? itemDef.reviveHpPercent : 0.30f;
+                        deadTarget.hp = Math.Max(1, (int)Math.Round(maxHp * pct));
+                        deadTarget.RecalculateStats();
+                        inventory.RemoveConsumable(c.itemId, 1);
+                        if (Game.I?.Run?.Items != null) Game.I.Run.Items.Remove(c.itemId);
+                        feedbackLabel?.Set(PixelFont.Fit($"REVIVED {deadTarget.name.ToUpperInvariant()} WITH {deadTarget.hp} HP!", 520));
+                        Refresh();
+                        return;
+                    }
+
+                    var target = party.FirstOrDefault(u => u.Alive && (u.hp < u.stats.maxHp || u.mp < u.stats.maxMp)) ?? party[0];
                     if (itemDef.heal > 0) target.Heal(itemDef.heal);
                     if (itemDef.mana > 0) target.mp = Math.Min(target.stats.maxMp, target.mp + itemDef.mana);
                     inventory.RemoveConsumable(c.itemId, 1);
+                    if (Game.I?.Run?.Items != null) Game.I.Run.Items.Remove(c.itemId);
                     feedbackLabel?.Set(PixelFont.Fit($"USED {itemDef.name} ON {target.name.ToUpperInvariant()}.", 520));
                     Refresh();
                 }

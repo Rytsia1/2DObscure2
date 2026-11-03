@@ -74,7 +74,16 @@ namespace Obscure
         {
             Run.ClaimReward(choice);
             if (choice >= 0) Sfx.Play(Sound.Success);
-            Game.Go(Run.Won ? GameState.Victory : GameState.Map);
+            if (Run.Won)
+            {
+                Run.TransferRunGoldToHub();
+                if (Run.Act >= 8) Game.Go(GameState.Victory);
+                else Game.Go(GameState.Hub);
+            }
+            else
+            {
+                Game.Go(GameState.Map);
+            }
         }
     }
 }
