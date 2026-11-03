@@ -472,6 +472,53 @@ namespace Obscure
         public EquipmentInstance FindEquipment(string instanceId) =>
             equipment.FirstOrDefault(e => e.instanceId == instanceId);
 
+        public bool ContainsInstance(string instanceId) =>
+            equipment.Any(e => e.instanceId == instanceId);
+
+        public IEnumerable<EquipmentInstance> GetEquippedEquipment(string characterId = null) =>
+            equipment.Where(e => e.isEquipped && (string.IsNullOrEmpty(characterId) || e.boundCharacterId == characterId));
+
+        public IEnumerable<EquipmentInstance> GetUnequippedEquipment() =>
+            equipment.Where(e => !e.isEquipped);
+
+        public bool TryDiscardEquipment(string instanceId, out string error)
+        {
+            var item = FindEquipment(instanceId);
+            if (item == null)
+            {
+                error = "Item not found in inventory.";
+                return false;
+            }
+            if (item.isEquipped)
+            {
+                error = $"Cannot discard '{item.Definition?.name ?? item.definitionId}' because it is currently equipped by character '{item.boundCharacterId}'. Unequip it first.";
+                return false;
+            }
+            RemoveEquipment(instanceId);
+            error = null;
+            return true;
+        }
+
+        public bool TrySellEquipment(string instanceId, out int goldValue, out string error)
+        {
+            goldValue = 0;
+            var item = FindEquipment(instanceId);
+            if (item == null)
+            {
+                error = "Item not found in inventory.";
+                return false;
+            }
+            if (item.isEquipped)
+            {
+                error = $"Cannot sell '{item.Definition?.name ?? item.definitionId}' because it is currently equipped by character '{item.boundCharacterId}'. Unequip it first.";
+                return false;
+            }
+            goldValue = item.CalculateSellValue();
+            RemoveEquipment(instanceId);
+            error = null;
+            return true;
+        }
+
         public void AddConsumable(string itemId, int amount = 1)
         {
             if (string.IsNullOrEmpty(itemId) || amount <= 0) return;
@@ -765,6 +812,108 @@ namespace Obscure
             }
 
             return EquipFromInventory(unit, targetSlot, instance, inventory, out error);
+        }
+
+        public static bool AutoEquipWeapon(Unit unit, EquipmentInstance instance, InventoryRuntime inventory, out string error)
+        {
+            if (unit == null) { error = "Unit is null."; return false; }
+            if (instance?.Definition == null) { error = "Item is null."; return false; }
+
+            var def = instance.Definition;
+            bool canMain = EquipmentValidator.SlotMatches(def, EquipmentSlot.MainHand, unit.classDef) &&
+                           EquipmentValidator.Validate(def, EquipmentSlot.MainHand, unit.classDef, unit.race, unit.level, unit.FinalScores, unit.id) == null;
+            bool canSecond = EquipmentValidator.SlotMatches(def, EquipmentSlot.SecondHand, unit.classDef) &&
+                             EquipmentValidator.Validate(def, EquipmentSlot.SecondHand, unit.classDef, unit.race, unit.level, unit.FinalScores, unit.id) == null;
+
+            if (!canMain && !canSecond)
+            {
+                error = $"{def.name} is not a compatible weapon or off-hand for {unit.name} ({unit.classDef?.name}).";
+                return false;
+            }
+
+            EquipmentSlot targetSlot;
+            bool hasMain = unit.equippedInstances.ContainsKey(EquipmentSlot.MainHand) || unit.equipped.ContainsKey(EquipmentSlot.MainHand);
+            bool hasSecond = unit.equippedInstances.ContainsKey(EquipmentSlot.SecondHand) || unit.equipped.ContainsKey(EquipmentSlot.SecondHand);
+
+            if (!hasMain && canMain)
+            {
+                targetSlot = EquipmentSlot.MainHand;
+            }
+            else if (!hasSecond && canSecond)
+            {
+                targetSlot = EquipmentSlot.SecondHand;
+            }
+            else if (canMain)
+            {
+                targetSlot = EquipmentSlot.MainHand;
+            }
+            else
+            {
+                targetSlot = EquipmentSlot.SecondHand;
+            }
+
+            return EquipFromInventory(unit, targetSlot, instance, inventory, out error);
+        }
+
+        public static bool QuickEquip(Unit unit, EquipmentInstance instance, InventoryRuntime inventory, out string error)
+        {
+            if (unit == null) { error = "Unit is null."; return false; }
+            if (instance?.Definition == null) { error = "Item is null."; return false; }
+
+            var def = instance.Definition;
+            var category = def.GetEquipmentCategory();
+
+            if (category == EquipmentType.Accessory || EquipmentValidator.IsAccessorySlot(def.slot))
+            {
+                return AutoEquipAccessory(unit, instance, inventory, out error);
+            }
+
+            if (category == EquipmentType.Weapon || category == EquipmentType.OffHand || def.slot == EquipmentSlot.MainHand || def.slot == EquipmentSlot.SecondHand)
+            {
+                return AutoEquipWeapon(unit, instance, inventory, out error);
+            }
+
+            return EquipFromInventory(unit, def.slot, instance, inventory, out error);
+        }
+
+        public static bool TransferEquipment(Unit fromUnit, EquipmentSlot fromSlot, Unit toUnit, EquipmentSlot toSlot, InventoryRuntime inventory, out string error)
+        {
+            if (fromUnit == null) { error = "Source unit is null."; return false; }
+            if (toUnit == null) { error = "Destination unit is null."; return false; }
+
+            if (!fromUnit.equippedInstances.TryGetValue(fromSlot, out var item) || item == null)
+            {
+                error = $"No item equipped in {EquipmentSlots.DisplayName(fromSlot)} on {fromUnit.name}.";
+                return false;
+            }
+
+            var valErr = EquipmentValidator.Validate(item.Definition, toSlot, toUnit.classDef, toUnit.race, toUnit.level, toUnit.FinalScores, toUnit.id);
+            if (valErr != null)
+            {
+                error = $"Cannot transfer to {toUnit.name}: {valErr}";
+                return false;
+            }
+
+            bool toHasItem = toUnit.equippedInstances.TryGetValue(toSlot, out var destItem) && destItem != null;
+            if (toHasItem)
+            {
+                return SwapEquipmentBetweenUnits(fromUnit, fromSlot, toUnit, toSlot, out error);
+            }
+
+            fromUnit.Unequip(fromSlot);
+            if (!toUnit.TryEquip(toSlot, item, out error))
+            {
+                fromUnit.TryEquip(fromSlot, item, out _);
+                return false;
+            }
+
+            if (inventory != null && !inventory.equipment.Contains(item))
+            {
+                inventory.equipment.Add(item);
+            }
+
+            error = null;
+            return true;
         }
 
         public static bool SwapEquipmentBetweenUnits(

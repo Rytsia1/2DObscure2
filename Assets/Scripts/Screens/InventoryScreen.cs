@@ -181,9 +181,12 @@ namespace Obscure
             currentSlotFilter = currentSlotFilter switch
             {
                 null => EquipmentSlot.MainHand,
-                EquipmentSlot.MainHand => EquipmentSlot.HeadArmor,
+                EquipmentSlot.MainHand => EquipmentSlot.SecondHand,
+                EquipmentSlot.SecondHand => EquipmentSlot.HeadArmor,
                 EquipmentSlot.HeadArmor => EquipmentSlot.BodyArmor,
-                EquipmentSlot.BodyArmor => EquipmentSlot.Accessory1,
+                EquipmentSlot.BodyArmor => EquipmentSlot.LegArmor,
+                EquipmentSlot.LegArmor => EquipmentSlot.FootArmor,
+                EquipmentSlot.FootArmor => EquipmentSlot.Accessory1,
                 EquipmentSlot.Accessory1 => EquipmentSlot.Accessory2,
                 _ => null
             };
@@ -476,8 +479,8 @@ namespace Obscure
             var eq = GetSelectedEquipment();
             if (eq == null || party == null || party.Count == 0) return;
 
-            var targetHero = party.FirstOrDefault(u => EquipmentValidator.Validate(eq.Definition, eq.Definition.slot, u.classDef, u.race, u.level, u.FinalScores) == null) ?? party[0];
-            if (EquipmentManager.EquipFromInventory(targetHero, eq.Definition.slot, eq, inventory, out string err))
+            var targetHero = party.FirstOrDefault(u => EquipmentValidator.Validate(eq.Definition, eq.Definition.slot, u.classDef, u.race, u.level, u.FinalScores, u.id) == null) ?? party[0];
+            if (EquipmentManager.QuickEquip(targetHero, eq, inventory, out string err))
             {
                 feedbackLabel?.Set(PixelFont.Fit($"EQUIPPED {eq.Definition?.name} ON {targetHero.name.ToUpperInvariant()}", 610));
                 Refresh();
@@ -535,6 +538,12 @@ namespace Obscure
                 var eq = GetSelectedEquipment();
                 if (eq == null) return;
 
+                if (eq.isEquipped)
+                {
+                    feedbackLabel?.Set("CANNOT SELL EQUIPPED ITEM. UNEQUIP IT FIRST.");
+                    return;
+                }
+
                 if (EquipmentRarities.HasSpecialEffect(eq.rarity) && !confirmSellActive)
                 {
                     confirmSellActive = true;
@@ -563,6 +572,11 @@ namespace Obscure
             {
                 var eq = GetSelectedEquipment();
                 if (eq == null) return;
+                if (eq.isEquipped)
+                {
+                    feedbackLabel?.Set("CANNOT DISCARD EQUIPPED ITEM. UNEQUIP IT FIRST.");
+                    return;
+                }
                 inventory.RemoveEquipment(eq.instanceId);
                 feedbackLabel?.Set(PixelFont.Fit($"DISCARDED {eq.Definition?.name}.", 610));
                 Refresh();

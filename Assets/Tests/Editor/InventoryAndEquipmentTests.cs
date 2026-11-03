@@ -721,5 +721,223 @@ namespace Obscure.Tests
             int deltaStr = EquipmentManager.CalculateAbilityScoreDelta(hero, EquipmentSlot.MainHand, swordInst, Ability.STR);
             Assert.AreEqual(5, deltaStr);
         }
+
+        // =====================================================================
+        // 10. Stage 5 — Inventory Integration Unit Tests
+        // =====================================================================
+
+        [Test]
+        public void InventoryIntegration_Storage_Addition_And_Removal()
+        {
+            var inv = new InventoryRuntime();
+            var swordDef = Database.Equipment["iron_broadsword"];
+            var sword = new EquipmentInstance(swordDef, EquipmentRarity.Rare, 1);
+
+            // Add equipment
+            Assert.IsTrue(inv.TryAddEquipment(sword, out string errAdd), errAdd);
+            Assert.AreEqual(1, inv.EquipmentCount);
+            Assert.IsTrue(inv.ContainsInstance(sword.instanceId));
+            Assert.AreEqual(sword, inv.FindEquipment(sword.instanceId));
+            Assert.AreEqual(1, inv.GetUnequippedEquipment().Count());
+
+            // Sell equipment
+            Assert.IsTrue(inv.TrySellEquipment(sword.instanceId, out int goldValue, out string errSell), errSell);
+            Assert.Greater(goldValue, 0);
+            Assert.AreEqual(0, inv.EquipmentCount);
+            Assert.IsFalse(inv.ContainsInstance(sword.instanceId));
+
+            // Discard another item
+            var axe = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1);
+            Assert.IsTrue(inv.TryAddEquipment(axe, out _));
+            Assert.IsTrue(inv.TryDiscardEquipment(axe.instanceId, out string errDiscard), errDiscard);
+            Assert.AreEqual(0, inv.EquipmentCount);
+        }
+
+        [Test]
+        public void InventoryIntegration_PreventsDiscardingOrSelling_EquippedItems()
+        {
+            var inv = new InventoryRuntime();
+            var charA = new CharacterDef { id = "hero_knight", name = "Knight Hero", classId = "fighter", raceId = "human" };
+            var hero = new Unit(charA);
+
+            var sword = new EquipmentInstance(Database.Equipment["iron_broadsword"], EquipmentRarity.Epic, 1);
+            inv.TryAddEquipment(sword, out _);
+            Assert.IsTrue(EquipmentManager.EquipFromInventory(hero, EquipmentSlot.MainHand, sword, inv, out _));
+            Assert.IsTrue(sword.isEquipped);
+
+            // Attempting to discard or sell equipped item fails
+            Assert.IsFalse(inv.TryDiscardEquipment(sword.instanceId, out string errDiscard));
+            StringAssert.Contains("currently equipped", errDiscard);
+
+            Assert.IsFalse(inv.TrySellEquipment(sword.instanceId, out _, out string errSell));
+            StringAssert.Contains("currently equipped", errSell);
+
+            // Item remains safely equipped and in inventory
+            Assert.IsTrue(sword.isEquipped);
+            Assert.IsTrue(inv.ContainsInstance(sword.instanceId));
+
+            // After unequip, discard succeeds
+            Assert.IsTrue(EquipmentManager.UnequipToInventory(hero, EquipmentSlot.MainHand, inv, out _));
+            Assert.IsFalse(sword.isEquipped);
+            Assert.IsTrue(inv.TryDiscardEquipment(sword.instanceId, out _));
+            Assert.IsFalse(inv.ContainsInstance(sword.instanceId));
+        }
+
+        [Test]
+        public void InventoryIntegration_CapacityEnforcement_100SlotsExclusiveToEquipment()
+        {
+            var inv = new InventoryRuntime();
+
+            // Consumables and materials do not consume 100 equipment capacity
+            inv.AddConsumable("potion", 99);
+            inv.AddConsumable("ether", 50);
+            inv.AddMaterial("iron_ingot", 100);
+            inv.AddKeyItem("dungeon_pass");
+            Assert.AreEqual(0, inv.EquipmentCount);
+            Assert.IsFalse(inv.IsEquipmentFull);
+
+            // Fill 100 equipment slots
+            var swordDef = Database.Equipment["iron_broadsword"];
+            for (int i = 0; i < InventoryRuntime.MaxEquipmentCapacity; i++)
+            {
+                var item = new EquipmentInstance(swordDef, EquipmentRarity.Common, 1);
+                Assert.IsTrue(inv.TryAddEquipment(item, out _));
+            }
+            Assert.AreEqual(100, inv.EquipmentCount);
+            Assert.IsTrue(inv.IsEquipmentFull);
+
+            // 101st equipment addition rejected
+            var overflowItem = new EquipmentInstance(swordDef, EquipmentRarity.Legendary, 1);
+            Assert.IsFalse(inv.TryAddEquipment(overflowItem, out string errFull));
+            StringAssert.Contains("Inventory is full", errFull);
+
+            // Equipping an item from inventory frees up an unequipped inventory slot
+            var charA = new CharacterDef { id = "hero_fighter", name = "Fighter Hero", classId = "fighter", raceId = "human" };
+            var hero = new Unit(charA);
+            var itemToEquip = inv.equipment[0];
+            Assert.IsTrue(EquipmentManager.EquipFromInventory(hero, EquipmentSlot.MainHand, itemToEquip, inv, out _));
+            Assert.AreEqual(99, inv.EquipmentCount, "Equipped item does not consume inventory capacity.");
+            Assert.IsFalse(inv.IsEquipmentFull);
+
+            // Now overflow item can be added
+            Assert.IsTrue(inv.TryAddEquipment(overflowItem, out _));
+            Assert.AreEqual(100, inv.EquipmentCount);
+        }
+
+        [Test]
+        public void InventoryIntegration_AutoEquipWeapon_SelectsMainHandFirst_ThenSecondHand()
+        {
+            var charBarb = new CharacterDef { id = "hero_barb", name = "Barbarian Hero", classId = "barbarian", raceId = "human" };
+            var barb = new Unit(charBarb);
+            barb.Unequip(EquipmentSlot.MainHand);
+            barb.Unequip(EquipmentSlot.SecondHand);
+
+            var inv = new InventoryRuntime();
+            var axe1 = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Common, 1);
+            var axe2 = new EquipmentInstance(Database.Equipment["steel_axe"], EquipmentRarity.Uncommon, 1);
+
+            // 1. First 1H Axe goes to empty Main Hand
+            Assert.IsTrue(EquipmentManager.AutoEquipWeapon(barb, axe1, inv, out string err1), err1);
+            Assert.AreEqual(axe1, barb.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.IsFalse(barb.equippedInstances.ContainsKey(EquipmentSlot.SecondHand));
+
+            // 2. Second 1H Axe goes to empty Second Hand (Dual-wielding Barbarian)
+            Assert.IsTrue(EquipmentManager.AutoEquipWeapon(barb, axe2, inv, out string err2), err2);
+            Assert.AreEqual(axe1, barb.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(axe2, barb.equippedInstances[EquipmentSlot.SecondHand]);
+
+            // 3. Great Axe (2H/Main Hand only) replaces Main Hand
+            var greataxe = new EquipmentInstance(Database.Equipment["battle_greataxe"], EquipmentRarity.Rare, 1);
+            Assert.IsTrue(EquipmentManager.AutoEquipWeapon(barb, greataxe, inv, out string err3), err3);
+            Assert.AreEqual(greataxe, barb.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(axe2, barb.equippedInstances[EquipmentSlot.SecondHand]);
+        }
+
+        [Test]
+        public void InventoryIntegration_QuickEquip_RoutesCorrectlyByItemCategory()
+        {
+            var charFighter = new CharacterDef { id = "hero_fighter", name = "Fighter Hero", classId = "fighter", raceId = "human" };
+            var hero = new Unit(charFighter);
+            hero.Unequip(EquipmentSlot.MainHand);
+            hero.Unequip(EquipmentSlot.BodyArmor);
+            hero.Unequip(EquipmentSlot.Accessory1);
+            hero.Unequip(EquipmentSlot.Accessory2);
+
+            var inv = new InventoryRuntime();
+
+            // 1. Armor routes to BodyArmor slot
+            var armorDef = new EquipmentDef
+            {
+                id = "plate_chest",
+                name = "Plate Chest",
+                slot = EquipmentSlot.BodyArmor,
+                equipmentType = EquipmentType.Body,
+                physicalDefense = 10
+            };
+            var armorInst = new EquipmentInstance(armorDef, EquipmentRarity.Common, 1);
+            Assert.IsTrue(EquipmentManager.QuickEquip(hero, armorInst, inv, out string errArmor), errArmor);
+            Assert.AreEqual(armorInst, hero.equippedInstances[EquipmentSlot.BodyArmor]);
+
+            // 2. Weapon routes to MainHand
+            var swordInst = new EquipmentInstance(Database.Equipment["iron_broadsword"], EquipmentRarity.Common, 1);
+            Assert.IsTrue(EquipmentManager.QuickEquip(hero, swordInst, inv, out string errWeapon), errWeapon);
+            Assert.AreEqual(swordInst, hero.equippedInstances[EquipmentSlot.MainHand]);
+
+            // 3. Accessory routes to Accessory 1 then Accessory 2
+            var ringDef = new EquipmentDef
+            {
+                id = "ruby_ring",
+                name = "Ruby Ring",
+                slot = EquipmentSlot.Accessory1,
+                equipmentType = EquipmentType.Accessory
+            };
+            var ring1 = new EquipmentInstance(ringDef, EquipmentRarity.Common, 1);
+            var ring2 = new EquipmentInstance(ringDef, EquipmentRarity.Uncommon, 1);
+
+            Assert.IsTrue(EquipmentManager.QuickEquip(hero, ring1, inv, out _));
+            Assert.AreEqual(ring1, hero.equippedInstances[EquipmentSlot.Accessory1]);
+
+            Assert.IsTrue(EquipmentManager.QuickEquip(hero, ring2, inv, out _));
+            Assert.AreEqual(ring2, hero.equippedInstances[EquipmentSlot.Accessory2]);
+        }
+
+        [Test]
+        public void InventoryIntegration_TransferEquipment_BetweenPartyMembers()
+        {
+            var charA = new CharacterDef { id = "hero_a", name = "Hero A", classId = "fighter", raceId = "human" };
+            var charB = new CharacterDef { id = "hero_b", name = "Hero B", classId = "fighter", raceId = "human" };
+            var heroA = new Unit(charA);
+            var heroB = new Unit(charB);
+            heroA.Unequip(EquipmentSlot.MainHand);
+            heroB.Unequip(EquipmentSlot.MainHand);
+
+            var inv = new InventoryRuntime();
+            var sword = new EquipmentInstance(Database.Equipment["iron_broadsword"], EquipmentRarity.Common, 1);
+            var mace = new EquipmentInstance(Database.Equipment["sanctified_mace"], EquipmentRarity.Rare, 1);
+
+            heroA.TryEquip(EquipmentSlot.MainHand, sword, out _);
+
+            // 1. One-way transfer: Hero A has sword, Hero B has empty Main Hand
+            Assert.IsTrue(EquipmentManager.TransferEquipment(heroA, EquipmentSlot.MainHand, heroB, EquipmentSlot.MainHand, inv, out string errTransfer), errTransfer);
+            Assert.IsFalse(heroA.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+            Assert.AreEqual(sword, heroB.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(heroB.id, sword.boundCharacterId);
+
+            // 2. Two-way swap: Hero A now equips mace, then transfer between A (mace) and B (sword)
+            heroA.TryEquip(EquipmentSlot.MainHand, mace, out _);
+            Assert.IsTrue(EquipmentManager.TransferEquipment(heroA, EquipmentSlot.MainHand, heroB, EquipmentSlot.MainHand, inv, out string errSwap), errSwap);
+            Assert.AreEqual(sword, heroA.equippedInstances[EquipmentSlot.MainHand]);
+            Assert.AreEqual(mace, heroB.equippedInstances[EquipmentSlot.MainHand]);
+
+            // 3. Incompatible transfer rollback
+            var charWizard = new CharacterDef { id = "hero_wiz", name = "Wizard Hero", classId = "wizard", raceId = "human" };
+            var wizard = new Unit(charWizard);
+            wizard.Unequip(EquipmentSlot.MainHand);
+
+            Assert.IsFalse(EquipmentManager.TransferEquipment(heroA, EquipmentSlot.MainHand, wizard, EquipmentSlot.MainHand, inv, out string errFail));
+            StringAssert.Contains("Cannot transfer", errFail);
+            Assert.AreEqual(sword, heroA.equippedInstances[EquipmentSlot.MainHand], "Hero A must retain sword after failed transfer.");
+            Assert.IsFalse(wizard.equippedInstances.ContainsKey(EquipmentSlot.MainHand));
+        }
     }
 }
