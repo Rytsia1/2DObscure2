@@ -20,8 +20,10 @@ namespace Obscure.Editor
 
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine(summary);
-                void CollectFailures(ITestResultAdaptor r)
+                void CollectTests(ITestResultAdaptor r)
                 {
+                    if (!r.HasChildren && r.TestStatus == TestStatus.Passed)
+                        sb.AppendLine($"PASSED: {r.Test.FullName}");
                     if (r.TestStatus == TestStatus.Failed)
                     {
                         if (!r.HasChildren)
@@ -29,10 +31,10 @@ namespace Obscure.Editor
                     }
                     if (r.HasChildren)
                     {
-                        foreach (var c in r.Children) CollectFailures(c);
+                        foreach (var c in r.Children) CollectTests(c);
                     }
                 }
-                CollectFailures(result);
+                CollectTests(result);
 
                 File.WriteAllText("TestResults.txt", sb.ToString());
             }

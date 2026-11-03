@@ -33,6 +33,20 @@ namespace Obscure
             }).ToList();
             Items = items;
             Rng = rng;
+
+            // Background Perk Rank V: Wayfarer (10% chance to gain 10% Speed for 2 turns at start of battle)
+            foreach (var p in Party)
+            {
+                if (p.unit?.background != null)
+                {
+                    var rank = p.unit.background.GetRank(p.unit.level);
+                    if (rank != null && rank.battleStartSpeedBuffChance > 0f)
+                    {
+                        if (Rng.NextDouble() < rank.battleStartSpeedBuffChance)
+                            p.wayfarerSpeedBuffTurns = rank.battleStartSpeedBuffDuration;
+                    }
+                }
+            }
         }
 
         public IEnumerable<Combatant> All => Party.Concat(Enemies);
@@ -96,6 +110,11 @@ namespace Obscure
         // Start of the bearer's turn: cooldowns and status durations tick, DoTs bite, Break recovers.
         void StartTurn(Combatant c)
         {
+            c.hasActedInBattle = true;
+            c.ResetTurnBackgroundPerks();
+            if (c.wayfarerSpeedBuffTurns > 0)
+                c.wayfarerSpeedBuffTurns--;
+
             foreach (var id in c.cooldowns.Keys.ToList())
                 if (--c.cooldowns[id] <= 0) c.cooldowns.Remove(id);
 
@@ -250,6 +269,21 @@ namespace Obscure
                     actor.unit.mp -= actor.GetEffectiveMpCost(s);
                     if (s.cooldown > 0) actor.cooldowns[s.id] = s.cooldown;
                     Say($"{actor.name} uses {s.name}.{(power > QteConfig.PerfectPower ? " Critical!" : "")}");
+
+                    // Sage Rank V: After using an Active Skill, 10% chance to restore MP equal to 5% of Max MP.
+                    if (actor.unit?.background != null)
+                    {
+                        var bgRank = actor.unit.background.GetRank(actor.unit.level);
+                        if (bgRank != null && bgRank.skillMpRefundChance > 0f)
+                        {
+                            if (Rng.NextDouble() < bgRank.skillMpRefundChance)
+                            {
+                                int refund = Math.Max(1, (int)Math.Round(actor.Stats.maxMp * bgRank.skillMpRefundPercent));
+                                actor.unit.RestoreMp(refund);
+                                Say($"{actor.name}'s Enlightened Mind restores {refund} MP.");
+                            }
+                        }
+                    }
                     foreach (var t in Targets(actor, s.target, a.target))
                     {
                         if (s.appliesNullBreak && s.nullBreakTarget.IsValid)
@@ -348,7 +382,7 @@ namespace Obscure
             _ => new[] { chosen },
         };
 
-        void Apply(Combatant t, StatusApply ap, Combatant source, float power)
+        public void Apply(Combatant t, StatusApply ap, Combatant source, float power)
         {
             if (!t.Alive) return;
 
@@ -385,7 +419,21 @@ namespace Obscure
             else
             {
                 if (t.StatusController.ResistanceProfile.GetEffectiveResistance() > 0f)
+                {
                     Say($"{t.name} resists {StatusInfo.Name(ap.id)}!");
+                    // Hermit Rank V: When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn.
+                    if (t.unit?.background != null && !t.hermitResistedThisTurn)
+                    {
+                        var bgRank = t.unit.background.GetRank(t.unit.level);
+                        if (bgRank != null && bgRank.statusResistMpRestorePercent > 0f)
+                        {
+                            t.hermitResistedThisTurn = true;
+                            int mpRestore = Math.Max(1, (int)Math.Round(t.Stats.maxMp * bgRank.statusResistMpRestorePercent));
+                            t.unit.RestoreMp(mpRestore);
+                            Say($"{t.name}'s Tranquil Spirit restores {mpRestore} MP.");
+                        }
+                    }
+                }
             }
         }
 
@@ -410,8 +458,89 @@ namespace Obscure
                 amount = Math.Max(1, (int)Math.Round(amount * QteConfig.GoodDefense));
                 note += " (blocked)";
             }
+
+            // Background Perk: Charlatan (Bonus damage vs debuffed targets & unacted targets)
+            if (attacker?.unit?.background != null && t != null)
+            {
+                var bgRank = attacker.unit.background.GetRank(attacker.unit.level);
+                if (bgRank != null)
+                {
+                    float chBonus = 0f;
+                    if (t.HasDebuff && bgRank.damageVsDebuffedBonus > 0f)
+                    {
+                        chBonus += bgRank.damageVsDebuffedBonus;
+                    }
+                    if (bgRank.firstAttackUnactedBonus > 0f && !t.hasActedInBattle && attacker.charlatanFirstAttackedTargets.Add(t))
+                    {
+                        chBonus += bgRank.firstAttackUnactedBonus;
+                    }
+                    if (chBonus > 0f)
+                    {
+                        amount = Math.Max(1, (int)Math.Round(amount * (1f + chBonus)));
+                    }
+                }
+            }
+
+            // Background Perk: Soldier (War Veteran retaliation bonus on next physical damage instance)
+            if (attacker != null && (element == Element.Physical || (skill != null && skill.kind == SkillKind.Physical)))
+            {
+                if (attacker.soldierRetaliationReady && attacker.unit?.background != null)
+                {
+                    var bgRank = attacker.unit.background.GetRank(attacker.unit.level);
+                    if (bgRank != null && bgRank.onDamagedNextPhysicalDamageBonus > 0f)
+                    {
+                        amount = Math.Max(1, (int)Math.Round(amount * (1f + bgRank.onDamagedNextPhysicalDamageBonus)));
+                        attacker.soldierRetaliationReady = false;
+                        Say($"{attacker.name}'s War Veteran retaliation empowers the strike!");
+                    }
+                }
+            }
+
+            // Background Perk: Guard (Physical Damage Taken reduction)
+            if (t?.unit?.background != null && (element == Element.Physical || (skill != null && skill.kind == SkillKind.Physical)))
+            {
+                var bgRank = t.unit.background.GetRank(t.unit.level);
+                if (bgRank != null && bgRank.physicalDamageTakenReduction > 0f)
+                {
+                    float red = bgRank.physicalDamageTakenReduction;
+                    if (bgRank.lowHpPhysicalDamageTakenReduction > 0f && t.unit.hp < t.Stats.maxHp * 0.30f)
+                    {
+                        red += bgRank.lowHpPhysicalDamageTakenReduction;
+                    }
+                    amount = Math.Max(1, (int)Math.Round(amount * (1f - red)));
+                }
+            }
+
             var hit = Damage(t, amount, note);
             hit.effect = effect;
+
+            // Background Perk: Soldier (record retaliation when damaged by enemy attack)
+            if (t != null && t.Alive && attacker != null && attacker.side != t.side && amount > 0)
+            {
+                if (t.unit?.background != null)
+                {
+                    var bgRank = t.unit.background.GetRank(t.unit.level);
+                    if (bgRank != null && bgRank.onDamagedNextPhysicalDamageBonus > 0f && !t.soldierDamagedThisTurn)
+                    {
+                        t.soldierDamagedThisTurn = true;
+                        t.soldierRetaliationReady = true;
+                    }
+                }
+            }
+
+            // Background Perk: Scribe (track attacks on same enemy, granting crit after 3 attacks)
+            if (attacker != null && t != null && attacker.unit?.background != null)
+            {
+                var bgRank = attacker.unit.background.GetRank(attacker.unit.level);
+                if (bgRank != null && bgRank.scribeTargetAttackThreshold > 0)
+                {
+                    if (!attacker.scribeAttackCounts.ContainsKey(t)) attacker.scribeAttackCounts[t] = 0;
+                    if (attacker.scribeAttackCounts[t] >= bgRank.scribeTargetAttackThreshold)
+                        attacker.scribeAttackCounts[t] = 0;
+                    else
+                        attacker.scribeAttackCounts[t]++;
+                }
+            }
 
             // Break Gauge reduction on enemy targets when struck by an attack or offensive skill.
             if (t.Alive && t.HasBreakGauge && attacker != null && attacker.side != t.side)
@@ -451,10 +580,38 @@ namespace Obscure
 
         Hit Heal(Combatant t, int amount)
         {
+            if (t?.unit?.background != null)
+            {
+                var bgRank = t.unit.background.GetRank(t.unit.level);
+                if (bgRank != null && bgRank.healingReceivedBonus > 0f)
+                {
+                    amount = (int)Math.Round(amount * (1f + bgRank.healingReceivedBonus));
+                }
+            }
             int before = t.unit.hp;
             t.unit.Heal(amount);
             Say($"{t.name} recovers {t.unit.hp - before} HP.");
             return new Hit { target = t, amount = t.unit.hp - before, heal = true };
+        }
+
+        // Post-battle recovery for Farmer (HP) and Noble (MP) Background Perks (Rank V).
+        public void ApplyPostBattleRecovery()
+        {
+            if (Outcome != Outcome.Victory) return;
+            foreach (var p in Party)
+            {
+                if (p.Alive && p.unit?.background != null)
+                {
+                    var rank = p.unit.background.GetRank(p.unit.level);
+                    if (rank != null)
+                    {
+                        if (rank.postBattleHpRestorePercent > 0f)
+                            p.unit.Heal(Math.Max(1, (int)Math.Round(p.Stats.maxHp * rank.postBattleHpRestorePercent)));
+                        if (rank.postBattleMpRestorePercent > 0f)
+                            p.unit.RestoreMp(Math.Max(1, (int)Math.Round(p.Stats.maxMp * rank.postBattleMpRestorePercent)));
+                    }
+                }
+            }
         }
 
         void Say(string line)

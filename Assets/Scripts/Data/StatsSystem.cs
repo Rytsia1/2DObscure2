@@ -1048,6 +1048,13 @@ namespace Obscure
                     acc += p.rangedAccuracyBonus;
             }
 
+            if (attackerUnit.background != null)
+            {
+                var bgRank = attackerUnit.background.GetRank(attackerUnit.level);
+                if (bgRank != null && bgRank.accuracyBonus > 0)
+                    acc += bgRank.accuracyBonus;
+            }
+
             return acc;
         }
 

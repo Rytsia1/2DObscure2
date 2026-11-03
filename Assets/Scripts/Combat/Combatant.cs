@@ -36,6 +36,21 @@ namespace Obscure
         public bool OverdriveExhaustPending;
         public bool UsedOceansEmbrace;
 
+        // Background System per-battle and per-turn state (Background System Section 3)
+        public readonly HashSet<Combatant> charlatanFirstAttackedTargets = new HashSet<Combatant>();
+        public bool soldierDamagedThisTurn;
+        public bool soldierRetaliationReady;
+        public bool hermitResistedThisTurn;
+        public int wayfarerSpeedBuffTurns;
+        public readonly Dictionary<Combatant, int> scribeAttackCounts = new Dictionary<Combatant, int>();
+        public bool hasActedInBattle;
+
+        public void ResetTurnBackgroundPerks()
+        {
+            soldierDamagedThisTurn = false;
+            hermitResistedThisTurn = false;
+        }
+
         // Modular Damage System per-battle state (Prompt Sections 5, 7, 8, 9)
         public readonly EnemyAffinityProfile AffinityProfile;
         public readonly NullBreakController NullBreak = new NullBreakController();
@@ -114,7 +129,21 @@ namespace Obscure
         public int Atk => Scale(unit.stats.atk + LowHpPhysicalPowerBonus, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
         public int RangedAtk => Scale(unit.Derived.rangedPower, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
         public int Magic => Scale(unit.stats.mag, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
-        public int HealPower => Scale(unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag, 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int HealPower
+        {
+            get
+            {
+                float bgBonus = 0f;
+                if (unit?.background != null)
+                {
+                    var rank = unit.background.GetRank(unit.level);
+                    if (rank != null) bgBonus = rank.healingDealtBonus;
+                }
+                return Scale(
+                    unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag,
+                    (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown)) * (1f + bgBonus));
+            }
+        }
         public int SupportPower => unit.Derived.supportPower;
 
         // Physical Defense and Magic Defense are separate (PRD Section 8.8).
@@ -123,7 +152,16 @@ namespace Obscure
             unit.Derived.magicDefense > 0 || !IsEnemy ? unit.Derived.magicDefense : unit.stats.def,
             1 + Mag(StatusId.MagicDefenseUp) - Mag(StatusId.MagicDefenseDown));
 
-        public int Speed => Scale(unit.stats.spd, (1 - Mag(StatusId.Slow) - Mag(StatusId.Freeze)) * StatusController.GetSpeedMultiplier());
+        public int Speed
+        {
+            get
+            {
+                float bgSpeedMult = wayfarerSpeedBuffTurns > 0 ? 1.10f : 1.0f;
+                return Scale(
+                    unit.stats.spd,
+                    (1 - Mag(StatusId.Slow) - Mag(StatusId.Freeze)) * StatusController.GetSpeedMultiplier() * bgSpeedMult);
+            }
+        }
         public int Initiative => Speed;
         public int ActionSpeed => Scale(unit.Derived.actionSpeed, (1 - Mag(StatusId.Slow) - Mag(StatusId.Freeze)) * StatusController.GetSpeedMultiplier());
 
@@ -145,6 +183,15 @@ namespace Obscure
                 foreach (var p in unit.passives)
                     if (p != null && p.critChanceVsDebuffedBonus != 0)
                         crit += p.critChanceVsDebuffedBonus;
+            }
+            if (target != null && unit?.background != null)
+            {
+                var rank = unit.background.GetRank(unit.level);
+                if (rank != null && rank.scribeNextAttackCritBonus > 0f)
+                {
+                    if (scribeAttackCounts.TryGetValue(target, out int count) && count >= rank.scribeTargetAttackThreshold)
+                        crit += (int)Math.Round(rank.scribeNextAttackCritBonus * 100f);
+                }
             }
             return Math.Clamp(crit, 0, 100);
         }
@@ -183,15 +230,27 @@ namespace Obscure
         }
 
         // Wizard Starter Passive — Arcane Affinity: reduces the MP cost of Arcane Spells.
+        // Sage Background Perk — Learned Mind: percentage reduction with min 1 MP floor.
         public int GetEffectiveMpCost(SkillDef skill)
         {
             if (skill == null) return 0;
-            int cost = skill.mpCost;
+            int baseCost = skill.mpCost;
+            if (baseCost <= 0) return 0;
+            int cost = baseCost;
             if (skill.HasTag("Arcane") && unit?.passives != null)
             {
                 foreach (var p in unit.passives)
                     if (p != null && p.arcaneMpCostReduction != 0)
                         cost -= p.arcaneMpCostReduction;
+            }
+            if (unit?.background != null)
+            {
+                var rank = unit.background.GetRank(unit.level);
+                if (rank != null && rank.mpCostReductionPercent > 0f)
+                {
+                    cost = (int)Math.Round(cost * (1f - rank.mpCostReductionPercent));
+                    if (cost < 1) cost = 1; // "An Active Skill with an MP cost cannot become free through this perk; its minimum cost remains 1 MP."
+                }
             }
             return Math.Max(0, cost);
         }

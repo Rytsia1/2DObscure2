@@ -48,7 +48,7 @@ namespace Obscure
 
             race = d.raceId != null && Database.Races.TryGetValue(d.raceId, out var r) ? r : Database.Races["human"];
             classDef = d.classId != null && Database.Classes.TryGetValue(d.classId, out var c) ? c : Database.Classes["knight"];
-            background = d.backgroundId != null && Database.Backgrounds.TryGetValue(d.backgroundId, out var bg) ? bg : Database.Backgrounds["oathsworn"];
+            background = d.backgroundId != null && Database.Backgrounds.TryGetValue(d.backgroundId, out var bg) ? bg : (Database.Backgrounds.TryGetValue("guard", out var g) ? g : Database.Backgrounds.Values.First());
 
             abilities.baseScores = d.baseScores.Equals(default) ? AbilityScores.DefaultBase : d.baseScores;
             abilities.racialModifiers = race.abilityModifiers;
@@ -191,7 +191,7 @@ namespace Obscure
         {
             var list = new List<StatModifier>();
             if (race?.passiveBonuses != null) list.AddRange(race.passiveBonuses);
-            if (background?.passiveEffects != null) list.AddRange(background.passiveEffects);
+            if (background != null) list.AddRange(background.GetActiveModifiers(level));
             foreach (var p in passives)
                 if (p.modifiers != null) list.AddRange(p.modifiers);
             list.AddRange(permanentModifiers);
@@ -288,6 +288,11 @@ namespace Obscure
         public void Heal(int amount)
         {
             if (Alive) hp = Math.Min(stats.maxHp, hp + amount);
+        }
+
+        public void RestoreMp(int amount)
+        {
+            if (Alive) mp = Math.Min(stats.maxMp, mp + amount);
         }
 
         // Permanent stat gain (relics, upgrades). Max HP/MP gains also fill the new capacity.
@@ -647,6 +652,23 @@ namespace Obscure
             Stats.battlesWon++;
             if (enc.tier == Tier.Elite) Stats.elitesWon++;
             if (enc.tier == Tier.Boss) Stats.bossDefeated = true;
+
+            // Background Perk Rank V Post-battle Recovery (Farmer & Noble)
+            foreach (var u in Party)
+            {
+                if (u.Alive && u.background != null)
+                {
+                    var rank = u.background.GetRank(u.level);
+                    if (rank != null)
+                    {
+                        if (rank.postBattleHpRestorePercent > 0f)
+                            u.Heal(Math.Max(1, (int)Math.Round(u.stats.maxHp * rank.postBattleHpRestorePercent)));
+                        if (rank.postBattleMpRestorePercent > 0f)
+                            u.RestoreMp(Math.Max(1, (int)Math.Round(u.stats.maxMp * rank.postBattleMpRestorePercent)));
+                    }
+                }
+            }
+
             foreach (var u in Party) if (!u.Alive) u.hp = 1; // the fallen rise after a won battle
             float heal = Relics.Sum(id => Database.Relics[id].victoryHeal);
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));

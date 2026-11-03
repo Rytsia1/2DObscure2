@@ -2082,92 +2082,409 @@ namespace Obscure
 
 
 
-        // ---- 6. Backgrounds ----
+        // ---- 6. Backgrounds (Background System Section 3) ----
+
+        public static readonly string[] PlayableBackgroundIds = new[]
+        {
+            "acolyte", "charlatan", "guard", "hermit", "farmer",
+            "noble", "sage", "soldier", "wayfarer", "scribe"
+        };
 
         public static readonly Dictionary<string, BackgroundDef> Backgrounds = Index(new[]
-
         {
-
+            // 1. Acolyte — Faithful Devotion
             new BackgroundDef
-
             {
+                id = "acolyte", name = "Acolyte",
+                narrativeIdentity = "Spiritual devotion, protection, and recovery.",
+                description = "Acolyte gains strength through faith and devotion. Its perk supports keeping the character and party alive.",
+                perkName = "Faithful Devotion",
+                perkDescription = "Empowers outgoing and incoming healing.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "Faithful Heart", perkDescription = "Healing dealt increases by 5%.", healingDealtBonus = 0.05f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Divine Resilience", perkDescription = "Healing dealt increases to 8%.", healingDealtBonus = 0.08f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Blessed Recovery", perkDescription = "Healing dealt increases to 10%. Healing received also increases by 5%.", healingDealtBonus = 0.10f, healingReceivedBonus = 0.05f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Sanctified Spirit", perkDescription = "Healing dealt increases to 12%, and healing received increases by 8%.", healingDealtBonus = 0.12f, healingReceivedBonus = 0.08f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Faith Unbroken", perkDescription = "Healing dealt increases to 15%, and healing received increases by 10%.", healingDealtBonus = 0.15f, healingReceivedBonus = 0.10f }
+                }
+            },
 
+            // 2. Charlatan — Master of Deception
+            new BackgroundDef
+            {
+                id = "charlatan", name = "Charlatan",
+                narrativeIdentity = "Manipulation, deception, and exploiting enemy weaknesses.",
+                description = "Turns deception into a combat advantage when enemies are impaired or affected by debuffs.",
+                perkName = "Master of Deception",
+                perkDescription = "Increases damage dealt to debuffed foes and strikes unprepared targets.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "False Promise", perkDescription = "Damage dealt to enemies affected by a debuff increases by 3%.", damageVsDebuffedBonus = 0.03f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Cunning Exploit", perkDescription = "The damage bonus increases to 5%.", damageVsDebuffedBonus = 0.05f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Deceptive Advantage", perkDescription = "The damage bonus increases to 7%.", damageVsDebuffedBonus = 0.07f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Master Manipulator", perkDescription = "The damage bonus increases to 10%.", damageVsDebuffedBonus = 0.10f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Perfect Deception", perkDescription = "The damage bonus increases to 12%. The character's first attack against an enemy that has not yet acted in the battle deals an additional 5% damage.", damageVsDebuffedBonus = 0.12f, firstAttackUnactedBonus = 0.05f }
+                }
+            },
+
+            // 3. Guard — Guardian's Discipline
+            new BackgroundDef
+            {
+                id = "guard", name = "Guard",
+                narrativeIdentity = "Defense, vigilance, and protection.",
+                description = "Experienced protector providing consistent physical defense for oneself and companions.",
+                perkName = "Guardian's Discipline",
+                perkDescription = "Reduces physical damage taken, with reinforced resistance at low health.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "Watchful Guard", perkDescription = "Physical Damage Taken is reduced by 3%.", physicalDamageTakenReduction = 0.03f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Steady Defense", perkDescription = "Physical Damage Taken is reduced by 5%.", physicalDamageTakenReduction = 0.05f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Defensive Training", perkDescription = "Physical Damage Taken is reduced by 7%.", physicalDamageTakenReduction = 0.07f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Guardian's Resolve", perkDescription = "Physical Damage Taken is reduced by 9%.", physicalDamageTakenReduction = 0.09f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Unyielding Guardian", perkDescription = "Physical Damage Taken is reduced by 10%. While HP is below 30%, Physical Damage Taken is reduced by an additional 5%.", physicalDamageTakenReduction = 0.10f, lowHpPhysicalDamageTakenReduction = 0.05f }
+                }
+            },
+
+            // 4. Hermit — Solitary Wisdom
+            new BackgroundDef
+            {
+                id = "hermit", name = "Hermit",
+                narrativeIdentity = "Solitude, endurance, and self-control.",
+                description = "Learned to endure difficult circumstances without relying on others, fortifying resistance against afflictions.",
+                perkName = "Solitary Wisdom",
+                perkDescription = "Increases Status Effect Resistance and restores MP when resisting negative effects.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef
+                    {
+                        rank = 1, requiredLevel = 1, perkName = "Quiet Endurance", perkDescription = "Status Effect Resistance increases by 5%.",
+                        statusResistanceBonus = 5,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 5, ModifierKind.Flat, ModifierSource.Background, "Quiet Endurance") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 2, requiredLevel = 4, perkName = "Solitary Resolve", perkDescription = "Status Effect Resistance increases to 8%.",
+                        statusResistanceBonus = 8,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 8, ModifierKind.Flat, ModifierSource.Background, "Solitary Resolve") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 3, requiredLevel = 7, perkName = "Inner Balance", perkDescription = "Status Effect Resistance increases to 10%.",
+                        statusResistanceBonus = 10,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 10, ModifierKind.Flat, ModifierSource.Background, "Inner Balance") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 4, requiredLevel = 10, perkName = "Unshaken Mind", perkDescription = "Status Effect Resistance increases to 12%.",
+                        statusResistanceBonus = 12,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 12, ModifierKind.Flat, ModifierSource.Background, "Unshaken Mind") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 5, requiredLevel = 13, perkName = "Tranquil Spirit", perkDescription = "Status Effect Resistance increases to 15%. When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn.",
+                        statusResistanceBonus = 15,
+                        statusResistMpRestorePercent = 0.03f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 15, ModifierKind.Flat, ModifierSource.Background, "Tranquil Spirit") }
+                    }
+                }
+            },
+
+            // 5. Farmer — Hardy Harvest
+            new BackgroundDef
+            {
+                id = "farmer", name = "Farmer",
+                narrativeIdentity = "Hard work, physical endurance, and a simple life.",
+                description = "Accustomed to demanding work and harsh conditions, enhancing vitality and post-battle recovery.",
+                perkName = "Hardy Harvest",
+                perkDescription = "Increases Max HP and provides restorative recovery following combat encounters.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef
+                    {
+                        rank = 1, requiredLevel = 1, perkName = "Hardy Worker", perkDescription = "Max HP increases by 3%.",
+                        maxHpPercentBonus = 0.03f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 0.03f, ModifierKind.PercentAdd, ModifierSource.Background, "Hardy Worker") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 2, requiredLevel = 4, perkName = "Sturdy Constitution", perkDescription = "Max HP increases to 5%.",
+                        maxHpPercentBonus = 0.05f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 0.05f, ModifierKind.PercentAdd, ModifierSource.Background, "Sturdy Constitution") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 3, requiredLevel = 7, perkName = "Seasoned Laborer", perkDescription = "Max HP increases to 7%.",
+                        maxHpPercentBonus = 0.07f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 0.07f, ModifierKind.PercentAdd, ModifierSource.Background, "Seasoned Laborer") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 4, requiredLevel = 10, perkName = "Resilient Farmer", perkDescription = "Max HP increases to 9%.",
+                        maxHpPercentBonus = 0.09f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 0.09f, ModifierKind.PercentAdd, ModifierSource.Background, "Resilient Farmer") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 5, requiredLevel = 13, perkName = "Bountiful Harvest", perkDescription = "Max HP increases to 10%. After battle, restore HP equal to 3% of Max HP.",
+                        maxHpPercentBonus = 0.10f,
+                        postBattleHpRestorePercent = 0.03f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 0.10f, ModifierKind.PercentAdd, ModifierSource.Background, "Bountiful Harvest") }
+                    }
+                }
+            },
+
+            // 6. Noble — Noble Authority
+            new BackgroundDef
+            {
+                id = "noble", name = "Noble",
+                narrativeIdentity = "Social status, leadership, and confidence.",
+                description = "Raised in an aristocratic environment where influence and leadership cultivate keen mental capacity.",
+                perkName = "Noble Authority",
+                perkDescription = "Increases Max MP and restores mental composure after battle.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef
+                    {
+                        rank = 1, requiredLevel = 1, perkName = "Noble Bearing", perkDescription = "Max MP increases by 3%.",
+                        maxMpPercentBonus = 0.03f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 0.03f, ModifierKind.PercentAdd, ModifierSource.Background, "Noble Bearing") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 2, requiredLevel = 4, perkName = "Commanding Presence", perkDescription = "Max MP increases to 5%.",
+                        maxMpPercentBonus = 0.05f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 0.05f, ModifierKind.PercentAdd, ModifierSource.Background, "Commanding Presence") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 3, requiredLevel = 7, perkName = "Royal Confidence", perkDescription = "Max MP increases to 7%.",
+                        maxMpPercentBonus = 0.07f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 0.07f, ModifierKind.PercentAdd, ModifierSource.Background, "Royal Confidence") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 4, requiredLevel = 10, perkName = "Noble Authority", perkDescription = "Max MP increases to 9%.",
+                        maxMpPercentBonus = 0.09f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 0.09f, ModifierKind.PercentAdd, ModifierSource.Background, "Noble Authority") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 5, requiredLevel = 13, perkName = "Born to Lead", perkDescription = "Max MP increases to 10%. After battle, restore MP equal to 5% of Max MP.",
+                        maxMpPercentBonus = 0.10f,
+                        postBattleMpRestorePercent = 0.05f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 0.10f, ModifierKind.PercentAdd, ModifierSource.Background, "Born to Lead") }
+                    }
+                }
+            },
+
+            // 7. Sage — Learned Mind
+            new BackgroundDef
+            {
+                id = "sage", name = "Sage",
+                narrativeIdentity = "Knowledge, research, and deep understanding.",
+                description = "Spent considerable time studying arcane literature to maximize efficiency of skill mana expenditure.",
+                perkName = "Learned Mind",
+                perkDescription = "Reduces Active Skill MP Cost and grants a chance to recover MP upon skill use.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "Studied Knowledge", perkDescription = "Active Skill MP Cost is reduced by 3%.", mpCostReductionPercent = 0.03f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Efficient Casting", perkDescription = "Active Skill MP Cost is reduced by 5%.", mpCostReductionPercent = 0.05f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Deep Understanding", perkDescription = "Active Skill MP Cost is reduced by 7%.", mpCostReductionPercent = 0.07f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Masterful Insight", perkDescription = "Active Skill MP Cost is reduced by 9%.", mpCostReductionPercent = 0.09f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Enlightened Mind", perkDescription = "Active Skill MP Cost is reduced by 10%. After using an Active Skill, the character has a 10% chance to restore MP equal to 5% of Max MP.", mpCostReductionPercent = 0.10f, skillMpRefundChance = 0.10f, skillMpRefundPercent = 0.05f }
+                }
+            },
+
+            // 8. Soldier — Veteran's Instinct
+            new BackgroundDef
+            {
+                id = "soldier", name = "Soldier",
+                narrativeIdentity = "War experience, discipline, and combat ability.",
+                description = "Experienced facing dangerous frontline situations, improving physical damage output and retaliation strikes.",
+                perkName = "Veteran's Instinct",
+                perkDescription = "Increases Physical Damage and empowers strikes following enemy damage.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef
+                    {
+                        rank = 1, requiredLevel = 1, perkName = "Combat Training", perkDescription = "Physical Damage increases by 3%.",
+                        physicalDamageBonus = 0.03f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 0.03f, ModifierKind.PercentAdd, ModifierSource.Background, "Combat Training") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 2, requiredLevel = 4, perkName = "Battle Experience", perkDescription = "Physical Damage increases to 5%.",
+                        physicalDamageBonus = 0.05f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 0.05f, ModifierKind.PercentAdd, ModifierSource.Background, "Battle Experience") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 3, requiredLevel = 7, perkName = "Veteran's Instinct", perkDescription = "Physical Damage increases to 7%.",
+                        physicalDamageBonus = 0.07f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 0.07f, ModifierKind.PercentAdd, ModifierSource.Background, "Veteran's Instinct") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 4, requiredLevel = 10, perkName = "Battle Hardened", perkDescription = "Physical Damage increases to 9%.",
+                        physicalDamageBonus = 0.09f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 0.09f, ModifierKind.PercentAdd, ModifierSource.Background, "Battle Hardened") }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 5, requiredLevel = 13, perkName = "War Veteran", perkDescription = "Physical Damage increases to 10%. After the character receives damage from an enemy attack, its next Physical Damage instance increases by 5%, at most once per turn.",
+                        physicalDamageBonus = 0.10f,
+                        onDamagedNextPhysicalDamageBonus = 0.05f,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 0.10f, ModifierKind.PercentAdd, ModifierSource.Background, "War Veteran") }
+                    }
+                }
+            },
+
+            // 9. Wayfarer — Endless Journey
+            new BackgroundDef
+            {
+                id = "wayfarer", name = "Wayfarer",
+                narrativeIdentity = "Travel, exploration, and adaptation.",
+                description = "Accustomed to long journeys and unfamiliar environments, moving with enhanced swiftness in combat.",
+                perkName = "Endless Journey",
+                perkDescription = "Increases Speed and can provide temporary turn-order surge at battle start.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef
+                    {
+                        rank = 1, requiredLevel = 1, perkName = "Traveler's Instinct", perkDescription = "Speed increases by 3%.",
+                        speedPercentBonus = 0.03f,
+                        modifiers = new[]
+                        {
+                            StatModifier.ForDerived(DerivedStatId.Initiative, 0.03f, ModifierKind.PercentAdd, ModifierSource.Background, "Traveler's Instinct"),
+                            StatModifier.ForDerived(DerivedStatId.ActionSpeed, 0.03f, ModifierKind.PercentAdd, ModifierSource.Background, "Traveler's Instinct")
+                        }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 2, requiredLevel = 4, perkName = "Roadwise", perkDescription = "Speed increases to 5%.",
+                        speedPercentBonus = 0.05f,
+                        modifiers = new[]
+                        {
+                            StatModifier.ForDerived(DerivedStatId.Initiative, 0.05f, ModifierKind.PercentAdd, ModifierSource.Background, "Roadwise"),
+                            StatModifier.ForDerived(DerivedStatId.ActionSpeed, 0.05f, ModifierKind.PercentAdd, ModifierSource.Background, "Roadwise")
+                        }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 3, requiredLevel = 7, perkName = "Seasoned Traveler", perkDescription = "Speed increases to 7%.",
+                        speedPercentBonus = 0.07f,
+                        modifiers = new[]
+                        {
+                            StatModifier.ForDerived(DerivedStatId.Initiative, 0.07f, ModifierKind.PercentAdd, ModifierSource.Background, "Seasoned Traveler"),
+                            StatModifier.ForDerived(DerivedStatId.ActionSpeed, 0.07f, ModifierKind.PercentAdd, ModifierSource.Background, "Seasoned Traveler")
+                        }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 4, requiredLevel = 10, perkName = "Pathfinder", perkDescription = "Speed increases to 9%.",
+                        speedPercentBonus = 0.09f,
+                        modifiers = new[]
+                        {
+                            StatModifier.ForDerived(DerivedStatId.Initiative, 0.09f, ModifierKind.PercentAdd, ModifierSource.Background, "Pathfinder"),
+                            StatModifier.ForDerived(DerivedStatId.ActionSpeed, 0.09f, ModifierKind.PercentAdd, ModifierSource.Background, "Pathfinder")
+                        }
+                    },
+                    new BackgroundRankDef
+                    {
+                        rank = 5, requiredLevel = 13, perkName = "Endless Journey", perkDescription = "Speed increases to 10%. At the start of battle, the character has a 10% chance to gain 10% Speed for 2 turns.",
+                        speedPercentBonus = 0.10f,
+                        battleStartSpeedBuffChance = 0.10f,
+                        battleStartSpeedBuffPercent = 0.10f,
+                        battleStartSpeedBuffDuration = 2,
+                        modifiers = new[]
+                        {
+                            StatModifier.ForDerived(DerivedStatId.Initiative, 0.10f, ModifierKind.PercentAdd, ModifierSource.Background, "Endless Journey"),
+                            StatModifier.ForDerived(DerivedStatId.ActionSpeed, 0.10f, ModifierKind.PercentAdd, ModifierSource.Background, "Endless Journey")
+                        }
+                    }
+                }
+            },
+
+            // 10. Scribe — Keeper of Records
+            new BackgroundDef
+            {
+                id = "scribe", name = "Scribe",
+                narrativeIdentity = "Documentation, analysis, and recorded knowledge.",
+                description = "Observes and records enemy traits, providing bonus accuracy and tactical critical strikes upon repeated study.",
+                perkName = "Keeper of Records",
+                perkDescription = "Improves Accuracy and rewards repeated attacks against the same target with critical chance.",
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "Careful Observation", perkDescription = "Accuracy increases by 3%.", accuracyBonus = 3 },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Detailed Records", perkDescription = "Accuracy increases to 5%.", accuracyBonus = 5 },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Enemy Analysis", perkDescription = "Accuracy increases to 7%.", accuracyBonus = 7 },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Tactical Notes", perkDescription = "Accuracy increases to 9%.", accuracyBonus = 9 },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Complete Record", perkDescription = "Accuracy increases to 10%. After attacking the same enemy 3 times, the character's next attack against that enemy gains 5% Critical Chance.", accuracyBonus = 10, scribeTargetAttackThreshold = 3, scribeNextAttackCritBonus = 0.05f }
+                }
+            },
+
+            // Legacy backward-compatibility aliases
+            new BackgroundDef
+            {
                 id = "oathsworn", name = "Oathsworn Guard",
-
                 narrativeIdentity = "Former sentinel of the outer bastion.",
-
                 description = "Trained to hold the line against abyssal incursions.",
-
+                perkName = "Guardian's Discipline",
+                perkDescription = "Reduces physical damage taken, with reinforced resistance at low health.",
                 proficiencies = new[] { "Athletics", "Intimidation" },
-
                 eventInteractions = new[] { "shrine", "fallen" },
-
                 socialBonus = 1,
-
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "Watchful Guard", perkDescription = "Physical Damage Taken is reduced by 3%.", physicalDamageTakenReduction = 0.03f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Steady Defense", perkDescription = "Physical Damage Taken is reduced by 5%.", physicalDamageTakenReduction = 0.05f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Defensive Training", perkDescription = "Physical Damage Taken is reduced by 7%.", physicalDamageTakenReduction = 0.07f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Guardian's Resolve", perkDescription = "Physical Damage Taken is reduced by 9%.", physicalDamageTakenReduction = 0.09f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Unyielding Guardian", perkDescription = "Physical Damage Taken is reduced by 10%. While HP is below 30%, Physical Damage Taken is reduced by an additional 5%.", physicalDamageTakenReduction = 0.10f, lowHpPhysicalDamageTakenReduction = 0.05f }
+                },
                 passiveEffects = new[] { StatModifier.ForDerived(DerivedStatId.BlockPower, 4, ModifierKind.Flat, ModifierSource.Background, "Oathsworn Stance") }
-
             },
-
             new BackgroundDef
-
             {
-
                 id = "outcast", name = "Crypt Outcast",
-
                 narrativeIdentity = "Survivor of the sunken slums.",
-
                 description = "Knows every trap, shadow, and hidden cache.",
-
+                perkName = "Master of Deception",
+                perkDescription = "Increases damage dealt to debuffed foes and strikes unprepared targets.",
                 proficiencies = new[] { "Stealth", "Sleight of Hand" },
-
                 eventInteractions = new[] { "fallen", "merchant" },
-
                 socialBonus = 0,
-
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "False Promise", perkDescription = "Damage dealt to enemies affected by a debuff increases by 3%.", damageVsDebuffedBonus = 0.03f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Cunning Exploit", perkDescription = "The damage bonus increases to 5%.", damageVsDebuffedBonus = 0.05f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Deceptive Advantage", perkDescription = "The damage bonus increases to 7%.", damageVsDebuffedBonus = 0.07f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Master Manipulator", perkDescription = "The damage bonus increases to 10%.", damageVsDebuffedBonus = 0.10f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Perfect Deception", perkDescription = "The damage bonus increases to 12%. The character's first attack against an enemy that has not yet acted in the battle deals an additional 5% damage.", damageVsDebuffedBonus = 0.12f, firstAttackUnactedBonus = 0.05f }
+                },
                 passiveEffects = new[] { StatModifier.ForDerived(DerivedStatId.Evasion, 3, ModifierKind.Flat, ModifierSource.Background, "Tunnel Reflexes") }
-
             },
-
             new BackgroundDef
-
             {
-
-                id = "acolyte", name = "Abyssal Scholar",
-
-                narrativeIdentity = "Keeper of forbidden inscriptions.",
-
-                description = "Studied the runes of the deep before the seal cracked.",
-
-                proficiencies = new[] { "Arcana", "History" },
-
-                eventInteractions = new[] { "altar", "shrine" },
-
-                socialBonus = 1,
-
-                passiveEffects = new[] { StatModifier.ForDerived(DerivedStatId.MagicDefense, 2, ModifierKind.Flat, ModifierSource.Background, "Runic Ward") }
-
-            },
-
-            new BackgroundDef
-
-            {
-
                 id = "pilgrim", name = "Wandering Pilgrim",
-
                 narrativeIdentity = "Bearer of the last lantern.",
-
                 description = "Walked from shrine to shrine offering solace and counsel.",
-
+                perkName = "Faithful Devotion",
+                perkDescription = "Empowers outgoing and incoming healing.",
                 proficiencies = new[] { "Insight", "Persuasion" },
-
                 eventInteractions = new[] { "shrine", "merchant" },
-
                 socialBonus = 2,
-
+                ranks = new[]
+                {
+                    new BackgroundRankDef { rank = 1, requiredLevel = 1, perkName = "Faithful Heart", perkDescription = "Healing dealt increases by 5%.", healingDealtBonus = 0.05f },
+                    new BackgroundRankDef { rank = 2, requiredLevel = 4, perkName = "Divine Resilience", perkDescription = "Healing dealt increases to 8%.", healingDealtBonus = 0.08f },
+                    new BackgroundRankDef { rank = 3, requiredLevel = 7, perkName = "Blessed Recovery", perkDescription = "Healing dealt increases to 10%. Healing received also increases by 5%.", healingDealtBonus = 0.10f, healingReceivedBonus = 0.05f },
+                    new BackgroundRankDef { rank = 4, requiredLevel = 10, perkName = "Sanctified Spirit", perkDescription = "Healing dealt increases to 12%, and healing received increases by 8%.", healingDealtBonus = 0.12f, healingReceivedBonus = 0.08f },
+                    new BackgroundRankDef { rank = 5, requiredLevel = 13, perkName = "Faith Unbroken", perkDescription = "Healing dealt increases to 15%, and healing received increases by 10%.", healingDealtBonus = 0.15f, healingReceivedBonus = 0.10f }
+                },
                 passiveEffects = new[] { StatModifier.ForDerived(DerivedStatId.SupportPower, 2, ModifierKind.Flat, ModifierSource.Background, "Inspiring Word") }
-
-            },
-
+            }
         }, b => b.id);
 
 

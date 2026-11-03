@@ -426,16 +426,6 @@ namespace Obscure
         }
     }
 
-    // Background definition: narrative identity, proficiencies, passive effects, roguelike event interactions, and social bonuses.
-    [Serializable]
-    public class BackgroundDef
-    {
-        public string id, name, narrativeIdentity, description;
-        public string[] proficiencies = Array.Empty<string>();
-        public StatModifier[] passiveEffects = Array.Empty<StatModifier>();
-        public string[] eventInteractions = Array.Empty<string>();
-        public int socialBonus;
-    }
 
     // Step-by-step navigation states for Character Creation (Section 2).
     // Players can advance or return to previous steps at any point before confirming the character.
@@ -1032,7 +1022,7 @@ namespace Obscure
         {
             var mods = new List<StatModifier>();
             if (Race?.passiveBonuses != null) mods.AddRange(Race.passiveBonuses);
-            if (Background?.passiveEffects != null) mods.AddRange(Background.passiveEffects);
+            if (Background != null) mods.AddRange(Background.GetActiveModifiers(1));
             foreach (var p in CollectEquippedPassives())
                 if (p.modifiers != null) mods.AddRange(p.modifiers);
             return mods;

@@ -21,6 +21,7 @@ namespace Obscure
         public Label ClassIdentityLabel { get; private set; }
         public Label RaceFeatLabel { get; private set; }
         public Label BackgroundLabel { get; private set; }
+        public Label BackgroundPerkLabel { get; private set; }
         public Label StarterPassiveLabel { get; private set; }
         public Label EquipmentSlotLabel { get; private set; }
         public Label PartySummaryLabel { get; private set; }
@@ -47,7 +48,7 @@ namespace Obscure
 
         static readonly string[] RaceIds = Database.PlayableRaceIds;
         static readonly string[] ClassIds = Database.PlayableClassIds;
-        static readonly string[] BackgroundIds = Database.Backgrounds.Keys.ToArray();
+        static readonly string[] BackgroundIds = Database.PlayableBackgroundIds;
         static readonly string[] TemplateIds = Database.TemplateIds;
 
         static readonly DerivedStatId[] PreviewedStats =
@@ -130,14 +131,19 @@ namespace Obscure
             ClassLabel = classBtn.label;
             menu.Add(classBtn);
 
+            // Background Selector (10 Playable Backgrounds)
+            var bgBtn = Ui.Button(Root, "", 18, 98, 156, () => ToggleBackgroundDetailsModal(), 19);
+            bgBtn.onAdjust = CycleBackground;
+            bgBtn.tooltip = "STEP 4: L/R SELECT BG. ENTER: VIEW PERK RANK I-V BREAKDOWN";
+            BackgroundLabel = bgBtn.label;
+            menu.Add(bgBtn);
+
             // Equipment Slot Configurator
-            var eqBtn = Ui.Button(Root, "", 18, 98, 320, () => CycleEquipmentSlot(1), 19);
+            var eqBtn = Ui.Button(Root, "", 180, 98, 158, () => CycleEquipmentSlot(1), 19);
             eqBtn.onAdjust = CycleEquipmentItem;
             eqBtn.tooltip = "STEP 7: ENTER NEXT SLOT (1-8), L/R EQUIP ITEM";
             EquipmentSlotLabel = eqBtn.label;
             menu.Add(eqBtn);
-
-            BackgroundLabel = Ui.Label(Root, "", 18, 98, Color.clear); // retained for compatibility
 
             // Ability table header
             Ui.Divider(Root, 18, 120, 320, Palette.DarkBorder, Palette.AntiqueGoldDim);
@@ -186,6 +192,7 @@ namespace Obscure
             ClassIdentityLabel = Ui.Label(Root, "", 412, 47, Palette.WarmIvory);
             RaceFeatLabel = Ui.Label(Root, "", 412, 61, Palette.MutedGray);
             StarterPassiveLabel = Ui.Label(Root, "", 364, 82, Palette.Emerald);
+            BackgroundPerkLabel = Ui.Label(Root, "", 490, 82, Palette.AntiqueGold);
 
             Ui.Divider(Root, 364, 96, 256, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
@@ -317,6 +324,85 @@ namespace Obscure
             Session.SelectClass(ClassIds[idx]);
         }
 
+        GameObject backgroundModalRoot;
+        public bool IsBackgroundModalOpen => backgroundModalRoot != null && backgroundModalRoot.activeSelf;
+
+        public void ToggleBackgroundDetailsModal()
+        {
+            if (IsBackgroundModalOpen)
+                CloseBackgroundDetailsModal();
+            else
+                OpenBackgroundDetailsModal();
+        }
+
+        static void SafeDestroy(UnityEngine.Object obj)
+        {
+            if (obj == null) return;
+            if (Application.isPlaying)
+                UnityEngine.Object.Destroy(obj);
+            else
+                UnityEngine.Object.DestroyImmediate(obj);
+        }
+
+        public void OpenBackgroundDetailsModal()
+        {
+            if (backgroundModalRoot != null)
+                SafeDestroy(backgroundModalRoot);
+
+            backgroundModalRoot = new GameObject("BackgroundDetailsModal");
+            backgroundModalRoot.transform.SetParent(Root, false);
+
+            RenderBackgroundModal();
+        }
+
+        public void CloseBackgroundDetailsModal()
+        {
+            if (backgroundModalRoot != null)
+            {
+                SafeDestroy(backgroundModalRoot);
+                backgroundModalRoot = null;
+            }
+        }
+
+        void RenderBackgroundModal()
+        {
+            if (backgroundModalRoot == null) return;
+            var children = new List<GameObject>();
+            foreach (Transform child in backgroundModalRoot.transform)
+                children.Add(child.gameObject);
+            foreach (var ch in children)
+                SafeDestroy(ch);
+
+            var bg = Session.Background;
+            if (bg == null) return;
+
+            // Modal backdrop & panel (520x260) centered at x = 60, y = 30
+            Ui.Panel(backgroundModalRoot.transform, 60, 30, 520, 260, Palette.DeepCharcoal, Palette.AntiqueGold);
+            Ui.Label(backgroundModalRoot.transform, $"BACKGROUND: {bg.name.ToUpperInvariant()} — {bg.perkName.ToUpperInvariant()}", 76, 38, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Label(backgroundModalRoot.transform, PixelFont.Fit(bg.narrativeIdentity.ToUpperInvariant(), 480), 76, 52, Palette.WarmIvory);
+            Ui.Label(backgroundModalRoot.transform, PixelFont.Fit(bg.description, 480), 76, 64, Palette.MutedGray);
+            Ui.Divider(backgroundModalRoot.transform, 76, 78, 488, Palette.DarkBorder, Palette.AntiqueGoldDim);
+
+            // Display Ranks I through V
+            for (int r = 1; r <= 5; r++)
+            {
+                var rDef = bg.GetRank(r == 1 ? 1 : r == 2 ? 4 : r == 3 ? 7 : r == 4 ? 10 : 13);
+                int y = 84 + (r - 1) * 32;
+                bool isActiveAtLevel1 = (r == 1);
+                var rankHeaderColor = isActiveAtLevel1 ? Palette.Emerald : Palette.AntiqueGold;
+                var textColor = isActiveAtLevel1 ? Palette.WarmIvory : Palette.MutedGray;
+
+                string badge = isActiveAtLevel1 ? "[ACTIVE] " : "";
+                string rankNumeral = r switch { 1 => "I", 2 => "II", 3 => "III", 4 => "IV", _ => "V" };
+                string rankTitle = $"{badge}RANK {rankNumeral} (LV {rDef?.requiredLevel ?? 1}) — {rDef?.perkName.ToUpperInvariant() ?? ""}";
+                Ui.Label(backgroundModalRoot.transform, PixelFont.Fit(rankTitle, 488), 76, y, rankHeaderColor);
+                Ui.Label(backgroundModalRoot.transform, PixelFont.Fit(rDef?.perkDescription ?? "", 488), 86, y + 14, textColor);
+            }
+
+            Ui.Divider(backgroundModalRoot.transform, 76, 248, 488, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            Ui.Label(backgroundModalRoot.transform, "LEFT/RIGHT: CYCLE BACKGROUND    ENTER/ESC: CLOSE", 320, 254, Palette.MutedGray, Align.Center);
+        }
+
         public void CycleBackground(int dir)
         {
             EnsureEditingMode();
@@ -324,6 +410,8 @@ namespace Obscure
             if (idx < 0) idx = 0;
             idx = (idx + dir + BackgroundIds.Length) % BackgroundIds.Length;
             Session.SelectBackground(BackgroundIds[idx]);
+            if (IsBackgroundModalOpen)
+                RenderBackgroundModal();
         }
 
         public void CycleEquipmentSlot(int dir)
@@ -423,6 +511,11 @@ namespace Obscure
 
         void OnBackPressed()
         {
+            if (IsBackgroundModalOpen)
+            {
+                CloseBackgroundDetailsModal();
+                return;
+            }
             if (Builder.FlowState == NewGameFlowState.PendingCharacterCreation && Session.CurrentStep > CreationStep.SelectRace)
             {
                 Session.PreviousStep();
@@ -525,14 +618,18 @@ namespace Obscure
             RaceLabel.Set(Selector("RACE", Session.Race.name));
             string identity = Session.Class?.gameplayIdentity ?? Session.Class?.role ?? "";
             ClassLabel.Set(Selector("CLASS", Session.Class.name));
-            BackgroundLabel?.Set($"BG < {Session.Background.name.ToUpperInvariant()} >");
+            BackgroundLabel?.Set(Selector("BG", Session.Background.name));
 
             classTitle?.Set(PixelFont.Fit($"{Session.Race.name} {Session.Class.name}".ToUpperInvariant(), RightTextWidth));
             ClassIdentityLabel?.Set(PixelFont.Fit(identity.ToUpperInvariant(), RightTextWidth));
             RaceFeatLabel?.Set(PixelFont.Fit($"FEAT {featName.ToUpperInvariant()}", RightTextWidth));
 
             var sp = Session.StarterPassive;
-            StarterPassiveLabel?.Set(PixelFont.Fit($"PASSIVE {(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 131));
+            StarterPassiveLabel?.Set(PixelFont.Fit($"PASSIVE {(sp != null ? sp.name.ToUpperInvariant() : "NONE")}", 125));
+
+            var bgRank = Session.Background?.GetRank(1);
+            string bgPerkText = bgRank != null ? bgRank.perkName : (Session.Background?.perkName ?? "");
+            BackgroundPerkLabel?.Set(PixelFont.Fit($"PERK {bgPerkText.ToUpperInvariant()}", 125));
 
             var eq = Session.GetEquipped(SelectedEquipmentSlot);
             string eqName = eq != null ? eq.name.ToUpperInvariant() : "EMPTY";
