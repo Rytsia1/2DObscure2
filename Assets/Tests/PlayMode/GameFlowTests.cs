@@ -20,6 +20,7 @@ namespace Obscure.Tests
             base.Setup();
             kb = InputSystem.AddDevice<Keyboard>();
             mouse = InputSystem.AddDevice<Mouse>();
+            StartClockAfterPlayModeEntry();
             savedPrefs = PlayerPrefs.GetString(PrefKey, null);
             Time.timeScale = 4f; // combat pacing uses scaled time; menus/fades use unscaled
         }
@@ -29,6 +30,18 @@ namespace Obscure.Tests
             Time.timeScale = 1f;
             if (savedPrefs == null) PlayerPrefs.DeleteKey(PrefKey); else PlayerPrefs.SetString(PrefKey, savedPrefs);
             base.TearDown();
+        }
+
+        // In the editor the Input System drops every state event stamped between leaving edit mode and entering
+        // play mode (InputSystem.s_SystemObject.exitEditModeTime..enterPlayModeTime, several seconds apart in batch mode).
+        // The test runtime's clock restarts at zero each test, so a long test walks into that window and loses every
+        // key until it walks out again. Start the clock past the window. The fields are internal, hence reflection.
+        void StartClockAfterPlayModeEntry()
+        {
+            var sys = typeof(InputSystem).GetField("s_SystemObject", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.GetValue(null);
+            var enter = sys?.GetType().GetField("enterPlayModeTime")?.GetValue(sys);
+            Assert.IsNotNull(enter, "Input System internals changed: InputSystem.s_SystemObject.enterPlayModeTime not found");
+            currentTime = System.Math.Max(currentTime, (double)enter + 1);
         }
 
         // queueEventOnly: let the player loop process input like real hardware does.
@@ -82,12 +95,6 @@ namespace Obscure.Tests
             Game.I.StartRun();
             yield return WaitFor(() => State == GameState.Map, "the map");
             yield return Settle();
-        }
-
-        // Enter the first open node; retried because a key tapped on the fade's last frame can be dropped.
-        IEnumerator EnterFirstNode()
-        {
-            for (int i = 0; i < 3 && State == GameState.Map; i++) yield return TapAndSettle(Key.Enter);
         }
 
         IEnumerator TapAndSettle(Key key)
@@ -179,7 +186,7 @@ namespace Obscure.Tests
         {
             yield return Begin();
             yield return StartRunOnMap();
-            yield return EnterFirstNode();
+            yield return TapAndSettle(Key.Enter); // node a
             Assert.AreEqual(GameState.Combat, State);
             var battle = CurrentBattle;
             foreach (var p in battle.Party) p.unit.hp = 1;
@@ -199,7 +206,7 @@ namespace Obscure.Tests
         {
             yield return Begin();
             yield return StartRunOnMap();
-            yield return EnterFirstNode();
+            yield return TapAndSettle(Key.Enter); // node a
             Assert.AreEqual(GameState.Combat, State);
             var b = CurrentBattle;
 
@@ -237,7 +244,7 @@ namespace Obscure.Tests
         {
             yield return Begin(assist);
             yield return StartRunOnMap();
-            yield return EnterFirstNode();
+            yield return TapAndSettle(Key.Enter); // node a
             Assert.AreEqual(GameState.Combat, State);
         }
 
