@@ -390,8 +390,9 @@ namespace Obscure.Tests
                 eqScreen.Open(root);
                 Assert.IsNotNull(eqScreen);
 
-                // Verify slot count equals 5
-                Assert.AreEqual(5, EquipmentScreen.CoreSlots.Length);
+                // The paper doll shows all 8 equipment slots
+                Assert.AreEqual(EquipmentSlots.All.Length, EquipmentScreen.CoreSlots.Length);
+                Assert.AreEqual(8, EquipmentScreen.CoreSlots.Length);
             }
             finally
             {

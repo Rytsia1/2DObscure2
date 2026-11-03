@@ -76,6 +76,20 @@ namespace Obscure.Tests
         }
         static RunState Run => Game.I.Run;
 
+        // NEW GAME now opens Character Creation; flow tests skip it and start a run with the default roster.
+        IEnumerator StartRunOnMap()
+        {
+            Game.I.StartRun();
+            yield return WaitFor(() => State == GameState.Map, "the map");
+            yield return Settle();
+        }
+
+        // Enter the first open node; retried because a key tapped on the fade's last frame can be dropped.
+        IEnumerator EnterFirstNode()
+        {
+            for (int i = 0; i < 3 && State == GameState.Map; i++) yield return TapAndSettle(Key.Enter);
+        }
+
         IEnumerator TapAndSettle(Key key)
         {
             yield return Tap(key);
@@ -108,7 +122,9 @@ namespace Obscure.Tests
         public IEnumerator KeyboardDrivesFullRunToVictory()
         {
             yield return Begin();
-            Assert.AreEqual("START RUN", Focus);
+            Assert.AreEqual("NEW GAME", Focus);
+            yield return Tap(Key.DownArrow);
+            Assert.AreEqual("CONTINUE", Focus);
             yield return Tap(Key.DownArrow);
             Assert.AreEqual("SETTINGS", Focus);
             yield return TapAndSettle(Key.Enter);
@@ -119,19 +135,19 @@ namespace Obscure.Tests
             yield return TapAndSettle(Key.Escape);
             Assert.AreEqual(GameState.MainMenu, State);
 
-            yield return TapAndSettle(Key.Enter);
-            Assert.AreEqual(GameState.Map, State);
+            yield return StartRunOnMap();
             var run = Run;
             Assert.AreEqual(MapGenerator.StartLanes, run.Available.Count());
 
             // Walk the generated map by keyboard, always taking the first open node, until the boss falls.
+            string rewardFocus = "";
             for (int step = 0; step < 60 && State != GameState.Victory; step++)
             {
                 switch (State)
                 {
                     case GameState.Map: yield return TapAndSettle(Key.Enter); break;
                     case GameState.Combat: yield return WinBattle(); break;
-                    case GameState.Reward: yield return TapAndSettle(Key.Enter); break; // first prize
+                    case GameState.Reward: rewardFocus = Focus; yield return TapAndSettle(Key.Enter); break; // first prize
                     case GameState.Rest:                                                  // recover, continue
                         yield return TapAndSettle(Key.Enter);
                         yield return TapAndSettle(Key.Enter);
@@ -148,7 +164,7 @@ namespace Obscure.Tests
             Assert.AreEqual(RunStatus.Victory, run.Status);
             Assert.AreEqual(run.Map.Floors, run.Stats.nodesCompleted);
             Assert.IsTrue(run.Stats.bossDefeated);
-            CollectionAssert.Contains(run.Relics, Database.BossRelic);
+            CollectionAssert.Contains(run.Relics, Database.BossRelic, "boss reward focus was " + rewardFocus);
 
             yield return TapAndSettle(Key.Enter); // NEW RUN from the summary
             Assert.AreEqual(GameState.Map, State);
@@ -162,8 +178,8 @@ namespace Obscure.Tests
         public IEnumerator DefeatEndsRunAndReturnsToTitle()
         {
             yield return Begin();
-            yield return TapAndSettle(Key.Enter);
-            yield return TapAndSettle(Key.Enter);
+            yield return StartRunOnMap();
+            yield return EnterFirstNode();
             Assert.AreEqual(GameState.Combat, State);
             var battle = CurrentBattle;
             foreach (var p in battle.Party) p.unit.hp = 1;
@@ -182,8 +198,8 @@ namespace Obscure.Tests
         public IEnumerator CombatUiUpdatesAfterEveryAction()
         {
             yield return Begin();
-            yield return TapAndSettle(Key.Enter);
-            yield return TapAndSettle(Key.Enter);
+            yield return StartRunOnMap();
+            yield return EnterFirstNode();
             Assert.AreEqual(GameState.Combat, State);
             var b = CurrentBattle;
 
@@ -220,8 +236,8 @@ namespace Obscure.Tests
         IEnumerator StartFirstBattle(QteAssist assist)
         {
             yield return Begin(assist);
-            yield return TapAndSettle(Key.Enter); // START RUN
-            yield return TapAndSettle(Key.Enter); // node a
+            yield return StartRunOnMap();
+            yield return EnterFirstNode();
             Assert.AreEqual(GameState.Combat, State);
         }
 

@@ -184,7 +184,12 @@ namespace Obscure
         int index, bornFrame;
         Vector2 lastMouse;
 
-        void Awake() => bornFrame = Time.frameCount;
+        // Hover only focuses after the mouse moves, so a resting cursor never steals the keyboard default on a new screen.
+        void Awake()
+        {
+            bornFrame = Time.frameCount;
+            lastMouse = Controls.MouseWorld;
+        }
 
         public Selectable Current => index < items.Count ? items[index] : null;
 

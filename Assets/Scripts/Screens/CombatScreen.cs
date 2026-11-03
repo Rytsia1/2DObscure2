@@ -89,7 +89,7 @@ namespace Obscure
             Ui.Rect(t, 0, 23, Ui.Width, 1, Palette.Ink4, Ui.Panels);
             string actName = encounter.tier == Tier.Boss ? "ACT 1: THE INNER SANCTUM" : "ACT 1: ASHEN RUINS";
             actBanner = Ui.Label(t, actName, 10, 6, Palette.AntiqueGoldBright, font: FontKind.Serif);
-            roundLabel = Ui.Label(t, "", 185, 7, Palette.WarmIvory);
+            roundLabel = Ui.Label(t, "", 172, 7, Palette.Gold2);
             turnBar = Child("TurnBar");
 
             // 2. 18px Telegraph banner under the header
@@ -190,7 +190,7 @@ namespace Obscure
 
         void Refresh()
         {
-            roundLabel.Set($"[R{Battle.Round}]");
+            roundLabel.Set($"ROUND {Battle.Round}");
             foreach (var kv in huds)
             {
                 var c = kv.Key;
@@ -280,7 +280,6 @@ namespace Obscure
         {
             foreach (Transform child in turnBar) Destroy(child.gameObject);
             int x = 230;
-            Ui.Label(turnBar, "TIMELINE:", x - 72, 7, Palette.AntiqueGoldDim);
 
             void Chip(Combatant c, Color color, bool active = false)
             {

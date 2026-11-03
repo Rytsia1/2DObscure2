@@ -436,5 +436,54 @@ namespace Obscure
             NodeType.Rest => IconRest,
             _ => IconBoss,
         };
+
+        // 12x12 equipment silhouettes, keyed white so the renderer can tint them by rarity.
+        static readonly string[] GearWeapon =
+        {
+            "..........ww", ".........www", "........www.", ".......www..", "......www...", ".w...www....",
+            ".ww.www.....", "..wwww......", "...ww.......", "..wwww......", ".ww..ww.....", "ww..........",
+        };
+        static readonly string[] GearShield =
+        {
+            ".wwwwwwwwww.", ".wwwwwwwwww.", ".wwwwwwwwww.", ".wwwwwwwwww.", ".wwwwwwwwww.", ".wwwwwwwwww.",
+            "..wwwwwwww..", "..wwwwwwww..", "...wwwwww...", "....wwww....", ".....ww.....",
+        };
+        static readonly string[] GearHead =
+        {
+            "....wwww....", "..wwwwwwww..", ".wwwwwwwwww.", ".wwwwwwwwww.", "wwwwwwwwwwww", "wwww....wwww",
+            "www......www", "www......www", "www......www", ".ww......ww.",
+        };
+        static readonly string[] GearBody =
+        {
+            ".www....www.", "wwwww..wwwww", "wwwwwwwwwwww", "wwwwwwwwwwww", ".wwwwwwwwww.", "..wwwwwwww..",
+            "..wwwwwwww..", "..wwwwwwww..", "..wwwwwwww..", "..wwwwwwww..",
+        };
+        static readonly string[] GearLegs =
+        {
+            ".wwwwwwwwww.", ".wwwwwwwwww.", ".wwwwwwwwww.", ".wwww..wwww.", ".wwww..wwww.", ".wwww..wwww.",
+            ".wwww..wwww.", ".wwww..wwww.", ".wwww..wwww.", ".wwww..wwww.",
+        };
+        static readonly string[] GearFeet =
+        {
+            "..wwww......", "..wwww......", "..wwww......", "..wwww......", "..wwww......", "..wwwwwww...",
+            "..wwwwwwwww.", "..wwwwwwwwww", "..wwwwwwwwww",
+        };
+        static readonly string[] GearAccessory =
+        {
+            ".w........w.", "..w......w..", "...w....w...", "....w..w....", ".....ww.....", "....wwww....",
+            "...wwwwww...", "...wwwwww...", "....wwww....", ".....ww.....",
+        };
+
+        // Icon for a slot; a weapon carried in the second hand keeps the weapon silhouette.
+        public static string[] GearIcon(EquipmentSlot slot, EquipmentDef item = null) => slot switch
+        {
+            EquipmentSlot.MainHand => GearWeapon,
+            EquipmentSlot.SecondHand => item != null && item.weaponType != WeaponType.None ? GearWeapon : GearShield,
+            EquipmentSlot.HeadArmor => GearHead,
+            EquipmentSlot.BodyArmor => GearBody,
+            EquipmentSlot.LegArmor => GearLegs,
+            EquipmentSlot.FootArmor => GearFeet,
+            _ => GearAccessory,
+        };
     }
 }
