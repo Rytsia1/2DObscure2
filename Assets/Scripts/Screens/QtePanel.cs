@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Obscure
 {
     // Draws a running Qte in the combat command panel and feeds it input.
-    // Conforming to 640x360 Reference Resolution, Octopath Traveler II Aesthetics, Serif Display Headers.
+    // Starlit Reliquary "O · Reaction QTE" styling: framed track, ink miss zones, blue GOOD band, gold PERFECT zone.
     public class QtePanel : MonoBehaviour
     {
         const int X = 365, W = 240, CenterX = 485, TrackY = 286, TrackH = 14;
@@ -25,7 +25,7 @@ namespace Obscure
         {
             qte = q;
             bornFrame = Time.frameCount;
-            Ui.Label(transform, heading, CenterX, 248, Palette.WarmIvory, Align.Center, 1, Ui.Widget + 2, FontKind.Serif);
+            Ui.Label(transform, heading, CenterX, 248, Palette.Gold1, Align.Center, 1, Ui.Widget + 2, FontKind.Serif);
             info = Ui.Label(transform, "", CenterX, 266, Palette.MutedGray, Align.Center, order: Ui.Widget + 2);
             result = Ui.Label(transform, "", CenterX, 326, Palette.AntiqueGoldBright, Align.Center, 2, Ui.Widget + 3, FontKind.Serif);
             string key = Controls.QteKey.ToString().ToUpperInvariant();
@@ -86,11 +86,12 @@ namespace Obscure
 
         void BuildTrack(float zone, float goodHalf, float perfectHalf, int markerCount)
         {
-            Rect(X - 3, TrackY - 3, W + 6, TrackH + 6, Palette.DarkBorder, 0);
-            Rect(X - 1, TrackY - 1, W + 2, TrackH + 2, Palette.DeepCharcoal, 1);
+            Rect(X - 3, TrackY - 3, W + 6, TrackH + 6, Palette.Ink0, 0);
+            Rect(X - 2, TrackY - 2, W + 4, TrackH + 4, Palette.Mist2, 0);
+            Rect(X - 1, TrackY - 1, W + 2, TrackH + 2, Palette.Ink1, 1);
             int cx = X + Px(zone), gw = Mathf.Max(6, Px(goodHalf * 2)), pw = Mathf.Max(2, Px(perfectHalf * 2));
-            Rect(cx - gw / 2, TrackY, gw, TrackH, Palette.Emerald, 2);
-            Rect(cx - pw / 2, TrackY, pw, TrackH, Palette.AntiqueGoldBright, 3);
+            Rect(cx - gw / 2, TrackY, gw, TrackH, Palette.Hex(0x2C5A8F), 2);
+            Rect(cx - pw / 2, TrackY, pw, TrackH, Palette.Gold2, 3);
             for (int i = 0; i < markerCount; i++) markers.Add(Rect(X, TrackY - 4, 3, TrackH + 8, Palette.WarmIvory, 4));
         }
 
@@ -170,7 +171,7 @@ namespace Obscure
         void ShowResult(QteResult r, string perfect, string good, string miss)
         {
             result.Set(r == QteResult.Perfect ? perfect : r == QteResult.Good ? good : miss);
-            result.Color = r == QteResult.Perfect ? Palette.AntiqueGoldBright : r == QteResult.Good ? Palette.WarmIvory : Palette.SpecCrimson;
+            result.Color = r == QteResult.Perfect ? Palette.Gold1 : r == QteResult.Good ? Palette.Hex(0xB8D6FF) : Palette.Mist3;
         }
     }
 }

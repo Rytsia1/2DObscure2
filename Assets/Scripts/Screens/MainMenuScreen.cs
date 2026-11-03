@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Main Menu conforming to UI/UX Overhaul Specification (Section 4.5)
-    // 640x360 Reference Resolution, Serif Display Typography, Antique Gold Filigree, Octopath Traveler II Aesthetics.
+    // Main Menu — Starlit Reliquary "A · Main Menu" board at 640x360:
+    // night sky + tower silhouette, left-aligned gold title, flat menu list, key-prompt footer.
     public class MainMenuScreen : GameScreen
     {
         public Selectable NewGameButton { get; private set; }
@@ -14,43 +14,37 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, true, 16, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk, Palette.SpecCrimson);
+            Backdrop.Create(Root, true, 16);
 
-            // Distant mountain silhouettes in 640x360
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 70, Palette.MidnightNavy, 3), 0, 240, Ui.Back + 5);
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 50, Palette.DeepCharcoal, 11), 0, 280, Ui.Back + 6);
+            // Tower silhouette with lit windows, then mountain ranges
+            Color tower = Palette.Hex(0x0E1430);
+            Ui.Rect(Root, 487, 120, 36, 180, tower, Ui.Back + 5);
+            Ui.Rect(Root, 478, 165, 54, 135, tower, Ui.Back + 5);
+            Ui.Rect(Root, 497, 104, 16, 16, tower, Ui.Back + 5);
+            Ui.Rect(Root, 502, 112, 5, 7, Palette.Gold2, Ui.Back + 6);
+            Ui.Rect(Root, 508, 153, 4, 6, Palette.Ember2, Ui.Back + 6);
+            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 80, Palette.Hex(0x1A2146), 3), 0, 250, Ui.Back + 7);
+            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 54, Palette.Hex(0x111733), 11), 0, 290, Ui.Back + 8);
+            Ui.Rect(Root, 0, 330, Ui.Width, 30, Palette.Hex(0x0A0F22), Ui.Back + 9);
 
-            // Party heroes resting along the cliff edge
-            int x = 28;
-            foreach (var id in Database.Party)
-            {
-                if (Database.Characters.TryGetValue(id, out var c) && c.sprite != null)
-                {
-                    Ui.Image(Root, PixelArt.FromRows(c.sprite), x, 285 - c.sprite.Length, Ui.World);
-                    x += 24;
-                }
-            }
+            // Title block
+            Ui.Divider(Root, 48, 40, 210, Palette.Gold3, Palette.Gold2);
+            Ui.Label(Root, "2D OBSCURE", 48, 54, Palette.Gold1, Align.Left, 3, FontKind.Serif);
+            for (int i = 0; i < 8; i++) Ui.Image(Root, PixelArt.Diamond(7, Palette.Gold3, false), 48 + i * 10, 98, Ui.Text);
+            Ui.Label(Root, "A PARTY ROGUELIKE ACROSS EIGHT DUNGEONS", 134, 98, Palette.Mist2);
 
-            // Top version / fantasy lore crest
-            Ui.Badge(Root, "• CHRONICLES OF THE FALLEN REALM •", 205, 20, 230, 16, Palette.DeepCharcoal, Palette.AntiqueGoldDim, Palette.AntiqueGoldBright, Align.Center);
-
-            // Grand Title with modern ornaments & serif display
-            Ui.Divider(Root, 140, 44, 360, Palette.AntiqueGoldDim, Palette.AntiqueGoldBright);
-            Ui.Label(Root, "2D OBSCURE", 320, 52, Palette.WarmIvory, Align.Center, 3, FontKind.Serif);
-            Ui.Divider(Root, 140, 88, 360, Palette.DarkBorder, Palette.AntiqueGoldDim);
-            Ui.Badge(Root, "A DESCENT INTO THE ABYSS", 225, 96, 190, 16, Palette.DeepCharcoal, Palette.SpecCrimson, Palette.WarmIvory, Align.Center);
-
-            // Center Command Deck Panel (640x360 centered)
-            Ui.Panel(Root, 235, 126, 170, 154, Palette.DeepCharcoal, Palette.AntiqueGold);
-
+            // Menu list
             var menu = Root.gameObject.AddComponent<Menu>();
-            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 245, 138, 150, () => Game?.StartNewGame(), 22));
-            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 245, 170, 150, () => Game?.ContinueGame(), 22, interactable: GameSave.HasSavedGame()));
-            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 245, 202, 150, () => Game?.Go(GameState.Settings), 22));
-            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 245, 234, 150, () => Game?.Quit(), 22));
+            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, 160, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat));
+            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 184, 190, () => Game?.ContinueGame(), 22, interactable: GameSave.HasSavedGame(), style: ButtonStyle.Flat));
+            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, 208, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat));
+            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, 232, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat));
 
-            // Modern keycaps footer
-            Ui.Badge(Root, "[ARROWS / MOUSE] NAVIGATE   •   [ENTER / CLICK] SELECT   •   [ESC] BACK", 120, 328, 400, 18, Palette.DeepCharcoal, Palette.DarkBorder, Palette.MutedGray, Align.Center);
+            // Footer: key prompts + build tag on an ink band
+            Ui.Rect(Root, 0, 334, Ui.Width, 26, Palette.Hex(0x070A14, 220), Ui.Panels);
+            int hx = Ui.KeyHint(Root, 48, 341, "SELECT", "ARROWS");
+            Ui.KeyHint(Root, hx, 341, "CONFIRM", "ENTER");
+            Ui.Label(Root, "V" + Application.version, 592, 343, Palette.Mist3, Align.Right);
         }
     }
 

@@ -244,15 +244,15 @@ namespace Obscure
         public static bool HasSpecialEffect(EquipmentRarity rarity) =>
             rarity == EquipmentRarity.Legendary || rarity == EquipmentRarity.Mythic;
 
-        // Visual presentation colors per GDD Section 4.1
+        // Visual presentation colors (Starlit Reliquary rarity ramp)
         public static UnityEngine.Color GetColor(EquipmentRarity rarity) => rarity switch
         {
-            EquipmentRarity.Common => Palette.Ash,
-            EquipmentRarity.Uncommon => Palette.Moss,
-            EquipmentRarity.Rare => Palette.Frost,
-            EquipmentRarity.Epic => Palette.Arcane,
-            EquipmentRarity.Legendary => Palette.Gold,
-            EquipmentRarity.Mythic => Palette.Crimson,
+            EquipmentRarity.Common => Palette.RarityCommon,
+            EquipmentRarity.Uncommon => Palette.RarityUncommon,
+            EquipmentRarity.Rare => Palette.RarityRare,
+            EquipmentRarity.Epic => Palette.RarityEpic,
+            EquipmentRarity.Legendary => Palette.RarityLegendary,
+            EquipmentRarity.Mythic => Palette.RarityMythic,
             _ => Palette.Bone
         };
 

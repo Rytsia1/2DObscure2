@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Skill Tree & Loadout Management Screen conforming to UI/UX Overhaul Specification (640x360).
+    // Skill Tree & Loadout Management Screen — Starlit Reliquary "J · Training Ground / Skill Tree" board (640x360).
     // Features 5-Tier level gating, 3 branch specializations, rank upgrades (Rank 1-3),
     // 3 Active + 3 Passive loadouts, and SP respec functionality.
     public class SkillTreeScreen : GameScreen
@@ -68,61 +68,58 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 8, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk);
+            Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            // 1. Top Bar (640x26): Title, Hero Switcher, SP pool, and Navigation buttons
-            Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
-            titleLabel = Ui.Label(Root, "SKILL TREE & PROGRESSION", 12, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            // 1. Header: title, hero switcher, shortcuts, Skill Points badge
+            titleLabel = Ui.Label(Root, "SKILL TREE", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            Ui.Button(Root, "<", 148, 8, 20, () => SwitchHero(-1), 20, showCursor: false);
+            heroLabel = Ui.Label(Root, "", 256, 14, Palette.Mist2, Align.Center);
+            Ui.Button(Root, ">", 344, 8, 20, () => SwitchHero(1), 20, showCursor: false);
 
-            Ui.Button(Root, "<", 185, 4, 20, () => SwitchHero(-1), 18, showCursor: false);
-            heroLabel = Ui.Label(Root, "", 255, 7, Palette.WarmIvory, Align.Center, 1, FontKind.Serif);
-            Ui.Button(Root, ">", 325, 4, 20, () => SwitchHero(1), 18, showCursor: false);
-
-            spLabel = Ui.Label(Root, "", 355, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
-
-            var statusBtn = Ui.Button(Root, "STATUS", 495, 4, 66, () => Game?.Go(GameState.CharacterStatus), 18, showCursor: false);
+            var statusBtn = Ui.Button(Root, "STATUS", 372, 8, 64, () => Game?.Go(GameState.CharacterStatus), 20, showCursor: false);
             statusBtn.tooltip = "VIEW CHARACTER ATTRIBUTES & STATS";
-            var gearBtn = Ui.Button(Root, "LOADOUT", 565, 4, 66, () => Game?.Go(GameState.Equipment), 18, showCursor: false);
+            var gearBtn = Ui.Button(Root, "LOADOUT", 440, 8, 70, () => Game?.Go(GameState.Equipment), 20, showCursor: false);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT";
 
-            // 2. Left Panel (424x224): 3 Branch Columns and 5 Tiers of Skill Nodes
-            Ui.Panel(Root, 8, 28, 424, 224, Palette.DeepCharcoal, Palette.DarkBorder);
+            Ui.Image(Root, PixelArt.Badge(112, 20, Palette.Hex(0x1D1608), Palette.Gold3), 516, 8, Ui.Widget);
+            spLabel = Ui.Label(Root, "", 572, 15, Palette.Gold1, Align.Center, order: Ui.Widget + 1);
+
+            // 2. Tree panel: 3 branch columns, 5 tiers of skill nodes
+            Ui.Panel(Root, 12, 36, 420, 214);
             BuildTreeNodes();
 
-            // 3. Right Panel (192x224): Selected Skill Details & Actions (Unlock / Upgrade / Equip)
-            Ui.Panel(Root, 438, 28, 194, 224, Palette.DeepCharcoal, Palette.DarkBorder);
-            detailName = Ui.Label(Root, "SELECT A SKILL", 446, 34, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
-            detailTierType = Ui.Label(Root, "", 446, 48, Palette.MutedGray);
-            detailStats = Ui.Label(Root, "", 446, 60, Palette.WarmIvory);
-            detailRank = Ui.Label(Root, "", 446, 72, Palette.AntiqueGoldDim);
-            detailDescription = Ui.Label(Root, "", 446, 86, Palette.WarmIvory);
-            detailRequirements = Ui.Label(Root, "", 446, 126, Palette.Crimson);
+            // 3. Details panel (gold): selected skill + actions
+            Ui.Panel(Root, 438, 36, 190, 214, Palette.Ink2, Palette.Gold3);
+            detailName = Ui.Label(Root, "SELECT A SKILL", 448, 44, Palette.Gold2, Align.Left, 1, FontKind.Serif);
+            detailTierType = Ui.Label(Root, "", 448, 58, Palette.Mist3);
+            detailStats = Ui.Label(Root, "", 448, 70, Palette.Mist1);
+            detailRank = Ui.Label(Root, "", 448, 82, Palette.Gold3);
+            detailDescription = Ui.Label(Root, "", 448, 96, Palette.Mist2);
+            detailRequirements = Ui.Label(Root, "", 448, 136, Palette.HpLow);
 
-            unlockBtn = Ui.Button(Root, "UNLOCK (1 SP)", 446, 150, 178, OnUnlockClicked, 18, showCursor: false);
-            upgradeBtn = Ui.Button(Root, "UPGRADE RANK", 446, 170, 178, OnUpgradeClicked, 18, showCursor: false);
-            equipSlot1Btn = Ui.Button(Root, "EQUIP: SLOT 1", 446, 190, 86, () => OnEquipSlotClicked(0), 16, showCursor: false);
-            equipSlot2Btn = Ui.Button(Root, "EQUIP: SLOT 2", 538, 190, 86, () => OnEquipSlotClicked(1), 16, showCursor: false);
-            equipSlot3Btn = Ui.Button(Root, "EQUIP: SLOT 3", 446, 208, 86, () => OnEquipSlotClicked(2), 16, showCursor: false);
-            unequipBtn = Ui.Button(Root, "UNEQUIP", 538, 208, 86, OnUnequipClicked, 16, showCursor: false);
+            unlockBtn = Ui.Button(Root, "UNLOCK (1 SP)", 446, 156, 174, OnUnlockClicked, 18, showCursor: false, style: ButtonStyle.Primary);
+            upgradeBtn = Ui.Button(Root, "UPGRADE RANK", 446, 176, 174, OnUpgradeClicked, 18, showCursor: false);
+            equipSlot1Btn = Ui.Button(Root, "EQUIP: SLOT 1", 446, 196, 84, () => OnEquipSlotClicked(0), 16, showCursor: false);
+            equipSlot2Btn = Ui.Button(Root, "EQUIP: SLOT 2", 536, 196, 84, () => OnEquipSlotClicked(1), 16, showCursor: false);
+            equipSlot3Btn = Ui.Button(Root, "EQUIP: SLOT 3", 446, 214, 84, () => OnEquipSlotClicked(2), 16, showCursor: false);
+            unequipBtn = Ui.Button(Root, "UNEQUIP", 536, 214, 84, OnUnequipClicked, 16, showCursor: false);
 
-            // 4. Bottom Panel (640x104): Equipped Loadouts (3 Active + 3 Passive) & Respec Button
-            Ui.Panel(Root, 0, 254, Ui.Width, 106, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Label(Root, "EQUIPPED ACTIVE SKILLS", 14, 260, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            // 4. Loadout strip: 3 Active + 3 Passive equipped skills, respec
+            Ui.Panel(Root, 12, 256, 616, 74);
+            Ui.Header(Root, "ACTIVE LOADOUT", 26, 264, 190);
             for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
-            {
-                activeSlotLabels[i] = Ui.Label(Root, $"[A{i + 1}] ---", 14, 274 + (i * 12), Palette.WarmIvory);
-            }
+                activeSlotLabels[i] = Ui.Label(Root, $"[A{i + 1}] ---", 22, 282 + (i * 12), Palette.Mist1);
 
-            Ui.Label(Root, "EQUIPPED PASSIVE SKILLS", 220, 260, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Header(Root, "PASSIVE LOADOUT", 226, 264, 200);
             for (int i = 0; i < SkillLoadout.PassiveSlotCount; i++)
-            {
-                passiveSlotLabels[i] = Ui.Label(Root, $"[P{i + 1}] ---", 220, 274 + (i * 12), Palette.WarmIvory);
-            }
+                passiveSlotLabels[i] = Ui.Label(Root, $"[P{i + 1}] ---", 222, 282 + (i * 12), Palette.Mist1);
 
-            respecBtn = Ui.Button(Root, "RESPEC ALL SP", 450, 264, 170, OnRespecClicked, 20, showCursor: false);
+            respecBtn = Ui.Button(Root, "RESPEC ALL SP", 448, 264, 170, OnRespecClicked, 20, showCursor: false);
             respecBtn.tooltip = "REFUNDS ALL SPENT SKILL POINTS AND RESETS TREE";
+            feedbackLabel = Ui.Label(Root, "", 448, 292, Palette.Mist2);
 
-            feedbackLabel = Ui.Label(Root, "", 450, 292, Palette.MutedGray);
+            int hx = Ui.KeyHint(Root, 12, 338, "SELECT", "CLICK");
+            Ui.KeyHint(Root, hx, 338, "BACK", "ESC");
 
             var menu = Root.gameObject.AddComponent<Menu>();
             menu.onBack = () => Game?.Go(returnState);
@@ -144,14 +141,13 @@ namespace Obscure
             if (b0.Length > 12) b0 = b0.Substring(0, 12);
             if (b1.Length > 12) b1 = b1.Substring(0, 12);
             if (b2.Length > 12) b2 = b2.Substring(0, 12);
-            Ui.Label(Root, b0, 20, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
-            Ui.Label(Root, b1, 160, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
-            Ui.Label(Root, b2, 300, 33, Palette.AntiqueGoldDim, Align.Left, 1, FontKind.Serif);
-            Ui.Divider(Root, 16, 45, 408, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            Ui.Header(Root, b0, 30, 44, 140);
+            Ui.Header(Root, b1, 168, 44, 138);
+            Ui.Header(Root, b2, 306, 44, 132);
 
             // Populate all unlockable nodes from the hero's class definition
             var nodes = cDef.skillUnlockProgression ?? Array.Empty<SkillUnlockNode>();
-            int[] branchX = { 16, 156, 296 };
+            int[] branchX = { 22, 160, 298 };
 
             // Render starting skills at Tier 1 top
             if (cDef.startingSkills != null)
@@ -162,7 +158,7 @@ namespace Obscure
                     if (string.IsNullOrEmpty(sid) || !Database.Skills.TryGetValue(sid, out var sDef)) continue;
                     int bIdx = Math.Clamp(sDef.branchIndex, 0, 2);
                     int x = branchX[bIdx];
-                    int y = 50;
+                    int y = 64;
                     CreateNodeButton(sid, sDef.name, false, 1, x, y);
                 }
             }
@@ -170,11 +166,11 @@ namespace Obscure
             // Render Starter Passive
             if (!string.IsNullOrEmpty(cDef.starterPassiveId) && Database.Passives.TryGetValue(cDef.starterPassiveId, out var starterP))
             {
-                CreateNodeButton(starterP.id, starterP.name, true, 1, branchX[0], 68);
+                CreateNodeButton(starterP.id, starterP.name, true, 1, branchX[0], 82);
             }
 
             // Render Tier 2 to Tier 5 progression nodes
-            int[] tierY = { 50, 88, 126, 164, 202 };
+            int[] tierY = { 64, 100, 136, 172, 208 };
             var groupedByTier = nodes.GroupBy(n => n.tier).OrderBy(g => g.Key);
 
             foreach (var group in groupedByTier)
@@ -237,7 +233,7 @@ namespace Obscure
         {
             var hero = CurrentHero;
             heroLabel.Set($"{hero.name.ToUpper()} (LV {hero.level} {hero.classDef?.name?.ToUpper()})");
-            spLabel.Set($"SP: {hero.skillLoadout.SkillPoints}");
+            spLabel.Set($"SKILL POINTS  {hero.skillLoadout.SkillPoints}");
 
             // Update equipped active slots
             for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
@@ -322,7 +318,7 @@ namespace Obscure
             detailRank.Set(isUnlocked ? $"RANK: {currentRank} / {maxRank}" : $"RANK: LOCKED (MAX {maxRank})");
 
             string desc = activeDef != null ? activeDef.description : passiveDef != null ? passiveDef.description : "";
-            detailDescription.Set(PixelFont.Wrap(desc, 180));
+            detailDescription.Set(PixelFont.Wrap(desc, 172));
 
             // Validate Requirements & Actions
             var node = hero.classDef?.skillUnlockProgression?.FirstOrDefault(n => n.skillId == selectedSkillId);

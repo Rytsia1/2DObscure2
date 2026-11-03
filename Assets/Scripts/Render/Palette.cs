@@ -1,42 +1,68 @@
 using UnityEngine;
 
-// 2DObscure Design System Palette (Octopath Traveler II Inspired Visual Direction).
+// 2DObscure Design System Palette ("Starlit Reliquary" visual direction).
+// Ink-navy grounds, one warm gold accent, element hues reserved for combat meaning.
 // Every color on screen originates from here.
 namespace Obscure
 {
     public static class Palette
     {
-        // 1. Canonical Spec Design Tokens (Specification Section 2.1)
+        // 0. Starlit Reliquary tokens
         public static readonly Color
-            DeepCharcoal    = Hex(0x171B24), // Dark neutral: primary panel fill, backdrop, letterbox
-            MidnightNavy    = Hex(0x263448), // Dark blue: secondary nested panels, active containers, hero cards
-            AntiqueGold     = Hex(0xC5A66A), // Primary accent: 1px filigree borders, selection cursors, gold
-            WarmIvory       = Hex(0xE8E2D6), // Primary text: headers, hero names, primary values, active options
-            MutedGray       = Hex(0xA5A7AC), // Secondary text: subtitles, formulas, disabled options, descriptions
-            SpecCrimson     = Hex(0xC75B5B), // Danger/damage: HP damage, negative stat comparisons, alerts
-            Emerald         = Hex(0x76A88B), // Positive/healing: HP recovery, positive stat gains, buffs
-            ArcaneViolet    = Hex(0x9B83C7), // Magic/special: MP resource bars, spell ranks, mystic effects
-            DarkBorder      = Hex(0x2D3E56), // Subtle inner card border
-            OverlayCharcoal = Hex(0x10131A), // Overlays and tooltips (95% opaque dark charcoal)
-            AntiqueGoldBright = Hex(0xE8CA90), // Bright gold specular highlight
-            AntiqueGoldDim  = Hex(0x8A7246); // Dim gold for inactive filigree
+            Ink0  = Hex(0x070A14), // void: wells, bar troughs
+            Ink1  = Hex(0x0C1122), // ground
+            Ink2  = Hex(0x121A31), // panel
+            Ink3  = Hex(0x1A2443), // raised
+            Ink4  = Hex(0x25315A), // line
+            Ink5  = Hex(0x3A4878), // border
+            Mist1 = Hex(0xEEF0F8), // primary text
+            Mist2 = Hex(0xC3C9DE), // body / small text
+            Mist3 = Hex(0x8F98B8), // labels, muted, disabled
+            Gold1 = Hex(0xFFE6A3), // focus, pointer, highlights
+            Gold2 = Hex(0xF2C25B), // primary accent, headings
+            Gold3 = Hex(0xC9932E), // rivets, gold frames
+            Gold4 = Hex(0x7A5717), // dim gold
+            Ember1 = Hex(0xFFC196), Ember2 = Hex(0xEF8A3C), Ember3 = Hex(0x8A4317), // run-only, temporary
+            Hp     = Hex(0x52D18C),
+            HpLow  = Hex(0xFF6A55),
+            Mp     = Hex(0x5AA2FF),
+            Xp     = Hex(0xC79BFF),
+            Shield = Hex(0x9FE3FF),
+            // Rarity — always paired with a letter badge
+            RarityCommon = Hex(0xA7AFC4), RarityUncommon = Hex(0x5FD08F), RarityRare = Hex(0x5AA2FF),
+            RarityEpic = Hex(0xB98AFF), RarityLegendary = Hex(0xF5A742), RarityMythic = Hex(0xFF6F8E);
 
-        // 2. Core Legacy / Sprite Art Palette (Harmonized with Spec)
+        // 1. Canonical spec roles, mapped onto the Starlit Reliquary tokens
         public static readonly Color
-            Void        = Hex(0x0E1117), // Deepest abyss void
+            DeepCharcoal    = Ink2,   // Primary panel fill, backdrop, letterbox
+            MidnightNavy    = Ink3,   // Secondary nested panels, active containers, hero cards
+            AntiqueGold     = Gold2,  // Primary accent: headings, selection, gold
+            WarmIvory       = Mist1,  // Primary text: headers, hero names, primary values, active options
+            MutedGray       = Mist3,  // Secondary text: subtitles, formulas, disabled options
+            SpecCrimson     = HpLow,  // Danger/damage: HP damage, negative stat comparisons, alerts
+            Emerald         = Hp,     // Positive/healing: HP recovery, positive stat gains, buffs
+            ArcaneViolet    = Xp,     // Magic/special: spell ranks, mystic effects, affixes
+            DarkBorder      = Ink5,   // Panel / card border
+            OverlayCharcoal = Ink0,   // Overlays, tooltips, gauge troughs
+            AntiqueGoldBright = Gold1, // Bright gold highlight, focus
+            AntiqueGoldDim  = Gold4;  // Dim gold for inactive accents
+
+        // 2. Sprite art palette (base hues kept so character/enemy art reads the same; outlines go navy)
+        public static readonly Color
+            Void        = Ink0,
             Night       = DeepCharcoal,
-            Dusk        = Hex(0x1E2430),
-            Shade       = Hex(0x323F52),
-            Ash         = MutedGray,
-            Bone        = WarmIvory,
+            Dusk        = Ink3,
+            Shade       = Ink4,
+            Ash         = Hex(0xA5A7AC),
+            Bone        = Hex(0xE8E2D6),
             Parchment   = Hex(0xD0C8BA),
             Blood       = Hex(0x632026),
-            Crimson     = SpecCrimson,
+            Crimson     = Hex(0xC75B5B),
             Ember       = Hex(0xD47A3B),
-            Gold        = AntiqueGold,
-            Moss        = Emerald,
+            Gold        = Hex(0xC5A66A),
+            Moss        = Hex(0x76A88B),
             Frost       = Hex(0x8EBECB),
-            Arcane      = ArcaneViolet,
+            Arcane      = Hex(0x9B83C7),
             Lilac       = Hex(0xB9A5DE),
             Steel       = Hex(0x7F8796),
             SteelLight  = Hex(0xB8BFCE),
@@ -46,16 +72,16 @@ namespace Obscure
             Abyss       = Hex(0x3DB8A8),
 
             // Modern UI Aliases
-            GoldBright    = AntiqueGoldBright,
-            GoldDim       = AntiqueGoldDim,
-            MossBright    = Emerald,
-            FrostBright   = Hex(0xB0DEEA),
-            CrimsonBright = Hex(0xE06868),
+            GoldBright    = Gold1,
+            GoldDim       = Gold4,
+            MossBright    = Hp,
+            FrostBright   = Shield,
+            CrimsonBright = HpLow,
             PanelDark     = DeepCharcoal,
             PanelEdge     = DarkBorder,
             CardInner     = MidnightNavy,
             BorderBright  = DarkBorder,
-            BorderGold    = AntiqueGold;
+            BorderGold    = Gold3;
 
         public static Color Key(char k) => k switch
         {

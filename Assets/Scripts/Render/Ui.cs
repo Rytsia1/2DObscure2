@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Sprite-based UI Engine conforming to Octopath Traveler II visual direction.
+// Sprite-based UI Engine conforming to the "Starlit Reliquary" visual system.
 // Reference resolution: 640x360 (16:9), top-left pixel coordinates (0..640, 0..360), y down.
 namespace Obscure
 {
     public enum Align { Left, Center, Right }
+    public enum ButtonStyle { Slab, Primary, Flat }
 
     public static class Ui
     {
@@ -41,24 +42,26 @@ namespace Obscure
             return Label(parent, text, x, y, color, align, scale, order, font);
         }
 
-        // Primary panel: Deep Charcoal (#171B24) fill with thin Antique Gold (#C5A66A) filigree border
+        // Primary panel: Ink 2 fill, Ink 5 border, gold rivets on the corners
         public static SpriteRenderer Panel(Transform parent, int x, int y, int w, int h, Color? fill = null, Color? border = null) =>
-            Image(parent, PixelArt.Box(w, h, fill ?? Palette.DeepCharcoal, border ?? Palette.AntiqueGold), x, y, Panels);
+            Image(parent, PixelArt.Box(w, h, fill ?? Palette.DeepCharcoal, border ?? Palette.DarkBorder), x, y, Panels);
 
-        // Secondary card / nested container: Midnight Navy (#263448) with subtle inner border (#2D3E56)
+        // Secondary card / nested container: raised Ink 3 with Ink 5 border
         public static SpriteRenderer Card(Transform parent, int x, int y, int w, int h, Color? fill = null, Color? border = null) =>
             Image(parent, PixelArt.Box(w, h, fill ?? Palette.MidnightNavy, border ?? Palette.DarkBorder), x, y, Panels + 1);
 
-        // Framed text button with Octopath tactile styling, top highlight sheen, and selection cursor.
-        public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 18, bool interactable = true, bool showCursor = true, FontKind font = FontKind.Interface)
+        // Ink slab button; focus lifts it into a gold frame with gold text and the pixel hand-pointer.
+        // Primary = the one gold call-to-action per view; Flat = menu-list item (.mi) with a gold wash on focus.
+        public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 18, bool interactable = true, bool showCursor = true, FontKind font = FontKind.Interface, ButtonStyle style = ButtonStyle.Slab)
         {
             var go = new GameObject("Button:" + text);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(x, -y, 0);
             var box = Image(go.transform, null, 0, 0, Widget);
             int gHeight = font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
-            var label = Label(go.transform, text, w / 2, (h - gHeight) / 2, Palette.WarmIvory, Align.Center, order: Widget + 1, font: font);
-            var cursor = showCursor ? Label(go.transform, ">", -9, (h - PixelFont.GlyphHeight) / 2, Palette.AntiqueGoldBright, order: Widget + 1) : null;
+            bool flat = style == ButtonStyle.Flat;
+            var label = Label(go.transform, text, flat ? 6 : w / 2, (h - gHeight) / 2, Palette.WarmIvory, flat ? Align.Left : Align.Center, order: Widget + 1, font: font);
+            var cursor = showCursor ? Image(go.transform, PixelArt.Pointer, -10, (h - 7) / 2, Widget + 1) : null;
             var sel = go.AddComponent<Selectable>();
             sel.size = new Vector2Int(w, h);
             sel.onClick = onClick;
@@ -66,8 +69,12 @@ namespace Obscure
             sel.interactable = interactable;
             sel.visual = on =>
             {
-                box.sprite = PixelArt.ButtonBox(w, h, on, sel.interactable);
-                label.Color = !sel.interactable ? Palette.MutedGray : on ? Palette.WarmIvory : Palette.MutedGray;
+                box.sprite = style == ButtonStyle.Flat ? (on ? PixelArt.MenuHighlight(w, h) : null)
+                    : style == ButtonStyle.Primary ? PixelArt.PrimaryBox(w, h, on, sel.interactable)
+                    : PixelArt.ButtonBox(w, h, on, sel.interactable);
+                label.Color = !sel.interactable ? Palette.MutedGray
+                    : style == ButtonStyle.Primary ? Palette.Ink1
+                    : on ? Palette.AntiqueGoldBright : Palette.WarmIvory;
                 if (cursor != null) cursor.gameObject.SetActive(on);
             };
             sel.visual(false);
@@ -86,7 +93,36 @@ namespace Obscure
             return Image(parent, PixelArt.Divider(w, lineCol ?? Palette.DarkBorder, centerCol ?? Palette.AntiqueGold), x, y, order);
         }
 
-        // Pill badge
+        // Solid rectangle (rules, scrims, fills).
+        public static SpriteRenderer Rect(Transform parent, int x, int y, int w, int h, Color color, int order = Panels + 1)
+        {
+            var sr = Image(parent, PixelArt.Pixel, x, y, order, color);
+            sr.transform.localScale = new Vector3(w, h, 1);
+            return sr;
+        }
+
+        // Panel header (.ph): gold diamond + gold title over an ink rule spanning the panel width.
+        public static Label Header(Transform parent, string text, int x, int y, int w, int order = Text)
+        {
+            Image(parent, PixelArt.Diamond(5, Palette.Gold2), x, y + 1, order);
+            Rect(parent, x - 6, y + 12, w, 1, Palette.Ink4, order);
+            return Label(parent, text, x + 9, y, Palette.Gold2, order: order);
+        }
+
+        // Key prompt (.hint): keycaps then the action. Returns the x where the next hint can start.
+        public static int KeyHint(Transform parent, int x, int y, string action, params string[] keys)
+        {
+            foreach (var k in keys)
+            {
+                int w = Mathf.Max(11, PixelFont.Measure(k) + 6);
+                Badge(parent, k, x, y, w, 11, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1);
+                x += w + 2;
+            }
+            Label(parent, action, x + 2, y + 2, Palette.Mist2);
+            return x + 2 + PixelFont.Measure(action) + 14;
+        }
+
+        // Square chip
         public static SpriteRenderer Badge(Transform parent, string text, int x, int y, int w, int h, Color fill, Color border, Color textColor, Align align = Align.Center, int order = Widget, FontKind font = FontKind.Interface)
         {
             var box = Image(parent, PixelArt.Badge(w, h, fill, border), x, y, order);
@@ -207,7 +243,8 @@ namespace Obscure
             var go = new GameObject("Backdrop");
             go.transform.SetParent(parent, false);
             var b = go.AddComponent<Backdrop>();
-            Color[] finalSky = sky != null && sky.Length > 0 ? sky : new[] { Palette.Void, Palette.DeepCharcoal, Palette.MidnightNavy };
+            // Default: Starlit Reliquary night sky
+            Color[] finalSky = sky != null && sky.Length > 0 ? sky : new[] { Palette.Hex(0x070B1C), Palette.Hex(0x101A3A), Palette.Hex(0x28284F), Palette.Hex(0x3A2F55) };
             Ui.Image(go.transform, PixelArt.Gradient(Ui.Width, Ui.Height, finalSky), 0, 0, Ui.Back);
             if (moon)
             {

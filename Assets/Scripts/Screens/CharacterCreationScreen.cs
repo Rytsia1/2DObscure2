@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Obscure
 {
     // Full Character Creation & 4-Hero Party Assembly screen (Character Creation System Specification Sections 2-10).
-    // Conforming to 640x360 Reference Resolution, Octopath Traveler II Aesthetics, Serif Display Headers.
+    // Starlit Reliquary "B1 · Character Creation" board at 640x360: form panel | gold preview panel, footer hint band.
     public class CharacterCreationScreen : GameScreen
     {
         public NewGamePartyBuilder Builder { get; private set; }
@@ -88,26 +88,26 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 8, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk);
+            Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            // 1. Top bar: Title, Current Step & Remaining Point Buy Budget
-            Ui.Panel(Root, 0, 0, Ui.Width, 26, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Label(Root, "CHARACTER CREATION & RECRUITMENT", 14, 7, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
-            StepLabel = Ui.Label(Root, "", 320, 7, Palette.WarmIvory, Align.Center);
-            RemainingPointsLabel = Ui.Label(Root, "", 626, 7, Palette.AntiqueGoldBright, Align.Right);
+            // 1. Header: title, current step chip, remaining point-buy budget
+            Ui.Label(Root, "CREATE CHARACTER", 12, 6, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            StepLabel = Ui.Label(Root, "", 360, 10, Palette.Mist2, Align.Center);
+            RemainingPointsLabel = Ui.Label(Root, "", 626, 10, Palette.Gold1, Align.Right);
 
-            // 2. Left panel (334x294): Creation Method, Race, Class, Equipment, and 6 Ability Rows
-            Ui.Panel(Root, 10, 28, 336, 294, Palette.DeepCharcoal, Palette.DarkBorder);
+            // 2. Left panel: Creation Method, Race, Class, Equipment, and 6 Ability Rows
+            Ui.Panel(Root, 10, 28, 336, 294);
 
-            // 3. Right panel (274x294): Live Character, Starter Passive & Derived Stats Preview
-            Ui.Panel(Root, 354, 28, 276, 294, Palette.DeepCharcoal, Palette.DarkBorder);
+            // 3. Right panel (gold frame): Live Character, Starter Passive & Derived Stats Preview
+            Ui.Panel(Root, 354, 28, 276, 294, Palette.Ink2, Palette.Gold3);
 
-            // 4. Bottom panel (640x36): Validation Feedback / Party Bar (X/4) & Action buttons
-            Ui.Panel(Root, 0, 324, Ui.Width, 36, Palette.DeepCharcoal, Palette.AntiqueGold);
+            // 4. Footer band: validation feedback and party summary (X/4)
+            Ui.Rect(Root, 0, 324, Ui.Width, 1, Palette.Ink4, Ui.Panels);
+            Ui.Rect(Root, 0, 325, Ui.Width, 35, Palette.Ink0, Ui.Panels);
 
             var menu = Root.gameObject.AddComponent<Menu>();
-            HintLabel = Ui.Label(Root, "", 14, 328, Palette.WarmIvory);
-            PartySummaryLabel = Ui.Label(Root, "", 14, 342, Palette.MutedGray);
+            HintLabel = Ui.Label(Root, "", 14, 330, Palette.Mist1);
+            PartySummaryLabel = Ui.Label(Root, "", 14, 344, Palette.Mist3);
             menu.onFocus = s => SetHint(s?.tooltip ?? "LEFT/RIGHT: ADJUST   ENTER: SELECT");
 
             // Creation Method / Template / Random Selector
@@ -175,7 +175,7 @@ namespace Obscure
             randOrRerollBtn.tooltip = "RANDOMIZE CURRENT HERO OR REROLL SELECTED PARTY HERO";
             menu.Add(randOrRerollBtn);
 
-            confirmBtn = Ui.Button(Root, "ADD HERO", 170, 266, 88, ConfirmAndAddToParty, 22, showCursor: false);
+            confirmBtn = Ui.Button(Root, "ADD HERO", 170, 266, 88, ConfirmAndAddToParty, 22, showCursor: false, style: ButtonStyle.Primary);
             confirmBtn.onAdjust = d => CycleReviewSlot(d);
             confirmBtn.tooltip = "CONFIRM HERO (1-4) OR SELECT PARTY MEMBER IN REVIEW";
             menu.Add(confirmBtn);
@@ -377,8 +377,8 @@ namespace Obscure
             if (bg == null) return;
 
             // Modal backdrop & panel (520x260) centered at x = 60, y = 30
-            Ui.Panel(backgroundModalRoot.transform, 60, 30, 520, 260, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Label(backgroundModalRoot.transform, $"BACKGROUND: {bg.name.ToUpperInvariant()} — {bg.perkName.ToUpperInvariant()}", 76, 38, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Panel(backgroundModalRoot.transform, 60, 30, 520, 260, Palette.Ink2, Palette.Gold3);
+            Ui.Label(backgroundModalRoot.transform, $"BACKGROUND: {bg.name.ToUpperInvariant()} - {bg.perkName.ToUpperInvariant()}", 76, 38, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
             Ui.Label(backgroundModalRoot.transform, PixelFont.Fit(bg.narrativeIdentity.ToUpperInvariant(), 480), 76, 52, Palette.WarmIvory);
             Ui.Label(backgroundModalRoot.transform, PixelFont.Fit(bg.description, 480), 76, 64, Palette.MutedGray);
             Ui.Divider(backgroundModalRoot.transform, 76, 78, 488, Palette.DarkBorder, Palette.AntiqueGoldDim);

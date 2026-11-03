@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEngine;
 
 // 2DObscure — Battle UI (Priority 1)
-// Conforming to UI/UX Visual Direction Specification (Octopath Traveler II Inspired Staging).
+// Starlit Reliquary "N1 · Combat HUD" board: dungeon floor staging, ink header band, gold telegraph strip, navy console.
 // Reference resolution: 640x360.
 namespace Obscure
 {
@@ -14,9 +14,11 @@ namespace Obscure
         protected override void Build()
         {
             var enc = Run?.CurrentEncounter ?? Database.Encounters.Values.First();
-            Backdrop.Create(Root, true, 16, Palette.Void, Palette.DeepCharcoal, Palette.MidnightNavy);
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 80, Palette.DeepCharcoal, 5), 0, 150, Ui.Back + 5);
-            Ui.Image(Root, PixelArt.Gradient(Ui.Width, 140, Palette.DeepCharcoal, Palette.Void), 0, 190, Ui.Back + 6);
+            // Dungeon wall + stone floor with joints (placeholder environment for final art)
+            Backdrop.Create(Root, false, 6, Palette.Hex(0x171E38), Palette.Hex(0x0B1022));
+            for (int y = 56; y < 150; y += 16) Ui.Rect(Root, 0, y, Ui.Width, 1, Palette.Hex(0x0B1022), Ui.Back + 5);
+            Ui.Rect(Root, 0, 150, Ui.Width, 90, Palette.Hex(0x10152B), Ui.Back + 6);
+            for (int x = 47; x < Ui.Width; x += 48) Ui.Rect(Root, x, 150, 1, 90, Palette.Hex(0x0E1329), Ui.Back + 7);
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             var items = Run?.Items ?? new List<string>(Database.StartingItems);
@@ -83,14 +85,15 @@ namespace Obscure
             var t = transform;
 
             // 1. Top 24px Header: Act banner, Round indicator, and Timeline ribbon (Spec Section 4.1)
-            Ui.Panel(t, 0, 0, Ui.Width, 24, Palette.DeepCharcoal, Palette.AntiqueGold);
+            Ui.Rect(t, 0, 0, Ui.Width, 23, Palette.Hex(0x070A14, 220), Ui.Panels);
+            Ui.Rect(t, 0, 23, Ui.Width, 1, Palette.Ink4, Ui.Panels);
             string actName = encounter.tier == Tier.Boss ? "ACT 1: THE INNER SANCTUM" : "ACT 1: ASHEN RUINS";
             actBanner = Ui.Label(t, actName, 10, 6, Palette.AntiqueGoldBright, font: FontKind.Serif);
             roundLabel = Ui.Label(t, "", 185, 7, Palette.WarmIvory);
             turnBar = Child("TurnBar");
 
             // 2. 18px Telegraph banner under the header
-            Ui.Panel(t, 0, 23, Ui.Width, 18, Palette.OverlayCharcoal, Palette.DarkBorder);
+            Ui.Panel(t, 0, 24, Ui.Width, 17, Palette.Hex(0x070A14, 235), Palette.Gold3);
             hint = Ui.Label(t, "", Ui.Width / 2, 27, Palette.WarmIvory, Align.Center, order: Ui.Widget + 2);
 
             // 3. Side-view combatants
@@ -100,8 +103,8 @@ namespace Obscure
             marker = Ui.Image(t, PixelArt.FromRows(Art.Marker), 0, 0, Ui.Widget + 5);
 
             // 4. Bottom 120px Console: Left 4-Hero Vitality Cards (330px), Right Command & Dossier (310px)
-            Ui.Panel(t, 0, ConsoleY, PartyConsoleW, ConsoleH, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Panel(t, PartyConsoleW + 2, ConsoleY, Ui.Width - PartyConsoleW - 2, ConsoleH, Palette.DeepCharcoal, Palette.AntiqueGold);
+            Ui.Panel(t, 0, ConsoleY, PartyConsoleW, ConsoleH);
+            Ui.Panel(t, PartyConsoleW + 2, ConsoleY, Ui.Width - PartyConsoleW - 2, ConsoleH);
 
             // Action Dossier & Combat Log feed panel (Right side of console)
             dossierPanel = Child("DossierPanel");
@@ -154,7 +157,7 @@ namespace Obscure
 
             // 4-Hero Vitality Cards (Spec Section 4.1): 4 spacious stacked rows inside 330px width
             int cy = ConsoleY + 5 + c.slot * 28;
-            h.cardBox = Ui.Image(transform, PixelArt.Box(PartyConsoleW - 10, 26, Palette.DeepCharcoal, Palette.DarkBorder), 5, cy, Ui.Panels + 2);
+            h.cardBox = Ui.Image(transform, PixelArt.Box(PartyConsoleW - 10, 26, Palette.Ink2, Palette.Ink5), 5, cy, Ui.Panels + 2);
 
             h.name = Ui.Label(transform, c.name.ToUpperInvariant(), 12, cy + 4, Palette.WarmIvory, font: FontKind.Serif);
             string roleStr = c.unit.role != null ? c.unit.role.ToUpperInvariant() : "HERO";
@@ -166,11 +169,11 @@ namespace Obscure
             h.hpBack = Bar(90, cy + 15, 95, Palette.OverlayCharcoal, 0, 5);
             h.hpBar = Bar(90, cy + 15, 95, Palette.Emerald, 1, 5);
 
-            // MP readout & Arcane Violet GaugeBar
-            Ui.Label(transform, "MP", 195, cy + 4, Palette.ArcaneViolet);
+            // MP readout & blue GaugeBar
+            Ui.Label(transform, "MP", 195, cy + 4, Palette.Mp);
             h.mp = Ui.Label(transform, "", 215, cy + 4, Palette.WarmIvory);
             h.mpBack = Bar(195, cy + 15, 75, Palette.OverlayCharcoal, 0, 5);
-            h.mpBar = Bar(195, cy + 15, 75, Palette.ArcaneViolet, 1, 5);
+            h.mpBar = Bar(195, cy + 15, 75, Palette.Mp, 1, 5);
 
             h.status = Ui.Label(transform, "", 275, cy + 8, Palette.Frost);
         }
@@ -253,8 +256,8 @@ namespace Obscure
                 if (h.cardBox != null)
                 {
                     h.cardBox.sprite = PixelArt.Box(PartyConsoleW - 10, 26,
-                        isActive ? Palette.MidnightNavy : Palette.DeepCharcoal,
-                        isActive ? Palette.AntiqueGold : Palette.DarkBorder);
+                        isActive ? Palette.Ink3 : Palette.Ink2,
+                        isActive ? Palette.Gold2 : Palette.Ink5);
                 }
                 h.name.Color = !c.Alive ? Palette.SpecCrimson : isActive ? Palette.AntiqueGoldBright : Palette.WarmIvory;
                 h.hp.Set($"{c.unit.hp}/{c.Stats.maxHp}");
@@ -291,7 +294,7 @@ namespace Obscure
                 }
                 else
                 {
-                    Ui.Image(turnBar, PixelArt.Box(w + 8, 16, c.IsEnemy ? Palette.DeepCharcoal : Palette.MidnightNavy, c.IsEnemy ? Palette.Blood : Palette.DarkBorder), x - 3, 4, Ui.Widget);
+                    Ui.Image(turnBar, PixelArt.Box(w + 8, 16, c.IsEnemy ? Palette.Hex(0x3A1418) : Palette.Ink3, c.IsEnemy ? Palette.Hex(0xB5483E) : Palette.Ink5), x - 3, 4, Ui.Widget);
                     Ui.Label(turnBar, c.tag, x + 1, 6, color, order: Ui.Widget + 1);
                     x += w + 12;
                 }
@@ -601,9 +604,10 @@ namespace Obscure
             ClearPhase();
             foreach (Transform child in turnBar) Destroy(child.gameObject);
             Hint("");
-            Ui.Panel(phase, 180, 100, 280, 120, Palette.DeepCharcoal, won ? Palette.AntiqueGold : Palette.SpecCrimson).sortingOrder = Ui.Widget - 1;
-            Ui.Divider(phase, 190, 106, 260, won ? Palette.AntiqueGoldDim : Palette.Blood, won ? Palette.AntiqueGoldBright : Palette.SpecCrimson);
-            Ui.Label(phase, won ? "VICTORY" : "DEFEAT", 320, 120, won ? Palette.AntiqueGoldBright : Palette.SpecCrimson, Align.Center, 2, Ui.Widget + 1, font: FontKind.Serif);
+            Ui.Rect(phase, 0, 0, Ui.Width, Ui.Height, Palette.Hex(0x05070F, 170), Ui.Widget - 2);
+            Ui.Panel(phase, 180, 100, 280, 120, Palette.Ink2, won ? Palette.Gold3 : Palette.HpLow).sortingOrder = Ui.Widget - 1;
+            Ui.Divider(phase, 190, 108, 260, won ? Palette.Gold3 : Palette.Hex(0xB5483E), won ? Palette.Gold2 : Palette.HpLow, Ui.Widget);
+            Ui.Label(phase, won ? "VICTORY" : "DEFEAT", 320, 122, won ? Palette.Gold1 : Palette.Hex(0xFF8A7A), Align.Center, 2, Ui.Widget + 1, font: FontKind.Serif);
             var m = phase.gameObject.AddComponent<Menu>();
             m.Add(Ui.Button(phase, "CONTINUE", 250, 170, 140, () =>
             {
@@ -617,7 +621,7 @@ namespace Obscure
                     Game.I.Run.LoseCombat();
                     Game.I.Go(GameState.GameOver);
                 }
-            }, 22));
+            }, 22, style: ButtonStyle.Primary));
         }
     }
 

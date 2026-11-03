@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Procedural pixel-art sprites at 1 pixel per unit, point-filtered.
-// Conforming to 2DObscure UI/UX Visual Direction Specification (Octopath Traveler II Style).
+// Conforming to the 2DObscure "Starlit Reliquary" visual system.
 namespace Obscure
 {
     public static class PixelArt
@@ -38,22 +38,14 @@ namespace Obscure
             return Cache[key] = SpriteFrom(px, w, h, p, "art");
         }
 
-        // Octopath-style framed panel with chamfered corners, thin Antique Gold filigree, and corner bracket accents.
+        // Starlit Reliquary panel: square corners, border, ink inset ring and gold rivets on the corners.
+        // Ornament lives on the frame only; the interior stays calm.
         public static Sprite Box(int w, int h, Color fill, Color border)
         {
-            var key = ("box_octo", w, h, fill, border);
+            var key = ("box_reliquary", w, h, fill, border);
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var px = new Color32[w * h];
-
-            bool isGold = border == Palette.AntiqueGold || border == Palette.Gold || border == Palette.BorderGold;
-            Color highlight = isGold ? Palette.AntiqueGoldBright
-                : border == Palette.Crimson ? Palette.CrimsonBright
-                : border == Palette.Emerald ? Palette.Emerald
-                : border == Palette.ArcaneViolet ? Palette.Lilac
-                : border == Palette.DarkBorder ? Palette.Shade
-                : Color.Lerp(border, Color.white, 0.3f);
-
-            bool large = w >= 40 && h >= 22;
+            bool rivets = w >= 24 && h >= 20;
 
             for (int y = 0; y < h; y++)
             {
@@ -61,57 +53,24 @@ namespace Obscure
                 for (int x = 0; x < w; x++)
                 {
                     int edge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(py, h - 1 - py));
-                    bool corner = (x == 0 || x == w - 1) && (py == 0 || py == h - 1);
-
-                    if (corner)
-                    {
-                        px[y * w + x] = Color.clear;
-                    }
-                    else if (edge == 0)
-                    {
-                        // Outer subtle drop shadow line
-                        px[y * w + x] = Palette.OverlayCharcoal;
-                    }
-                    else if (edge == 1)
-                    {
-                        // 1px primary filigree border
-                        px[y * w + x] = border;
-                    }
-                    else if (edge == 2 && py == 2)
-                    {
-                        // Specular top highlight line for depth
-                        px[y * w + x] = highlight;
-                    }
-                    else if (isGold && large && (
-                        (x <= 4 && (py == 2 || py == 3)) || (x >= w - 5 && (py == 2 || py == 3)) ||
-                        (x <= 4 && (py == h - 3 || py == h - 4)) || (x >= w - 5 && (py == h - 3 || py == h - 4)) ||
-                        (py <= 4 && (x == 2 || x == 3)) || (py >= h - 5 && (x == 2 || x == 3)) ||
-                        (py <= 4 && (x == w - 3 || x == w - 4)) || (py >= h - 5 && (x == w - 3 || x == w - 4))
-                    ))
-                    {
-                        // Delicate Antique Gold corner bracket accents
-                        px[y * w + x] = Palette.AntiqueGoldDim;
-                    }
-                    else
-                    {
-                        px[y * w + x] = fill;
-                    }
+                    bool rivet = rivets && (x < 3 || x >= w - 3) && (py < 3 || py >= h - 3);
+                    px[y * w + x] = rivet ? Palette.Gold3 : edge == 0 ? border : edge == 1 ? Palette.Ink1 : fill;
                 }
             }
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "box");
         }
 
-        // Modern tactile button with Octopath selection states (Antique Gold border, Warm Ivory focus, left chevron accent)
+        // Starlit Reliquary button: ink slab with a pressed-in bottom lip.
+        // Focused = lifted ink + gold frame; disabled = flat with a dashed border.
         public static Sprite ButtonBox(int w, int h, bool focused, bool interactable)
         {
-            var key = ("btn_octo", w, h, focused, interactable);
+            var key = ("btn_reliquary", w, h, focused, interactable);
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
             var px = new Color32[w * h];
 
-            Color border = !interactable ? Palette.DarkBorder : focused ? Palette.AntiqueGold : Palette.DarkBorder;
-            Color fill = !interactable ? Palette.OverlayCharcoal : focused ? Palette.MidnightNavy : Palette.DeepCharcoal;
-            Color topRim = !interactable ? Palette.Shade : focused ? Palette.AntiqueGoldBright : Palette.DarkBorder;
-            Color leftTag = focused ? Palette.AntiqueGoldBright : Color.clear;
+            Color border = interactable && focused ? Palette.Gold2 : Palette.Ink5;
+            Color fill = !interactable ? Palette.Ink2 : focused ? Palette.Ink4 : Palette.Ink3;
+            Color lip = !interactable ? fill : focused ? Palette.Ink3 : Palette.Ink2;
 
             for (int y = 0; y < h; y++)
             {
@@ -119,48 +78,71 @@ namespace Obscure
                 for (int x = 0; x < w; x++)
                 {
                     int edge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(py, h - 1 - py));
-                    bool corner = (x == 0 || x == w - 1) && (py == 0 || py == h - 1);
-
-                    if (corner)
-                    {
-                        px[y * w + x] = Color.clear;
-                    }
-                    else if (edge == 0)
-                    {
-                        px[y * w + x] = Palette.OverlayCharcoal;
-                    }
-                    else if (edge == 1)
-                    {
-                        px[y * w + x] = border;
-                    }
-                    else if (focused && (x == 2 || x == 3) && py >= 2 && py <= h - 3)
-                    {
-                        // Golden selection notch on the left
-                        px[y * w + x] = leftTag;
-                    }
-                    else if (py == 2 && edge >= 2)
-                    {
-                        // Lit top highlight
-                        px[y * w + x] = topRim;
-                    }
-                    else
-                    {
-                        px[y * w + x] = fill;
-                    }
+                    bool gap = !interactable && ((x + py) / 2) % 2 == 1;
+                    px[y * w + x] = edge == 0 ? (gap ? fill : border) : py == h - 2 ? lip : fill;
                 }
             }
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "btn_box");
         }
 
-        // Framed gauge bar (HP: Emerald, MP: Arcane Violet, Break: Antique Gold) with dark bezel and gradient fill
-        public static Sprite GaugeBar(int w, int h, Color fill, float ratio)
+        // Gold primary button (.btn.pri): one per view. Focus brightens the slab.
+        public static Sprite PrimaryBox(int w, int h, bool focused, bool interactable)
         {
-            Color highlight = fill == Palette.Emerald ? Palette.Emerald
-                : fill == Palette.ArcaneViolet ? Palette.Lilac
-                : fill == Palette.AntiqueGold ? Palette.AntiqueGoldBright
-                : Color.Lerp(fill, Color.white, 0.4f);
-            return GaugeBar(w, h, ratio, fill, highlight, Palette.OverlayCharcoal);
+            if (!interactable) return ButtonBox(w, h, false, false);
+            var key = ("btn_primary", w, h, focused);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[w * h];
+            Color fill = focused ? Palette.Gold1 : Palette.Gold2;
+            for (int y = 0; y < h; y++)
+            {
+                int py = h - 1 - y;
+                for (int x = 0; x < w; x++)
+                {
+                    int edge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(py, h - 1 - py));
+                    px[y * w + x] = edge == 0 ? (py == h - 1 ? Palette.Gold4 : Palette.Gold1) : py == h - 2 ? Palette.Gold3 : fill;
+                }
+            }
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "btn_primary");
         }
+
+        // Menu-list focus (.mi.is-focus): gold wash fading out to the right.
+        public static Sprite MenuHighlight(int w, int h)
+        {
+            var key = ("menu_hl", w, h);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[w * h];
+            for (int x = 0; x < w; x++)
+            {
+                var c = Palette.Gold2;
+                c.a = 0.18f * (1f - (float)x / w);
+                for (int y = 0; y < h; y++) px[y * w + x] = c;
+            }
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "menu_hl");
+        }
+
+        // Diamond pip (rotated square), filled or outlined; size should be odd.
+        public static Sprite Diamond(int size, Color color, bool filled = true)
+        {
+            var key = ("diamond", size, color, filled);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[size * size];
+            int r = size / 2;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int d = Mathf.Abs(x - r) + Mathf.Abs(y - r);
+                    if (filled ? d <= r : d == r) px[y * size + x] = color;
+                }
+            return Cache[key] = SpriteFrom(px, size, size, TopLeft, "diamond");
+        }
+
+        // Pixel hand-pointer: shown only for keyboard/controller focus.
+        static readonly string[] PointerRows = { "YYY", "YYYYY", "YYYYYYY", "YYYYYYY", "YYYYYYY", "YYYYY", "YYY" };
+        public static Sprite Pointer => FromRows(PointerRows);
+
+        // Segmented vital bar (HP / MP / XP): bordered trough, lit top edge, tick every 5px for quick reading.
+        public static Sprite GaugeBar(int w, int h, Color fill, float ratio) =>
+            GaugeBar(w, h, ratio, fill, Color.Lerp(fill, Color.white, 0.35f), Palette.OverlayCharcoal);
 
         public static Sprite GaugeBar(int w, int h, float ratio, Color fill)
         {
@@ -171,30 +153,24 @@ namespace Obscure
         {
             ratio = Mathf.Clamp01(ratio);
             int fillW = Mathf.RoundToInt((w - 2) * ratio);
-            var key = ("gauge_v2", w, h, fillW, fill, highlight, bg);
+            var key = ("gauge_reliquary", w, h, fillW, fill, highlight, bg);
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
 
+            Color shade = Color.Lerp(fill, Color.black, 0.25f);
             var px = new Color32[w * h];
             for (int y = 0; y < h; y++)
             {
                 int py = h - 1 - y; // 0 at top
                 for (int x = 0; x < w; x++)
                 {
-                    bool border = x == 0 || x == w - 1 || py == 0 || py == h - 1;
-                    if (border)
+                    if (x == 0 || x == w - 1 || py == 0 || py == h - 1)
                     {
-                        px[y * w + x] = Palette.OverlayCharcoal;
+                        px[y * w + x] = Palette.Ink5;
+                        continue;
                     }
-                    else if (x <= fillW)
-                    {
-                        if (py == 1) px[y * w + x] = highlight;
-                        else if (x == fillW && fillW > 1 && py == h - 2) px[y * w + x] = highlight;
-                        else px[y * w + x] = fill;
-                    }
-                    else
-                    {
-                        px[y * w + x] = bg;
-                    }
+                    Color c = x > fillW ? bg : py == 1 ? highlight : py == h - 2 && h >= 5 ? shade : fill;
+                    if (x % 5 == 0) c = Color.Lerp(c, Palette.Ink0, 0.55f); // segment tick
+                    px[y * w + x] = c;
                 }
             }
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "gauge");
@@ -242,39 +218,16 @@ namespace Obscure
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "divider");
         }
 
-        // Pill badge with chamfered ends for tags and stats
+        // Square chip for tags, status, rarity and stats: 1px border on a dark fill.
         public static Sprite Badge(int w, int h, Color fill, Color border)
         {
-            var key = ("badge_v2", w, h, fill, border);
+            var key = ("badge_reliquary", w, h, fill, border);
             if (Cache.TryGetValue(key, out var s) && s != null) return s;
 
             var px = new Color32[w * h];
             for (int y = 0; y < h; y++)
-            {
-                int py = h - 1 - y;
                 for (int x = 0; x < w; x++)
-                {
-                    bool corner = (x == 0 && (py <= 1 || py >= h - 2)) ||
-                                  (x == 1 && (py == 0 || py == h - 1)) ||
-                                  (x == w - 1 && (py <= 1 || py >= h - 2)) ||
-                                  (x == w - 2 && (py == 0 || py == h - 1));
-
-                    if (corner)
-                    {
-                        px[y * w + x] = Color.clear;
-                    }
-                    else if (x == 0 || x == w - 1 || py == 0 || py == h - 1 ||
-                            (x == 1 && (py == 1 || py == h - 2)) ||
-                            (x == w - 2 && (py == 1 || py == h - 2)))
-                    {
-                        px[y * w + x] = border;
-                    }
-                    else
-                    {
-                        px[y * w + x] = fill;
-                    }
-                }
-            }
+                    px[y * w + x] = x == 0 || x == w - 1 || y == 0 || y == h - 1 ? border : fill;
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "badge");
         }
 
