@@ -76,9 +76,11 @@ namespace Obscure
             heroLabel = Ui.Label(Root, "", 256, 14, Palette.Mist2, Align.Center);
             Ui.Button(Root, ">", 344, 8, 20, () => SwitchHero(1), 20, showCursor: false);
 
-            var statusBtn = Ui.Button(Root, "STATUS", 372, 8, 64, () => Game?.Go(GameState.CharacterStatus), 20, showCursor: false);
+            var statusBtn = Ui.Button(Root, "STATUS", 370, 8, 46, () => Game?.Go(GameState.CharacterStatus), 20, showCursor: false);
             statusBtn.tooltip = "VIEW CHARACTER ATTRIBUTES & STATS";
-            var gearBtn = Ui.Button(Root, "LOADOUT", 440, 8, 70, () => Game?.Go(GameState.Equipment), 20, showCursor: false);
+            var talentsBtn = Ui.Button(Root, "TALENTS", 420, 8, 46, () => Game?.Go(GameState.Talents), 20, showCursor: false);
+            talentsBtn.tooltip = "VIEW & SELECT HERO TALENTS";
+            var gearBtn = Ui.Button(Root, "LOADOUT", 470, 8, 44, () => Game?.Go(GameState.Equipment), 20, showCursor: false);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT";
 
             Ui.Image(Root, PixelArt.Badge(112, 20, Palette.Hex(0x1D1608), Palette.Gold3), 516, 8, Ui.Widget);

@@ -89,6 +89,7 @@ namespace Obscure
         public Affinities affinities = Affinities.None;
         public Stats stats;
         public string[] skills;
+        public string[] talentIds = Array.Empty<string>();
         public string[] sprite;
     }
 

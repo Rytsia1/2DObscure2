@@ -73,6 +73,7 @@ namespace Obscure
         Background,
         Equipment,
         Passive,
+        Talent,
         Upgrade,
         Relic,
         Buff,
@@ -1553,7 +1554,7 @@ namespace Obscure
             var relevantMods = allMods.Where(m => !m.isAbilityModifier && m.derivedStat == statId).ToList();
             int raceBgContrib = (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Race || m.source == ModifierSource.Background).Sum(m => m.value));
             eqContrib += (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Equipment).Sum(m => m.value));
-            permContrib += (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Passive || m.source == ModifierSource.Upgrade || m.source == ModifierSource.Relic).Sum(m => m.value));
+            permContrib += (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Passive || m.source == ModifierSource.Upgrade || m.source == ModifierSource.Relic || m.source == ModifierSource.Talent).Sum(m => m.value));
             int tempContrib = (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Buff || m.source == ModifierSource.Debuff).Sum(m => m.value));
 
             return new StatBreakdown

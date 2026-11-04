@@ -106,6 +106,10 @@ namespace Obscure
             };
 
             var result = DamageCalculator.Calculate(context);
+            if (statusId == StatusId.Poison && source?.unit != null && source.unit.HasTalent("poisoner"))
+            {
+                return Math.Max(1, (int)Math.Round(result.totalDamage * (1f + TalentSystem.PoisonerPotencyBonus)));
+            }
             return result.totalDamage;
         }
     }

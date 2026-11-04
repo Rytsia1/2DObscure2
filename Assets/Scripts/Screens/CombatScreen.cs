@@ -371,6 +371,19 @@ namespace Obscure
                     }
                     yield return RunQte(qte, Telegraph(act), act);
                     if (qte.Cancelled) break;
+                    var defender = act.target;
+                    if (defender != null && qte.Result == QteResult.Miss && defender.CanTriggerLuckyRetry(qte.Result, () => (float)qteRng.NextDouble()))
+                    {
+                        defender.RecordLuckyRetry();
+                        Hint("LUCKY ACTIVATED! RETRYING DEFENSE...");
+                        yield return new WaitForSeconds(0.4f);
+                        var retryDefQte = QteFactory.Defense(act, Assist);
+                        if (retryDefQte != null)
+                        {
+                            yield return RunQte(retryDefQte, "LUCKY RETRY! " + Telegraph(act), act);
+                            if (!retryDefQte.Cancelled) qte = retryDefQte;
+                        }
+                    }
                     yield return Resolve(act, 1f, qte is DefenseQte d ? d.Results : ((AutoQte)qte).Results);
                 }
                 else
@@ -382,8 +395,21 @@ namespace Obscure
                     float power = 1f;
                     if (qte != null)
                     {
+                        c.ResetQteLuckyFlag();
                         yield return RunQte(qte, OffenseHeading(chosen), null);
                         if (qte.Cancelled) break;
+                        if (qte.Result == QteResult.Miss && c.CanTriggerLuckyRetry(qte.Result, () => (float)qteRng.NextDouble()))
+                        {
+                            c.RecordLuckyRetry();
+                            Hint("LUCKY ACTIVATED! RETRYING QTE...");
+                            yield return new WaitForSeconds(0.4f);
+                            var retryQte = QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng);
+                            if (retryQte != null)
+                            {
+                                yield return RunQte(retryQte, "LUCKY RETRY! " + OffenseHeading(chosen), null);
+                                if (!retryQte.Cancelled) qte = retryQte;
+                            }
+                        }
                         power = Battle.QtePower(chosen, qte.Result);
                     }
                     yield return Resolve(chosen, power);

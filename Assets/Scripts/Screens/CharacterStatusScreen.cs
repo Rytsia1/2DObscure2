@@ -66,11 +66,13 @@ namespace Obscure
 
             // 1. Header: title + service shortcuts
             Ui.Label(Root, "STATUS", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
-            var skillsBtn = Ui.Button(Root, "SKILLS", 400, 8, 72, () => Game?.Go(GameState.Skills), 20, showCursor: false);
+            var skillsBtn = Ui.Button(Root, "SKILLS", 336, 8, 66, () => Game?.Go(GameState.Skills), 20, showCursor: false);
             skillsBtn.tooltip = "VIEW & UPGRADE SKILL TREES AND SP";
-            var gearBtn = Ui.Button(Root, "LOADOUT", 478, 8, 72, () => Game?.Go(GameState.Equipment), 20, showCursor: false);
+            var talentsBtn = Ui.Button(Root, "TALENTS", 408, 8, 68, () => Game?.Go(GameState.Talents), 20, showCursor: false);
+            talentsBtn.tooltip = "VIEW & SELECT HERO TALENT MILESTONES";
+            var gearBtn = Ui.Button(Root, "LOADOUT", 482, 8, 68, () => Game?.Go(GameState.Equipment), 20, showCursor: false);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT LOADOUT";
-            var itemsBtn = Ui.Button(Root, "SATCHEL", 556, 8, 72, () => Game?.Go(GameState.Inventory), 20, showCursor: false);
+            var itemsBtn = Ui.Button(Root, "SATCHEL", 556, 8, 68, () => Game?.Go(GameState.Inventory), 20, showCursor: false);
             itemsBtn.tooltip = "INVENTORY (EQUIPMENT, CONSUMABLES, MATERIALS, KEYS)";
 
             // 2. Identity column (gold frame): portrait, name, race/class, vitals

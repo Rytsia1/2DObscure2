@@ -2489,6 +2489,8 @@ namespace Obscure
 
 
 
+        public static readonly Dictionary<string, TalentDef> Talents = TalentSystem.AllTalents;
+
         // ---- 7. Equipment Across All 8 Slots & Starter Passives (Sections 5 & 8) ----
 
         public static readonly Dictionary<string, EquipmentDef> Equipment = Index(new[]

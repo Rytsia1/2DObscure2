@@ -1720,6 +1720,7 @@ namespace Obscure
         public string[] activeSkillLoadout;
         public string[] passiveSkillLoadout;
         public string[] unlockedSkills;
+        public string[] selectedTalents = Array.Empty<string>();
         public EquipmentSlotAssignment[] equipmentLoadout;
         public EquipmentInstanceSaveData[] equippedInstances = Array.Empty<EquipmentInstanceSaveData>();
         public Stats stats;
@@ -1748,6 +1749,7 @@ namespace Obscure
                 unlockedSkills = runtimeUnit != null
                     ? runtimeUnit.skillLoadout.UnlockedActiveSkills.Concat(runtimeUnit.skillLoadout.UnlockedPassiveSkills).ToArray()
                     : (d.unlockedSkills ?? Array.Empty<string>()),
+                selectedTalents = runtimeUnit != null ? runtimeUnit.selectedTalentIds.ToArray() : (d.talentIds ?? Array.Empty<string>()),
                 equipmentLoadout = runtimeUnit != null
                     ? runtimeUnit.equipped.Where(kv => kv.Value != null).Select(kv => new EquipmentSlotAssignment(kv.Key, kv.Value.id)).ToArray()
                     : (d.equipmentLoadout ?? Array.Empty<EquipmentSlotAssignment>()),
@@ -1788,6 +1790,7 @@ namespace Obscure
                 startingEquipment = (equipmentLoadout ?? Array.Empty<EquipmentSlotAssignment>()).Select(a => a.equipmentId).ToArray(),
                 passives = (passiveSkillLoadout ?? Array.Empty<string>()).Where(s => !string.IsNullOrEmpty(s)).ToArray(),
                 skills = (activeSkillLoadout ?? Array.Empty<string>()).Where(s => !string.IsNullOrEmpty(s)).ToArray(),
+                talentIds = selectedTalents ?? Array.Empty<string>(),
                 affinities = classDef.affinities ?? Affinities.None,
                 sprite = classDef.sprite ?? Art.Knight,
             };
@@ -1908,6 +1911,7 @@ namespace Obscure
                 activeSkillLoadout = u.skillLoadout.ActiveSlots.ToArray(),
                 passiveSkillLoadout = u.skillLoadout.PassiveSlots.ToArray(),
                 unlockedSkills = u.skillLoadout.UnlockedActiveSkills.Concat(u.skillLoadout.UnlockedPassiveSkills).ToArray(),
+                talentIds = u.selectedTalentIds.ToArray(),
                 equipmentLoadout = u.equipped.Where(kv => kv.Value != null).Select(kv => new EquipmentSlotAssignment(kv.Key, kv.Value.id)).ToArray(),
             }).ToList();
 

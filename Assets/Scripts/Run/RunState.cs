@@ -19,6 +19,13 @@ namespace Obscure
         public string starterPassiveId;
         public int level = 1;
         public int unspentAsiPoints;
+        public readonly List<string> selectedTalentIds = new List<string>();
+        public bool HasTalent(string talentId) => !string.IsNullOrEmpty(talentId) && selectedTalentIds.Contains(talentId);
+        public int EarnedTalentSlots => TalentSystem.GetTalentSlotsAtLevel(level);
+        public int AvailableTalentSelections => Math.Max(0, EarnedTalentSlots - selectedTalentIds.Count);
+        public bool CanSelectTalent(string talentId, out string error) => TalentSystem.ValidateSelection(this, talentId, out error);
+        public bool TrySelectTalent(string talentId, out string error) => TalentSystem.TrySelectTalent(this, talentId, out error);
+        public void RespecTalents() => TalentSystem.Respec(this);
 
         public readonly AbilityScoreSheet abilities = new AbilityScoreSheet();
         public readonly SkillLoadout skillLoadout = new SkillLoadout();
@@ -97,6 +104,12 @@ namespace Obscure
                 Array.Clear(skillLoadout.passiveSlots, 0, skillLoadout.passiveSlots.Length);
             }
 
+            if (d.talentIds != null)
+            {
+                foreach (var tid in d.talentIds)
+                    if (!string.IsNullOrEmpty(tid) && !selectedTalentIds.Contains(tid))
+                        selectedTalentIds.Add(tid);
+            }
             if (d.passives != null)
                 foreach (var pid in d.passives)
                     if (Database.Passives.TryGetValue(pid, out var p) && !passives.Contains(p)) passives.Add(p);
@@ -194,6 +207,10 @@ namespace Obscure
             if (background != null) list.AddRange(background.GetActiveModifiers(level));
             foreach (var p in passives)
                 if (p.modifiers != null) list.AddRange(p.modifiers);
+            if (HasTalent("durable"))
+                list.Add(StatModifier.ForDerived(DerivedStatId.MaxHP, TalentSystem.DurableHpBonus, ModifierKind.PercentAdd, ModifierSource.Talent, "Durable"));
+            if (HasTalent("arcane_reserve"))
+                list.Add(StatModifier.ForDerived(DerivedStatId.MaxMP, TalentSystem.ArcaneReserveMaxMpBonus, ModifierKind.Flat, ModifierSource.Talent, "Arcane Reserve"));
             list.AddRange(permanentModifiers);
             list.AddRange(temporaryModifiers);
             return list;
@@ -898,6 +915,13 @@ namespace Obscure
                     var sc = data.party[i];
                     var u = Party[i];
                     u.level = Math.Max(1, sc.level);
+                    u.selectedTalentIds.Clear();
+                    if (sc.selectedTalents != null)
+                    {
+                        foreach (var tid in sc.selectedTalents)
+                            if (!string.IsNullOrEmpty(tid) && !u.selectedTalentIds.Contains(tid))
+                                u.selectedTalentIds.Add(tid);
+                    }
                     u.unspentAsiPoints = sc.unspentAsiPoints;
                     u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
 

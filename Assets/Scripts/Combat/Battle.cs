@@ -16,6 +16,12 @@ namespace Obscure
         public event Action<string> Logged;
 
         public int Round { get; private set; }
+        public bool IsInspiringLeaderActive(Side side)
+        {
+            if (Round > TalentSystem.InspiringLeaderDuration) return false;
+            var allies = side == Side.Party ? Party : Enemies;
+            return allies.Any(a => a.Alive && a.unit != null && a.unit.HasTalent("inspiring_leader"));
+        }
         public Combatant Active { get; private set; }
 
         readonly List<Combatant> queue = new List<Combatant>();
@@ -349,7 +355,7 @@ namespace Obscure
                                         hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s));
                                         break;
                                     case SkillKind.Heal:
-                                        hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng)));
+                                        hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng), actor));
                                         break;
                                 }
                             }
@@ -374,7 +380,7 @@ namespace Obscure
                     }
                     else if (a.target.Alive)
                     {
-                        if (item.heal > 0) hits.Add(Heal(a.target, item.heal));
+                        if (item.heal > 0) hits.Add(Heal(a.target, item.heal, actor));
                         if (item.mana > 0)
                         {
                             int before = a.target.unit.mp;
@@ -410,6 +416,13 @@ namespace Obscure
 
             // Power from QTE: power > GoodPower guarantees application unless resisted/immune
             float effChance = (power > QteConfig.GoodPower) ? 1.0f : ap.chance;
+            if (source?.unit != null)
+            {
+                if (ap.id == StatusId.Stun && source.unit.HasTalent("crusher"))
+                    effChance += TalentSystem.CrusherStunBonus;
+                if (ap.id == StatusId.Bleed && source.unit.HasTalent("slasher"))
+                    effChance += TalentSystem.SlasherBleedBonus;
+            }
             var applyClone = new StatusApply
             {
                 id = ap.id,
@@ -570,8 +583,12 @@ namespace Obscure
             return hit;
         }
 
-        Hit Damage(Combatant t, int amount, string note = "")
+        public Hit Damage(Combatant t, int amount, string note = "")
         {
+            if (t != null && t.side == Side.Party && IsInspiringLeaderActive(t.side))
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * (1f - TalentSystem.InspiringLeaderReduction)));
+            }
             t.unit.hp = Math.Max(0, t.unit.hp - amount);
             // GDD Section 12: Sleep ends when target receives direct damage or DoT
             t.StatusController.OnDamageReceived(amount, false, Say);
@@ -592,8 +609,12 @@ namespace Obscure
             if (d.phase2Buff != null) Apply(t, d.phase2Buff, t, 1f);
         }
 
-        Hit Heal(Combatant t, int amount)
+        public Hit Heal(Combatant t, int amount, Combatant healer = null)
         {
+            if (healer?.unit != null && healer.unit.HasTalent("healer"))
+            {
+                amount = (int)Math.Round(amount * (1f + TalentSystem.HealerBonus));
+            }
             if (t?.unit?.background != null)
             {
                 var bgRank = t.unit.background.GetRank(t.unit.level);

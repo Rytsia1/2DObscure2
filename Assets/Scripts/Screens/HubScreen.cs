@@ -233,12 +233,19 @@ namespace Obscure
             Ui.Label(facilityContent, "TRAINING GROUND - SKILLS & LOADOUT", 28, 82, Palette.Gold2, Align.Left, 1, FontKind.Serif);
             Ui.Label(facilityContent, "MANAGE ACTIVE AND PASSIVE CLASS SKILL LOADOUTS.", 28, 104, Palette.WarmIvory);
 
-            var openSkillsBtn = Ui.Button(facilityContent, "OPEN FULL SKILL TREE SCREEN >>", 28, 140, 374, () =>
+            var openSkillsBtn = Ui.Button(facilityContent, "OPEN FULL SKILL TREE SCREEN >>", 28, 130, 374, () =>
             {
                 Game.Go(GameState.Skills);
-            }, 28, style: ButtonStyle.Primary);
+            }, 26, style: ButtonStyle.Primary);
             openSkillsBtn.tooltip = "INSPECT 5-TIER SKILL TREES, UPGRADE RANKS, AND ALLOCATE SKILL POINTS.";
             menu.Add(openSkillsBtn);
+
+            var openTalentsBtn = Ui.Button(facilityContent, "MANAGE HERO TALENTS & RESPEC >>", 28, 164, 374, () =>
+            {
+                Game.Go(GameState.Talents);
+            }, 26, style: ButtonStyle.Primary);
+            openTalentsBtn.tooltip = "CHOOSE TALENT MILESTONES (LVL 3, 6, 9, 12, 15) AND RESPEC TALENTS.";
+            menu.Add(openTalentsBtn);
         }
 
         void RenderTemple(Menu menu)

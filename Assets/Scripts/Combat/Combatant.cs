@@ -44,6 +44,22 @@ namespace Obscure
         public int wayfarerSpeedBuffTurns;
         public readonly Dictionary<Combatant, int> scribeAttackCounts = new Dictionary<Combatant, int>();
         public bool hasActedInBattle;
+        public int luckyActivationsRemaining = TalentSystem.LuckyMaxPerBattle;
+        public bool luckyUsedForCurrentQte = false;
+        public bool CanTriggerLuckyRetry(QteResult result, Func<float> rngProvider = null)
+        {
+            if (!Alive || unit == null || !unit.HasTalent("lucky")) return false;
+            if (luckyActivationsRemaining <= 0 || luckyUsedForCurrentQte) return false;
+            if (result != QteResult.Miss) return false;
+            float roll = rngProvider != null ? rngProvider() : UnityEngine.Random.value;
+            return roll < TalentSystem.LuckyActivationChance;
+        }
+        public void RecordLuckyRetry()
+        {
+            if (luckyActivationsRemaining > 0) luckyActivationsRemaining--;
+            luckyUsedForCurrentQte = true;
+        }
+        public void ResetQteLuckyFlag() => luckyUsedForCurrentQte = false;
 
         public void ResetTurnBackgroundPerks()
         {
@@ -85,6 +101,8 @@ namespace Obscure
             if (enemy != null && enemy.tier == Tier.Boss)
                 StatusController.ResistanceProfile.baseResistance = 0.50f; // High base resistance for Bosses (GDD Section 13)
 
+            if (unit != null && unit.HasTalent("durable"))
+                DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 1f - TalentSystem.DurableDamageReduction, sourceId: "durable");
             if (unit?.race?.racialFeat != null && unit.race.racialFeat.canRetryFailedQte)
                 SecondChanceRetriesRemaining = Math.Max(0, unit.race.racialFeat.maxQteRetriesPerBattle);
 
@@ -193,6 +211,8 @@ namespace Obscure
                         crit += (int)Math.Round(rank.scribeNextAttackCritBonus * 100f);
                 }
             }
+            if (target != null && target.unit != null && target.unit.HasTalent("alert"))
+                crit -= (int)Math.Round(TalentSystem.AlertCritReduction * 100f);
             return Math.Clamp(crit, 0, 100);
         }
 
@@ -217,7 +237,7 @@ namespace Obscure
                 attackerInt = scores.intel,
                 attackerModifiers = DamageModifiers ?? new DamageModifierSet(),
                 criticalHitConfig = GetCriticalHitConfig(target),
-                targetPhysicalDefense = target != null ? target.Def : 0f,
+                targetPhysicalDefense = target != null ? (unit != null && unit.HasTalent("piercer") ? (float)Math.Max(0.0, target.Def * (1f - TalentSystem.PiercerPenetration)) : target.Def) : 0f,
                 targetModifiers = target?.DamageModifiers ?? new DamageModifierSet(),
                 targetEnemyAffinity = target?.AffinityProfile ?? new EnemyAffinityProfile(),
                 targetNullBreak = target?.NullBreak,
@@ -251,6 +271,11 @@ namespace Obscure
                     cost = (int)Math.Round(cost * (1f - rank.mpCostReductionPercent));
                     if (cost < 1) cost = 1; // "An Active Skill with an MP cost cannot become free through this perk; its minimum cost remains 1 MP."
                 }
+            }
+            if (unit != null && unit.HasTalent("keen_mind"))
+            {
+                cost = (int)Math.Round(cost * (1f - TalentSystem.KeenMindMpReduction));
+                if (cost < TalentSystem.KeenMindMinFloor) cost = TalentSystem.KeenMindMinFloor;
             }
             return Math.Max(0, cost);
         }
