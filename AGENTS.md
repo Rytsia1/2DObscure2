@@ -4,7 +4,24 @@ Dokumen ini merupakan panduan instruksi dan aturan mutlak (**Strict Guidelines**
 
 ---
 
-## 1. Aturan Mutlak: Larangan Commit Berkas Sensitif & Internal
+## 1. Aturan Mutlak: Larangan Commit Otomatis (No Auto-Commit)
+
+Setiap agen **DILARANG KERAS** menjalankan operasi `git commit` maupun `git push` secara otomatis atau atas inisiatif sendiri setelah menyelesaikan suatu tugas.
+
+1. **Kendali Penuh di Tangan Pengguna:**
+   - Setelah selesai melakukan perubahan kode, refactoring, atau pengujian, agen **HANYA** bertugas memverifikasi hasil kerja dan melaporkannya kepada pengguna.
+   - **JANGAN PERNAH** menjalankan perintah `git commit` kecuali pengguna secara eksplisit dan sengaja memberikan perintah untuk melakukan commit (misalnya: *"tolong commit"*, *"commit perubahan ini"*).
+   - **JANGAN PERNAH** menjalankan perintah `git push` ke remote repository tanpa perintah spesifik dari pengguna.
+
+2. **Prosedur Pelaporan Tugas (Tanpa Commit):**
+   - Laporkan ringkasan perubahan kode yang telah dibuat.
+   - Cantumkan daftar berkas yang dimodifikasi atau ditambahkan.
+   - Laporkan status verifikasi dan hasil pengujian (*test suite results*).
+   - Biarkan berkas berada dalam *working tree* (unstaged/uncommitted) agar pengguna dapat memeriksa ulang sebelum memutuskan untuk melakukan commit.
+
+---
+
+## 2. Aturan Mutlak: Larangan Commit Berkas Sensitif & Internal
 
 Setiap agen **DILARANG KERAS** melakukan staging atau commit terhadap berkas-berkas yang termasuk dalam kategori di bawah ini:
 
@@ -33,9 +50,9 @@ Setiap agen **DILARANG KERAS** melakukan staging atau commit terhadap berkas-ber
 
 ---
 
-## 2. Prosedur Git Workflow untuk Agen
+## 3. Prosedur Git Workflow untuk Agen (Hanya Jika Diminta Pengguna)
 
-Sebelum menjalankan operasi git (`git add` dan `git commit`), agen **WAJIB** mengikuti prosedur berikut:
+Jika dan hanya jika pengguna secara eksplisit meminta agen untuk melakukan commit, agen **WAJIB** mengikuti prosedur berikut:
 
 1. **Dilarang Menggunakan Wildcard Add:**
    - **JANGAN PERNAH** menjalankan `git add .` atau `git add -A`.
@@ -59,7 +76,7 @@ Sebelum menjalankan operasi git (`git add` dan `git commit`), agen **WAJIB** men
 
 ---
 
-## 3. Sinkronisasi dengan `.gitignore`
+## 4. Sinkronisasi dengan `.gitignore`
 
 Aturan pada dokumen ini didukung langsung oleh berkas `.gitignore` di root proyek. Jika ada format file konfigurasi agen, dependency baru, atau file lingkungan baru yang ditambahkan ke proyek, agen harus memastikan polanya telah tercantum pada `.gitignore`.
 
