@@ -21,6 +21,7 @@ namespace Obscure
         public bool loop = true;
         [Range(0, 1)] public float volume = 1f;
         public float fadeIn = -1f, fadeOut = -1f; // seconds; negative uses the library defaults
+        [Range(1000, 22000)] public float lowPassCutoff = 22000f; // Hz; 22000 = transparent / bypass
     }
 
     [CreateAssetMenu(menuName = "Obscure/Music Library")]
@@ -46,6 +47,7 @@ namespace Obscure
 
         public float FadeIn(MusicTrack t) => t.fadeIn >= 0 ? t.fadeIn : fadeIn;
         public float FadeOut(MusicTrack t) => t.fadeOut >= 0 ? t.fadeOut : fadeOut;
+        public float Cutoff(MusicTrack t) => t != null && t.lowPassCutoff >= 1000f ? t.lowPassCutoff : 22000f;
 
         // The encounter's own theme if it has one, else a random battle theme (when enabled), else the default.
         public string BattleMusicFor(EncounterDef encounter, System.Random rng)

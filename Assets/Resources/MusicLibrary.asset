@@ -20,6 +20,7 @@ MonoBehaviour:
     volume: 1
     fadeIn: -1
     fadeOut: -1
+    lowPassCutoff: 22000
   - id: battle_1
     clip: {fileID: 8300000, guid: dfa4c54e95412eb4992dc6d7436b101b, type: 3}
     category: 1
@@ -27,6 +28,7 @@ MonoBehaviour:
     volume: 1
     fadeIn: -1
     fadeOut: -1
+    lowPassCutoff: 15000
   - id: battle_2
     clip: {fileID: 8300000, guid: c6c2dc4b2ac104143a9455b103ce6c43, type: 3}
     category: 1
@@ -34,6 +36,7 @@ MonoBehaviour:
     volume: 1
     fadeIn: -1
     fadeOut: -1
+    lowPassCutoff: 22000
   - id: battle_3
     clip: {fileID: 8300000, guid: 08ecd3ead6051ce4eb4161183383e4d9, type: 3}
     category: 1
@@ -41,6 +44,7 @@ MonoBehaviour:
     volume: 1
     fadeIn: -1
     fadeOut: -1
+    lowPassCutoff: 12500
   - id: map
     clip: {fileID: 8300000, guid: 4cdc74e8eb8a92c4e8e0ce514e18b33a, type: 3}
     category: 2
@@ -48,6 +52,7 @@ MonoBehaviour:
     volume: 1
     fadeIn: -1
     fadeOut: -1
+    lowPassCutoff: 22000
   menuMusic: main_menu
   creationMusic: 
   explorationMusic: map

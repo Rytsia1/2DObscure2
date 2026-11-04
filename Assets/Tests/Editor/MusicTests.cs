@@ -193,6 +193,55 @@ namespace Obscure.Tests
             }
         }
 
+        [Test]
+        public void LibraryTracksHaveCalibratedFiltersAndHeadroom()
+        {
+            var lib = Library;
+            Assert.IsNotNull(lib);
+            foreach (var t in lib.tracks)
+            {
+                Assert.AreEqual(1f, t.volume, 1e-4f, $"{t.id} volume should match standard Unity unity gain for remastered assets");
+                Assert.GreaterOrEqual(t.lowPassCutoff, 1000f, $"{t.id} cutoff out of range");
+                Assert.LessOrEqual(t.lowPassCutoff, 22000f, $"{t.id} cutoff out of range");
+            }
+
+            // Battle 3 (boss theme) has aggressive high-mid content; verify it is filtered below 14kHz
+            var b3 = lib.Get(MusicIds.Battle3);
+            Assert.IsNotNull(b3);
+            Assert.LessOrEqual(b3.lowPassCutoff, 14000f, "Battle 3 must have high-frequency filter applied");
+        }
+
+        [Test]
+        public void MusicManagerInitializesAndMaintainsLowPassFilter()
+        {
+            var host = new GameObject("TestMusicManagerHost");
+            try
+            {
+                var mgr = MusicManager.Create(host);
+                Assert.IsNotNull(mgr);
+                Assert.IsNotNull(mgr.Source);
+                Assert.IsNotNull(mgr.LowPass);
+                Assert.AreEqual(1f, mgr.LowPass.lowpassResonanceQ);
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void ToneSfxGeneratesSmoothBandlimitedHarmonicsWithoutClipping()
+        {
+            var samples = Sfx.GenerateToneSamples((440, 0.05f), (294, 0.08f));
+            Assert.Greater(samples.Length, 0);
+            Assert.LessOrEqual(samples.Max(Mathf.Abs), 0.95f, "Tone should not clip");
+            Assert.AreEqual(0f, samples[samples.Length - 1], 1e-3f, "Decay smoothly to zero");
+
+            var denySamples = Sfx.GenerateToneSamples((110, 0.14f));
+            Assert.Greater(denySamples.Length, 0);
+            Assert.LessOrEqual(denySamples.Max(Mathf.Abs), 0.95f, "Deny tone should not clip");
+        }
+
         static float Rms(float[] s, float from, float to)
         {
             int a = (int)(from * Sfx.Rate), b = (int)(to * Sfx.Rate);

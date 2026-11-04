@@ -11,6 +11,7 @@ namespace Obscure
 
         public MusicLibrary Library { get; private set; }
         public AudioSource Source { get; private set; }
+        public AudioLowPassFilter LowPass { get; private set; }
         public string CurrentId => target?.id;   // the track playing or being faded to; null = silence
         public bool Fading => fade != null;
 
@@ -24,6 +25,7 @@ namespace Obscure
         {
             if (I != null) return I;
             var m = host.AddComponent<MusicManager>();
+            if (m.Source == null) m.SetupAudioComponents();
             m.Library = Resources.Load<MusicLibrary>(MusicLibrary.ResourcePath);
             if (m.Library == null) Debug.LogWarning($"No Resources/{MusicLibrary.ResourcePath} asset: music is disabled.");
             return m;
@@ -33,9 +35,23 @@ namespace Obscure
         {
             if (I != null && I != this) { Destroy(this); return; }
             I = this;
-            Source = gameObject.AddComponent<AudioSource>();
-            Source.playOnAwake = false;
-            Source.spatialBlend = 0f;
+            if (Source == null) SetupAudioComponents();
+        }
+
+        void SetupAudioComponents()
+        {
+            if (Source == null)
+            {
+                Source = gameObject.AddComponent<AudioSource>();
+                Source.playOnAwake = false;
+                Source.spatialBlend = 0f;
+            }
+            if (LowPass == null)
+            {
+                LowPass = gameObject.AddComponent<AudioLowPassFilter>();
+                LowPass.cutoffFrequency = 22000f;
+                LowPass.lowpassResonanceQ = 1f;
+            }
         }
 
         void OnDestroy()
@@ -111,6 +127,11 @@ namespace Obscure
         void Apply()
         {
             if (Source != null) Source.volume = level * settingsVolume * (playing?.volume ?? 1f);
+            if (LowPass != null)
+            {
+                float cutoff = Library != null ? Library.Cutoff(playing) : (playing != null && playing.lowPassCutoff >= 1000f ? playing.lowPassCutoff : 22000f);
+                LowPass.cutoffFrequency = cutoff;
+            }
         }
     }
 }

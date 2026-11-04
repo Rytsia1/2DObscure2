@@ -240,18 +240,33 @@ namespace Obscure
             return clip;
         }
 
-        // Square wave notes in sequence with a linear decay per note.
-        static AudioClip Tone(params (float hz, float seconds)[] notes)
+        // Soft harmonic tones in sequence with a smooth decay per note (replaces harsh unbandlimited square buzz).
+        public static float[] GenerateToneSamples(params (float hz, float seconds)[] notes)
         {
             var data = new List<float>();
+            const float twoPi = Mathf.PI * 2f;
             foreach (var (hz, seconds) in notes)
             {
                 int n = (int)(seconds * Rate);
                 for (int i = 0; i < n; i++)
-                    data.Add(((int)(i * hz * 2 / Rate) % 2 == 0 ? 1f : -1f) * (1f - (float)i / n));
+                {
+                    float t = (float)i / Rate;
+                    float env = 1f - (float)i / n;
+                    // Warm musical tone with gentle harmonics rather than harsh square wave
+                    float wave = 0.72f * Mathf.Sin(twoPi * hz * t)
+                               + 0.20f * Mathf.Sin(twoPi * hz * 2f * t)
+                               + 0.08f * Mathf.Sin(twoPi * hz * 3f * t);
+                    data.Add(Mathf.Clamp(wave * env, -0.95f, 0.95f));
+                }
             }
-            var clip = AudioClip.Create("sfx", data.Count, 1, Rate, false);
-            clip.SetData(data.ToArray(), 0);
+            return data.ToArray();
+        }
+
+        static AudioClip Tone(params (float hz, float seconds)[] notes)
+        {
+            var data = GenerateToneSamples(notes);
+            var clip = AudioClip.Create("sfx", data.Length, 1, Rate, false);
+            clip.SetData(data, 0);
             return clip;
         }
     }
