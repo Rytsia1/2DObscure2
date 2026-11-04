@@ -7,7 +7,7 @@ namespace Obscure
 {
     // Dungeon Shop Screen:
     // Conforms to 640x360 reference resolution, Serif headers, and retro JRPG aesthetics.
-    // Uses RUN GOLD (temporary dungeon currency). Sells consumables, equipment, and rare Phoenix Plumes (Revive Item).
+    // Uses GOLD (run-based currency). Sells consumables, equipment, and rare Phoenix Plumes (Revive Item).
     public class ShopScreen : GameScreen
     {
         enum ShopTab { BuyConsumables, BuyEquipment, Sell }
@@ -64,7 +64,7 @@ namespace Obscure
             }
 
             // Bottom bar: feedback and leave button
-            feedbackLabel = Ui.Label(Root, "WELCOME TO THE CARAVAN. TRADE RUN GOLD TO PREPARE FOR DEEPER FLOORS.", 24, 314, Palette.WarmIvory, Align.Left);
+            feedbackLabel = Ui.Label(Root, "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.", 24, 314, Palette.WarmIvory, Align.Left);
             var leaveBtn = Ui.Button(Root, "LEAVE CARAVAN", 480, 310, 140, OnLeaveShop, 24, style: ButtonStyle.Primary);
             tabMenu.Add(leaveBtn);
 
@@ -150,7 +150,7 @@ namespace Obscure
                         int sellVal = eq.CalculateSellValue();
                         string text = $"{eq.Definition?.name.ToUpperInvariant()} - SELL FOR {sellVal}G";
                         var btn = Ui.Button(contentRoot, PixelFont.Fit(text, 360), 28, y, 364, () => SellEquipment(eq), 24);
-                        btn.tooltip = $"SELL {eq.Definition?.name.ToUpperInvariant()} FOR {sellVal} RUN GOLD";
+                        btn.tooltip = $"SELL {eq.Definition?.name.ToUpperInvariant()} FOR {sellVal} GOLD";
                         menu.Add(btn);
                         y += 30;
                     }
@@ -164,7 +164,7 @@ namespace Obscure
             if (shopData.TryBuyConsumable(Run, c.itemId, out _, out string err))
             {
                 Sfx.Play(Sound.Success);
-                feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} RUN GOLD!", 520));
+                feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} GOLD!", 520));
                 RefreshContent();
             }
             else
@@ -180,7 +180,7 @@ namespace Obscure
             if (shopData.TryBuyEquipment(Run, eqItem.shopItemId, out var bought, out string err))
             {
                 Sfx.Play(Sound.Success);
-                feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} RUN GOLD!", 520));
+                feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} GOLD!", 520));
                 RefreshContent();
             }
             else
@@ -196,7 +196,7 @@ namespace Obscure
             if (shopData.TrySellEquipment(Run, eq.instanceId, out int goldGained, out string err))
             {
                 Sfx.Play(Sound.Success);
-                feedbackLabel?.Set(PixelFont.Fit($"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} RUN GOLD!", 520));
+                feedbackLabel?.Set(PixelFont.Fit($"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} GOLD!", 520));
                 RefreshContent();
             }
             else

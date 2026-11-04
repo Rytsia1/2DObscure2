@@ -8,7 +8,7 @@ namespace Obscure
     // Hub Screen:
     // Conforms to 640x360 reference resolution, Serif headers, and retro JRPG aesthetics.
     // Represents the central sanctuary between dungeon expeditions.
-    // Houses the 5 Hub Facilities using HUB GOLD (persistent currency):
+    // Houses the 5 Hub Facilities using GOLD:
     // 1. Shop (Consumables, unlimited stock)
     // 2. Armory (Equipment merchant)
     // 3. Blacksmith (Upgrade equipment)
@@ -36,9 +36,9 @@ namespace Obscure
             Ui.Divider(Root, 120, 36, 400, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
             // Hub Gold badge
-            int currentHubGold = Run != null ? Run.HubGold : 0;
+            int currentGold = Run != null ? Run.Gold : 0;
             Ui.Panel(Root, 460, 10, 164, 24, Palette.Hex(0x1C2210), Palette.Gold1);
-            hubGoldLabel = Ui.Label(Root, $"{currentHubGold} HUB GOLD", 542, 16, Palette.Gold1, Align.Center);
+            hubGoldLabel = Ui.Label(Root, $"{currentGold} GOLD", 542, 16, Palette.Gold1, Align.Center);
 
             // Navigation bar: 5 Facilities + Embark
             var navMenu = Root.gameObject.AddComponent<Menu>();
@@ -91,8 +91,8 @@ namespace Obscure
 
         void RefreshHeaderAndParty()
         {
-            int currentHubGold = Run != null ? Run.HubGold : 0;
-            hubGoldLabel?.Set($"{currentHubGold} HUB GOLD");
+            int currentGold = Run != null ? Run.Gold : 0;
+            hubGoldLabel?.Set($"{currentGold} GOLD");
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             for (int i = 0; i < partyStatusRows.Length && i < party.Count; i++)
@@ -146,7 +146,7 @@ namespace Obscure
                     if (HubEconomy.TryBuyHubConsumable(Run, c.itemId, 1, out string err))
                     {
                         Sfx.Play(Sound.Success);
-                        feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {c.name.ToUpperInvariant()} WITH HUB GOLD!", 520));
+                        feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {c.name.ToUpperInvariant()} WITH GOLD!", 520));
                         RenderFacility();
                     }
                     else
@@ -176,7 +176,7 @@ namespace Obscure
                     if (HubEconomy.TryBuyHubEquipment(Run, armoryStock, itm.shopItemId, out var bought, out string err))
                     {
                         Sfx.Play(Sound.Success);
-                        feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {itm.cost} HUB GOLD!", 520));
+                        feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {itm.cost} GOLD!", 520));
                         RenderFacility();
                     }
                     else
@@ -222,7 +222,7 @@ namespace Obscure
                         feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
                     }
                 }, 24);
-                btn.tooltip = $"UPGRADE STATS BY +5% BASE STATS. REQUIRES {cost} HUB GOLD.";
+                btn.tooltip = $"UPGRADE STATS BY +5% BASE STATS. REQUIRES {cost} GOLD.";
                 menu.Add(btn);
                 y += 32;
             }
@@ -249,7 +249,7 @@ namespace Obscure
             for (int i = 0; i < party.Count; i++)
             {
                 var u = party[i];
-                string status = u.Alive ? "ALIVE (NORMAL)" : $"FALLEN (REVIVE FOR {HubEconomy.TempleReviveCost} HUB GOLD)";
+                string status = u.Alive ? "ALIVE (NORMAL)" : $"FALLEN (REVIVE FOR {HubEconomy.TempleReviveCost} GOLD)";
                 var btn = Ui.Button(facilityContent, PixelFont.Fit($"{u.name.ToUpperInvariant()} - {status}", 370), 28, y, 374, () =>
                 {
                     if (HubEconomy.TryTempleRevive(Run, u, out string err))
@@ -264,7 +264,7 @@ namespace Obscure
                         feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
                     }
                 }, 24);
-                btn.tooltip = u.Alive ? "HERO IS ALIVE AND HEALTHY" : $"EXPEND {HubEconomy.TempleReviveCost} HUB GOLD TO REVIVE HERO TO 50% HP";
+                btn.tooltip = u.Alive ? "HERO IS ALIVE AND HEALTHY" : $"EXPEND {HubEconomy.TempleReviveCost} GOLD TO REVIVE HERO TO 50% HP";
                 if (u.Alive) btn.label.Color = Palette.Emerald;
                 else btn.label.Color = Palette.SpecCrimson;
                 menu.Add(btn);

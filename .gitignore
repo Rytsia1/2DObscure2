@@ -62,3 +62,51 @@ crashlytics-build.properties
 Thumbs.db
 desktop.ini
 
+
+
+# ==============================================================================
+# Security & Sensitive Files (per AGENTS.md)
+# ==============================================================================
+
+# Environment, Secrets & Credentials
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.cert
+*.pfx
+*.keystore
+*secret*
+*credential*
+credentials.json
+secrets.json
+
+# AI Agents, Skills, Workspaces & Tools
+.gemini/
+.claude/
+.cursor/
+.windsurf/
+.antigravity/
+.agent/
+.agents/
+project.yaml
+skills/
+custom_skills/
+
+# Dependencies & Package Caches
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.pytest_cache/
+packages/
+
+# Temporary Test & Debug Artifacts
+TestResults.txt
+TestResults.xml
+TestResults/
+*.log

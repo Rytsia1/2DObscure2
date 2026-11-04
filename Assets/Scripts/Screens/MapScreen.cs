@@ -27,7 +27,7 @@ namespace Obscure
             int floor = Run != null ? Run.Floor : 0;
 
             // 1. Run header
-            Ui.Label(Root, $"FLOOR {floor} OF {map.Floors}", 12, 8, Palette.Mist3);
+            Ui.Label(Root, $"DUNGEON {map.act} OF 8: {map.name.ToUpperInvariant()} (FLOOR {floor}/{map.Floors})", 12, 8, Palette.Mist3);
             Ui.Label(Root, $"ACT {map.act}", 12, 19, Palette.Gold2, Align.Left, 1, FontKind.Serif);
             for (int i = 0; i < map.Floors; i++)
             {
@@ -198,7 +198,7 @@ namespace Obscure
 
         static string Describe(NodeDef n) => n.type switch
         {
-            NodeType.Shop => "A WANDERING OUTPOST. TRADE RUN GOLD FOR SUPPLIES AND GEAR.",
+            NodeType.Shop => "A WANDERING OUTPOST. TRADE GOLD FOR SUPPLIES AND GEAR.",
             NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
             NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
             NodeType.Rest => "RECOVER THE PARTY OR IMPROVE A HERO.",

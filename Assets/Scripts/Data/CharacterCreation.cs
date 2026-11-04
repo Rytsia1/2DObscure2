@@ -1817,6 +1817,8 @@ namespace Obscure
     public class GameSaveData
     {
         public bool hasConfirmedParty;
+        public bool isRunActive = true;
+        public bool isDefeated = false;
         public int seed = 1;
         public int act = 1;
         public int gold;
@@ -1843,14 +1845,14 @@ namespace Obscure
 
         public static bool HasSavedGame()
         {
-            if (memoryCache != null && memoryCache.hasConfirmedParty && memoryCache.party != null && memoryCache.party.Length == CharacterRoster.PartySize)
+            if (memoryCache != null && memoryCache.hasConfirmedParty && !memoryCache.isDefeated && memoryCache.isRunActive && memoryCache.party != null && memoryCache.party.Length == CharacterRoster.PartySize)
                 return true;
             string raw = UnityEngine.PlayerPrefs.GetString(PrefKey, "");
             if (string.IsNullOrEmpty(raw)) return false;
             try
             {
                 var data = UnityEngine.JsonUtility.FromJson<GameSaveData>(raw);
-                return data != null && data.hasConfirmedParty && data.party != null && data.party.Length == CharacterRoster.PartySize;
+                return data != null && data.hasConfirmedParty && !data.isDefeated && data.isRunActive && data.party != null && data.party.Length == CharacterRoster.PartySize;
             }
             catch
             {
@@ -1873,6 +1875,8 @@ namespace Obscure
             var data = new GameSaveData
             {
                 hasConfirmedParty = true,
+                isRunActive = true,
+                isDefeated = false,
                 seed = seed,
                 act = 1,
                 gold = 0,
@@ -1908,15 +1912,18 @@ namespace Obscure
             }).ToList();
 
             var invData = run.Inventory != null ? run.Inventory.ToSaveData() : new InventorySaveData();
+            bool isDefeated = run.Status == RunStatus.Defeat;
             var data = new GameSaveData
             {
                 hasConfirmedParty = true,
+                isRunActive = !isDefeated,
+                isDefeated = isDefeated,
                 seed = run.Seed,
-                act = run.Act,
-                gold = run.Gold,
-                hubGold = run.HubGold,
-                currentNodeId = run.Current?.id ?? "",
-                clearedNodeIds = run.Cleared.ToArray(),
+                act = isDefeated ? 1 : run.Act,
+                gold = isDefeated ? 0 : run.Gold,
+                hubGold = isDefeated ? 0 : run.Gold,
+                currentNodeId = isDefeated ? "" : (run.Current?.id ?? ""),
+                clearedNodeIds = isDefeated ? Array.Empty<string>() : run.Cleared.ToArray(),
                 items = run.Items.ToArray(),
                 relics = run.Relics.ToArray(),
                 party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
@@ -1968,7 +1975,7 @@ namespace Obscure
             restoredRoster = null;
             restoredRun = null;
             var data = LoadSaveData();
-            if (data == null || !data.hasConfirmedParty || data.party == null || data.party.Length != CharacterRoster.PartySize)
+            if (data == null || !data.hasConfirmedParty || data.isDefeated || !data.isRunActive || data.party == null || data.party.Length != CharacterRoster.PartySize)
                 return false;
 
             var partyDefs = data.party.Select(p => p.ToCharacterDef()).ToList();

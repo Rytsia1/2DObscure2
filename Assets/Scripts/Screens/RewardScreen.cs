@@ -22,7 +22,7 @@ namespace Obscure
             // Rewards panel
             Ui.Panel(Root, 40, 68, 330, 250);
             Ui.Header(Root, "REWARDS", 54, 76, 318);
-            Ui.Badge(Root, $"+{r.gold} RUN GOLD", 52, 96, 120, 18, Palette.Hex(0x1D1009), Palette.Ember2, Palette.Ember1);
+            Ui.Badge(Root, $"+{r.gold} GOLD", 52, 96, 120, 18, Palette.Hex(0x1D1009), Palette.Ember2, Palette.Ember1);
             if (Run != null) Ui.Label(Root, $"NOW {Run.Gold}", 360, 102, Palette.Ember1, Align.Right);
             Ui.Label(Root, r.choices.Count > 0 ? "CHOOSE ONE PRIZE" : "NO PRIZE THIS TIME", 54, 124, Palette.Mist3);
 

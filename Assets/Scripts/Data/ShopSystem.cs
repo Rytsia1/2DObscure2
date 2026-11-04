@@ -92,7 +92,7 @@ namespace Obscure
 
             if (run.Gold < entry.cost)
             {
-                error = $"Not enough Run Gold. Requires {entry.cost} Run Gold, but only have {run.Gold} Run Gold.";
+                error = $"Not enough Gold. Requires {entry.cost} Gold, but only have {run.Gold} Gold.";
                 return false;
             }
 
@@ -124,17 +124,14 @@ namespace Obscure
     {
         public const int TempleReviveCost = 100;
 
-        // 1:1 Transfer without any deductions or conversion fees (GDD Section 3.4)
+        // Retains run gold 1:1 across dungeon clears without any deductions or conversion fees (Difficulty System Section 5.1)
         public static int TransferRunGoldToHub(RunState run)
         {
             if (run == null) return 0;
-            int transferred = run.Gold;
-            run.HubGold += transferred;
-            run.Gold = 0;
-            return transferred;
+            return run.Gold;
         }
 
-        // On run failure, Run Gold is lost 100%, Hub Gold is 100% safe (GDD Section 3.1 & 3.2)
+        // On run failure, all Gold is wiped (Difficulty System Section 4.3 & 5.1)
         public static void HandleRunFailure(RunState run)
         {
             if (run == null) return;
@@ -167,13 +164,13 @@ namespace Obscure
             }
 
             int totalCost = entry.cost * count;
-            if (run.HubGold < totalCost)
+            if (run.Gold < totalCost)
             {
-                error = $"Not enough Hub Gold. Requires {totalCost} Hub Gold, but party only has {run.HubGold} Hub Gold.";
+                error = $"Not enough Gold. Requires {totalCost} Gold, but party only has {run.Gold} Gold.";
                 return false;
             }
 
-            run.HubGold -= totalCost;
+            run.Gold -= totalCost;
             for (int i = 0; i < count; i++)
             {
                 run.Items.Add(entry.itemId);
@@ -204,9 +201,9 @@ namespace Obscure
                 return false;
             }
 
-            if (run.HubGold < shopItem.cost)
+            if (run.Gold < shopItem.cost)
             {
-                error = $"Not enough Hub Gold. Requires {shopItem.cost} Hub Gold, but party only has {run.HubGold} Hub Gold.";
+                error = $"Not enough Gold. Requires {shopItem.cost} Gold, but party only has {run.Gold} Gold.";
                 return false;
             }
 
@@ -216,7 +213,7 @@ namespace Obscure
                 return false;
             }
 
-            run.HubGold -= shopItem.cost;
+            run.Gold -= shopItem.cost;
             shopItem.isSold = true;
             bought = shopItem.item;
 
@@ -238,13 +235,13 @@ namespace Obscure
                 return false;
 
             int cost = eq.GetUpgradeCostGold();
-            if (run.HubGold < cost)
+            if (run.Gold < cost)
             {
-                error = $"Not enough Hub Gold. Requires {cost} Hub Gold, but party only has {run.HubGold} Hub Gold.";
+                error = $"Not enough Gold. Requires {cost} Gold, but party only has {run.Gold} Gold.";
                 return false;
             }
 
-            run.HubGold -= cost;
+            run.Gold -= cost;
             if (!eq.TryUpgrade(out error))
                 return false;
 
@@ -270,13 +267,13 @@ namespace Obscure
                 return false;
             }
 
-            if (run.HubGold < TempleReviveCost)
+            if (run.Gold < TempleReviveCost)
             {
-                error = $"Not enough Hub Gold. Temple revival requires {TempleReviveCost} Hub Gold, but party only has {run.HubGold} Hub Gold.";
+                error = $"Not enough Gold. Temple revival requires {TempleReviveCost} Gold, but party only has {run.Gold} Gold.";
                 return false;
             }
 
-            run.HubGold -= TempleReviveCost;
+            run.Gold -= TempleReviveCost;
             unit.hp = Math.Max(1, (int)Math.Round(unit.stats.maxHp * 0.50f));
             unit.RecalculateStats();
 

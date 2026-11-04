@@ -584,7 +584,7 @@ namespace Obscure
         public readonly DateTime StartedUtc = DateTime.UtcNow;
         public DateTime? EndedUtc { get; private set; }
         public int Gold;
-        public int HubGold;
+        public int HubGold { get => Gold; set => Gold = value; }
         public int RunGold => Gold;
         public DungeonShopData CurrentDungeonShop { get; set; }
 
@@ -694,6 +694,11 @@ namespace Obscure
             Status = RunStatus.Defeat;
             EndedUtc = DateTime.UtcNow;
             Gold = 0;
+            Current = null;
+            Cleared.Clear();
+            PendingReward = null;
+            BattleBuffs.Clear();
+            HubEconomy.HandleRunFailure(this);
             GameSave.SaveRunState(this);
         }
 
@@ -859,8 +864,8 @@ namespace Obscure
         public void RestoreFromSave(GameSaveData data)
         {
             if (data == null) return;
-            Gold = data.gold;
-            HubGold = data.hubGold;
+            Gold = data.gold != 0 ? data.gold : data.hubGold;
+
             Items.Clear();
             if (data.items != null) Items.AddRange(data.items);
             Relics.Clear();
@@ -938,6 +943,7 @@ namespace Obscure
         public bool AdvanceToNextDungeon(MapDef nextMap)
         {
             if (nextMap == null) return false;
+            if (Map != null && nextMap.act != Map.act + 1) return false;
             Map = nextMap;
             Current = null;
             Cleared.Clear();

@@ -29,30 +29,28 @@ namespace Obscure.Tests
         // =====================================================================
 
         [Test]
-        public void DualCurrencyEconomy_RunGoldToHubGold_Transfers1to1WithoutDeduction()
+        public void Economy_DungeonClear_RetainsGold1to1WithoutDeduction()
         {
             var run = CreateTestRun();
             run.Gold = 1250;
-            run.HubGold = 300;
 
             int transferred = run.TransferRunGoldToHub();
 
-            Assert.AreEqual(1250, transferred, "Transferred amount must equal exact remaining Run Gold.");
-            Assert.AreEqual(0, run.Gold, "Run Gold must be cleared to 0 after transfer.");
-            Assert.AreEqual(1550, run.HubGold, "Hub Gold must increase by 100% of Run Gold with zero deduction (1:1 ratio).");
+            Assert.AreEqual(1250, transferred, "Transferred amount must equal exact remaining Gold.");
+            Assert.AreEqual(1250, run.Gold, "Gold is retained 100% across dungeon clears.");
+            Assert.AreEqual(1250, run.HubGold, "HubGold alias matches Gold.");
         }
 
         [Test]
-        public void DualCurrencyEconomy_RunFailure_WipesRunGold_LeavesHubGoldUntouched()
+        public void Economy_RunFailure_WipesAllGold()
         {
             var run = CreateTestRun();
             run.Gold = 850;
-            run.HubGold = 2400;
 
             run.LoseCombat();
 
-            Assert.AreEqual(0, run.Gold, "Run Gold must be completely lost on run failure.");
-            Assert.AreEqual(2400, run.HubGold, "Hub Gold from previous expeditions must remain completely safe and untouched.");
+            Assert.AreEqual(0, run.Gold, "Gold must be completely lost on run failure.");
+            Assert.AreEqual(0, run.HubGold, "HubGold alias must also be wiped on run failure.");
             Assert.AreEqual(RunStatus.Defeat, run.Status);
         }
 
@@ -103,7 +101,7 @@ namespace Obscure.Tests
             // Attempt buy with insufficient Run Gold
             ok = shop.TryBuyConsumable(run, "elixir", out _, out err); // Elixir costs 50, run has 30
             Assert.IsFalse(ok, "Buy with insufficient gold should fail.");
-            StringAssert.Contains("not enough run gold", err.ToLowerInvariant());
+            StringAssert.Contains("not enough gold", err.ToLowerInvariant());
         }
 
         [Test]
@@ -152,7 +150,7 @@ namespace Obscure.Tests
             // Rejects if insufficient Hub Gold
             ok = HubEconomy.TryBuyHubConsumable(run, "elixir", 10, out err); // 50 * 10 = 500 > 240
             Assert.IsFalse(ok);
-            StringAssert.Contains("not enough hub gold", err.ToLowerInvariant());
+            StringAssert.Contains("not enough gold", err.ToLowerInvariant());
         }
 
         [Test]
@@ -228,7 +226,7 @@ namespace Obscure.Tests
             knight.hp = 0;
             ok = HubEconomy.TryTempleRevive(run, knight, out err);
             Assert.IsFalse(ok, "Temple revive must fail if Hub Gold is below 100.");
-            StringAssert.Contains("not enough hub gold", err.ToLowerInvariant());
+            StringAssert.Contains("not enough gold", err.ToLowerInvariant());
         }
 
         // =====================================================================
@@ -292,7 +290,7 @@ namespace Obscure.Tests
         {
             var run = CreateTestRun();
             run.Gold = 600;
-            run.HubGold = 100;
+
 
             var hero = run.Party[0];
             var boss = Database.Enemies["warden"]; // Abyssal Warden (Tier.Boss)
@@ -308,10 +306,10 @@ namespace Obscure.Tests
             // In Battle.Outcome: Enemies.All(!Alive) is checked first
             Assert.AreEqual(Outcome.Victory, battle.Outcome, "Mutual kill on boss must evaluate as Victory (GDD Section 8.3 & Resolved Decision).");
 
-            // On victory, Run Gold is transferred 1:1 to Hub Gold
+            // On victory, Gold is retained 1:1
             run.TransferRunGoldToHub();
-            Assert.AreEqual(0, run.Gold);
-            Assert.AreEqual(700, run.HubGold);
+            Assert.AreEqual(600, run.Gold);
+            Assert.AreEqual(600, run.HubGold);
         }
 
         // =====================================================================
@@ -319,21 +317,20 @@ namespace Obscure.Tests
         // =====================================================================
 
         [Test]
-        public void Persistence_SavesAndLoadsHubGoldAndRunGold()
+        public void Persistence_SavesAndLoadsGold()
         {
             var run = CreateTestRun(seed: 77);
             run.Gold = 340;
-            run.HubGold = 1820;
 
             var saved = GameSave.SaveRunState(run);
             Assert.AreEqual(340, saved.gold);
-            Assert.AreEqual(1820, saved.hubGold);
+            Assert.AreEqual(340, saved.hubGold);
 
             var freshRun = CreateTestRun(seed: 77);
             freshRun.RestoreFromSave(saved);
 
             Assert.AreEqual(340, freshRun.Gold);
-            Assert.AreEqual(1820, freshRun.HubGold);
+            Assert.AreEqual(340, freshRun.HubGold);
         }
 
         // =====================================================================
