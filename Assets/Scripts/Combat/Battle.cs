@@ -16,6 +16,8 @@ namespace Obscure
         public event Action<string> Logged;
 
         public int Round { get; private set; }
+        public RunState run;
+        public bool partyHasAttackedInBattle;
         public bool IsInspiringLeaderActive(Side side)
         {
             if (Round > TalentSystem.InspiringLeaderDuration) return false;
@@ -27,8 +29,9 @@ namespace Obscure
         readonly List<Combatant> queue = new List<Combatant>();
         readonly HashSet<Combatant> acted = new HashSet<Combatant>();
 
-        public Battle(IEnumerable<Unit> party, IEnumerable<EnemyDef> enemies, List<string> items, Random rng)
+        public Battle(IEnumerable<Unit> party, IEnumerable<EnemyDef> enemies, List<string> items, Random rng, RunState run = null)
         {
+            this.run = run;
             Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant())).ToList();
             var defs = enemies.ToList();
             Enemies = defs.Select((d, i) =>
@@ -39,6 +42,8 @@ namespace Obscure
             }).ToList();
             Items = items;
             Rng = rng;
+
+            run?.RelicManager?.OnBattleStart(this);
 
             // Background Perk Rank V: Wayfarer (10% chance to gain 10% Speed for 2 turns at start of battle)
             foreach (var p in Party)
@@ -117,6 +122,8 @@ namespace Obscure
         void StartTurn(Combatant c)
         {
             c.hasActedInBattle = true;
+            c.tookDamageSinceLastTurn = false;
+            run?.RelicManager?.OnTurnStart(c);
             c.ResetTurnBackgroundPerks();
             if (c.wayfarerSpeedBuffTurns > 0)
                 c.wayfarerSpeedBuffTurns--;
@@ -302,6 +309,10 @@ namespace Obscure
                     var move = a.attack;
                     QteResult attackQte = power > 1.05f ? QteResult.Perfect : (power < 0.95f ? QteResult.Poor : QteResult.Good);
                     actor.ApplyMartialArtistCombo(attackQte, false);
+                    if (actor.IsPlayer)
+                    {
+                        run?.RelicManager?.OnQteResolved(actor, true, attackQte, this);
+                    }
                     if (move != null && move.self)
                     {
                         Say($"{actor.name} uses {move.name}.");
@@ -367,6 +378,10 @@ namespace Obscure
                                 ? QteResult.Perfect
                                 : (power < 0.95f ? QteResult.Poor : QteResult.Good);
                             actor.ApplyMartialArtistCombo(mappedQte, s.isFinisher);
+                            if (actor.IsPlayer)
+                            {
+                                run?.RelicManager?.OnQteResolved(actor, true, mappedQte, this);
+                            }
                             var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel);
                             foreach (var hitRes in dmgResult.hits)
                             {
@@ -374,7 +389,21 @@ namespace Obscure
                                 string note = hitRes.allComponentsNullified
                                     ? " (nullified)"
                                     : (hitRes.anyComponentCriticalHit ? " (CRITICAL!)" : "");
-                                var hit = Damage(t, hitRes.finalHitDamage, note);
+
+                                int skillDmg = hitRes.finalHitDamage;
+                                if (actor.IsPlayer && run?.RelicManager != null && t != null)
+                                {
+                                    float relicDmgMult = 1f;
+                                    int relicBreak = 0;
+                                    run.RelicManager.ModifyDamageDealt(actor, t, ref relicDmgMult, ref relicBreak, !partyHasAttackedInBattle, this);
+                                    partyHasAttackedInBattle = true;
+                                    if (Math.Abs(relicDmgMult - 1f) > 0.001f)
+                                    {
+                                        skillDmg = Math.Max(1, (int)Math.Round(skillDmg * relicDmgMult));
+                                    }
+                                }
+
+                                var hit = Damage(t, skillDmg, note);
                                 hit.critical = hitRes.anyComponentCriticalHit;
 
                                 var primaryComp = hitRes.componentResults.Count > 0 ? hitRes.componentResults[0] : default;
@@ -431,19 +460,38 @@ namespace Obscure
                     var item = a.item;
                     Items.Remove(item.id);
                     Say($"{actor.name} uses {item.name} on {a.target.name}.");
+                    float consumableHealMult = 1f;
+                    run?.RelicManager?.ModifyConsumableHeal(ref consumableHealMult);
+
                     if (item.isRevive && !a.target.Alive)
                     {
                         int maxHp = a.target.Stats.maxHp;
                         float pct = item.reviveHpPercent > 0 ? item.reviveHpPercent : 0.30f;
-                        int restoredHp = Math.Max(1, (int)Math.Round(maxHp * pct));
+                        int restoredHp = Math.Max(1, (int)Math.Round(maxHp * pct * consumableHealMult));
                         a.target.unit.hp = Math.Min(maxHp, restoredHp);
                         hits.Add(new Hit { target = a.target, amount = -a.target.unit.hp, heal = true });
                         Say($"{a.target.name} rises from death with {a.target.unit.hp} HP!");
                     }
                     else if (a.target.Alive)
                     {
-                        if (item.heal > 0) hits.Add(Heal(a.target, item.heal, actor));
-                        if (item.mana > 0)
+                        if (item.healPercent > 0)
+                        {
+                            int baseHeal = Math.Max(1, (int)Math.Round(a.target.Stats.maxHp * item.healPercent));
+                            hits.Add(Heal(a.target, (int)Math.Round(baseHeal * consumableHealMult), actor));
+                        }
+                        else if (item.heal > 0)
+                        {
+                            hits.Add(Heal(a.target, (int)Math.Round(item.heal * consumableHealMult), actor));
+                        }
+
+                        if (item.manaPercent > 0)
+                        {
+                            int amt = Math.Max(1, (int)Math.Round(a.target.Stats.maxMp * item.manaPercent));
+                            int before = a.target.unit.mp;
+                            a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + amt);
+                            Say($"{a.target.name} recovers {a.target.unit.mp - before} MP.");
+                        }
+                        else if (item.mana > 0)
                         {
                             int before = a.target.unit.mp;
                             a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + item.mana);
@@ -638,6 +686,19 @@ namespace Obscure
                 }
             }
 
+            // Relic System: ModifyDamageDealt (R001, R006, R012, R017, R021, R022)
+            if (attacker != null && attacker.IsPlayer && run?.RelicManager != null && t != null)
+            {
+                float relicDmgMult = 1f;
+                int relicBreak = 0;
+                run.RelicManager.ModifyDamageDealt(attacker, t, ref relicDmgMult, ref relicBreak, !partyHasAttackedInBattle, this);
+                partyHasAttackedInBattle = true;
+                if (Math.Abs(relicDmgMult - 1f) > 0.001f)
+                {
+                    amount = Math.Max(1, (int)Math.Round(amount * relicDmgMult));
+                }
+            }
+
             var hit = Damage(t, amount, note);
             hit.effect = effect;
 
@@ -673,6 +734,16 @@ namespace Obscure
             if (t.Alive && t.HasBreakGauge && attacker != null && attacker.side != t.side)
             {
                 int rawBreak = Rules.BreakDamage(attacker, skill, effect);
+                if (attacker.IsPlayer && run?.RelicManager != null && run.RelicManager.HasRelic("R010"))
+                {
+                    var r010 = run.RelicManager.GetInstance("R010");
+                    if (r010 != null && !r010.battleTriggered)
+                    {
+                        r010.battleTriggered = true;
+                        rawBreak += Math.Max(1, (int)Math.Round(rawBreak * 0.15f));
+                        Say("[Relic: Executioner's Bell] First strike of battle gains +15% Break Power!");
+                    }
+                }
                 bool broke = t.ApplyBreakDamage(rawBreak, attacker, out int reduced);
                 hit.breakAmount = reduced;
                 hit.brokeTarget = broke;
@@ -690,6 +761,17 @@ namespace Obscure
                 amount = Math.Max(1, (int)Math.Round(amount * (1f - TalentSystem.InspiringLeaderReduction)));
             }
 
+            // Relic System: ModifyDamageReceived (R003 Rustbound Medal, R011 Hollow Knight's Buckle)
+            if (t != null && t.side == Side.Party && run?.RelicManager != null)
+            {
+                float relicRecvMult = 1f;
+                run.RelicManager.ModifyDamageReceived(t, ref relicRecvMult, true, this);
+                if (Math.Abs(relicRecvMult - 1f) > 0.001f)
+                {
+                    amount = Math.Max(1, (int)Math.Round(amount * relicRecvMult));
+                }
+            }
+
             // Shield absorption (Bab 11 §6 & Bab 6 §4.1)
             if (t != null && t.unit.shield > 0 && amount > 0)
             {
@@ -704,7 +786,24 @@ namespace Obscure
             }
 
             int hpBefore = t != null ? t.unit.hp : 0;
+
+            // Relic System: Lethal damage protection (R009 Soul-Tether Ring)
+            if (t != null && t.side == Side.Party && amount >= t.unit.hp && amount > 0)
+            {
+                if (run?.RelicManager != null && run.RelicManager.CheckLethalDamageProtection(t, amount, this))
+                {
+                    amount = Math.Max(0, hpBefore - 1);
+                }
+            }
+
             t.unit.hp = Math.Max(0, t.unit.hp - amount);
+            if (amount > 0 && t != null) t.tookDamageSinceLastTurn = true;
+
+            // Relic System: Boss HP threshold (R020 Sovereign's Last Breath)
+            if (t != null && t.IsEnemy && t.enemy != null && t.enemy.tier == Tier.Boss)
+            {
+                run?.RelicManager?.OnBossHpChanged(t, this);
+            }
 
             // Human Determination trigger (Bab 6 §5.1)
             if (amount > 0 && t.CheckDeterminationTrigger(hpBefore, t.unit.hp))
@@ -720,7 +819,15 @@ namespace Obscure
             }
 
             Say($"{t.name} takes {amount} damage{(t.guarding ? " (guarded)" : "")}{note}.");
-            if (!t.Alive) Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
+            if (!t.Alive)
+            {
+                Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
+                // Relic System: Enemy Defeated (R013 Dirge-Eater's Fang, R022 Zoroa's Dull Crown)
+                if (t.IsEnemy)
+                {
+                    run?.RelicManager?.OnEnemyDefeated(Active, t, this);
+                }
+            }
             else CheckPhase(t);
             return new Hit { target = t, amount = amount, killed = !t.Alive };
         }
@@ -776,7 +883,7 @@ namespace Obscure
             }
         }
 
-        void Say(string line)
+        public void Say(string line)
         {
             Log.Add(line);
             Logged?.Invoke(line);

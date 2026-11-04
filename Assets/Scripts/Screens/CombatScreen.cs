@@ -23,7 +23,7 @@ namespace Obscure
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             var items = Run?.Items ?? new List<string>(Database.StartingItems);
             var rng = Run?.Rng ?? new System.Random(1);
-            var battle = new Battle(party, enc.enemies.Select(id => Database.Enemies[id]), items, rng);
+            var battle = new Battle(party, enc.enemies.Select(id => Database.Enemies[id]), items, rng, Run);
             if (Run != null)
             {
                 foreach (var buff in Run.TakeBattleBuffs())

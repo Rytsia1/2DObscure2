@@ -32,6 +32,8 @@ namespace Obscure
 
         public Stats Plus(Stats b) => new Stats(maxHp + b.maxHp, maxMp + b.maxMp, atk + b.atk, def + b.def, spd + b.spd, mag + b.mag);
 
+        public bool IsZero => maxHp == 0 && maxMp == 0 && atk == 0 && def == 0 && spd == 0 && mag == 0;
+
         // "MAX HP 125>140, DEF 13>15": what changes when b is added.
         public string Preview(Stats b)
         {
@@ -221,9 +223,21 @@ namespace Obscure
     public class ItemDef
     {
         public string id, name, description;
+        public string category; // "Potion", "Recovery Item", "Food", "Buff Item", "Revive Item", "Tactical Item", "Exploration Item"
+        public EquipmentRarity rarity = EquipmentRarity.Common;
+        public string itemEffect;
+        public string target; // "Single ally", "One downed ally", "Party"
+        public string usageRestriction; // "Combat / exploration", "Exploration only", "Combat only", "Dungeon map only", "Before combat"
+        public int maxStack = 10;
+        public int shopValue = 20;
+        public string suggestedSource;
+
+        // Effect values
         public int heal, mana;
         public bool isRevive;
         public float reviveHpPercent = 0.30f;
+        public float healPercent;
+        public float manaPercent;
     }
 
     public class EncounterDef
@@ -235,7 +249,7 @@ namespace Obscure
         public string music;  // MusicIds battle theme; null = the MusicLibrary's default (or random) battle theme
     }
 
-    // Passive run-long bonus: stats added to every party member, plus optional after-battle healing.
+    // Relic definition supporting both legacy stats and the modular Layer 1 Relic System.
     public class RelicDef
     {
         public string id, name, description;
@@ -243,6 +257,22 @@ namespace Obscure
         public AbilityScores abilityBonus;
         public StatModifier[] modifiers = Array.Empty<StatModifier>();
         public float victoryHeal; // fraction of max HP restored after each won battle
+
+        // Modular Relic System properties (Felna_Layer1_Relic_List.xlsx)
+        public RelicCategory category = RelicCategory.Utility;
+        public RelicProposedRarity proposedRarity = RelicProposedRarity.Common;
+        public string gameplayEffect;
+        public string designIntent;
+        public RelicTriggerType triggerType = RelicTriggerType.Combat;
+        public RelicActivationLimit activationLimit = RelicActivationLimit.Passive;
+
+        // Configurable numeric parameters
+        public float value1;
+        public float value2;
+        public int intValue;
+        public int maxPerBattle;
+
+        public string Description => !string.IsNullOrEmpty(gameplayEffect) ? gameplayEffect : description;
     }
 
     // A permanent improvement for one character (rest sites, elite rewards).

@@ -77,6 +77,14 @@ namespace Obscure
             if (c.item != null) parts.Add("+" + Database.Items[c.item].name.ToUpperInvariant());
             if (c.relic && Run?.EventRelic != null) parts.Add("+" + Database.Relics[Run.EventRelic].name.ToUpperInvariant());
             if (c.battleBuff != null) parts.Add("NEXT BATTLE: " + StatusInfo.Name(c.battleBuff.id).ToUpperInvariant());
+            if (Run?.RelicManager != null)
+            {
+                if (c.relic)
+                {
+                    var clue = Run.RelicManager.GetAdditionalEventClue("relic");
+                    if (clue != null) parts.Add(clue.ToUpperInvariant());
+                }
+            }
             return parts.Count == 0 ? "NOTHING HAPPENS" : string.Join(", ", parts);
         }
 

@@ -39,7 +39,7 @@ namespace Obscure
             int goldVal = Run != null ? Run.Gold : 0;
             int itemsVal = Run?.Items != null ? Run.Items.Count : 0;
             int relicsVal = Run?.Relics != null ? Run.Relics.Count : 0;
-            Ui.Label(Root, $"ITEMS {itemsVal}   RELICS {relicsVal}", 516, 19, Palette.Mist2, Align.Right);
+            Ui.Label(Root, $"ITEMS {itemsVal}   RELICS {relicsVal}/{RelicManager.MaxRelicCapacity}", 516, 19, Palette.Mist2, Align.Right);
             Ui.Badge(Root, $"{goldVal} RUN GOLD", 528, 14, 100, 17, Palette.Hex(0x22120A), Palette.Ember2, Palette.Ember1);
 
             // 2. Map panel

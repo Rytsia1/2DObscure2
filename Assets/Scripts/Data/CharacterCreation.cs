@@ -1832,6 +1832,7 @@ namespace Obscure
         public string[] clearedNodeIds = Array.Empty<string>();
         public string[] items = Array.Empty<string>();
         public string[] relics = Array.Empty<string>();
+        public RelicInstanceSaveData[] relicInstances = Array.Empty<RelicInstanceSaveData>();
         public SavedCharacterData[] party = Array.Empty<SavedCharacterData>();
 
         // Inventory & Equipment persistence (GDD Section 10 & 16)
@@ -1932,6 +1933,7 @@ namespace Obscure
                 clearedNodeIds = isDefeated ? Array.Empty<string>() : run.Cleared.ToArray(),
                 items = run.Items.ToArray(),
                 relics = run.Relics.ToArray(),
+                relicInstances = run.RelicManager != null ? run.RelicManager.ToSaveData() : Array.Empty<RelicInstanceSaveData>(),
                 party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
                 inventoryEquipment = invData.equipment ?? Array.Empty<EquipmentInstanceSaveData>(),
                 inventoryConsumables = invData.consumables ?? Array.Empty<ConsumableStackSaveData>(),

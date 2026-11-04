@@ -174,12 +174,19 @@ namespace Obscure
         Staff,
         Rod,
         Spear,
+        Polearm,
+        DualDaggers,
+        Scythe,
+        Scepter,
+        Tome,
 
         // Second Hand Weapon / Off-Hand Types
         Shield,
         Buckler,
         FistWeapon,
         ParryingDagger,
+        OffHandWeapon,
+        SpecialFocus,
         Warhorn,
         MartialFocus,
         Quiver,
@@ -813,6 +820,8 @@ namespace Obscure
     public class EquipmentDef
     {
         public string id, name, description;
+        public string category = "Equipment";
+        public string specificType;
         public EquipmentType equipmentType = EquipmentType.Weapon;
         public EquipmentSlot slot = EquipmentSlot.MainHand;
         public WeaponType weaponType = WeaponType.None;
@@ -827,6 +836,13 @@ namespace Obscure
         public float weaponScaling;
         public int accuracyModifier;       // Weapon Accuracy modifier
         public int breakPowerModifier;     // Weapon Break Power modifier
+        public Element damageElement = Element.Physical;
+        public string fixedSpecialEffect;
+        public string specialEffectId;
+        public int requiredCharacterLevel = 1;
+        public string allowedClassesText;
+        public string suggestedSource;
+        public string baseStatsSummary;
         public string[] weaponProperties = Array.Empty<string>();
         public string[] weaponEffects = Array.Empty<string>();
 
@@ -893,33 +909,37 @@ namespace Obscure
             if (!SlotMatches(item, targetSlot, classDef))
                 return $"{item.name} ({EquipmentSlots.DisplayName(item.slot)}) cannot be equipped in {EquipmentSlots.DisplayName(targetSlot)}.";
 
-            // 1. Strict Weapon Compatibility for Main Hand and Second Hand (No exceptions, including Legendary)
-            if (targetSlot == EquipmentSlot.MainHand)
+            // 1. Strict Class Compatibility (Prompt Section 5: Main Hand & Second Hand compatibility must follow Allowed Classes)
+            var r = item.restrictions;
+            if (r != null && r.allowedClasses != null && r.allowedClasses.Length > 0)
             {
-                if (classDef != null && classDef.mainHandWeapons != null && classDef.mainHandWeapons.Length > 0)
-                {
-                    if (item.weaponType == WeaponType.None || !classDef.mainHandWeapons.Contains(item.weaponType))
-                        return $"Incompatible Main Hand weapon ({item.weaponType}) for {classDef.name}.";
-                }
+                if (classDef == null || !r.allowedClasses.Contains(classDef.id))
+                    return $"{item.name} is not compatible with class {classDef?.name ?? "Unknown"} (requires class {string.Join(", ", r.allowedClasses)}).";
             }
-            else if (targetSlot == EquipmentSlot.SecondHand)
+            else
             {
-                if (classDef != null && classDef.secondHandWeapons != null && classDef.secondHandWeapons.Length > 0)
+                // Fallback to class weapon compatibility matrix if item does not define explicit allowed classes
+                if (targetSlot == EquipmentSlot.MainHand)
                 {
-                    if (item.weaponType == WeaponType.None || !classDef.secondHandWeapons.Contains(item.weaponType))
-                        return $"Incompatible Second Hand weapon ({item.weaponType}) for {classDef.name}.";
+                    if (classDef != null && classDef.mainHandWeapons != null && classDef.mainHandWeapons.Length > 0)
+                    {
+                        if (item.weaponType == WeaponType.None || !classDef.mainHandWeapons.Contains(item.weaponType))
+                            return $"Incompatible Main Hand weapon ({item.weaponType}) for {classDef.name}.";
+                    }
+                }
+                else if (targetSlot == EquipmentSlot.SecondHand)
+                {
+                    if (classDef != null && classDef.secondHandWeapons != null && classDef.secondHandWeapons.Length > 0)
+                    {
+                        if (item.weaponType == WeaponType.None || !classDef.secondHandWeapons.Contains(item.weaponType))
+                            return $"Incompatible Second Hand weapon ({item.weaponType}) for {classDef.name}.";
+                    }
                 }
             }
 
-            // 2. Item-specific restrictions (Class, Race, Character, Level, Ability Score requirements)
-            var r = item.restrictions;
+            // 2. Item-specific restrictions (Race, Character, Level, Ability Score requirements)
             if (r != null)
             {
-                if (r.allowedClasses != null && r.allowedClasses.Length > 0)
-                {
-                    if (classDef == null || !r.allowedClasses.Contains(classDef.id))
-                        return $"{item.name} requires class: {string.Join("/", r.allowedClasses)}.";
-                }
                 if (r.allowedRaces != null && r.allowedRaces.Length > 0)
                 {
                     if (raceDef == null || !r.allowedRaces.Contains(raceDef.id))

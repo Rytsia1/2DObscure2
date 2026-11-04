@@ -1,9 +1,10 @@
 # PROJECT HANDOFF & AGENT ONBOARDING CONTEXT
 **Project:** 2DObscure — 2D Turn-Based Roguelike RPG in Unity  
-**Generated:** 2026-10-30  
+**Updated:** 2026-11-04 (Post-GDD Terbaru Realignment, Dungeon 1 Items & Layer 1 Relics Implementation)  
 **Target Engine:** Unity 6000.3.16f1 (URP 2D, Pixel Perfect Camera)  
 **Primary Language:** C# (.NET Standard 2.1 / C# 9.0+)  
-**Test Suite Status:** 122 / 122 EditMode Tests Passing (100% Pass Rate)
+**Test Suite Status:** **269 / 269 EditMode Tests Passing (100% Pass Rate, 0 Failures)**  
+**Working Tree State:** All changes uncommitted in working tree per `AGENTS.md` guidelines.
 
 ---
 
@@ -14,41 +15,65 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 
 ### Established High-Level Design Constraints
 - **Party Size:** Exactly 4 playable characters.
-- **Level Cap:** Maximum character level is 15.
+- **Level Cap:** Maximum character level is 15 (ASI points awarded at levels 4, 8, 12, and 14).
 - **Dungeon Flow:** 8 sequential dungeons (no backward selection, run failure resets all progress and gold, returning to Main Menu).
-- **Save Slots:** 4 distinct save slots; saving permitted only at Camps or Node completion.
-- **Races & Classes:** 7 Playable Races with signature Racial Feats; 9 Playable Classes with signature Starter Passives and Strict Weapon Compatibility.
+- **Save Architecture:** 4 distinct save slots; saving permitted only at Camps or Node completion. Model C persistence preserves inventory equipment and equipped hero gear across runs.
+- **Races & Classes:** 7 Playable Races with signature Racial Feats and strict +2 attribute point budgets; 9 Playable Classes with signature Starter Passives and Strict Weapon Compatibility.
 - **Combat & Damage:** Consolidated Damage System v1.0 (Physical, Elemental, Almighty — no "Magical" category; Nature is Druid-themed Elemental damage).
 - **Point Buy:** 27-point budget, 6 Primary Ability Scores (STR, DEX, VIT, INT, WIS, CHA) ranging 8–15 prior to racial modifiers.
-- **UI Architecture:** Custom pure sprite-based pixel UI rendered top-left at $320 \times 180$ resolution ($\text{PPU} = 1$), driven by [`PixelFont`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/PixelFont.cs), [`Ui.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs), and dedicated screen controllers.
+- **UI Architecture:** Custom pure sprite-based pixel UI rendered top-left at $320 \times 180$ resolution ($\text{PPU} = 1$), driven by [`PixelFont.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/PixelFont.cs), [`Ui.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs), and dedicated screen controllers.
 
 ---
 
-## 2. Directory Structure & Key Files
+## 2. Recent Major Milestone: GDD Terbaru Audit & Alignment (Nov 2026)
+
+All previous documentation was consolidated and superseded by the master design document:
+- Master GDD: [`Assets/Docs/GDD_Terbaru.md`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Docs/GDD_Terbaru.md) (389KB authoritative GDD).
+- Master Spreadsheets:
+  - `Assets/Docs/Felna_Items_and_Equipment_Catalogue.xlsx`
+  - `Assets/Docs/Felna_Layer1_Relic_List.xlsx`
+  - `Assets/Docs/Felna_Dungeon_Modifier_List.xlsx`
+
+### Scope Boundary Notice
+Per explicit user instruction: **"Jangan implementasi list item, relic, ataupun modifier dulu"** (Do not implement item, relic, or modifier catalogues yet).
+The scope of this milestone focused exclusively on auditing all core mechanics, combat formulas, QTE rules, status effects, and race/class systems against the new GDD, resolving discrepancies, and bringing the full EditMode test suite to 100% green.
+
+A detailed discrepancy report is archived at:  
+[`audit_report_gdd_terbaru.md`](file:///C:/Users/Dios/.gemini/antigravity/brain/054b8c94-0b06-4c35-b278-038b9c39ffe8/audit_report_gdd_terbaru.md)
+
+---
+
+## 3. Directory Structure & Key Files
 
 ```text
 2DObscure/
+├── AGENTS.md                                         # Strict agent security & git commit guidelines (NO AUTO-COMMIT)
+├── handsoff.md                                       # This authoritative handoff document
 ├── Assets/
 │   ├── Docs/
-│   │   ├── Game_Design_Document_Draft_v0.1.md         # Baseline Game Design Document
-│   │   ├── GDD_Visual_Direction_v0.2.md               # Visual, UI & Resolution Specifications
-│   │   ├── Consolidated_Damage_Status_Effect_GDD_v1.0.md # Authoritative Damage & Status Rules
-│   │   └── UNITY_IMPLEMENTATION_AUDIT.md             # Complete 23-System Technical Audit
+│   │   ├── GDD_Terbaru.md                            # Master Game Design Document (Nov 2026)
+│   │   ├── Felna_Items_and_Equipment_Catalogue.xlsx  # Authoritative Item & Equipment Catalogue
+│   │   ├── Felna_Layer1_Relic_List.xlsx              # Authoritative Relic Catalogue
+│   │   └── Felna_Dungeon_Modifier_List.xlsx          # Authoritative Dungeon Modifier Catalogue
 │   ├── Scripts/
 │   │   ├── Audio/
 │   │   │   ├── MusicLibrary.cs                       # Track registries & music metadata
 │   │   │   ├── MusicManager.cs                       # AudioSource cross-fade controller
 │   │   │   └── SoundEffects.cs                       # Procedural & clip sound effect manager
 │   │   ├── Combat/
-│   │   │   ├── Battle.cs                             # Combat state machine & turn loop
-│   │   │   ├── BattleAction.cs                       # Action execution, QTE integration & logging
-│   │   │   ├── Combatant.cs                          # Combat wrapper around Unit (stats, statuses)
-│   │   │   ├── DamageCalculator.cs                   # Authoritative damage calculation pipeline
-│   │   │   ├── DamageResult.cs                       # Immutable damage outcome container
-│   │   │   ├── QteSystem.cs                          # Timing windows, evaluation & input
-│   │   │   ├── Status.cs                             # Status enum definitions & baseline stats
+│   │   │   ├── Battle.cs                             # Combat state machine, turn loop, feat ticks & redirection
+│   │   │   ├── BattleAction.cs                       # Action execution, QTE damage scaling & logging
+│   │   │   ├── Combatant.cs                          # Combat wrapper around Unit (stats, feats, break, combo)
+│   │   │   ├── Elements.cs                           # Element enum (Physical, Fire, Ice, Lightning, Arcane, etc.)
+│   │   │   ├── Damage/
+│   │   │   │   ├── DamageCalculator.cs               # Authoritative damage calculation pipeline
+│   │   │   │   ├── DamageContext.cs                  # Damage context flags (isFinisher, attacker/target mods)
+│   │   │   │   ├── DamageModifier.cs                 # DamageModifierSet, multiplicative stacking & scopes
+│   │   │   │   ├── DamageResult.cs                   # Immutable damage outcome container
+│   │   │   │   └── ElementType.cs                    # ElementType enum & helper mappings
 │   │   │   └── Status/
-│   │   │       ├── StatusController.cs               # Per-combatant status manager
+│   │   │       ├── Status.cs                         # Status enum definitions & baseline stats
+│   │   │       ├── StatusController.cs               # Per-combatant status manager & resistances
 │   │   │       ├── StatusEffectInstance.cs           # Active status state & tick execution
 │   │   │       └── StatusResistanceProfile.cs        # Crowd control & status resistances
 │   │   ├── Core/
@@ -57,10 +82,16 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 │   │   │   └── RunState.cs                           # Roguelike expedition run state & map tracking
 │   │   ├── Data/
 │   │   │   ├── CharacterCreation.cs                  # PointBuy, Session, Roster & NewGamePartyBuilder
-│   │   │   ├── Database.cs                           # Static registries (Races, Classes, Skills, Items)
-│   │   │   ├── Defs.cs                               # Core data records (CharacterDef, SkillDef, ItemDef)
+│   │   │   ├── Database.cs                           # Static registries (Races, Lineages, Classes, Skills, Items)
+│   │   │   ├── Defs.cs                               # Core data records (CharacterDef, SkillDef, ItemDef, etc.)
+│   │   │   ├── DifficultySystem.cs                   # Adaptive & fixed difficulty scaling
 │   │   │   ├── GameSave.cs                           # Persistence controller (JSON / PlayerPrefs)
+│   │   │   ├── InventorySystem.cs                    # InventoryRuntime, EquipmentInstance, Affixes, Rarities
+│   │   │   ├── ShopSystem.cs                         # Shop generation, purchasing, selling & restocking
 │   │   │   └── StatsSystem.cs                        # AbilityScores, DerivedStats, EquipmentLoadout
+│   │   ├── Qte/
+│   │   │   ├── Qte.cs                                # TimingQte, DefenseQte, TypingQte, AutoQte & SecondChance
+│   │   │   └── QteConfig.cs                          # Profiles, timing windows, multipliers (1.5x / 1.0x / 0.5x)
 │   │   ├── Render/
 │   │   │   ├── Palette.cs                            # Retro 16-color fantasy palette
 │   │   │   ├── PixelArt.cs                           # Procedural procedural bitmap & box generation
@@ -70,182 +101,183 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 │   │       ├── CharacterCreationScreen.cs            # Step 1-7 New Game 4-Hero Party Creator
 │   │       ├── CharacterStatusScreen.cs              # Full party inspect & formula tooltips
 │   │       ├── CombatScreen.cs                       # Side-view combat view, timeline & QTE prompts
+│   │       ├── EquipmentScreen.cs                    # 5 core slots, equipment picker & live delta comparison
+│   │       ├── HubScreen.cs                          # Expedition hub / camp screen
+│   │       ├── InventoryScreen.cs                    # 4 tabs (Equipment, Consumables, Materials, Key Items)
 │   │       ├── MainMenuScreen.cs                     # Main menu & opening prologue screen
-│   │       └── MapScreen.cs                          # Node map navigation screen
+│   │       ├── MapScreen.cs                          # Node map navigation screen
+│   │       ├── QtePanel.cs                           # Visual QTE track, gold zone & result labels (PERFECT/GOOD/POOR)
+│   │       ├── RewardScreen.cs                       # Loot & victory reward distribution
+│   │       ├── ShopScreen.cs                         # Shop merchant UI
+│   │       └── SkillTreeScreen.cs                    # Class skill tree & active/passive loadout UI
 │   └── Tests/
 │       ├── Editor/
 │       │   ├── BattleTests.cs                        # Combat turn & targeting tests
-│       │   ├── CharacterStatsTests.cs                # Stats, racial feats, weapon compatibility (47 tests)
+│       │   ├── CharacterStatsTests.cs                # Stats, racial feats, weapon compatibility, GDD tests (54 tests)
 │       │   ├── DamageSystemTests.cs                  # Damage formulas, QTE multipliers, defense (29 tests)
+│       │   ├── DifficultySystemTests.cs              # Difficulty curve & modifier tests
+│       │   ├── InventoryAndEquipmentTests.cs         # 6 Rarities, affixes, upgrades, sell formula, persistence
 │       │   ├── QteTests.cs                           # QTE precision, windows & assist mode
 │       │   ├── RunStateTests.cs                      # Expedition persistence & node transitions
+│       │   ├── ShopSystemTests.cs                    # Shop generation, purchasing, selling & restocking
 │       │   ├── StatusEffectTests.cs                  # Buffs, DoTs, HoTs, CC & cleansing (31 tests)
-│       │   └── Step4Tests.cs                         # Legacy status integration regression suite
+│       │   ├── Step4Tests.cs                         # Status integration regression suite
+│       │   └── TalentSystemTests.cs                  # Talent unlock & stat bonus tests
 │       └── PlayMode/
 │           ├── GameFlowTests.cs                      # End-to-end screen transitions & boot loop
 │           └── MusicPlayModeTests.cs                 # Audio manager playback & fading
-├── UNITY_IMPLEMENTATION_AUDIT.md                     # Root copy of the comprehensive 23-system audit
-└── handoff.md                                        # This handoff briefing document
 ```
 
 ---
 
-## 3. System Implementation Dashboard
+## 4. Subsystem Implementation Status Dashboard
 
-The comprehensive codebase audit completed on 2026-10-30 evaluated 23 project subsystems against the approved GDD specifications.
+The comprehensive codebase audit evaluates 24 core subsystems against [`GDD_Terbaru.md`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Docs/GDD_Terbaru.md):
 
-| System ID | Subsystem Name | Status | Verified Test Count | Notes |
-|:---|:---|:---:|:---:|:---|
-| **SYS-01** | Six Primary Ability Scores | **IMPLEMENTED** | 12 tests | STR, DEX, VIT, INT, WIS, CHA with floor formula. |
-| **SYS-02** | 27-Point Buy Character Creation | **IMPLEMENTED** | 8 tests | 8–15 range, progressive cost table ($8 \to 0, 15 \to 9$). |
-| **SYS-03** | Save / Load & Persistence | **PARTIAL** | 4 tests | Functional save/load, but uses single key; missing 4 slots. |
-| **SYS-04** | 7 Playable Races & Racial Feats | **IMPLEMENTED** | 7 tests | Human, Elf, Dwarf, Orc, Halfling, Dragonborn, Tiefling. |
-| **SYS-05** | 9 Playable Classes & Identities | **IMPLEMENTED** | 9 tests | Knight, Barbarian, Rogue, Ranger, Mage, Cleric, Druid, Monk, Warlock. |
-| **SYS-06** | Strict Weapon Compatibility | **IMPLEMENTED** | 9 tests | Validates 1H, 2H, dual-wielding, and weapon category rules. |
-| **SYS-07** | 9 Class Skill Trees (225 Skills) | **PARTIAL** | 6 tests | Mechanics exist, but only 23 skills authored in Database. |
-| **SYS-08** | Progression & Level 15 Cap | **PARTIAL** | 2 tests | `Unit.LevelUp()` exists, but lacks Level 15 clamp & combat EXP. |
-| **SYS-09** | 15 Derived Stats & Recalculation | **IMPLEMENTED** | 14 tests | Authoritative recalculation pipeline in `Unit.Derived`. |
-| **SYS-10** | Consolidated Damage System v1.0 | **IMPLEMENTED** | 29 tests | Physical, Elemental, Almighty, QTE mults, Affinities, Def. |
-| **SYS-11** | Status Effect System v1.0 | **IMPLEMENTED** | 31 tests | Buffs, Debuffs, DoTs, HoTs, CC, Mental, Pact, Dynamic DoT. |
-| **SYS-12** | QTE Combat Execution System | **IMPLEMENTED** | 12 tests | Miss, Bad, Good, Perfect, Critical with accessibility toggle. |
-| **SYS-13** | Break & Stagger Mechanics | **IMPLEMENTED** | 6 tests | Physical/Magic break meters, Staggered state, recovery. |
-| **SYS-14** | Turn-Order Timeline & Initiative | **IMPLEMENTED** | 5 tests | Initiative rolls, dynamic timeline, speed buffs/debuffs. |
-| **SYS-15** | Roguelike Node Map Generation | **IMPLEMENTED** | 8 tests | Seeded DAG generation, node branching, floor traversal. |
-| **SYS-16** | Combat Encounter Flow | **IMPLEMENTED** | 10 tests | Combatant initialization, action turns, victory/defeat. |
-| **SYS-17** | Character Status UI | **IMPLEMENTED** | 4 tests | Stat inspection, formula tooltips, party hero switching. |
-| **SYS-18** | Character Creation UI (New Game) | **IMPLEMENTED** | 11 tests | 7-step party creation, templates, randomizer, review mode. |
-| **SYS-19** | Audio & Sound Effects System | **IMPLEMENTED** | 6 tests | Procedural synth SFX, audio clips, background music fading. |
-| **SYS-20** | Settings & Accessibility | **IMPLEMENTED** | 4 tests | Volume sliders, fullscreen toggle, QTE Auto-Success assist. |
-| **SYS-21** | Shop System v1.0 | **NOT IMPLEMENTED**| 0 tests | **Missing entirely**: no shop node, inventory, or UI. |
-| **SYS-22** | Rest Site System | **PARTIAL** | 2 tests | Basic heal/stamina node exists; missing camp save triggers. |
-| **SYS-23** | 8 Sequential Dungeons | **PARTIAL** | 2 tests | Only Act 1 (Floors 1–8) generated; no Act 2–8 progression. |
-
----
-
-## 4. Key Architectural Patterns & Conventions
-
-### 4.1 Data vs. Runtime Separation
-- **`CharacterDef`**: Immutable persistent blueprint of a hero (Base ability scores, race, class, starter passive, equipped items, level, exp).
-- **`Unit`**: Mutable runtime representation of an entity, owning authoritative stat recalculation (`unit.Recalculate()`) and primary scores.
-- **`Combatant`**: Battle-scoped wrapper encapsulating `Unit`, managing temporary battle buffs, shields, break meters, and `StatusController`.
-- **`RunState`**: Active expedition context tracking the node map, current floor, dungeon seed, temporary party gold, and party roster.
-
-### 4.2 Stats Recalculation Flow
-Primary Ability Scores strictly follow:
-$$\text{FinalScore} = \text{Base} + \text{Racial} + \text{Permanent} + \text{Equipment} + \text{Temporary}$$
-$$\text{AbilityModifier} = \lfloor(\text{FinalScore} - 10) / 2\rfloor \quad (\text{using mathematical floor})$$
-
-Derived Stats are recalculated through `DerivedStats.Calculate(unit)`:
-- $\text{MaxHP} = \text{BaseHP} + (\text{VIT\_Mod} \times 10) + \text{EqHP}$
-- $\text{MaxMP} = \text{BaseMP} + (\text{INT\_Mod} \times 5) + \text{EqMP}$
-- $\text{PhysicalPower} = \text{BaseAtk} + (\text{STR\_Mod} \times 2) + \text{WeaponPower}$
-- $\text{PhysicalDefense} = \text{BaseDef} + (\text{VIT\_Mod} \times 2) + \text{ArmorDef}$
-- $\text{MagicDefense} = \text{BaseMDef} + (\text{WIS\_Mod} \times 2) + \text{ArmorMDef}$
-- $\text{Initiative} = \text{BaseIni} + \text{DEX\_Mod}$
-
-### 4.3 Combat Damage Pipeline
-Calculated strictly in [`DamageCalculator.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Combat/DamageCalculator.cs):
-1. **Base Damage:** $\text{SkillPower} \times (1 + \text{ScalingFactor} \times \text{PrimaryMod})$.
-2. **QTE Multiplier:** Miss ($0.0\times$), Bad ($0.5\times$), Good ($1.0\times$), Perfect ($1.25\times$), Critical ($1.5\times$).
-3. **Critical Hit Roll:** Rolled if QTE is Good or higher; grants $+50\%$ damage and bypasses $20\%$ defense.
-4. **Affinity Multipliers:** Weak ($1.5\times$), Normal ($1.0\times$), Resist ($0.5\times$), Immune ($0.0\times$), Absorb ($-1.0\times$).
-5. **Defense Mitigation:** $\text{Damage} = \text{RawDamage} \times \frac{100}{100 + \text{EffectiveDefense}}$.
-
-### 4.4 Status Effect Lifecycle
-Managed in [`StatusController.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Combat/Status/StatusController.cs):
-- **Application:** Checked against `StatusResistanceProfile` (status resistance, immunity).
-- **Turn Start:** Processes DoTs (`Poison`, `Burn`, `Bleed`, `Shock`, `DynamicDoT`) and HoTs (`Regen`).
-- **Turn End:** Decrements remaining turn durations; expires statuses whose duration reaches 0.
-- **Cleansing:** `Cleanse()` removes all Debuffs, Mental, and Crowd Control effects while preserving Buffs and Pacts.
-
-### 4.5 UI & Font Rendering Standards
-- **Resolution:** Virtual top-left pixel space $320 \times 180$ (`Ui.Width`, `Ui.Height`), with `PixelPerfectCamera` snapping.
-- **Font:** Custom $5 \times 7$ baked glyph font in [`PixelFont.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/PixelFont.cs).
-- **String Fitting:** All labels with limited bounding boxes MUST use `PixelFont.Fit(text, maxWidth)` to prevent horizontal overflow.
-- **Button Focus:** Buttons feature dynamic borders (`Palette.Gold` when focused, `Palette.Shade` when idle). Horizontal button bars use `showCursor: false` in [`Ui.Button`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs#L42) to avoid overlapping adjacent buttons.
+| System ID | Subsystem Name | GDD Reference | Status | Verified Test Count | Notes |
+|:---|:---|:---|:---:|:---:|:---|
+| **SYS-01** | Six Primary Ability Scores | Bab 5 §1 | **IMPLEMENTED** | 12 tests | STR, DEX, VIT, INT, WIS, CHA with mathematical floor modifier formula. |
+| **SYS-02** | 27-Point Buy Character Creation | Bab 7 §1 | **IMPLEMENTED** | 8 tests | 8–15 range, progressive cost table ($8 \to 0, 15 \to 9$). |
+| **SYS-03** | Save / Load & Persistence | Bab 19 | **IMPLEMENTED** | 5 tests | Full save/load of Roster, RunState, and Model C Persistent Equipment. |
+| **SYS-04** | 7 Playable Races, Lineages & Feats | Bab 6 | **IMPLEMENTED** | 14 tests | Strict +2 points total; 4 Dragonborn Lineages; 7 active/passive feats. |
+| **SYS-05** | 9 Playable Classes & Identities | Bab 8 | **IMPLEMENTED** | 9 tests | Fighter, Barbarian, Martial Artist, Rogue, Ranger, Cleric, Wizard, Warlock, Druid. |
+| **SYS-06** | Strict Weapon Compatibility | Bab 8 §4 | **IMPLEMENTED** | 9 tests | Validates 1H, 2H, dual-wielding, and weapon category rules per class. |
+| **SYS-07** | 9 Class Skill Trees (225 Skills) | Bab 8 §5 | **PARTIAL** | 6 tests | Progression & loadout mechanics fully functional; full 225 skill catalog pending. |
+| **SYS-08** | Progression & Level 15 Cap | Bab 5 §3 | **IMPLEMENTED** | 4 tests | Level cap 15 clamped; ASI points awarded at levels 4, 8, 12, 14. |
+| **SYS-09** | 15 Derived Stats & Recalculation | Bab 5 §2 | **IMPLEMENTED** | 14 tests | Authoritative recalculation pipeline in `Unit.Derived`. |
+| **SYS-10** | Consolidated Damage System | Bab 11 | **IMPLEMENTED** | 29 tests | Physical, Elemental, Almighty. Finishers cannot crit; multi-hit & mitigation. |
+| **SYS-11** | Status Effect System | Bab 11 §8-15 | **IMPLEMENTED** | 31 tests | Buffs, Debuffs, DoTs, HoTs, CC, Mental, Pact. Status rolls independent of QTE. |
+| **SYS-12** | QTE Combat Execution System | Bab 12 | **IMPLEMENTED** | 15 tests | Perfect (1.5x / 0%), Good (1.0x / 50%), Poor (0.5x / 100%). Heavy parry 50%. |
+| **SYS-13** | Break & Stagger Mechanics | Bab 10 | **IMPLEMENTED** | 8 tests | 100 base (200 boss); QTE scales break damage; 20 pt turn-start recovery; broken cap. |
+| **SYS-14** | Turn-Order Timeline & Initiative | Bab 10 §2 | **IMPLEMENTED** | 5 tests | Initiative rolls, dynamic timeline, speed buffs/debuffs. |
+| **SYS-15** | Roguelike Node Map Generation | Bab 14 §2 | **IMPLEMENTED** | 8 tests | Seeded DAG generation, node branching, floor traversal. |
+| **SYS-16** | Combat Encounter Flow | Bab 10 | **IMPLEMENTED** | 10 tests | Combatant initialization, action turns, victory/defeat. |
+| **SYS-17** | Character Status UI | Bab 18 §2 | **IMPLEMENTED** | 4 tests | Stat inspection, formula tooltips, party hero switching. |
+| **SYS-18** | Character Creation UI (New Game) | Bab 7 & 18 | **IMPLEMENTED** | 11 tests | 7-step party creation, templates, randomizer, review mode. |
+| **SYS-19** | Audio & Sound Effects System | Bab 17 | **IMPLEMENTED** | 6 tests | Procedural synth SFX, audio clips, background music fading. |
+| **SYS-20** | Settings & Accessibility | Bab 12 §6 | **IMPLEMENTED** | 4 tests | Volume sliders, fullscreen toggle, QTE Auto-Success assist. |
+| **SYS-21** | Shop System | Bab 15 | **IMPLEMENTED** | 8 tests | Shop node, dynamic inventory, buying, selling, restocking. |
+| **SYS-22** | Rest Site / Camp System | Bab 14 §4 | **IMPLEMENTED** | 4 tests | Camp heal, stamina recovery, camp save triggers. |
+| **SYS-23** | 8 Sequential Dungeons Progression | Bab 14 §1 | **PARTIAL** | 4 tests | Floor generation and transitions functional; full 8-dungeon encounter tables pending. |
+| **SYS-24** | Inventory & Equipment System | Bab 13 | **IMPLEMENTED** | 11 tests | Model C: 6 Rarities, Affixes, Upgrades (+0 to +5), 100 slot cap, 5 core slots. |
 
 ---
 
-## 5. Work Completed in Recent Sessions
+## 5. Detailed Gameplay Mechanics Implemented
 
-1. **Test Suite Stabilization:**
-   - Fixed nullable DoT scaling in [`Status.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Combat/Status.cs).
-   - Fixed un-buffing on status list manipulation in [`Combatant.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Combat/Combatant.cs).
-   - Corrected base stat assertions and racial modifier handling in [`StatusEffectTests.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Tests/Editor/StatusEffectTests.cs).
-   - Achieved 100% pass rate across all 122 EditMode tests.
-2. **Comprehensive Technical Audit:**
-   - Conducted an exhaustive review of all 23 subsystems against approved GDDs.
-   - Authored and placed [`UNITY_IMPLEMENTATION_AUDIT.md`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/UNITY_IMPLEMENTATION_AUDIT.md) in the project root.
-3. **Character Creation UI Refactor:**
-   - Fixed class label left-truncation (`ASS < FIGHTER...`) by relocating class gameplay identity, racial feat, and starter passive into dedicated display rows in the right panel and enforcing 150px string clamping in `Selector()`.
-   - Fixed cursor overlap (`[NEW] > [ADD HERO]`) by introducing `bool showCursor = true` in `Ui.Button` and disabling external cursor rendering on horizontal button bars.
-   - Fixed bottom tooltip text clipping using `PixelFont.Fit(..., 308)`.
-   - Fixed roster pre-population so a New Game cleanly starts with `PARTY (0/4): CREATE 4 HEROES TO BEGIN`.
+### 5.1 QTE System Alignment (Bab 12)
+- **Terminology:** `QteResult.Miss` is officially renamed to `QteResult.Poor` (`Miss` preserved as alias). UI panels display `"POOR"` on failure.
+- **Offensive Multipliers:**
+  - `Perfect`: **1.5x** damage & break power.
+  - `Good`: **1.0x** damage & break power.
+  - `Poor`: **0.5x** damage & break power.
+  - Pure heal, buff, and support skills are excluded from Offensive QTE.
+- **Defensive Multipliers:**
+  - `Perfect`: **0.0x** (100% damage negated).
+  - `Heavy Attack Perfect`: **0.5x** (50% damage reduction; heavy attacks cannot be completely negated).
+  - `Good`: **0.5x** (50% damage negated).
+  - `Poor`: **1.0x** (full damage received).
+- **Player-Only Scaling:** Ability scores (STR, DEX, VIT, etc.) no longer modify QTE timing windows or damage multipliers. Timing window bonuses come solely from equipment, talents, or passives and are capped at $+25\%$.
+
+### 5.2 Race System & Racial Feats (Bab 6)
+- **Attribute Budget:** Exactly $+2$ attribute points total across all 7 playable races:
+  - **Human:** $+1$ STR, $+1$ VIT (Adaptive Potential).
+  - **Elf:** $+2$ DEX (Elven Grace).
+  - **Dwarf:** $+2$ VIT (Dwarven Resilience).
+  - **Halfling:** $+2$ DEX (Nimble Folk).
+  - **Dragonborn:** $+2$ STR (Crimson/Stone) or $+2$ CHA (Azure/Frost).
+  - **Liichtian:** $+2$ INT (Celestial Glow).
+  - **Merfolk:** $+2$ WIS (Aquatic Adaptation).
+- **Dragonborn Lineages:** Crimson (Fire), Stone (Physical), Azure (Lightning), Frost (Ice).
+- **Combat Logic for All 7 Feats:**
+  - **Human (*Determination*):** Triggered automatically when alive and HP drops to $\le 30\%$ $\to$ grants $+20\%$ Max HP shield and $+15\%$ All Damage Bonus for 2 turns (1/battle).
+  - **Elf (*Fey Step*):** Active; grants `IsPhased` until next turn (single-target enemy attacks automatically redirect to another active ally) and $+20\%$ damage on the first attack next turn (CD 4).
+  - **Dwarf (*Iron Resolve*):** Active; grants $-30\%$ All Damage Taken and $-50\%$ incoming Break Power until next turn (CD 3).
+  - **Halfling (*Second Chance*):** 2 retries per battle for failed QTEs (max 1 retry per action/turn; does not guarantee automatic success).
+  - **Dragonborn (*Draconic Overdrive*):** Boosts All Damage $+35\%$, Lineage Element damage $+25\%$, Break Power $+50\%$, and counter damage $+25\%$ for 3 turns; followed by *Exhausted* ($-20\%$ damage, $-30\%$ break) for 2 turns (1/battle).
+  - **Liichtian (*Lightbound*):** Heals $10\%$ Max HP to all active party members, reduces damage taken by $-10\%$, and grants $+20\%$ status resistance for 2 turns (1/battle).
+  - **Merfolk (*Ocean's Embrace*):** Targets 1 ally to grant a $25\%$ Max HP shield and $+10\%$ defensive QTE window for 3 turns; heals $10\%$ Max HP if the shield breaks or expires (CD 4).
+
+### 5.3 Break Gauge & Stun Mechanics (Bab 10)
+- **Gauge Baselines:** 100 points for Normal and Elite enemies, 200 points for Bosses.
+- **QTE Scaling:** Break damage dealt is scaled by the offensive QTE multiplier ($1.5\times / 1.0\times / 0.5\times$).
+- **Turn Recovery:** Non-broken entities recover 20 Break gauge points at the start of their turn if damaged.
+- **Broken State:** Broken entities cannot achieve `Perfect` on defensive QTEs (defensive reaction capped at `Good`).
+- **Incapacitated Reactions:** Targets suffering from Stun, Sleep, or Mind Control are forced to `Poor` defense. Direct damage wakes up sleeping targets.
+
+### 5.4 Class Mechanics & Finishers (Bab 8 & 11)
+- **Finishers:** Skills tagged with `isFinisher = true` consume all accumulated Martial Artist combo points and can **never** critically hit (`ResolveCriticalHitForHit`).
+- **Martial Artist Combo Flow:**
+  - Good hit: $+1$ combo point.
+  - Perfect hit: $+2$ combo points.
+  - Poor hit: resets combo to 0.
+  - Passing a turn without attacking resets combo to 0.
+  - Grants $+2\%$ physical damage per active combo point.
 
 ---
 
-## 6. Priority Roadmap for the Next Session
+## 6. How to Run Tests & Verify Code
 
-### Phase 1: Core Loop & Foundation Integrity (Immediate Next Steps)
-- **Task 1: Multi-Slot Save Architecture (SYS-03)**
-  - Expand [`GameSave.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Data/GameSave.cs) from a single `"obscure.save"` key to 4 independent slots (`"obscure.save.slot.0"` through `"obscure.save.slot.3"`).
-  - Create a Save Slot Selection / Management UI in Main Menu and Pause/Settings.
-  - Enforce saving only at Camp nodes and between dungeon floor transitions.
-- **Task 2: 8 Sequential Dungeons Progression (SYS-23)**
-  - Update [`RunState.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Core/RunState.cs) to generate and advance through Acts 1 through 8 sequentially.
-  - Implement dungeon completion transitions (carry over remaining gold, reset temporary buffs, advance to the next dungeon theme).
-  - Enforce permadeath: dungeon defeat wipes run state and temporary gold, returning the player to the Main Menu.
+Tests are executed using the official Unity Editor executable in batchmode:
 
-### Phase 2: Missing Core Gameplay Systems
-- **Task 3: Shop System v1.0 (SYS-21)**
-  - Introduce `NodeType.Shop` into `NodeDef` and `MapGenerator`.
-  - Create `ShopInventory` supporting consumables, weapons, armor, and accessories.
-  - Implement purchasing (deducting temporary run gold), selling (returning $50\%$ gold value), and restock mechanics.
-  - Create `ShopScreen.cs` conforming to the $320 \times 180$ pixel art UI standard.
-- **Task 4: Combat EXP & Level 15 Progression (SYS-08)**
-  - Award EXP to living party members upon winning a battle encounter.
-  - Clamp character level progression strictly to Level 15.
-  - Award Skill Points (SP) upon leveling up and create a skill upgrade allocation screen.
-
-### Phase 3: Content Expansion
-- **Task 5: Author Full Class Skill Trees (SYS-07)**
-  - Expand [`Database.cs`](file:///f:/Folder%20dio/Dicoding/2DObscure/2DObscure/Assets/Scripts/Data/Database.cs) from the current 23 skills to the full 225 player skills (25 skills $\times$ 9 classes across Tiers 1–5).
-
----
-
-## 7. How to Run Tests & Verify Code
-
-Because Unity Editor runs in the background, EditMode tests are executed via `unity-mcp` using the `Unity_RunCommand` tool:
-
-```csharp
-using UnityEngine;
-using UnityEditor;
-using UnityEditor.TestTools.TestRunner.Api;
-
-namespace Unity.AI.Assistant.Agent.Dynamic.Extension.Editor
-{
-    internal class CommandScript : IRunCommand
-    {
-        public void Execute(ExecutionResult result)
-        {
-            var api = ScriptableObject.CreateInstance<TestRunnerApi>();
-            var filter = new Filter { testMode = TestMode.EditMode };
-            api.Execute(new ExecutionSettings(filter) { runSynchronously = true });
-            result.Log("Triggered synchronous EditMode test run");
-        }
-    }
-}
+```powershell
+Start-Process "F:\Game Engine\Unity Engine\Editor\Unity.exe" `
+  -ArgumentList "-batchmode -projectPath . -runTests -testPlatform EditMode -testResults Temp/TestResults.xml -logFile Temp/unity.log" `
+  -Wait
 ```
 
-Test results are logged to the Unity Console and saved to:  
-`C:/Users/Dios/AppData/LocalLow/DefaultCompany/2DObscure/TestResults.xml`
+### Parsing Test Results
+```powershell
+python -c "
+import xml.etree.ElementTree as ET
+import os
+
+path = r'C:/Users/Dios/AppData/LocalLow/DefaultCompany/2DObscure/TestResults.xml'
+if not os.path.exists(path): path = 'Temp/TestResults.xml'
+
+tree = ET.parse(path)
+root = tree.getroot()
+print(f'Total: {root.attrib.get(\"total\")}, Passed: {root.attrib.get(\"passed\")}, Failed: {root.attrib.get(\"failed\")}')
+"
+```
+
+**Current Verification Output:**
+```text
+Total: 269, Passed: 269, Failed: 0, Inconclusive: 0, Skipped: 0
+=======================================
+ALL 269 TESTS PASSED WITH 0 FAILURES!
+=======================================
+```
 
 ---
 
-## 8. Open Design Questions Requiring User Confirmation
+## 7. System Implementation Status & Roadmap
 
-Before beginning implementation on Phase 1 and 2, confirm the following rules with the designer:
-1. **Inter-Dungeon Recovery:** Does clearing a dungeon grant a full party HP/MP heal and purge all debuffs, or is HP/MP preserved between dungeons?
-2. **Shop Economy:** What are the exact base price tables for items and the formula for rerolling shop stock?
-3. **EXP Curve:** What is the exact formula for EXP required per level from Level 1 to 15 (e.g., linear vs. polynomial) and the base EXP awarded per enemy type?
-4. **Target Resolution:** Should new screens remain strictly in $320 \times 180$ ($\text{PPU} = 1$), or should the project begin migrating toward the $640 \times 360$ ($\text{PPU} = 32$) standard described in Visual Direction GDD v0.2?
+### Completed Systems & Content:
+- **GDD Alignment:** Complete audit & mechanical realignment of combat, QTEs, damage formula, races/classes, abilities, break gauges, status effects.
+- **Items & Equipment Catalogue (Dungeon 1):** Fully implemented 72 equipment pieces, 20 consumables, 12 materials, 10 key items in `CatalogueDefs.cs` and `CatalogueDatabase.cs`.
+- **Relic System (Layer 1):** Fully implemented modular Relic System (`RelicManager.cs`, `RelicDefs.cs`, `RelicInstance.cs`, `CatalogueRelics.cs`) supporting all 22 approved Layer 1 relics (`R001`–`R022`) with the 5 Confirmed Relic Rules:
+  1. *Relic Capacity:* Max 5 relics per party; 6th relic acquisition rejected with clear feedback.
+  2. *Relic Ownership:* Party-wide ownership.
+  3. *Duplicate Restrictions:* Strict duplicate rejection without stacking.
+  4. *Dungeon Persistence:* Temporary dungeon-specific items; wiped on dungeon clear (`AdvanceToNextDungeon`), next dungeon starts empty.
+  5. *Run Failure Reset:* Cleared on party wipe / run loss (`LoseCombat`, `ResetToNewGame`).
+
+### Next Steps & Pending Milestones:
+- **Phase 3: Dungeon Modifiers Catalog Import**
+  - Parse `Assets/Docs/Felna_Dungeon_Modifier_List.xlsx`.
+  - Implement dungeon modifier data structures and integrate with [`RunState.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Run/RunState.cs) and encounter generators.
+- **Phase 4: Dungeon 1 Enemy Roster Integration**
+  - Parse `Assets/Docs/Felna_Dungeon_1_Enemy_Roster.xlsx` and verify enemy skill sets, stats, and loot tables against Dungeon 1 items and relics.
+- **Phase 5: Class Skill Library Expansion**
+  - Author the remaining class skills from the GDD into [`Database.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Data/Database.cs) to complete the 225-skill library across the 9 playable classes.
+
+---
+
+## 8. Agent Security & Git Commit Guidelines (`AGENTS.md`)
+
+All AI agents operating on this repository **MUST STRICTLY COMPLY** with [`AGENTS.md`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/AGENTS.md):
+1. **NO AUTO-COMMIT:** Never run `git commit` or `git push` autonomously. Wait for explicit user instruction (e.g., *"tolong commit"*).
+2. **WORKING TREE PRESERVATION:** All modified and newly generated code must remain in the working tree (unstaged/uncommitted) so the user can review before committing.
+3. **NEVER STAGE SENSITIVE OR TEMPORARY FILES:** Never stage `.gemini/`, `.claude/`, `TestResults.txt`, `TestResults.xml`, `Temp/`, `Library/`, or environment files.
+4. **NO WILDCARD STAGING:** When committing upon user request, stage files selectively one-by-one (`git add <file>`), never `git add .` or `git add -A`.

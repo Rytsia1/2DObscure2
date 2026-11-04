@@ -64,6 +64,17 @@ namespace Obscure
         public int wayfarerSpeedBuffTurns;
         public readonly Dictionary<Combatant, int> scribeAttackCounts = new Dictionary<Combatant, int>();
         public bool hasActedInBattle;
+
+        // Relic System combat state (e.g. R017 Oathstone of the Fallen)
+        public bool tookDamageSinceLastTurn;
+
+        public void AddShield(int amount)
+        {
+            if (unit != null)
+            {
+                unit.shield += amount;
+            }
+        }
         public int luckyActivationsRemaining = TalentSystem.LuckyMaxPerBattle;
         public bool luckyUsedForCurrentQte = false;
         public bool CanTriggerLuckyRetry(QteResult result, Func<float> rngProvider = null)
@@ -139,6 +150,7 @@ namespace Obscure
 
         public bool Alive => unit.Alive;
         public bool IsEnemy => side == Side.Enemy;
+        public bool IsPlayer => side == Side.Party;
         public Stats Stats => unit.stats;
         public DerivedStats BaseDerived => unit.Derived;
         public Affinities Affinities => unit.affinities;

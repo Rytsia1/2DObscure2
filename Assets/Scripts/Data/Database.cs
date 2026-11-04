@@ -54,7 +54,7 @@ namespace Obscure
 
 
 
-    public static class Database
+    public static partial class Database
 
     {
 

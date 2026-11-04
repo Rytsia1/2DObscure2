@@ -51,9 +51,12 @@ namespace Obscure
             choices = { Relic(rng, ownedRelics), new RewardOption { kind = RewardKind.Item, id = "elixir" }, Upgrade(rng) },
         };
 
-        // A relic the party does not have yet; null when every pool relic is owned.
+        // A relic the party does not have yet; null when every pool relic is owned or party capacity (5) is full.
         public static string RandomRelicId(Random rng, ICollection<string> owned)
         {
+            if (owned != null && owned.Count >= RelicManager.MaxRelicCapacity)
+                return null;
+
             var pool = Database.Relics.Keys.Where(id => id != Database.BossRelic && !owned.Contains(id)).ToList();
             return pool.Count == 0 ? null : pool[rng.Next(pool.Count)];
         }

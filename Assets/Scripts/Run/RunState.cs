@@ -595,6 +595,7 @@ namespace Obscure
         public readonly List<string> Relics = new List<string>();
         public readonly HashSet<string> Cleared = new HashSet<string>();
         public readonly InventoryRuntime Inventory = new InventoryRuntime();
+        public readonly RelicManager RelicManager = new RelicManager();
         public readonly Random Rng; // combat randomness
         public readonly RunStats Stats = new RunStats();
         public readonly List<StatusApply> BattleBuffs = new List<StatusApply>();
@@ -677,7 +678,12 @@ namespace Obscure
                 throw new InvalidOperationException("No combat to win");
             Stats.battlesWon++;
             if (enc.tier == Tier.Elite) Stats.elitesWon++;
-            if (enc.tier == Tier.Boss) Stats.bossDefeated = true;
+            if (enc.tier == Tier.Boss)
+            {
+                Stats.bossDefeated = true;
+                Inventory.AddKeyItem("KEY002");
+            }
+            RelicManager.OnBattleWon(this);
 
             // Background Perk Rank V Post-battle Recovery (Farmer & Noble)
             foreach (var u in Party)
@@ -715,6 +721,8 @@ namespace Obscure
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
+            RelicManager.ClearAll();
+            Relics.Clear();
             HubEconomy.HandleRunFailure(this);
             GameSave.SaveRunState(this);
         }
@@ -770,24 +778,40 @@ namespace Obscure
             }
         }
 
-        void AddGold(int amount)
+        public void AddGold(int amount)
         {
+            if (amount > 0)
+            {
+                RelicManager.ModifyGoldReward(ref amount);
+                Stats.goldEarned += amount;
+            }
             Gold += amount;
-            if (amount > 0) Stats.goldEarned += amount;
         }
 
-        void AddRelic(string id)
+        public bool TryAddRelic(string id, out string error)
         {
-            if (Relics.Contains(id)) return;
-            Relics.Add(id);
-            var relic = Database.Relics[id];
-            foreach (var u in Party)
+            if (!RelicManager.TryAddRelic(id, out error))
+                return false;
+
+            if (!Relics.Contains(id))
+                Relics.Add(id);
+
+            if (Database.Relics.TryGetValue(id, out var relic))
             {
-                if (!relic.abilityBonus.IsZero) u.AddPermanentAbilityBonuses(relic.abilityBonus);
-                if (relic.modifiers != null)
-                    foreach (var m in relic.modifiers) u.AddPermanentModifier(m);
-                u.Improve(relic.bonus);
+                foreach (var u in Party)
+                {
+                    if (!relic.abilityBonus.IsZero) u.AddPermanentAbilityBonuses(relic.abilityBonus);
+                    if (relic.modifiers != null)
+                        foreach (var m in relic.modifiers) u.AddPermanentModifier(m);
+                    if (!relic.bonus.IsZero) u.Improve(relic.bonus);
+                }
             }
+            return true;
+        }
+
+        public void AddRelic(string id)
+        {
+            TryAddRelic(id, out _);
         }
 
         public static UpgradeDef GetUpgradeFor(Unit u)
@@ -839,7 +863,7 @@ namespace Obscure
 
         // Null when the choice can be taken, otherwise why not.
         public string EventBlocked(EventChoice c) =>
-            c.goldCost > Gold ? $"Need {c.goldCost} gold" : c.relic && EventRelic == null ? "Nothing left to gain" : null;
+            c.goldCost > Gold ? $"Need {c.goldCost} gold" : (c.relic && RelicManager.IsFull ? "Relic capacity full (5/5)" : (c.relic && EventRelic == null ? "Nothing left to gain" : null));
 
         public string ChooseEvent(int index)
         {
@@ -886,7 +910,22 @@ namespace Obscure
             Items.Clear();
             if (data.items != null) Items.AddRange(data.items);
             Relics.Clear();
-            if (data.relics != null) Relics.AddRange(data.relics);
+            RelicManager.ClearAll();
+            if (data.relicInstances != null && data.relicInstances.Length > 0)
+            {
+                RelicManager.RestoreFromSave(data.relicInstances);
+                foreach (var inst in RelicManager.ActiveRelics)
+                {
+                    if (!Relics.Contains(inst.relicId)) Relics.Add(inst.relicId);
+                }
+            }
+            else if (data.relics != null)
+            {
+                foreach (var rid in data.relics)
+                {
+                    TryAddRelic(rid, out _);
+                }
+            }
             Cleared.Clear();
             if (data.clearedNodeIds != null)
             {
@@ -977,6 +1016,9 @@ namespace Obscure
             BattleBuffs.Clear();
             CurrentDungeonShop = DungeonShopData.Generate(nextMap.act, Rng);
             CurrentShop = CurrentDungeonShop.equipmentShop;
+            // Confirmed Rule 4: Temporary dungeon-specific items - removed upon dungeon clear
+            RelicManager.ClearDungeonRelics();
+            Relics.Clear();
             return true;
         }
 
@@ -997,6 +1039,7 @@ namespace Obscure
             Items.Clear();
             Items.AddRange(Database.StartingItems);
             Relics.Clear();
+            RelicManager.ClearAll();
             Cleared.Clear();
             BattleBuffs.Clear();
 
@@ -1006,6 +1049,7 @@ namespace Obscure
                 Inventory.AddConsumable(itm, 1);
             Inventory.materials.Clear();
             Inventory.keyItems.Clear();
+            Inventory.AddKeyItem("KEY001");
 
             Party.Clear();
             if (initialPartyDefs != null)

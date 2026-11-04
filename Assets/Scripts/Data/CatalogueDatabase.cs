@@ -1,0 +1,3009 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Obscure
+{
+    // Authoritative Felna Dungeon 1 Item & Equipment Catalogue Database.
+    // Contains all 72 Equipment definitions, 20 Consumables, 12 Materials, and 10 Key Items.
+    public static partial class Database
+    {
+        // ---- 72 Approved Dungeon 1 Equipment Definitions ----
+        public static readonly Dictionary<string, EquipmentDef> CatalogueEquipment = Index(new[]
+        {
+            new EquipmentDef
+            {
+                id = "EQ001",
+                name = "Ironbound Longsword",
+                description = "Ironbound Longsword (Sword). 5% chance to inflict Bleed for 1 turn",
+                category = "Equipment",
+                specificType = "Sword",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Sword,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 18,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 45,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(2, 0, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.PhysicalPower, 0.0200f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Ironbound Longsword") },
+                fixedSpecialEffect = "5% chance to inflict Bleed for 1 turn",
+                specialEffectId = "fx_eq001",
+                suggestedSource = "Layer 1 - Ruined Kingdom",
+                baseStatsSummary = "STR +2; Physical Damage +2%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ002",
+                name = "Gravewarden Greatsword",
+                description = "Gravewarden Greatsword (Greatsword). +8% damage to enemies above 75% HP",
+                category = "Equipment",
+                specificType = "Greatsword",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Greatsword,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 3,
+                requiredCharacterLevel = 3,
+                weaponPower = 29,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 110,
+                breakPowerModifier = 3,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(4, 0, 0, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "+8% damage to enemies above 75% HP",
+                specialEffectId = "fx_eq002",
+                suggestedSource = "Layer 1 - Zoroa",
+                baseStatsSummary = "STR +4; Break Power +3",
+                allowedClassesText = "Fighter; Barbarian",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 3,
+                    allowedClasses = new[] { "fighter", "barbarian" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ003",
+                name = "Pitfighter's Glaive",
+                description = "Pitfighter's Glaive (Polearm). Perfect Offensive QTE: next hit +3% damage (once/turn)",
+                category = "Equipment",
+                specificType = "Polearm",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Polearm,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 21,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 70,
+                breakPowerModifier = 2,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 0, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Perfect Offensive QTE: next hit +3% damage (once/turn)",
+                specialEffectId = "fx_eq003",
+                suggestedSource = "Layer 3 - Akasuna",
+                baseStatsSummary = "AGI +2; Break Power +2",
+                allowedClassesText = "Fighter; Barbarian; Ranger",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "fighter", "barbarian", "ranger" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ004",
+                name = "Ashen Knuckle Wraps",
+                description = "Ashen Knuckle Wraps (Fist Weapon). Perfect Offensive QTE grants +1 Combo Flow to Martial Artist",
+                category = "Equipment",
+                specificType = "Fist Weapon",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.FistWeapon,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 15,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 42,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 2f, ModifierKind.Flat, ModifierSource.Equipment, "Ashen Knuckle Wraps") },
+                fixedSpecialEffect = "Perfect Offensive QTE grants +1 Combo Flow to Martial Artist",
+                specialEffectId = "fx_eq004",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "AGI +2; Speed +2",
+                allowedClassesText = "Martial Artist; Rogue",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "martial_artist", "rogue" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ005",
+                name = "Duelist's Twin Daggers",
+                description = "Duelist's Twin Daggers (Dual Daggers). +10% damage against Bleeding targets",
+                category = "Equipment",
+                specificType = "Dual Daggers",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.DualDaggers,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 20,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 125,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 4, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 0.0300f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Duelist's Twin Daggers") },
+                fixedSpecialEffect = "+10% damage against Bleeding targets",
+                specialEffectId = "fx_eq005",
+                suggestedSource = "Layer 3 - Colosseum",
+                baseStatsSummary = "AGI +4; Critical Chance +3%",
+                allowedClassesText = "Rogue; Martial Artist",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "rogue", "martial_artist" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ006",
+                name = "Longshot Recurve Bow",
+                description = "Longshot Recurve Bow (Bow). +5% damage to back-row targets",
+                category = "Equipment",
+                specificType = "Bow",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Bow,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 19,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 65,
+                breakPowerModifier = 0,
+                accuracyModifier = 2,
+                abilityBonuses = new AbilityScores(0, 3, 0, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "+5% damage to back-row targets",
+                specialEffectId = "fx_eq006",
+                suggestedSource = "Layer 2 - Lilia",
+                baseStatsSummary = "AGI +3; Ranged Accuracy +2%",
+                allowedClassesText = "Ranger; Rogue",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "ranger", "rogue" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ007",
+                name = "Emerose Crossbow",
+                description = "Emerose Crossbow (Crossbow). Basic Attack gains +2 Break Power",
+                category = "Equipment",
+                specificType = "Crossbow",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Crossbow,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 25,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 120,
+                breakPowerModifier = 0,
+                accuracyModifier = 3,
+                abilityBonuses = new AbilityScores(2, 2, 0, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Basic Attack gains +2 Break Power",
+                specialEffectId = "fx_eq007",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "STR +2; AGI +2; Ranged Accuracy +3%",
+                allowedClassesText = "Ranger; Fighter",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "ranger", "fighter" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ008",
+                name = "Pilgrim's Mace",
+                description = "Pilgrim's Mace (Mace). Holy skills deal +4% damage",
+                category = "Equipment",
+                specificType = "Mace",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Mace,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 17,
+                physicalDefense = 0,
+                damageElement = Element.Holy,
+                maxUpgradeLevel = 10,
+                baseValue = 62,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(1, 0, 2, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Holy skills deal +4% damage",
+                specialEffectId = "fx_eq008",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +2; STR +1",
+                allowedClassesText = "Fighter; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "fighter", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ009",
+                name = "Sunlit Warhammer",
+                description = "Sunlit Warhammer (Warhammer). Perfect Offensive QTE: +8% Break damage this hit",
+                category = "Equipment",
+                specificType = "Warhammer",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Warhammer,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 33,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 260,
+                breakPowerModifier = 5,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(5, 0, 0, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Perfect Offensive QTE: +8% Break damage this hit",
+                specialEffectId = "fx_eq009",
+                suggestedSource = "Layer 5 - Berzelius",
+                baseStatsSummary = "STR +5; Break Power +5",
+                allowedClassesText = "Fighter; Cleric; Barbarian",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "cleric", "barbarian" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ010",
+                name = "Apprentice Ember Staff",
+                description = "Apprentice Ember Staff (Staff). Fire skills cost 1 less MP (minimum 1)",
+                category = "Equipment",
+                specificType = "Staff",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Staff,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 8,
+                physicalDefense = 0,
+                damageElement = Element.Fire,
+                maxUpgradeLevel = 10,
+                baseValue = 50,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 4, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0300f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Apprentice Ember Staff") },
+                fixedSpecialEffect = "Fire skills cost 1 less MP (minimum 1)",
+                specialEffectId = "fx_eq010",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "INT +4; Fire Damage +3%",
+                allowedClassesText = "Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ011",
+                name = "Tideglass Wand",
+                description = "Tideglass Wand (Wand). +5% status application chance for Ice / Water skills",
+                category = "Equipment",
+                specificType = "Wand",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Wand,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 3,
+                requiredCharacterLevel = 3,
+                weaponPower = 10,
+                physicalDefense = 0,
+                damageElement = Element.Ice,
+                maxUpgradeLevel = 10,
+                baseValue = 105,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 4, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 5f, ModifierKind.Flat, ModifierSource.Equipment, "Tideglass Wand") },
+                fixedSpecialEffect = "+5% status application chance for Ice / Water skills",
+                specialEffectId = "fx_eq011",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "INT +4; MP +5",
+                allowedClassesText = "Cleric; Wizard; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 3,
+                    allowedClasses = new[] { "cleric", "wizard", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ012",
+                name = "Umbral Grimoire",
+                description = "Umbral Grimoire (Tome). +6% Shadow damage to Cursed targets",
+                category = "Equipment",
+                specificType = "Tome",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Tome,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 9,
+                physicalDefense = 0,
+                damageElement = Element.Shadow,
+                maxUpgradeLevel = 10,
+                baseValue = 125,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 5, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Umbral Grimoire") },
+                fixedSpecialEffect = "+6% Shadow damage to Cursed targets",
+                specialEffectId = "fx_eq012",
+                suggestedSource = "Layer 4 - Pharam",
+                baseStatsSummary = "INT +5; Shadow Damage +4%",
+                allowedClassesText = "Wizard; Warlock; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "wizard", "warlock", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ013",
+                name = "Verdant Thorn Staff",
+                description = "Verdant Thorn Staff (Staff). Healing skills restore +5% additional HP",
+                category = "Equipment",
+                specificType = "Staff",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Staff,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 6,
+                requiredCharacterLevel = 6,
+                weaponPower = 14,
+                physicalDefense = 0,
+                damageElement = Element.Earth,
+                maxUpgradeLevel = 10,
+                baseValue = 235,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 2, 5, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Verdant Thorn Staff") },
+                fixedSpecialEffect = "Healing skills restore +5% additional HP",
+                specialEffectId = "fx_eq013",
+                suggestedSource = "Layer 6 - Lacrima",
+                baseStatsSummary = "INT +5; VIT +2; Earth Damage +4%",
+                allowedClassesText = "Druid; Wizard",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 6,
+                    allowedClasses = new[] { "druid", "wizard" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ014",
+                name = "Aureate Scepter",
+                description = "Aureate Scepter (Scepter). Perfect Holy direct-damage QTE restores 2% Max MP; once/turn",
+                category = "Equipment",
+                specificType = "Scepter",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Scepter,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 13,
+                physicalDefense = 0,
+                damageElement = Element.Holy,
+                maxUpgradeLevel = 10,
+                baseValue = 270,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 5, 0, 2),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0500f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Aureate Scepter") },
+                fixedSpecialEffect = "Perfect Holy direct-damage QTE restores 2% Max MP; once/turn",
+                specialEffectId = "fx_eq014",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "INT +5; CHA +2; Holy Damage +5%",
+                allowedClassesText = "Cleric; Warlock",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "cleric", "warlock" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ015",
+                name = "Wyrmfang Greatsword",
+                description = "Wyrmfang Greatsword (Greatsword). +12% damage to bosses; no compatibility bypass",
+                category = "Equipment",
+                specificType = "Greatsword",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Greatsword,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 46,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 650,
+                breakPowerModifier = 5,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(8, 0, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalDamage, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Wyrmfang Greatsword") },
+                fixedSpecialEffect = "+12% damage to bosses; no compatibility bypass",
+                specialEffectId = "fx_eq015",
+                suggestedSource = "Layer 7 - Vortigern",
+                baseStatsSummary = "STR +8; Critical Damage +8%; Break Power +5",
+                allowedClassesText = "Fighter; Barbarian",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ016",
+                name = "Soulreaper Scythe",
+                description = "Soulreaper Scythe (Scythe). Defeating an enemy restores 5% Max MP; once/turn",
+                category = "Equipment",
+                specificType = "Scythe",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Scythe,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 42,
+                physicalDefense = 0,
+                damageElement = Element.Shadow,
+                maxUpgradeLevel = 10,
+                baseValue = 1100,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(4, 0, 0, 8, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Soulreaper Scythe") },
+                fixedSpecialEffect = "Defeating an enemy restores 5% Max MP; once/turn",
+                specialEffectId = "fx_eq016",
+                suggestedSource = "Layer 8 - Helelios",
+                baseStatsSummary = "INT +8; STR +4; Shadow Damage +8%",
+                allowedClassesText = "Warlock; Barbarian",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "warlock", "barbarian" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ017",
+                name = "Stormcall Shortbow",
+                description = "Stormcall Shortbow (Bow). 8% chance to inflict Shock for 1 turn",
+                category = "Equipment",
+                specificType = "Bow",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Bow,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 32,
+                physicalDefense = 0,
+                damageElement = Element.Lightning,
+                maxUpgradeLevel = 10,
+                baseValue = 250,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 6, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0500f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Stormcall Shortbow") },
+                fixedSpecialEffect = "8% chance to inflict Shock for 1 turn",
+                specialEffectId = "fx_eq017",
+                suggestedSource = "Layer 6",
+                baseStatsSummary = "AGI +6; Lightning Damage +5%",
+                allowedClassesText = "Ranger; Rogue",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "ranger", "rogue" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ018",
+                name = "Oathkeeper Blade",
+                description = "Oathkeeper Blade (Sword). First ally hit each battle takes 8% less damage for that hit",
+                category = "Equipment",
+                specificType = "Sword",
+                slot = EquipmentSlot.MainHand,
+                weaponType = WeaponType.Sword,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 9,
+                requiredCharacterLevel = 9,
+                weaponPower = 39,
+                physicalDefense = 0,
+                damageElement = Element.Holy,
+                maxUpgradeLevel = 10,
+                baseValue = 590,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(6, 0, 4, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Oathkeeper Blade") },
+                fixedSpecialEffect = "First ally hit each battle takes 8% less damage for that hit",
+                specialEffectId = "fx_eq018",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "STR +6; VIT +4; Holy Damage +4%",
+                allowedClassesText = "Fighter; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 9,
+                    allowedClasses = new[] { "fighter", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ019",
+                name = "Watchman's Buckler",
+                description = "Watchman's Buckler (Shield). Defensive QTE Perfect reduces an additional 2% damage",
+                category = "Equipment",
+                specificType = "Shield",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.Shield,
+                rarity = EquipmentRarity.Common,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 0,
+                physicalDefense = 5,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 25,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 2, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Defensive QTE Perfect reduces an additional 2% damage",
+                specialEffectId = "fx_eq019",
+                suggestedSource = "Hub starter",
+                baseStatsSummary = "VIT +2",
+                allowedClassesText = "Fighter; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ020",
+                name = "Iron Tower Shield",
+                description = "Iron Tower Shield (Shield). Heavy attacks deal 5% less damage to wearer",
+                category = "Equipment",
+                specificType = "Shield",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.Shield,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 0,
+                physicalDefense = 9,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 72,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 3, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0200f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Iron Tower Shield") },
+                fixedSpecialEffect = "Heavy attacks deal 5% less damage to wearer",
+                specialEffectId = "fx_eq020",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +3; Physical Damage Taken Reduction +2%",
+                allowedClassesText = "Fighter; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "fighter", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ021",
+                name = "Duelist's Parrying Dagger",
+                description = "Duelist's Parrying Dagger (Off-hand Weapon). Perfect Defensive QTE: next Basic Attack +5% damage",
+                category = "Equipment",
+                specificType = "Off-hand Weapon",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.OffHandWeapon,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 7,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 68,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 0.0200f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Duelist's Parrying Dagger") },
+                fixedSpecialEffect = "Perfect Defensive QTE: next Basic Attack +5% damage",
+                specialEffectId = "fx_eq021",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "AGI +2; Critical Chance +2%",
+                allowedClassesText = "Rogue; Martial Artist",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "rogue", "martial_artist" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ022",
+                name = "Hunter's Handbow",
+                description = "Hunter's Handbow (Off-hand Weapon). Ranged Basic Attack gains +2% damage",
+                category = "Equipment",
+                specificType = "Off-hand Weapon",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.OffHandWeapon,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 11,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 115,
+                breakPowerModifier = 0,
+                accuracyModifier = 2,
+                abilityBonuses = new AbilityScores(0, 3, 0, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Ranged Basic Attack gains +2% damage",
+                specialEffectId = "fx_eq022",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "AGI +3; Ranged Accuracy +2%",
+                allowedClassesText = "Ranger; Rogue",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "ranger", "rogue" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ023",
+                name = "Runic Focus",
+                description = "Runic Focus (Special Focus). Elemental skills gain +3% damage",
+                category = "Equipment",
+                specificType = "Special Focus",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.SpecialFocus,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 0,
+                physicalDefense = 1,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 70,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 3, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 3f, ModifierKind.Flat, ModifierSource.Equipment, "Runic Focus") },
+                fixedSpecialEffect = "Elemental skills gain +3% damage",
+                specialEffectId = "fx_eq023",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "INT +3; MP +3",
+                allowedClassesText = "Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ024",
+                name = "Reliquary of Dawn",
+                description = "Reliquary of Dawn (Special Focus). Healing restores +3% additional HP",
+                category = "Equipment",
+                specificType = "Special Focus",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.SpecialFocus,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 2,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 120,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 2, 3, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Healing restores +3% additional HP",
+                specialEffectId = "fx_eq024",
+                suggestedSource = "Layer 4",
+                baseStatsSummary = "INT +3; VIT +2",
+                allowedClassesText = "Cleric; Druid; Wizard",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "cleric", "druid", "wizard" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ025",
+                name = "Obsidian Ward",
+                description = "Obsidian Ward (Shield). Once/battle survive lethal hit at 1 HP; gain Exhausted",
+                category = "Equipment",
+                specificType = "Shield",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.Shield,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 16,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 260,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 6, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Obsidian Ward") },
+                fixedSpecialEffect = "Once/battle survive lethal hit at 1 HP; gain Exhausted",
+                specialEffectId = "fx_eq025",
+                suggestedSource = "Layer 6",
+                baseStatsSummary = "VIT +6; Shadow Resistance +8%",
+                allowedClassesText = "Fighter; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ026",
+                name = "Dragonbone Parrying Claw",
+                description = "Dragonbone Parrying Claw (Off-hand Weapon). Perfect Offensive QTE grants +2% Speed for 2 turns",
+                category = "Equipment",
+                specificType = "Off-hand Weapon",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.OffHandWeapon,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 8,
+                requiredCharacterLevel = 8,
+                weaponPower = 13,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 290,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 5, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 0.0300f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Dragonbone Parrying Claw") },
+                fixedSpecialEffect = "Perfect Offensive QTE grants +2% Speed for 2 turns",
+                specialEffectId = "fx_eq026",
+                suggestedSource = "Layer 7",
+                baseStatsSummary = "AGI +5; Critical Chance +3%",
+                allowedClassesText = "Martial Artist; Rogue",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 8,
+                    allowedClasses = new[] { "martial_artist", "rogue" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ027",
+                name = "Aegis of the Golden Choir",
+                description = "Aegis of the Golden Choir (Shield). Perfect Defensive QTE restores 2% Max HP; once/turn",
+                category = "Equipment",
+                specificType = "Shield",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.Shield,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 21,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 620,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 8, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.1000f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Aegis of the Golden Choir") },
+                fixedSpecialEffect = "Perfect Defensive QTE restores 2% Max HP; once/turn",
+                specialEffectId = "fx_eq027",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "VIT +8; Holy Resistance +10%",
+                allowedClassesText = "Fighter; Cleric",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "cleric" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ028",
+                name = "Eclipse Catalyst",
+                description = "Eclipse Catalyst (Special Focus). First Shadow skill each battle costs 0 MP",
+                category = "Equipment",
+                specificType = "Special Focus",
+                slot = EquipmentSlot.SecondHand,
+                weaponType = WeaponType.SpecialFocus,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 4,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1050,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 9, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 10f, ModifierKind.Flat, ModifierSource.Equipment, "Eclipse Catalyst"), StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0600f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Eclipse Catalyst") },
+                fixedSpecialEffect = "First Shadow skill each battle costs 0 MP",
+                specialEffectId = "fx_eq028",
+                suggestedSource = "Layer 8",
+                baseStatsSummary = "INT +9; MP +10; Shadow Damage +6%",
+                allowedClassesText = "Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ029",
+                name = "Leather Scout Hood",
+                description = "Leather Scout Hood (Headgear). Ranged Accuracy +1%",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 0,
+                physicalDefense = 2,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 40,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Evasion, 2f, ModifierKind.Flat, ModifierSource.Equipment, "Leather Scout Hood") },
+                fixedSpecialEffect = "Ranged Accuracy +1%",
+                specialEffectId = "fx_eq029",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "AGI +2; Evasion +2",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ030",
+                name = "Iron Guard Helm",
+                description = "Iron Guard Helm (Headgear). Physical Damage Taken Reduction +2%",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 6,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 130,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(1, 0, 4, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Physical Damage Taken Reduction +2%",
+                specialEffectId = "fx_eq030",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "VIT +4; STR +1",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ031",
+                name = "Crown of Cinders",
+                description = "Crown of Cinders (Headgear). Burn inflicted by wearer lasts +1 turn (non-boss only)",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 5,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 245,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 5, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0600f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Crown of Cinders") },
+                fixedSpecialEffect = "Burn inflicted by wearer lasts +1 turn (non-boss only)",
+                specialEffectId = "fx_eq031",
+                suggestedSource = "Layer 4",
+                baseStatsSummary = "INT +5; Fire Resistance +6%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ032",
+                name = "Golden Halo Circlet",
+                description = "Golden Halo Circlet (Headgear). First heal each battle grants target 5% damage reduction for 1 turn",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 4,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 610,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 6, 0, 4),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Golden Halo Circlet") },
+                fixedSpecialEffect = "First heal each battle grants target 5% damage reduction for 1 turn",
+                specialEffectId = "fx_eq032",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "INT +6; CHA +4; Holy Resistance +8%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ033",
+                name = "Crown of the Last Dawn",
+                description = "Crown of the Last Dawn (Headgear). Battle start: lowest-HP ally gains barrier equal to 5% Max HP",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 7,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1080,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 5, 8, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Crown of the Last Dawn") },
+                fixedSpecialEffect = "Battle start: lowest-HP ally gains barrier equal to 5% Max HP",
+                specialEffectId = "fx_eq033",
+                suggestedSource = "Layer 8",
+                baseStatsSummary = "INT +8; VIT +5; Status Resistance +8%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ034",
+                name = "Wayfarer's Leather Coat",
+                description = "Wayfarer's Leather Coat (Body Armor). Back-row damage taken -3%",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 0,
+                physicalDefense = 5,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 48,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 1, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Back-row damage taken -3%",
+                specialEffectId = "fx_eq034",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "AGI +2; VIT +1",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ035",
+                name = "Prisonbreak Brigandine",
+                description = "Prisonbreak Brigandine (Body Armor). Take 5% less damage below 50% HP",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 12,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 140,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(2, 0, 4, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Take 5% less damage below 50% HP",
+                specialEffectId = "fx_eq035",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +4; STR +2",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ036",
+                name = "Archmage's Mantle",
+                description = "Archmage's Mantle (Body Armor). All elemental resistances +3%",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 8,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 260,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 6, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 8f, ModifierKind.Flat, ModifierSource.Equipment, "Archmage's Mantle") },
+                fixedSpecialEffect = "All elemental resistances +3%",
+                specialEffectId = "fx_eq036",
+                suggestedSource = "Layer 4",
+                baseStatsSummary = "INT +6; MP +8",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ037",
+                name = "Gilded Seraph Robe",
+                description = "Gilded Seraph Robe (Body Armor). Healing ally below 30% HP grants 5% Max HP barrier",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 10,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 640,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 4, 7, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Gilded Seraph Robe") },
+                fixedSpecialEffect = "Healing ally below 30% HP grants 5% Max HP barrier",
+                specialEffectId = "fx_eq037",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "INT +7; VIT +4; Holy Damage +4%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ038",
+                name = "Endworld Carapace",
+                description = "Endworld Carapace (Body Armor). Once/battle negate one status effect on wearer",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 18,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1120,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(4, 0, 9, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.1000f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Endworld Carapace") },
+                fixedSpecialEffect = "Once/battle negate one status effect on wearer",
+                specialEffectId = "fx_eq038",
+                suggestedSource = "Layer 8",
+                baseStatsSummary = "VIT +9; STR +4; Shadow Resistance +10%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ039",
+                name = "Trailrunner Trousers",
+                description = "Trailrunner Trousers (Leg Armor).",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 0,
+                physicalDefense = 2,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 38,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 1f, ModifierKind.Flat, ModifierSource.Equipment, "Trailrunner Trousers") },
+                fixedSpecialEffect = "No fixed special effect",
+                specialEffectId = "fx_eq039",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "AGI +2; Speed +1",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ040",
+                name = "Colosseum Greaves",
+                description = "Colosseum Greaves (Leg Armor). Break Power +2",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 7,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 125,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(2, 0, 3, 0, 0, 0),
+                modifiers = Array.Empty<StatModifier>(),
+                fixedSpecialEffect = "Break Power +2",
+                specialEffectId = "fx_eq040",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "VIT +3; STR +2",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ041",
+                name = "Ashfall Legguards",
+                description = "Ashfall Legguards (Leg Armor). Burn damage taken -8%",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 10,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 235,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 5, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0500f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Ashfall Legguards") },
+                fixedSpecialEffect = "Burn damage taken -8%",
+                specialEffectId = "fx_eq041",
+                suggestedSource = "Layer 4",
+                baseStatsSummary = "VIT +5; Fire Resistance +5%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ042",
+                name = "Regalia of the Golden Step",
+                description = "Regalia of the Golden Step (Leg Armor). Defeating enemy grants +2 Speed for 1 turn",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 12,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 600,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 5, 0, 0, 0, 3),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 3f, ModifierKind.Flat, ModifierSource.Equipment, "Regalia of the Golden Step") },
+                fixedSpecialEffect = "Defeating enemy grants +2 Speed for 1 turn",
+                specialEffectId = "fx_eq042",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "AGI +5; CHA +3; Speed +3",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ043",
+                name = "Titan's Scale Greaves",
+                description = "Titan's Scale Greaves (Leg Armor). Cannot be Stunned by non-boss enemies",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 19,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1090,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(4, 0, 8, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Titan's Scale Greaves") },
+                fixedSpecialEffect = "Cannot be Stunned by non-boss enemies",
+                specialEffectId = "fx_eq043",
+                suggestedSource = "Layer 7",
+                baseStatsSummary = "VIT +8; STR +4; Earth Resistance +8%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ044",
+                name = "Softstep Boots",
+                description = "Softstep Boots (Footwear). Defensive QTE Window affix eligible; no fixed effect",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 0,
+                physicalDefense = 2,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 42,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 2, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Evasion, 2f, ModifierKind.Flat, ModifierSource.Equipment, "Softstep Boots") },
+                fixedSpecialEffect = "Defensive QTE Window affix eligible; no fixed effect",
+                specialEffectId = "fx_eq044",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "AGI +2; Evasion +2",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ045",
+                name = "Warden's Iron Boots",
+                description = "Warden's Iron Boots (Footwear). Defensive QTE Perfect grants 2% damage reduction for 1 turn",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 8,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 132,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 3, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 1f, ModifierKind.Flat, ModifierSource.Equipment, "Warden's Iron Boots") },
+                fixedSpecialEffect = "Defensive QTE Perfect grants 2% damage reduction for 1 turn",
+                specialEffectId = "fx_eq045",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +3; Speed +1",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ046",
+                name = "Stormglass Greaves",
+                description = "Stormglass Greaves (Footwear). Shock resistance +5%",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 9,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 245,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 4, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0600f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Stormglass Greaves") },
+                fixedSpecialEffect = "Shock resistance +5%",
+                specialEffectId = "fx_eq046",
+                suggestedSource = "Layer 6",
+                baseStatsSummary = "AGI +4; Lightning Resistance +6%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ047",
+                name = "Winged Pilgrim Sandals",
+                description = "Winged Pilgrim Sandals (Footwear). Defensive QTE Window +8%; shared +25% cap",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 7,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 620,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 6, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 4f, ModifierKind.Flat, ModifierSource.Equipment, "Winged Pilgrim Sandals"), StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0500f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Winged Pilgrim Sandals") },
+                fixedSpecialEffect = "Defensive QTE Window +8%; shared +25% cap",
+                specialEffectId = "fx_eq047",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "AGI +6; Speed +4; Holy Resistance +5%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ048",
+                name = "Calamity Tread",
+                description = "Calamity Tread (Footwear). First incoming attack each battle deals 10% less damage",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 15,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1080,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 6, 6, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 3f, ModifierKind.Flat, ModifierSource.Equipment, "Calamity Tread") },
+                fixedSpecialEffect = "First incoming attack each battle deals 10% less damage",
+                specialEffectId = "fx_eq048",
+                suggestedSource = "Layer 7",
+                baseStatsSummary = "VIT +6; AGI +6; Speed +3",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ049",
+                name = "Copper Vitality Ring",
+                description = "Copper Vitality Ring (Accessory).",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 1,
+                requiredCharacterLevel = 1,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 35,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 3, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 5f, ModifierKind.Flat, ModifierSource.Equipment, "Copper Vitality Ring") },
+                fixedSpecialEffect = "No fixed special effect",
+                specialEffectId = "fx_eq049",
+                suggestedSource = "Layer 1",
+                baseStatsSummary = "VIT +3; HP +5",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 1,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ050",
+                name = "Emberglass Pendant",
+                description = "Emberglass Pendant (Accessory). Fire skills +3% status application chance",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 118,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 3, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Emberglass Pendant") },
+                fixedSpecialEffect = "Fire skills +3% status application chance",
+                specialEffectId = "fx_eq050",
+                suggestedSource = "Layer 4",
+                baseStatsSummary = "INT +3; Fire Damage +4%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ051",
+                name = "Band of Keen Edges",
+                description = "Band of Keen Edges (Accessory).",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 120,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 3, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 0.0300f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Band of Keen Edges") },
+                fixedSpecialEffect = "No fixed special effect",
+                specialEffectId = "fx_eq051",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "AGI +3; Critical Chance +3%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ052",
+                name = "Prisoner's Last Locket",
+                description = "Prisoner's Last Locket (Accessory). Once/battle cleanse one Poison or Bleed when HP falls below 30%",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 240,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 5, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0500f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Prisoner's Last Locket") },
+                fixedSpecialEffect = "Once/battle cleanse one Poison or Bleed when HP falls below 30%",
+                specialEffectId = "fx_eq052",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +5; Status Resistance +5%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ053",
+                name = "Aureate Signet",
+                description = "Aureate Signet (Accessory). Hub shop prices reduced by 3%",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 7,
+                requiredCharacterLevel = 7,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 250,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 3, 0, 4),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 5f, ModifierKind.Flat, ModifierSource.Equipment, "Aureate Signet") },
+                fixedSpecialEffect = "Hub shop prices reduced by 3%",
+                specialEffectId = "fx_eq053",
+                suggestedSource = "Layer 5",
+                baseStatsSummary = "CHA +4; INT +3; MP +5",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 7,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ054",
+                name = "Mourner's Soul Veil",
+                description = "Mourner's Soul Veil (Headgear). Take 5% less damage from Soul-type enemies",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 3,
+                requiredCharacterLevel = 3,
+                weaponPower = 0,
+                physicalDefense = 3,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 105,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 3, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Mourner's Soul Veil") },
+                fixedSpecialEffect = "Take 5% less damage from Soul-type enemies",
+                specialEffectId = "fx_eq054",
+                suggestedSource = "Layer 1 - Zoroa",
+                baseStatsSummary = "INT +3; Shadow Resistance +4%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 3,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ055",
+                name = "Chainwarden Mask",
+                description = "Chainwarden Mask (Headgear).",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 0,
+                physicalDefense = 4,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 65,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 2, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0400f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Chainwarden Mask") },
+                fixedSpecialEffect = "No fixed special effect",
+                specialEffectId = "fx_eq055",
+                suggestedSource = "Layer 2 - Lilia",
+                baseStatsSummary = "VIT +2; Fear Resistance +4%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ056",
+                name = "Champion's Laurel",
+                description = "Champion's Laurel (Headgear). After battle, restore 2% Max HP",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 6,
+                requiredCharacterLevel = 6,
+                weaponPower = 0,
+                physicalDefense = 4,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 225,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(3, 3, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 0.0200f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Champion's Laurel") },
+                fixedSpecialEffect = "After battle, restore 2% Max HP",
+                specialEffectId = "fx_eq056",
+                suggestedSource = "Layer 3 - Akasuna",
+                baseStatsSummary = "STR +3; AGI +3; Critical Chance +2%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 6,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ057",
+                name = "Fallen Star Diadem",
+                description = "Fallen Star Diadem (Headgear). Holy and Shadow damage +2%",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 2,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 135,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 4, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 5f, ModifierKind.Flat, ModifierSource.Equipment, "Fallen Star Diadem") },
+                fixedSpecialEffect = "Holy and Shadow damage +2%",
+                specialEffectId = "fx_eq057",
+                suggestedSource = "Layer 5 - Berzelius",
+                baseStatsSummary = "INT +4; MP +5",
+                allowedClassesText = "Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ058",
+                name = "Blightfilter Cowl",
+                description = "Blightfilter Cowl (Headgear). Poison duration on wearer reduced by 1 turn",
+                category = "Equipment",
+                specificType = "Headgear",
+                slot = EquipmentSlot.HeadArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 8,
+                requiredCharacterLevel = 8,
+                weaponPower = 0,
+                physicalDefense = 6,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 260,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 4, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Blightfilter Cowl") },
+                fixedSpecialEffect = "Poison duration on wearer reduced by 1 turn",
+                specialEffectId = "fx_eq058",
+                suggestedSource = "Layer 6 - Lacrima",
+                baseStatsSummary = "VIT +4; Poison Resistance +8%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 8,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ059",
+                name = "Ashen Scholar's Vestment",
+                description = "Ashen Scholar's Vestment (Body Armor). Fire and Ice Resistance +3%",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 3,
+                requiredCharacterLevel = 3,
+                weaponPower = 0,
+                physicalDefense = 8,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 135,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 4, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxMP, 5f, ModifierKind.Flat, ModifierSource.Equipment, "Ashen Scholar's Vestment") },
+                fixedSpecialEffect = "Fire and Ice Resistance +3%",
+                specialEffectId = "fx_eq059",
+                suggestedSource = "Layer 4 - Pharam",
+                baseStatsSummary = "INT +4; MP +5",
+                allowedClassesText = "Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 3,
+                    allowedClasses = new[] { "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ060",
+                name = "Dragonhide Harness",
+                description = "Dragonhide Harness (Body Armor). Dragon-type enemies deal 5% less damage",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 8,
+                requiredCharacterLevel = 8,
+                weaponPower = 0,
+                physicalDefense = 16,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 290,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(3, 0, 5, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0500f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Dragonhide Harness") },
+                fixedSpecialEffect = "Dragon-type enemies deal 5% less damage",
+                specialEffectId = "fx_eq060",
+                suggestedSource = "Layer 7 - Vortigern",
+                baseStatsSummary = "VIT +5; STR +3; Fire Resistance +5%",
+                allowedClassesText = "Fighter; Barbarian; Ranger",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 8,
+                    allowedClasses = new[] { "fighter", "barbarian", "ranger" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ061",
+                name = "Corruption-Sealed Robe",
+                description = "Corruption-Sealed Robe (Body Armor). Applying Curse restores 2 MP; once/turn",
+                category = "Equipment",
+                specificType = "Body Armor",
+                slot = EquipmentSlot.BodyArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 12,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 630,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 6, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0600f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Corruption-Sealed Robe") },
+                fixedSpecialEffect = "Applying Curse restores 2 MP; once/turn",
+                specialEffectId = "fx_eq061",
+                suggestedSource = "Layer 6 - Lacrima",
+                baseStatsSummary = "INT +6; Status Resistance +6%",
+                allowedClassesText = "Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ062",
+                name = "Gilded Duelist's Sash",
+                description = "Gilded Duelist's Sash (Leg Armor).",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 0,
+                physicalDefense = 3,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 62,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 3, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalChance, 0.0100f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Gilded Duelist's Sash") },
+                fixedSpecialEffect = "No fixed special effect",
+                specialEffectId = "fx_eq062",
+                suggestedSource = "Layer 3",
+                baseStatsSummary = "AGI +3; Critical Chance +1%",
+                allowedClassesText = "Martial Artist; Rogue; Ranger",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "martial_artist", "rogue", "ranger" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ063",
+                name = "Prison March Greaves",
+                description = "Prison March Greaves (Leg Armor). Physical Damage Taken Reduction +3%",
+                category = "Equipment",
+                specificType = "Leg Armor",
+                slot = EquipmentSlot.LegArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Uncommon,
+                equipmentLevel = 2,
+                requiredCharacterLevel = 2,
+                weaponPower = 0,
+                physicalDefense = 5,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 60,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 2, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, -1f, ModifierKind.Flat, ModifierSource.Equipment, "Prison March Greaves") },
+                fixedSpecialEffect = "Physical Damage Taken Reduction +3%",
+                specialEffectId = "fx_eq063",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +2; Speed -1",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 2,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ064",
+                name = "Stormstep Tabi",
+                description = "Stormstep Tabi (Footwear). Lightning Resistance +4%",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Rare,
+                equipmentLevel = 4,
+                requiredCharacterLevel = 4,
+                weaponPower = 0,
+                physicalDefense = 5,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 130,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 4, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 2f, ModifierKind.Flat, ModifierSource.Equipment, "Stormstep Tabi") },
+                fixedSpecialEffect = "Lightning Resistance +4%",
+                specialEffectId = "fx_eq064",
+                suggestedSource = "Layer 6",
+                baseStatsSummary = "AGI +4; Speed +2",
+                allowedClassesText = "Martial Artist; Rogue; Ranger",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 4,
+                    allowedClasses = new[] { "martial_artist", "rogue", "ranger" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ065",
+                name = "Wyrmwing Boots",
+                description = "Wyrmwing Boots (Footwear). Defensive QTE Window +5%; shared +25% cap",
+                category = "Equipment",
+                specificType = "Footwear",
+                slot = EquipmentSlot.FootArmor,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Epic,
+                equipmentLevel = 8,
+                requiredCharacterLevel = 8,
+                weaponPower = 0,
+                physicalDefense = 9,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 290,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 5, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 3f, ModifierKind.Flat, ModifierSource.Equipment, "Wyrmwing Boots") },
+                fixedSpecialEffect = "Defensive QTE Window +5%; shared +25% cap",
+                specialEffectId = "fx_eq065",
+                suggestedSource = "Layer 7",
+                baseStatsSummary = "AGI +5; Speed +3",
+                allowedClassesText = "Martial Artist; Rogue; Ranger",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 8,
+                    allowedClasses = new[] { "martial_artist", "rogue", "ranger" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ066",
+                name = "Pendant of the Unbroken",
+                description = "Pendant of the Unbroken (Accessory). Once/battle ignore one lethal hit and remain at 1 HP; gain Exhausted",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 650,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 5, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0700f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Pendant of the Unbroken") },
+                fixedSpecialEffect = "Once/battle ignore one lethal hit and remain at 1 HP; gain Exhausted",
+                specialEffectId = "fx_eq066",
+                suggestedSource = "Layer 2",
+                baseStatsSummary = "VIT +5; Status Resistance +7%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ067",
+                name = "Helelios' Black Sun",
+                description = "Helelios' Black Sun (Accessory). First Shadow direct-damage skill gains +15% damage",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1250,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 10, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Helelios' Black Sun"), StatModifier.ForDerived(DerivedStatId.MaxMP, 8f, ModifierKind.Flat, ModifierSource.Equipment, "Helelios' Black Sun") },
+                fixedSpecialEffect = "First Shadow direct-damage skill gains +15% damage",
+                specialEffectId = "fx_eq067",
+                suggestedSource = "Layer 8",
+                baseStatsSummary = "INT +10; Shadow Damage +8%; MP +8",
+                allowedClassesText = "Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ068",
+                name = "Wyrm-Eye Charm",
+                description = "Wyrm-Eye Charm (Accessory). +8% damage to Dragon-type enemies",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 630,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(4, 4, 0, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.CriticalDamage, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Wyrm-Eye Charm") },
+                fixedSpecialEffect = "+8% damage to Dragon-type enemies",
+                specialEffectId = "fx_eq068",
+                suggestedSource = "Layer 7",
+                baseStatsSummary = "STR +4; AGI +4; Critical Damage +8%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ069",
+                name = "Lacrima's Corrupted Pearl",
+                description = "Lacrima's Corrupted Pearl (Accessory). Shadow direct damage Perfect QTE restores 1% Max MP; once/turn",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 650,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 0, 6, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MagicPower, 0.0600f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Lacrima's Corrupted Pearl"), StatModifier.ForDerived(DerivedStatId.StatusResistance, -0.0200f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Lacrima's Corrupted Pearl") },
+                fixedSpecialEffect = "Shadow direct damage Perfect QTE restores 1% Max MP; once/turn",
+                specialEffectId = "fx_eq069",
+                suggestedSource = "Layer 6",
+                baseStatsSummary = "INT +6; Shadow Damage +6%; Status Resistance -2%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ070",
+                name = "Heart of the Forgotten",
+                description = "Heart of the Forgotten (Accessory). Once/battle revive wearer at 10% HP after lethal damage; party wipe still ends run",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1150,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 0, 8, 0, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.MaxHP, 12f, ModifierKind.Flat, ModifierSource.Equipment, "Heart of the Forgotten"), StatModifier.ForDerived(DerivedStatId.StatusResistance, 0.0800f, ModifierKind.PercentAdd, ModifierSource.Equipment, "Heart of the Forgotten") },
+                fixedSpecialEffect = "Once/battle revive wearer at 10% HP after lethal damage; party wipe still ends run",
+                specialEffectId = "fx_eq070",
+                suggestedSource = "Layer 8",
+                baseStatsSummary = "VIT +8; HP +12; Universal Status Resistance +8%",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ071",
+                name = "Chronicle of the Five",
+                description = "Chronicle of the Five (Accessory). Reveal enemy intent one additional turn ahead",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Mythic,
+                equipmentLevel = 13,
+                requiredCharacterLevel = 13,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 1200,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 5, 0, 5, 0, 0),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Initiative, 4f, ModifierKind.Flat, ModifierSource.Equipment, "Chronicle of the Five"), StatModifier.ForDerived(DerivedStatId.MaxMP, 8f, ModifierKind.Flat, ModifierSource.Equipment, "Chronicle of the Five") },
+                fixedSpecialEffect = "Reveal enemy intent one additional turn ahead",
+                specialEffectId = "fx_eq071",
+                suggestedSource = "Layer 8",
+                baseStatsSummary = "INT +5; AGI +5; Speed +4; MP +8",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 13,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+            new EquipmentDef
+            {
+                id = "EQ072",
+                name = "Soulbound Compass",
+                description = "Soulbound Compass (Accessory). 5% chance to find extra material after a dungeon node reward",
+                category = "Equipment",
+                specificType = "Accessory",
+                slot = EquipmentSlot.Accessory1,
+                weaponType = WeaponType.None,
+                rarity = EquipmentRarity.Legendary,
+                equipmentLevel = 10,
+                requiredCharacterLevel = 10,
+                weaponPower = 0,
+                physicalDefense = 0,
+                damageElement = Element.Physical,
+                maxUpgradeLevel = 10,
+                baseValue = 640,
+                breakPowerModifier = 0,
+                accuracyModifier = 0,
+                abilityBonuses = new AbilityScores(0, 3, 0, 0, 0, 4),
+                modifiers = new StatModifier[] { StatModifier.ForDerived(DerivedStatId.Evasion, 3f, ModifierKind.Flat, ModifierSource.Equipment, "Soulbound Compass") },
+                fixedSpecialEffect = "5% chance to find extra material after a dungeon node reward",
+                specialEffectId = "fx_eq072",
+                suggestedSource = "Layer 1-8",
+                baseStatsSummary = "CHA +4; AGI +3; Evasion +3",
+                allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
+                restrictions = new EquipmentRestriction
+                {
+                    minLevel = 10,
+                    allowedClasses = new[] { "fighter", "barbarian", "martial_artist", "rogue", "ranger", "cleric", "wizard", "warlock", "druid" }
+                }
+            },
+        }, e => e.id);
+
+        // ---- 20 Approved Dungeon 1 Consumables ----
+        public static readonly Dictionary<string, ConsumableDef> Consumables = Index(new[]
+        {
+            new ConsumableDef
+            {
+                id = "CON001",
+                name = "Minor Health Potion",
+                description = "Restore 20% Max HP to one ally.",
+                category = "Potion",
+                rarity = EquipmentRarity.Common,
+                itemEffect = "Restore 20% Max HP to one ally.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 10,
+                shopValue = 18,
+                suggestedSource = "Shop; Layer 1-2",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.20f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.2 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON002",
+                name = "Health Potion",
+                description = "Restore 35% Max HP to one ally.",
+                category = "Potion",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "Restore 35% Max HP to one ally.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 10,
+                shopValue = 45,
+                suggestedSource = "Shop; Layer 2-4",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.35f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.35 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON003",
+                name = "Greater Health Potion",
+                description = "Restore 55% Max HP to one ally.",
+                category = "Potion",
+                rarity = EquipmentRarity.Rare,
+                itemEffect = "Restore 55% Max HP to one ally.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 5,
+                shopValue = 90,
+                suggestedSource = "Layer 4-6; shop",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.55f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.55 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON004",
+                name = "Minor Mana Tonic",
+                description = "Restore 20% Max MP to one ally.",
+                category = "Potion",
+                rarity = EquipmentRarity.Common,
+                itemEffect = "Restore 20% Max MP to one ally.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 10,
+                shopValue = 20,
+                suggestedSource = "Shop; Layer 1-2",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.20f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.2 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON005",
+                name = "Mana Tonic",
+                description = "Restore 35% Max MP to one ally.",
+                category = "Potion",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "Restore 35% Max MP to one ally.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 10,
+                shopValue = 48,
+                suggestedSource = "Shop; Layer 3-5",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.35f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.35 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON006",
+                name = "Greater Mana Tonic",
+                description = "Restore 55% Max MP to one ally.",
+                category = "Potion",
+                rarity = EquipmentRarity.Rare,
+                itemEffect = "Restore 55% Max MP to one ally.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 5,
+                shopValue = 95,
+                suggestedSource = "Layer 5-7",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.55f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.55 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON007",
+                name = "Field Dressing",
+                description = "Remove one Bleed instance and restore 5% Max HP.",
+                category = "Recovery Item",
+                rarity = EquipmentRarity.Common,
+                itemEffect = "Remove one Bleed instance and restore 5% Max HP.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 10,
+                shopValue = 22,
+                suggestedSource = "Layer 1-3",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.05f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.05 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON008",
+                name = "Antitoxin Vial",
+                description = "Remove one Poison instance.",
+                category = "Recovery Item",
+                rarity = EquipmentRarity.Common,
+                itemEffect = "Remove one Poison instance.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 10,
+                shopValue = 20,
+                suggestedSource = "Layer 2-6",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON009",
+                name = "Purifying Salt",
+                description = "Remove one Burn, Freeze, Shock, or Curse instance.",
+                category = "Recovery Item",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "Remove one Burn, Freeze, Shock, or Curse instance.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 5,
+                shopValue = 55,
+                suggestedSource = "Layer 3-6",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON010",
+                name = "Sanctified Water",
+                description = "Remove up to two non-Mental status instances.",
+                category = "Recovery Item",
+                rarity = EquipmentRarity.Rare,
+                itemEffect = "Remove up to two non-Mental status instances.",
+                target = "Single ally",
+                usageRestriction = "Combat / exploration",
+                maxStack = 5,
+                shopValue = 105,
+                suggestedSource = "Layer 5-8",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON011",
+                name = "Emergency Ration",
+                description = "Restore 10% Max HP and 10% Max MP.",
+                category = "Food",
+                rarity = EquipmentRarity.Common,
+                itemEffect = "Restore 10% Max HP and 10% Max MP.",
+                target = "Single ally",
+                usageRestriction = "Exploration only",
+                maxStack = 10,
+                shopValue = 28,
+                suggestedSource = "Hub; events",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.10f,
+                manaPercent = 0.10f,
+                heal = (int)Math.Round(0.1 * 100),
+                mana = (int)Math.Round(0.1 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON012",
+                name = "Ironbark Elixir",
+                description = "VIT +3 and Physical Damage Taken Reduction +5% for 3 turns.",
+                category = "Buff Item",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "VIT +3 and Physical Damage Taken Reduction +5% for 3 turns.",
+                target = "Single ally",
+                usageRestriction = "Combat only",
+                maxStack = 5,
+                shopValue = 65,
+                suggestedSource = "Layer 3-5",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON013",
+                name = "Sharpsight Draught",
+                description = "Ranged Accuracy +8% for 3 turns.",
+                category = "Buff Item",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "Ranged Accuracy +8% for 3 turns.",
+                target = "Single ally",
+                usageRestriction = "Combat only",
+                maxStack = 5,
+                shopValue = 60,
+                suggestedSource = "Layer 2-4",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON014",
+                name = "Ember Oil",
+                description = "Physical attacks gain +10% Fire damage for 3 turns.",
+                category = "Buff Item",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "Physical attacks gain +10% Fire damage for 3 turns.",
+                target = "Single ally",
+                usageRestriction = "Combat only",
+                maxStack = 5,
+                shopValue = 62,
+                suggestedSource = "Layer 4-6",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON015",
+                name = "Quickstep Phial",
+                description = "Speed +5 for 2 turns.",
+                category = "Buff Item",
+                rarity = EquipmentRarity.Rare,
+                itemEffect = "Speed +5 for 2 turns.",
+                target = "Single ally",
+                usageRestriction = "Combat only",
+                maxStack = 5,
+                shopValue = 100,
+                suggestedSource = "Layer 5-7",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON016",
+                name = "Phoenix Ash",
+                description = "Revive one downed ally with 20% Max HP.",
+                category = "Revive Item",
+                rarity = EquipmentRarity.Epic,
+                itemEffect = "Revive one downed ally with 20% Max HP.",
+                target = "One downed ally",
+                usageRestriction = "Combat only",
+                maxStack = 1,
+                shopValue = 350,
+                suggestedSource = "Rare dungeon reward; Layer 5-8",
+                isRevive = true,
+                reviveHpPercent = 0.20f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON017",
+                name = "Dawn Phoenix Feather",
+                description = "Revive one downed ally with 40% Max HP and 10% Max MP.",
+                category = "Revive Item",
+                rarity = EquipmentRarity.Legendary,
+                itemEffect = "Revive one downed ally with 40% Max HP and 10% Max MP.",
+                target = "One downed ally",
+                usageRestriction = "Combat only",
+                maxStack = 1,
+                shopValue = 650,
+                suggestedSource = "Boss reward; Layer 7-8",
+                isRevive = true,
+                reviveHpPercent = 0.40f,
+                healPercent = 0.00f,
+                manaPercent = 0.10f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.1 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON018",
+                name = "Smoke Bomb",
+                description = "Escape a non-boss encounter; no battle rewards.",
+                category = "Tactical Item",
+                rarity = EquipmentRarity.Uncommon,
+                itemEffect = "Escape a non-boss encounter; no battle rewards.",
+                target = "Party",
+                usageRestriction = "Combat only",
+                maxStack = 3,
+                shopValue = 75,
+                suggestedSource = "Shop; events",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON019",
+                name = "Soul Lantern",
+                description = "Reveal the next two node reward categories on current map.",
+                category = "Exploration Item",
+                rarity = EquipmentRarity.Rare,
+                itemEffect = "Reveal the next two node reward categories on current map.",
+                target = "Party",
+                usageRestriction = "Dungeon map only",
+                maxStack = 2,
+                shopValue = 130,
+                suggestedSource = "Layer 1-4 event",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+            new ConsumableDef
+            {
+                id = "CON020",
+                name = "Daemon Ward Incense",
+                description = "Party gains +8% Universal Status Effect Resistance for 2 battles.",
+                category = "Buff Item",
+                rarity = EquipmentRarity.Epic,
+                itemEffect = "Party gains +8% Universal Status Effect Resistance for 2 battles.",
+                target = "Party",
+                usageRestriction = "Before combat",
+                maxStack = 2,
+                shopValue = 220,
+                suggestedSource = "Layer 6-8",
+                isRevive = false,
+                reviveHpPercent = 0.30f,
+                healPercent = 0.00f,
+                manaPercent = 0.00f,
+                heal = (int)Math.Round(0.0 * 100),
+                mana = (int)Math.Round(0.0 * 50)
+            },
+        }, c => c.id);
+
+        // ---- 12 Approved Dungeon 1 Materials ----
+        public static readonly Dictionary<string, MaterialDef> Materials = Index(new[]
+        {
+            new MaterialDef
+            {
+                id = "MAT001",
+                name = "Iron Scrap",
+                description = "Blacksmith upgrade input (Layer 1-2)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Common,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 1-2",
+                baseValue = 8,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT002",
+                name = "Soul Ash",
+                description = "Blacksmith upgrade input (Layer 1 - Zoroa)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Uncommon,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 1 - Zoroa",
+                baseValue = 15,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT003",
+                name = "Prisoner Chain Link",
+                description = "Blacksmith upgrade input (Layer 2 - Lilia)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Common,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 2 - Lilia",
+                baseValue = 9,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT004",
+                name = "Arena Medal",
+                description = "Blacksmith upgrade input (Layer 3 - Akasuna)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Uncommon,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 3 - Akasuna",
+                baseValue = 18,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT005",
+                name = "Arcane Shard",
+                description = "Blacksmith upgrade input (Layer 4 - Pharam)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Uncommon,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 4 - Pharam",
+                baseValue = 20,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT006",
+                name = "Gilded Alloy",
+                description = "Blacksmith upgrade input (Layer 5 - Berzelius)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Rare,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 5 - Berzelius",
+                baseValue = 35,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT007",
+                name = "Blight Core",
+                description = "Blacksmith upgrade input (Layer 6 - Lacrima)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Rare,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 6 - Lacrima",
+                baseValue = 42,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT008",
+                name = "Dragon Scale",
+                description = "Blacksmith upgrade input (Layer 7 - Vortigern)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Epic,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 7 - Vortigern",
+                baseValue = 65,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT009",
+                name = "Endworld Fragment",
+                description = "Blacksmith upgrade input (Layer 8 - Helelios)",
+                category = "Upgrade Material",
+                rarity = EquipmentRarity.Legendary,
+                primaryUse = "Blacksmith upgrade input",
+                suggestedSource = "Layer 8 - Helelios",
+                baseValue = 100,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT010",
+                name = "Moonroot",
+                description = "Crafting / Hub exchange (Layer 1-3)",
+                category = "Crafting Material",
+                rarity = EquipmentRarity.Common,
+                primaryUse = "Crafting / Hub exchange",
+                suggestedSource = "Layer 1-3",
+                baseValue = 6,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT011",
+                name = "Ether Bloom",
+                description = "Crafting / Hub exchange (Layer 4-6)",
+                category = "Crafting Material",
+                rarity = EquipmentRarity.Uncommon,
+                primaryUse = "Crafting / Hub exchange",
+                suggestedSource = "Layer 4-6",
+                baseValue = 16,
+                maxStack = 99
+            },
+            new MaterialDef
+            {
+                id = "MAT012",
+                name = "Daemon Marrow",
+                description = "Crafting / Hub exchange (Layer 6-8)",
+                category = "Crafting Material",
+                rarity = EquipmentRarity.Rare,
+                primaryUse = "Crafting / Hub exchange",
+                suggestedSource = "Layer 6-8",
+                baseValue = 32,
+                maxStack = 99
+            },
+        }, m => m.id);
+
+        // ---- 10 Approved Dungeon 1 Key Items ----
+        public static readonly Dictionary<string, KeyItemDef> KeyItems = Index(new[]
+        {
+            new KeyItemDef
+            {
+                id = "KEY001",
+                name = "Geistwald Expedition Permit",
+                description = "Required to enter The World's Between. Issued by Emerose expedition authority.",
+                category = "Progression Key",
+                progressionFunction = "Required to enter The World's Between.",
+                loreDescription = "Issued by Emerose expedition authority.",
+                suggestedSource = "Hub / Prologue",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY002",
+                name = "Zoroa's Soul Seal",
+                description = "Opens sealed descent route to Layer 2. Fragment of harvested soul-energy.",
+                category = "Boss Key",
+                progressionFunction = "Opens sealed descent route to Layer 2.",
+                loreDescription = "Fragment of harvested soul-energy.",
+                suggestedSource = "Layer 1 - Zoroa",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY003",
+                name = "Lilia's Iron Verdict",
+                description = "Unlocks route from the Forgotten Prison. Prison seal marked by the Lady of Pain.",
+                category = "Boss Key",
+                progressionFunction = "Unlocks route from the Forgotten Prison.",
+                loreDescription = "Prison seal marked by the Lady of Pain.",
+                suggestedSource = "Layer 2 - Lilia",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY004",
+                name = "Akasuna's Champion Sigil",
+                description = "Unlocks route to Layer 4. Colosseum token of unclear origin.",
+                category = "Boss Key",
+                progressionFunction = "Unlocks route to Layer 4.",
+                loreDescription = "Colosseum token of unclear origin.",
+                suggestedSource = "Layer 3 - Akasuna",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY005",
+                name = "Pharam's Arcane Index",
+                description = "Stabilizes passage through magical ruins. Record of catastrophic spell formulae.",
+                category = "Boss Key",
+                progressionFunction = "Stabilizes passage through magical ruins.",
+                loreDescription = "Record of catastrophic spell formulae.",
+                suggestedSource = "Layer 4 - Pharam",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY006",
+                name = "Berzelius' Fallen Halo",
+                description = "Opens passage beyond the Golden Land. Broken emblem of the fallen angel.",
+                category = "Boss Key",
+                progressionFunction = "Opens passage beyond the Golden Land.",
+                loreDescription = "Broken emblem of the fallen angel.",
+                suggestedSource = "Layer 5 - Berzelius",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY007",
+                name = "Lacrima's Blight Heart",
+                description = "Purifies route toward dragon mountains. Crystallized knot of corruption.",
+                category = "Boss Key",
+                progressionFunction = "Purifies route toward dragon mountains.",
+                loreDescription = "Crystallized knot of corruption.",
+                suggestedSource = "Layer 6 - Lacrima",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY008",
+                name = "Vortigern's Calamity Scale",
+                description = "Allows entry into Endworld. Scale still warm with draconic calamity.",
+                category = "Boss Key",
+                progressionFunction = "Allows entry into Endworld.",
+                loreDescription = "Scale still warm with draconic calamity.",
+                suggestedSource = "Layer 7 - Vortigern",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY009",
+                name = "Five Wanderers' Chronicle",
+                description = "Optional record revealing clues about five missing adventurers. Surviving clue from the 1076 AR expedition.",
+                category = "Lore Item",
+                progressionFunction = "Optional record revealing clues about five missing adventurers.",
+                loreDescription = "Surviving clue from the 1076 AR expedition.",
+                suggestedSource = "Layer 8 - Endworld",
+                restriction = "Not sellable; not normally discardable"
+            },
+            new KeyItemDef
+            {
+                id = "KEY010",
+                name = "World-Severing Keystone",
+                description = "Core component required to permanently sever Felna-Endworld connection. Its function is tied to the deepest point of The World's Between.",
+                category = "Final Objective",
+                progressionFunction = "Core component required to permanently sever Felna-Endworld connection.",
+                loreDescription = "Its function is tied to the deepest point of The World's Between.",
+                suggestedSource = "Layer 8 - Helelios",
+                restriction = "Not sellable; not normally discardable"
+            },
+        }, k => k.id);
+
+        static Database()
+        {
+            // Merge all 72 approved Catalogue Equipment into central Database.Equipment
+            foreach (var kv in CatalogueEquipment)
+            {
+                if (!Equipment.ContainsKey(kv.Key))
+                    Equipment.Add(kv.Key, kv.Value);
+            }
+
+            // Merge all 20 approved Consumables into central Database.Items
+            foreach (var kv in Consumables)
+            {
+                if (!Items.ContainsKey(kv.Key))
+                    Items.Add(kv.Key, kv.Value);
+            }
+
+            // Merge all 22 approved Layer 1 Relics into central Database.Relics
+            RegisterLayer1Relics();
+        }
+    }
+}
