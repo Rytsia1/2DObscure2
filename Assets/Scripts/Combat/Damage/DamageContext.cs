@@ -27,6 +27,7 @@ namespace Obscure
         public QteResult qteResult = QteResult.Good;
         public float? customQteMultiplier;
         public bool isDamageOverTime;
+        public bool isFinisher; // Bab 11 §3 & Revision Note v1.1: Finisher attacks cannot Critically Hit.
         public DamageRoundingMode roundingMode = DamageRoundingMode.Floor;
 
         // Deterministic / testable Critical Hit hooks (rolled once per hit)
@@ -54,7 +55,7 @@ namespace Obscure
 
         public bool ResolveCriticalHitForHit(int hitIndex)
         {
-            if (isDamageOverTime)
+            if (isDamageOverTime || isFinisher)
                 return false;
 
             if (forcedCriticalHitsPerHit != null && hitIndex >= 0 && hitIndex < forcedCriticalHitsPerHit.Count)

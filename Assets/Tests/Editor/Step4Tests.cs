@@ -69,8 +69,8 @@ namespace Obscure.Tests
             var rng = new Random(1);
             Qte For(string skill) => QteFactory.Offense(BattleAction.Skill(b.Party[0], S(skill), b.Enemies[0]), Tier.Normal, QteAssist.Standard, rng);
             foreach (var id in new[] { "shield_bash", "quick_strike", "expose" }) Assert.IsInstanceOf<TimingQte>(For(id), id);
-            foreach (var id in new[] { "firebolt", "frost_shard", "arcane_burst", "heal", "mend" }) Assert.IsInstanceOf<TypingQte>(For(id), id);
-            foreach (var id in new[] { "fortify", "interpose", "evasion", "blessing" }) Assert.IsNull(For(id), id + " needs no QTE");
+            foreach (var id in new[] { "firebolt", "frost_shard", "arcane_burst" }) Assert.IsInstanceOf<TypingQte>(For(id), id);
+            foreach (var id in new[] { "fortify", "interpose", "evasion", "blessing", "heal", "mend" }) Assert.IsNull(For(id), id + " needs no QTE");
             Assert.IsInstanceOf<TimingQte>(QteFactory.Offense(BattleAction.Attack(b.Party[0], b.Enemies[0]), Tier.Normal, QteAssist.Standard, rng));
             Assert.IsInstanceOf<AutoQte>(QteFactory.Offense(BattleAction.Skill(b.Party[0], S("firebolt"), b.Enemies[0]), Tier.Normal, QteAssist.Auto, rng));
         }

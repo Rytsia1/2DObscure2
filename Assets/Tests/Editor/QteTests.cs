@@ -224,8 +224,8 @@ namespace Obscure.Tests
             int miss = OffenseDamage(QteConfig.Offense(QteResult.Miss));
             Assert.Greater(perfect, good);
             Assert.Greater(good, miss);
-            // Multiplier applies before defense: 16 Atk vs 10 Def.
-            Assert.Less(perfect, (int)Math.Ceiling(good * 1.25f) + 2, "defense still subtracts after the bonus");
+            // Multiplier applies before defense: 16 Atk vs 10 Def (GDD Bab 12: Perfect is 1.5x).
+            Assert.Less(perfect, (int)Math.Ceiling(good * 1.50f) + 2, "defense still subtracts after the bonus");
         }
 
         [Test]

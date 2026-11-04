@@ -33,6 +33,7 @@ namespace Obscure
     {
         public string id, name, description;
         public bool isPlayable = true;
+        public string lineageId;
         public AbilityScores abilityModifiers;
         public RacialFeatDef racialFeat;
         public RacialUtilityDef racialUtility;
@@ -1091,6 +1092,7 @@ namespace Obscure
                 templateId = ActiveTemplateId,
                 description = $"{Race.name} {Class.name} ({Class.gameplayIdentity ?? Background.name}). {Class.description}",
                 raceId = Race.id,
+                lineageId = Race.lineageId,
                 classId = Class.id,
                 backgroundId = Background.id,
                 baseScores = BaseScores,

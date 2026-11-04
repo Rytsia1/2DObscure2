@@ -4,7 +4,13 @@ using System.Collections.Generic;
 // Every QTE tuning number and stat-interaction rule lives here. All windows are half-widths in seconds (±).
 namespace Obscure
 {
-    public enum QteResult { Perfect, Good, Miss }
+    public enum QteResult
+    {
+        Perfect,
+        Good,
+        Poor,
+        Miss = Poor // Backward compatibility alias (GDD: "Miss" replaced with "Poor")
+    }
 
     // Four-tier QTE result categories defined in PRD Section 10.4.
     public enum QteOutcomeCategory { Perfect, Success, PartialSuccess, Failure }
@@ -42,9 +48,10 @@ namespace Obscure
         // Relaxed assist: wider windows and more time. Never touches unit stats.
         public const float RelaxedWindow = 1.6f, RelaxedTime = 1.35f;
 
-        // Result -> multiplier. Offense scales damage/healing; defense scales damage taken.
-        public const float PerfectPower = 1.25f, GoodPower = 1f, PartialPower = 0.85f, MissPower = 0.7f;
-        public const float PerfectDefense = 0f, GoodDefense = 0.5f, PartialDefense = 0.75f, MissDefense = 1f;
+        // Result -> multiplier (GDD Terbaru Bab 12). Offense: Perfect 1.5x, Good 1.0x, Poor 0.5x.
+        // Defense: Perfect 0x (Heavy 0.5x), Good 0.5x, Poor 1.0x damage taken.
+        public const float PerfectPower = 1.5f, GoodPower = 1.0f, PartialPower = 0.75f, PoorPower = 0.5f, MissPower = 0.5f;
+        public const float PerfectDefense = 0f, GoodDefense = 0.5f, HeavyPerfectDefense = 0.5f, PartialDefense = 0.75f, PoorDefense = 1f, MissDefense = 1f;
         public const float PartialWindowMultiplier = 1.35f;
 
         // Typing: Perfect = no mistakes and finished within this fraction of the time limit.
@@ -99,60 +106,32 @@ namespace Obscure
             _ => QteResult.Miss
         };
 
-        public static float Offense(QteResult r) => r == QteResult.Perfect ? PerfectPower : r == QteResult.Good ? GoodPower : MissPower;
+        public static float Offense(QteResult r) => r == QteResult.Perfect ? PerfectPower : r == QteResult.Good ? GoodPower : PoorPower;
 
         public static float OffenseCategory(QteOutcomeCategory c, Combatant actor = null, SkillKind? kind = null)
         {
-            float baseMult = c switch
+            return c switch
             {
                 QteOutcomeCategory.Perfect => PerfectPower,
                 QteOutcomeCategory.Success => GoodPower,
                 QteOutcomeCategory.PartialSuccess => PartialPower,
-                _ => MissPower
+                _ => PoorPower
             };
-
-            if (actor == null) return baseMult;
-
-            // STR improves physical Perfect QTE results; INT improves magic QTE results; VIT reduces failure penalty.
-            if (c == QteOutcomeCategory.Perfect)
-            {
-                if (kind == null || kind == SkillKind.Physical)
-                    baseMult += Math.Clamp(Math.Max(0, actor.unit.Mod(Ability.STR)) * Database.QteStatInteractions[Ability.STR].scalingPerModifier, 0f, Database.QteStatInteractions[Ability.STR].maxBonus);
-                else if (kind == SkillKind.Magic)
-                    baseMult += Math.Clamp(Math.Max(0, actor.unit.Mod(Ability.INT)) * Database.QteStatInteractions[Ability.INT].scalingPerModifier, 0f, Database.QteStatInteractions[Ability.INT].maxBonus);
-            }
-            else if (c == QteOutcomeCategory.Failure || c == QteOutcomeCategory.PartialSuccess)
-            {
-                float stability = actor.unit.Derived.QteStabilityFraction;
-                baseMult = Math.Min(1f, baseMult + (1f - baseMult) * stability);
-            }
-            return baseMult;
         }
 
-        public static float Defense(QteResult r) => r == QteResult.Perfect ? PerfectDefense : r == QteResult.Good ? GoodDefense : MissDefense;
+        public static float Defense(QteResult r, bool isHeavy = false) =>
+            r == QteResult.Perfect ? (isHeavy ? HeavyPerfectDefense : PerfectDefense) :
+            r == QteResult.Good ? GoodDefense : PoorDefense;
 
-        // Evaluates defense damage multiplier for a QteOutcomeCategory, incorporating VIT stability and WIS mental/magic reaction bonus.
-        public static float DefenseCategory(QteOutcomeCategory c, Combatant defender = null, Element attackElement = Element.Physical)
+        public static float DefenseCategory(QteOutcomeCategory c, Combatant defender = null, Element attackElement = Element.Physical, bool isHeavy = false)
         {
-            if (c == QteOutcomeCategory.Perfect) return PerfectDefense;
-            float mult = c switch
+            if (c == QteOutcomeCategory.Perfect) return isHeavy ? HeavyPerfectDefense : PerfectDefense;
+            return c switch
             {
                 QteOutcomeCategory.Success => GoodDefense,
                 QteOutcomeCategory.PartialSuccess => PartialDefense,
-                _ => MissDefense
+                _ => PoorDefense
             };
-            if (defender != null)
-            {
-                float reduction = 0f;
-                // VIT reduces failure/partial penalties via QTE Stability.
-                if (c == QteOutcomeCategory.PartialSuccess || c == QteOutcomeCategory.Failure)
-                    reduction += defender.unit.Derived.QteStabilityFraction;
-                // WIS helps against magical/mental reactions.
-                if (attackElement != Element.Physical)
-                    reduction += Math.Clamp(Math.Max(0, defender.unit.Mod(Ability.WIS)) * Database.QteStatInteractions[Ability.WIS].scalingPerModifier, 0f, Database.QteStatInteractions[Ability.WIS].maxBonus);
-                mult = Math.Max(0.15f, mult * (1f - Math.Clamp(reduction, 0f, 0.40f)));
-            }
-            return mult;
         }
 
         // Calculates physical counterattack damage on a Perfect reaction (scales with STR + DEX CounterPower).

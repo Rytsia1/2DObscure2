@@ -53,8 +53,8 @@ namespace Obscure.Tests
             var baseBefore = unit.BaseScores;
             var raceBefore = unit.RacialModifiers;
             Assert.AreEqual(new AbilityScores(15, 10, 15, 8, 12, 11), baseBefore);
-            Assert.AreEqual(new AbilityScores(1, 0, 1, 0, 0, 1), raceBefore); // Human: +1 STR, +1 VIT, +1 CHA
-            Assert.AreEqual(new AbilityScores(16, 10, 16, 8, 12, 12), unit.FinalScores);
+            Assert.AreEqual(new AbilityScores(1, 0, 1, 0, 0, 0), raceBefore); // Human: +1 STR, +1 VIT (GDD Bab 6: sum = 2)
+            Assert.AreEqual(new AbilityScores(16, 10, 16, 8, 12, 11), unit.FinalScores);
 
             int atkBefore = unit.Derived.physicalPower;
             unit.Equip(Database.Equipment["steel_cuirass"]); // +1 VIT, +4 PhysDef, +1 MagDef
@@ -175,16 +175,16 @@ namespace Obscure.Tests
             session.PointBuy.SetAllOrThrow(new AbilityScores(10, 12, 12, 15, 13, 11)); // 2+4+4+9+5+3 = 27
             var allocated = session.BaseScores;
 
-            session.SelectRace("elf");       // +2 DEX, +1 INT
+            session.SelectRace("elf");       // +2 DEX (GDD Bab 6)
             session.SelectClass("knight");   // Class selection must NOT overwrite Point Buy scores
             session.SelectBackground("acolyte");
 
             Assert.AreEqual(allocated, session.BaseScores, "Class/Background selection never overwrites Point Buy scores");
             Assert.AreEqual(27, session.PointBuy.TotalSpent, "Background/Race never alter Point Buy costs");
-            // Elf +1 INT raises 15 -> 16 after Point Buy
-            Assert.AreEqual(16, session.FinalScores.intel);
+            // Elf +2 DEX raises 12 -> 14 after Point Buy
+            Assert.AreEqual(15, session.FinalScores.intel);
             Assert.AreEqual(14, session.FinalScores.dex);
-            Assert.AreEqual(3, session.AbilityModifiers.intel);
+            Assert.AreEqual(2, session.AbilityModifiers.intel);
             Assert.AreEqual(2, session.AbilityModifiers.dex);
 
             // Live Derived Stats preview updates immediately when scores change
@@ -211,14 +211,14 @@ namespace Obscure.Tests
         public void DerivedStatsFormulasAndRecalculationAreAccurate()
         {
             var knight = new Unit(Database.Characters["knight"]);
-            // Knight: Human (+1 STR, +1 VIT, +1 CHA) + Base(15,10,15,8,12,11) = Final(16,10,16,8,12,12)
-            // Modifiers: STR +3, DEX 0, VIT +3, INT -1, WIS +1, CHA +1
+            // Knight: Human (+1 STR, +1 VIT) + Base(15,10,15,8,12,11) = Final(16,10,16,8,12,11)
+            // Modifiers: STR +3, DEX 0, VIT +3, INT -1, WIS +1, CHA 0
             Assert.AreEqual(125, knight.Derived.maxHp);           // 95 + 3 * 10
             Assert.AreEqual(20, knight.Derived.maxMp);            // 15 + 1 * 5
             Assert.AreEqual(14, knight.Derived.physicalPower);    // 8 + 3 * 2
             Assert.AreEqual(4, knight.Derived.magicPower);        // 6 + (-1) * 2
             Assert.AreEqual(8, knight.Derived.healingPower);      // 6 + 1 * 2
-            Assert.AreEqual(10, knight.Derived.supportPower);     // 8 + 1 * 2
+            Assert.AreEqual(8, knight.Derived.supportPower);      // 8 + 0 * 2
             Assert.AreEqual(13, knight.Derived.physicalDefense);  // 7 + 3 * 2
             Assert.AreEqual(7, knight.Derived.magicDefense);      // 5 + 1 * 2
             Assert.AreEqual(6, knight.Derived.initiative);        // 6 + 0
@@ -379,16 +379,17 @@ namespace Obscure.Tests
             Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.35f, profile, 0.25f));
             Assert.AreEqual(QteOutcomeCategory.Failure, QteConfig.JudgeCategory(0.35f, profile, 0.25f));
 
-            // VIT Stability reduces PartialSuccess / Failure defense damage multiplier
+            // Defense multipliers match GDD Terbaru values (GoodDefense = 0.5f, PartialDefense = 0.75f, Perfect = 0f, Poor = 1.0f)
             var knight = new Combatant(new Unit(Database.Characters["knight"]), Side.Party, 0, "Knight", "KNI");
             float partialMult = QteConfig.DefenseCategory(QteOutcomeCategory.PartialSuccess, knight, Element.Physical);
-            Assert.Less(partialMult, QteConfig.PartialDefense);
+            Assert.AreEqual(QteConfig.PartialDefense, partialMult);
 
             // STR + DEX Counter Power calculates positive counterattack damage
             var sk = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
             Assert.Greater(QteConfig.CalculateCounterDamage(knight, sk), 0);
 
             // CHA Support potency multiplier scales with positive CHA modifier
+            knight.unit.AddPermanentAbilityBonus(Ability.CHA, 2);
             Assert.Greater(QteConfig.SupportPotencyMultiplier(knight), 1f);
         }
 
@@ -635,13 +636,13 @@ namespace Obscure.Tests
         [Test]
         public void RacialFeatConceptsSecondChanceDraconicOverdriveAndOceansEmbraceWorkProperly()
         {
-            // 1. Halfling — Second Chance: retry a failed QTE once; does NOT auto-succeed!
+            // 1. Halfling — Second Chance: retry a failed QTE (2x per battle in GDD Terbaru); does NOT auto-succeed!
             var session = new CharacterCreationSession();
             session.SelectRace("halfling");
             session.SelectClass("rogue");
             session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 11, 10, 12, 14));
             var halfling = new Combatant(new Unit(session.Confirm(null, "halfling_rogue")), Side.Party, 0, "Halfling", "HLF");
-            Assert.AreEqual(1, halfling.SecondChanceRetriesRemaining);
+            Assert.AreEqual(2, halfling.SecondChanceRetriesRemaining);
 
             var profile = QteConfig.Profiles[Tier.Normal];
             var qte1 = new TimingQte(profile, 0.5f); // target = sweep * 0.5
@@ -649,11 +650,24 @@ namespace Obscure.Tests
             qte1.Press(); // way too early -> Miss
             Assert.AreEqual(QteResult.Miss, qte1.Result);
 
-            // Retry with a STILL bad timing -> retry is consumed, and it STILL misses (does NOT auto-succeed!)
+            // Retry with a STILL bad timing -> retry is consumed (2 -> 1), and it STILL misses (does NOT auto-succeed!)
             Assert.IsTrue(qte1.TrySecondChanceRetry(halfling, 0.05f));
             Assert.AreEqual(QteResult.Miss, qte1.Result, "Second Chance retry must not automatically succeed");
+            Assert.AreEqual(1, halfling.SecondChanceRetriesRemaining);
+
+            // A single QTE cannot be retried twice (1x per action/turn limit)
+            Assert.IsFalse(qte1.TrySecondChanceRetry(halfling, 0.05f));
+            Assert.AreEqual(1, halfling.SecondChanceRetriesRemaining);
+
+            // A second QTE in the battle can use the second retry!
+            var qteSecond = new TimingQte(profile, 0.5f);
+            qteSecond.Tick(0.05f);
+            qteSecond.Press();
+            Assert.AreEqual(QteResult.Miss, qteSecond.Result);
+            Assert.IsTrue(qteSecond.TrySecondChanceRetry(halfling, qteSecond.target));
+            Assert.AreEqual(QteResult.Perfect, qteSecond.Result);
             Assert.AreEqual(0, halfling.SecondChanceRetriesRemaining);
-            Assert.IsFalse(qte1.TrySecondChanceRetry(halfling, qte1.target), "Cannot retry a second time");
+            Assert.IsFalse(qteSecond.TrySecondChanceRetry(halfling, qteSecond.target), "Cannot retry when 0 retries remain");
 
             // In a new battle, retrying at the target window succeeds
             var halfling2 = new Combatant(halfling.unit, Side.Party, 0, "Halfling", "HLF");
@@ -1160,6 +1174,168 @@ namespace Obscure.Tests
             Assert.AreEqual("Kael", secondExpedition.Party[3].name);
 
             GameSave.ClearSave();
+        }
+
+        // =====================================================================
+        // 14. GDD Terbaru (November 2026) Specifications Tests
+        // =====================================================================
+
+        [Test]
+        public void GddTerbaru_AllPlayableRaces_HaveExactTwoAttributeBonusPoints()
+        {
+            var expectedRaces = new[] { "human", "elf", "dwarf", "halfling", "dragonborn", "liichtian", "merfolk" };
+            foreach (var rId in expectedRaces)
+            {
+                Assert.IsTrue(Database.Races.ContainsKey(rId));
+                var r = Database.Races[rId];
+                int totalPoints = r.abilityModifiers.str + r.abilityModifiers.dex + r.abilityModifiers.vit +
+                                  r.abilityModifiers.intel + r.abilityModifiers.wis + r.abilityModifiers.cha;
+                Assert.AreEqual(2, totalPoints, $"Race '{rId}' must have exactly +2 total attribute bonus points per GDD Bab 6 §3.1.");
+            }
+        }
+
+        [Test]
+        public void GddTerbaru_DragonbornLineages_AreProperlyConfigured()
+        {
+            Assert.AreEqual(4, Database.DragonbornLineages.Count);
+            Assert.IsTrue(Database.DragonbornLineages.ContainsKey("crimson"));
+            Assert.IsTrue(Database.DragonbornLineages.ContainsKey("stone"));
+            Assert.IsTrue(Database.DragonbornLineages.ContainsKey("azure"));
+            Assert.IsTrue(Database.DragonbornLineages.ContainsKey("frost"));
+
+            Assert.AreEqual(Element.Fire, Database.DragonbornLineages["crimson"].element);
+            Assert.AreEqual(2, Database.DragonbornLineages["crimson"].abilityModifiers.str);
+
+            Assert.AreEqual(Element.Physical, Database.DragonbornLineages["stone"].element);
+            Assert.AreEqual(2, Database.DragonbornLineages["stone"].abilityModifiers.str);
+
+            Assert.AreEqual(Element.Lightning, Database.DragonbornLineages["azure"].element);
+            Assert.AreEqual(2, Database.DragonbornLineages["azure"].abilityModifiers.cha);
+
+            Assert.AreEqual(Element.Ice, Database.DragonbornLineages["frost"].element);
+            Assert.AreEqual(2, Database.DragonbornLineages["frost"].abilityModifiers.cha);
+        }
+
+        [Test]
+        public void GddTerbaru_HumanDetermination_TriggersAtThreshold()
+        {
+            var unit = new Unit(Database.Characters["knight"]);
+            var hero = new Combatant(unit, Side.Party, 0, "Knight", "KNT");
+            int maxHp = hero.Stats.maxHp;
+            hero.unit.hp = maxHp;
+
+            // Damage from full HP to 50% does not trigger Determination (threshold is <= 30%)
+            int hp50 = (int)(maxHp * 0.50f);
+            Assert.IsFalse(hero.CheckDeterminationTrigger(maxHp, hp50));
+            Assert.IsFalse(hero.DeterminationUsed);
+
+            // Damage dropping HP from 50% to 25% (<= 30%) triggers Determination
+            int hp25 = (int)(maxHp * 0.25f);
+            Assert.IsTrue(hero.CheckDeterminationTrigger(hp50, hp25));
+            Assert.IsTrue(hero.DeterminationUsed);
+            Assert.Greater(hero.unit.shield, 0, "Determination grants 20% Max HP shield");
+            Assert.AreEqual(2, hero.DeterminationTurns);
+
+            // Cannot trigger a second time in the same battle
+            Assert.IsFalse(hero.CheckDeterminationTrigger(hp25, hp25 - 5));
+        }
+
+        [Test]
+        public void GddTerbaru_ElfFeyStep_AndDwarfIronResolve_ActivateCorrectly()
+        {
+            var elfUnit = new Unit(Database.Characters["rogue"]);
+            var elf = new Combatant(elfUnit, Side.Party, 0, "ElfRogue", "ELF");
+
+            Assert.IsTrue(elf.ActivateFeyStep());
+            Assert.IsTrue(elf.IsPhased);
+            Assert.AreEqual(4, elf.FeyStepCooldown);
+            Assert.IsFalse(elf.ActivateFeyStep(), "Cannot activate during cooldown");
+
+            var dwarfDef = new CharacterDef { id = "dw", name = "Dwarf", role = "Fighter", raceId = "dwarf", classId = "fighter" };
+            var dwarfUnit = new Unit(dwarfDef);
+            var dwarf = new Combatant(dwarfUnit, Side.Party, 1, "Dwarf", "DWF");
+
+            Assert.IsTrue(dwarf.ActivateIronResolve());
+            Assert.IsTrue(dwarf.IronResolveActive);
+            Assert.AreEqual(3, dwarf.IronResolveCooldown);
+            Assert.IsFalse(dwarf.ActivateIronResolve(), "Cannot activate during cooldown");
+        }
+
+        [Test]
+        public void GddTerbaru_LiichtianLightbound_AndMerfolkOceansEmbrace_Work()
+        {
+            var liichtDef = new CharacterDef { id = "li", name = "Liicht", role = "Cleric", raceId = "liichtian", classId = "cleric" };
+            var liichtUnit = new Unit(liichtDef);
+            var liicht = new Combatant(liichtUnit, Side.Party, 0, "Liicht", "LCT");
+
+            var allyDef = new CharacterDef { id = "al", name = "Ally", role = "Fighter", raceId = "human", classId = "fighter" };
+            var allyUnit = new Unit(allyDef);
+            var ally = new Combatant(allyUnit, Side.Party, 1, "Ally", "ALY");
+            ally.unit.hp = ally.Stats.maxHp / 2;
+
+            int hpBefore = ally.unit.hp;
+            Assert.IsTrue(liicht.ActivateLightbound(new[] { liicht, ally }));
+            Assert.Greater(ally.unit.hp, hpBefore, "Lightbound heals allies by 10% Max HP");
+            Assert.IsTrue(liicht.UsedLightbound);
+
+            var merfolkDef = new CharacterDef { id = "mr", name = "Merfolk", role = "Cleric", raceId = "merfolk", classId = "cleric" };
+            var merfolkUnit = new Unit(merfolkDef);
+            var merfolk = new Combatant(merfolkUnit, Side.Party, 2, "Merfolk", "MRF");
+
+            int shieldBefore = ally.unit.shield;
+            Assert.IsTrue(merfolk.ActivateOceansEmbrace(ally));
+            Assert.Greater(ally.unit.shield, shieldBefore, "Ocean's Embrace grants 25% Max HP shield");
+            Assert.IsTrue(ally.OceansEmbraceShieldActive);
+            Assert.AreEqual(4, merfolk.OceansEmbraceCooldown);
+        }
+
+        [Test]
+        public void GddTerbaru_MartialArtist_ComboFlow_RulesEnforced()
+        {
+            var maDef = new CharacterDef { id = "ma", name = "Monk", role = "Striker", raceId = "human", classId = "martial_artist" };
+            var maUnit = new Unit(maDef);
+            var ma = new Combatant(maUnit, Side.Party, 0, "Monk", "MNK");
+
+            Assert.AreEqual(0, ma.CurrentCombo);
+
+            // Good QTE: +1 combo
+            ma.ApplyMartialArtistCombo(QteResult.Good, false);
+            Assert.AreEqual(1, ma.CurrentCombo);
+
+            // Perfect QTE: +2 combo (+1 bonus)
+            ma.ApplyMartialArtistCombo(QteResult.Perfect, false);
+            Assert.AreEqual(3, ma.CurrentCombo);
+
+            // Poor QTE: resets combo to 0
+            ma.ApplyMartialArtistCombo(QteResult.Poor, false);
+            Assert.AreEqual(0, ma.CurrentCombo);
+
+            // Re-gain combo and test finisher
+            ma.ApplyMartialArtistCombo(QteResult.Perfect, false);
+            ma.ApplyMartialArtistCombo(QteResult.Good, false);
+            Assert.AreEqual(3, ma.CurrentCombo);
+
+            // Finisher consumes all combo
+            ma.ApplyMartialArtistCombo(QteResult.Perfect, isFinisher: true);
+            Assert.AreEqual(0, ma.CurrentCombo);
+        }
+
+        [Test]
+        public void GddTerbaru_FinisherSkill_CannotCriticallyHit()
+        {
+            var ctx = new DamageContext
+            {
+                attackerStr = 20,
+                attackerInt = 10,
+                isFinisher = true,
+                forcedCriticalHit = true,
+                components = new[] { DamageComponent.Physical(50f, 1f) }
+            };
+
+            Assert.IsFalse(ctx.ResolveCriticalHitForHit(0), "Finisher skills are strictly forbidden from critically hitting per GDD Bab 11 §3.");
+            var result = DamageCalculator.Calculate(ctx);
+            Assert.IsFalse(result.FirstHit.anyComponentCriticalHit);
+            Assert.AreEqual(0, result.criticalHitCount);
         }
     }
 }

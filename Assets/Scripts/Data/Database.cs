@@ -284,152 +284,87 @@ namespace Obscure
 
         };
 
-
+        // ---- Dragonborn Lineages (GDD Bab 6 §5.5) ----
+        public static readonly Dictionary<string, DragonbornLineageDef> DragonbornLineages = Index(new[]
+        {
+            new DragonbornLineageDef { id = "crimson", name = "Crimson", lineage = DragonbornLineage.Crimson, element = Element.Fire, abilityModifiers = new AbilityScores(2, 0, 0, 0, 0, 0) },
+            new DragonbornLineageDef { id = "stone", name = "Stone", lineage = DragonbornLineage.Stone, element = Element.Physical, abilityModifiers = new AbilityScores(2, 0, 0, 0, 0, 0) },
+            new DragonbornLineageDef { id = "azure", name = "Azure", lineage = DragonbornLineage.Azure, element = Element.Lightning, abilityModifiers = new AbilityScores(0, 0, 0, 0, 0, 2) },
+            new DragonbornLineageDef { id = "frost", name = "Frost", lineage = DragonbornLineage.Frost, element = Element.Ice, abilityModifiers = new AbilityScores(0, 0, 0, 0, 0, 2) }
+        }, l => l.id);
 
         public static readonly Dictionary<string, RaceDef> Races = Index(new[]
-
         {
-
             new RaceDef
-
             {
-
                 id = "human", name = "Human", isPlayable = true,
-
                 description = "Adaptable survivors of the surface kingdoms.",
-
-                abilityModifiers = new AbilityScores(1, 0, 1, 0, 0, 1),
-
-                racialFeat = new RacialFeatDef { id = "determination", name = "Determination", description = "Steadfast resolve in dire moments." },
-
-                racialUtility = new RacialUtilityDef { id = "versatile_adaptation", name = "Versatile Adaptation", description = "Adaptable across varied expedition challenges.", utilityTag = "adaptable" }
-
+                abilityModifiers = new AbilityScores(1, 0, 1, 0, 0, 0), // Adaptive Potential: +1 STR, +1 VIT (sum = 2)
+                racialFeat = new RacialFeatDef { id = "determination", name = "Determination", description = "Shield 20% Max HP + All Damage Bonus +15% for 2 turns when dropped to <= 30% HP (1/battle)." },
+                racialUtility = new RacialUtilityDef { id = "adaptability", name = "Adaptability", description = "Adaptable across varied expedition challenges.", utilityTag = "adaptable" }
             },
-
             new RaceDef
-
             {
-
                 id = "elf", name = "Elf", isPlayable = true,
-
                 description = "Swift hunters attuned to the twilight beneath the world.",
-
-                abilityModifiers = new AbilityScores(0, 2, 0, 1, 0, 0),
-
-                racialFeat = new RacialFeatDef { id = "fey_step", name = "Fey Step", description = "Graceful repositioning that evades danger." },
-
+                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 0), // Elven Grace: +2 DEX (sum = 2)
+                racialFeat = new RacialFeatDef { id = "fey_step", name = "Fey Step", description = "Elf becomes Phased until next turn; first attack next turn gains +20% damage (CD 4)." },
                 racialUtility = new RacialUtilityDef { id = "keen_senses", name = "Keen Senses", description = "Heightened perception in dark corridors.", utilityTag = "perception" }
-
             },
-
             new RaceDef
-
             {
-
                 id = "dwarf", name = "Dwarf", isPlayable = true,
-
                 description = "Stout delve-folk forged for endurance in the deep.",
-
-                abilityModifiers = new AbilityScores(1, 0, 2, 0, 0, 0),
-
-                racialFeat = new RacialFeatDef { id = "iron_resolve", name = "Iron Resolve", description = "Unshakeable resilience against stagger and blows." },
-
-                racialUtility = new RacialUtilityDef { id = "stonecunning", name = "Stonecunning", description = "Instinctive knowledge of subterranean structures.", utilityTag = "delver" }
-
+                abilityModifiers = new AbilityScores(0, 0, 2, 0, 0, 0), // Dwarven Constitution: +2 VIT (sum = 2)
+                racialFeat = new RacialFeatDef { id = "iron_resolve", name = "Iron Resolve", description = "All Damage Taken -30% and Break Power received -50% until next turn (CD 3)." },
+                racialUtility = new RacialUtilityDef { id = "stonecraft", name = "Stonecraft", description = "Instinctive knowledge of subterranean structures.", utilityTag = "mineral" }
             },
-
             new RaceDef
-
             {
-
                 id = "halfling", name = "Halfling", isPlayable = true,
-
                 description = "Nimble and fortunate wanderers who slip past peril.",
-
-                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 1),
-
+                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 0), // Halfling Agility: +2 DEX (sum = 2)
                 racialFeat = new RacialFeatDef
-
                 {
-
                     id = "second_chance", name = "Second Chance",
-
-                    canRetryFailedQte = true, maxQteRetriesPerBattle = 1,
-
-                    description = "Allows retrying a failed QTE once under specific conditions without guaranteeing success."
-
+                    canRetryFailedQte = true, maxQteRetriesPerBattle = 2,
+                    description = "Allows retrying a failed QTE twice per battle without guaranteeing success."
                 },
-
-                racialUtility = new RacialUtilityDef { id = "nimble_passage", name = "Nimble Passage", description = "Slips past larger foes and hazards.", utilityTag = "stealth" }
-
+                racialUtility = new RacialUtilityDef { id = "small_and_nimble", name = "Small and Nimble", description = "Slips past larger foes and hazards.", utilityTag = "narrow" }
             },
-
             new RaceDef
-
             {
-
-                id = "dragonborn", name = "Dragonborn", isPlayable = true,
-
+                id = "dragonborn", name = "Dragonborn", isPlayable = true, lineageId = "crimson",
                 description = "Proud warriors carrying the burning blood of ancient dragons.",
-
-                abilityModifiers = new AbilityScores(2, 0, 0, 0, 0, 1),
-
+                abilityModifiers = new AbilityScores(2, 0, 0, 0, 0, 0), // Draconic Heritage (Crimson): +2 STR (sum = 2)
                 racialFeat = new RacialFeatDef
-
                 {
-
                     id = "draconic_overdrive", name = "Draconic Overdrive",
-
-                    overdrivePowerBonus = 0.25f, overdriveDurationTurns = 2, exhaustDurationTurns = 1,
-
-                    description = "Temporarily increases power, followed by the Exhausted condition."
-
+                    overdrivePowerBonus = 0.35f, overdriveDurationTurns = 3, exhaustDurationTurns = 2,
+                    description = "All Damage +35%, Lineage Element +25%, Break Power +50%, counter mult 1.25x for 3 turns. Afterward Exhausted (-20% damage, -30% break) for 2 turns."
                 },
-
-                racialUtility = new RacialUtilityDef { id = "draconic_presence", name = "Draconic Presence", description = "Commanding aura born of ancient dragonblood.", utilityTag = "intimidation" }
-
+                racialUtility = new RacialUtilityDef { id = "draconic_presence", name = "Draconic Presence", description = "Commanding aura born of ancient dragonblood.", utilityTag = "dragon" }
             },
-
             new RaceDef
-
             {
-
                 id = "liichtian", name = "Liichtian", isPlayable = true,
-
                 description = "Mortals of celestial heritage who carry astral light into the abyss.",
-
-                abilityModifiers = new AbilityScores(0, 0, 0, 1, 1, 1),
-
-                racialFeat = new RacialFeatDef { id = "lightbound", name = "Lightbound", description = "Channels celestial heritage to illuminate the dark." },
-
-                racialUtility = new RacialUtilityDef { id = "celestial_guidance", name = "Celestial Guidance", description = "Attuned to astral signs and sacred wards.", utilityTag = "celestial" }
-
+                abilityModifiers = new AbilityScores(0, 0, 0, 0, 2, 0), // Celestial Wisdom: +2 WIS (sum = 2)
+                racialFeat = new RacialFeatDef { id = "lightbound", name = "Lightbound", description = "Heal 10% Max HP all active allies, Damage Taken -10%, Status Resist +20% for 2 turns (1/battle)." },
+                racialUtility = new RacialUtilityDef { id = "luminescent_insight", name = "Luminescent Insight", description = "Attuned to astral signs and sacred wards.", utilityTag = "sacred" }
             },
-
             new RaceDef
-
             {
-
                 id = "merfolk", name = "Merfolk", isPlayable = true,
-
                 description = "Denizens of the sunken depths who command protective tides.",
-
-                abilityModifiers = new AbilityScores(0, 1, 1, 0, 1, 0),
-
+                abilityModifiers = new AbilityScores(0, 0, 0, 0, 2, 0), // Aquatic Affinity: +2 WIS (sum = 2)
                 racialFeat = new RacialFeatDef
-
                 {
-
                     id = "oceans_embrace", name = "Ocean's Embrace",
-
-                    allyShieldAmount = 15,
-
-                    description = "Provides a protective aqueous shield effect to an ally."
-
+                    allyShieldAmount = 25,
+                    description = "Grants 25% Max HP shield and +10% defensive QTE window to an ally for 3 turns; heals 10% on end/break (CD 4)."
                 },
-
-                racialUtility = new RacialUtilityDef { id = "tidal_grace", name = "Tidal Grace", description = "Fluid movement and calm restoration.", utilityTag = "aquatic" }
-
+                racialUtility = new RacialUtilityDef { id = "oceans_gift", name = "Ocean's Gift", description = "Fluid movement and liquid purification.", utilityTag = "aquatic" }
             },
 
 

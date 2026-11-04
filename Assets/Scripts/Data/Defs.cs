@@ -6,6 +6,17 @@ using System.Linq;
 namespace Obscure
 {
     public enum Tier { Normal, Elite, Boss }
+    public enum DragonbornLineage { Crimson = 0, Stone = 1, Azure = 2, Frost = 3 }
+
+    [Serializable]
+    public class DragonbornLineageDef
+    {
+        public string id;
+        public string name;
+        public DragonbornLineage lineage;
+        public Element element;
+        public AbilityScores abilityModifiers;
+    }
     public enum NodeType { Battle, Elite, Event, Treasure, Rest, Boss, Shop }
     public enum SkillKind { Physical, Magic, Heal, Support }
     public enum TargetType { Enemy, AllEnemies, Ally, AllAllies, Self }
@@ -78,6 +89,7 @@ namespace Obscure
         public CreationMethod creationMethod = CreationMethod.Manual;
         public string templateId;
         public string raceId = "human", classId = "knight", backgroundId = "oathsworn";
+        public string lineageId;
         public AbilityScores baseScores = AbilityScores.DefaultBase;
         public string starterPassiveId;
         public string[] activeSkillLoadout = Array.Empty<string>();
@@ -127,6 +139,7 @@ namespace Obscure
         public Element element = Element.Physical;
         public bool allTargets;
         public bool self;             // a stance/buff on the user: no damage, no reaction QTE
+        public bool isHeavy;          // Heavy attack: Defensive Perfect reduces 50% damage instead of 100% (Bab 12)
         public float delay;           // extra hold before the first hit lands (a delayed swing)
         public int phase;             // 0 = any phase, otherwise only in that boss phase
         public StatusApply[] apply;   // applied to each target not perfectly parried (or to self if self)
@@ -148,6 +161,7 @@ namespace Obscure
         public string[] tags = Array.Empty<string>(); // e.g. "Arcane", "Pact", "Nature", "Cleric"
         public float breakMultiplier = 1f; // multiplier applied to Break Gauge reduction
         public float bonusVsBroken = 0f;   // extra damage multiplier against Broken targets
+        public bool isFinisher;            // Finisher attacks consume combo and cannot critically hit (Bab 8 & 11)
         public string word; // typing QTE word for spells, null for physical skills
         public SkillDifficulty difficulty = SkillDifficulty.Medium; // typing QTE difficulty
         public int cooldown;      // own turns before reuse (0 = none)

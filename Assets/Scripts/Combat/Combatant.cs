@@ -30,11 +30,31 @@ namespace Obscure
         public int BreakStunTurns = 1;
         public float BreakDamageMultiplier = 1.5f;
 
-        // Racial Feat per-battle state (Character Creation Section 4)
-        public int SecondChanceRetriesRemaining;
+        // Racial Feat per-battle state (GDD Bab 6 & Bab 12)
+        public bool DeterminationUsed;
+        public int DeterminationTurns;
+        public int FeyStepCooldown;
+        public bool IsPhased;
+        public bool FeyStepBonusPending;
+        public int IronResolveCooldown;
+        public bool IronResolveActive;
+        public int SecondChanceRetriesRemaining = 2;
         public bool UsedDraconicOverdrive;
+        public int DraconicOverdriveTurns;
         public bool OverdriveExhaustPending;
+        public int DraconicExhaustedTurns;
+        public bool UsedLightbound;
+        public int LightboundTurns;
+        public int OceansEmbraceCooldown;
+        public int OceansEmbraceTurns;
+        public bool OceansEmbraceShieldActive;
+        public Combatant OceansEmbraceTarget;
         public bool UsedOceansEmbrace;
+
+        // Martial Artist Combo Flow state (GDD Bab 8 §5.1 & Bab 12 §7)
+        public const int MaxComboNormal = 10;
+        public int CurrentCombo = 0;
+        public bool AttackedThisTurn = false;
 
         // Background System per-battle and per-turn state (Background System Section 3)
         public readonly HashSet<Combatant> charlatanFirstAttackedTargets = new HashSet<Combatant>();
@@ -280,6 +300,44 @@ namespace Obscure
             return Math.Max(0, cost);
         }
 
+        // Human Racial Feat — Determination: Shield 20% Max HP + All Damage Bonus +15% for 2 turns when dropped to <= 30% HP (1/battle)
+        public bool CheckDeterminationTrigger(int hpBefore, int hpAfter)
+        {
+            if (!Alive || DeterminationUsed || unit?.race == null || unit.race.id != "human")
+                return false;
+            float threshold = Stats.maxHp * 0.30f;
+            if (hpBefore > threshold && hpAfter <= threshold && hpAfter > 0)
+            {
+                DeterminationUsed = true;
+                DeterminationTurns = 2;
+                int shieldAmt = Math.Max(1, (int)Math.Round(Stats.maxHp * 0.20f));
+                unit.shield += shieldAmt;
+                DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageBonus, 1.15f, sourceId: "determination");
+                return true;
+            }
+            return false;
+        }
+
+        // Elf Racial Feat — Fey Step: Phased (cannot be targeted by single-target attacks); +20% damage next attack (CD 4)
+        public bool ActivateFeyStep()
+        {
+            if (!Alive || FeyStepCooldown > 0) return false;
+            IsPhased = true;
+            FeyStepCooldown = 4;
+            FeyStepBonusPending = true;
+            return true;
+        }
+
+        // Dwarf Racial Feat — Iron Resolve: All Damage Taken -30%, Break Power received -50% until next turn (CD 3)
+        public bool ActivateIronResolve()
+        {
+            if (!Alive || IronResolveCooldown > 0) return false;
+            IronResolveActive = true;
+            IronResolveCooldown = 3;
+            DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 0.70f, sourceId: "iron_resolve");
+            return true;
+        }
+
         // Halfling Racial Feat — Second Chance
         public bool CanUseSecondChanceRetry => Alive && SecondChanceRetriesRemaining > 0;
 
@@ -290,15 +348,36 @@ namespace Obscure
             return true;
         }
 
-        // Dragonborn Racial Feat — Draconic Overdrive: temporarily increases power with an Exhausted consequence.
+        // Dragonborn Racial Feat — Draconic Overdrive: All Damage +35%, Lineage Element +25%, Break Power +50%, counter mult 1.25x for 3 turns.
+        // Afterward Exhausted (-20% damage, -30% break) for 2 turns.
+        public Element GetDragonbornLineageElement()
+        {
+            if (unit?.race?.lineageId != null && Database.DragonbornLineages.TryGetValue(unit.race.lineageId, out var lin))
+                return lin.element;
+            return Element.Fire;
+        }
+
         public bool ActivateDraconicOverdrive()
         {
-            var feat = unit?.race?.racialFeat;
-            if (!Alive || feat == null || feat.overdrivePowerBonus <= 0f || UsedDraconicOverdrive)
-                return false;
+            if (!Alive || UsedDraconicOverdrive) return false;
             UsedDraconicOverdrive = true;
-            OverdriveExhaustPending = feat.exhaustDurationTurns > 0;
-            AddStatus(StatusId.AttackUp, Math.Max(1, feat.overdriveDurationTurns), feat.overdrivePowerBonus, this);
+            DraconicOverdriveTurns = 3;
+            OverdriveExhaustPending = true;
+            DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageBonus, 1.35f, sourceId: "draconic_overdrive");
+            Element lin = GetDragonbornLineageElement();
+            ElementType elemType = lin switch
+            {
+                Element.Fire => ElementType.Fire,
+                Element.Ice => ElementType.Ice,
+                Element.Lightning => ElementType.Lightning,
+                _ => ElementType.None
+            };
+            if (elemType != ElementType.None)
+                DamageModifiers.AddMultiplier(DamageModifierScope.ElementSpecificDamageBonus, 1.25f, elemType, "draconic_lineage");
+            else
+                DamageModifiers.AddMultiplier(DamageModifierScope.PhysicalDamageBonus, 1.25f, sourceId: "draconic_lineage");
+
+            AddStatus(StatusId.AttackUp, 3, 0.35f, this);
             return true;
         }
 
@@ -306,22 +385,80 @@ namespace Obscure
         {
             if (!OverdriveExhaustPending) return;
             OverdriveExhaustPending = false;
-            int dur = Math.Max(1, unit?.race?.racialFeat?.exhaustDurationTurns ?? 1);
-            AddStatus(StatusId.Exhausted, dur, 0.25f, this);
+            DamageModifiers.RemoveBySource("draconic_overdrive");
+            DamageModifiers.RemoveBySource("draconic_lineage");
+            DraconicExhaustedTurns = 2;
+            DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageBonus, 0.80f, sourceId: "draconic_exhausted");
+            AddStatus(StatusId.Exhausted, 2, 0.20f, this);
         }
 
-        // Merfolk Racial Feat — Ocean's Embrace: provides protection/shield effect to an ally.
+        // Liichtian Racial Feat — Lightbound: Heal 10% Max HP all active party, All Damage Taken -10%, Status Resist +20% for 2 turns (1/battle)
+        public bool ActivateLightbound(IEnumerable<Combatant> allies)
+        {
+            if (!Alive || UsedLightbound) return false;
+            UsedLightbound = true;
+            if (allies != null)
+            {
+                foreach (var a in allies.Where(c => c.Alive))
+                {
+                    int healAmt = Math.Max(1, (int)Math.Round(a.Stats.maxHp * 0.10f));
+                    a.unit.hp = Math.Min(a.Stats.maxHp, a.unit.hp + healAmt);
+                    a.LightboundTurns = 2;
+                    a.DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 0.90f, sourceId: "lightbound");
+                    a.StatusController.ResistanceProfile.buffResistance = Math.Min(0.75f, a.StatusController.ResistanceProfile.buffResistance + 0.20f);
+                }
+            }
+            return true;
+        }
+
+        // Merfolk Racial Feat — Ocean's Embrace: Shield 25% Max HP on target ally, +10% defensive QTE window for 3 turns; heals 10% on end/break (CD 4)
         public bool ActivateOceansEmbrace(Combatant ally)
         {
-            var feat = unit?.race?.racialFeat;
-            if (!Alive || feat == null || feat.allyShieldAmount <= 0 || UsedOceansEmbrace)
-                return false;
-            if (ally == null || !ally.Alive || ally.side != side)
+            if (!Alive || ally == null || !ally.Alive || ally.side != side || OceansEmbraceCooldown > 0)
                 return false;
             UsedOceansEmbrace = true;
-            ally.unit.shield += feat.allyShieldAmount;
-            ally.AddStatus(StatusId.DefenseUp, 2, 0.20f, this);
+            OceansEmbraceCooldown = 4;
+            OceansEmbraceTarget = ally;
+            OceansEmbraceTurns = 3;
+            int shieldAmt = Math.Max(1, (int)Math.Round(ally.Stats.maxHp * 0.25f));
+            ally.unit.shield += shieldAmt;
+            ally.OceansEmbraceShieldActive = true;
+            ally.AddStatus(StatusId.DefenseUp, 3, 0.20f, this);
             return true;
+        }
+
+        public void EndOceansEmbrace(Combatant target)
+        {
+            if (target != null && target.OceansEmbraceShieldActive)
+            {
+                target.OceansEmbraceShieldActive = false;
+                int healAmt = Math.Max(1, (int)Math.Round(target.Stats.maxHp * 0.10f));
+                target.unit.hp = Math.Min(target.Stats.maxHp, target.unit.hp + healAmt);
+            }
+        }
+
+        // Martial Artist Combo Flow (GDD Bab 8 §5.1 & Bab 12 §7)
+        public void ApplyMartialArtistCombo(QteResult qte, bool isFinisher)
+        {
+            if (unit?.classDef == null || unit.classDef.id != "martial_artist") return;
+            AttackedThisTurn = true;
+            if (isFinisher)
+            {
+                CurrentCombo = 0; // Finisher consumes all combo
+                return;
+            }
+            if (qte == QteResult.Poor)
+            {
+                CurrentCombo = 0; // Poor resets combo
+            }
+            else if (qte == QteResult.Good)
+            {
+                CurrentCombo = Math.Min(MaxComboNormal, CurrentCombo + 1);
+            }
+            else if (qte == QteResult.Perfect)
+            {
+                CurrentCombo = Math.Min(MaxComboNormal, CurrentCombo + 2); // Perfect adds +1 on top (+2 total)
+            }
         }
 
         // Returns the full DerivedStats snapshot including active per-battle buffs and debuffs.
@@ -354,6 +491,9 @@ namespace Obscure
             gaugeReduced = 0;
             if (!Alive || !HasBreakGauge || IsBroken || rawBreakPower <= 0) return false;
 
+            if (IronResolveActive)
+                rawBreakPower = Math.Max(1, (int)Math.Round(rawBreakPower * 0.5f)); // Dwarf Iron Resolve: Break Power received -50%
+
             int resist = Math.Max(0, BreakResistance);
             int netBreak = Math.Max(1, rawBreakPower - resist);
             int before = CurrentBreakGauge;
@@ -363,6 +503,7 @@ namespace Obscure
             if (CurrentBreakGauge == 0)
             {
                 AddStatus(StatusId.Broken, BreakDuration, BreakDamageMultiplier, source);
+                CurrentCombo = 0; // Broken resets combo
                 if (BreakStunTurns > 0)
                     stunTurns = Math.Max(stunTurns, BreakStunTurns);
                 return true;

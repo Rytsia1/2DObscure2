@@ -129,7 +129,7 @@ namespace Obscure
         void RenderTiming(TimingQte t)
         {
             SetMarker(0, t.T / t.Sweep, Palette.WarmIvory);
-            if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "MISS");
+            if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
         }
 
         void RenderDefense(DefenseQte d)
@@ -165,7 +165,7 @@ namespace Obscure
             timeFill.transform.localScale = new Vector3(Mathf.RoundToInt(W * left), 4, 1);
             info.Set(t.Mistakes > 0 ? $"MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}" : "RECITE THE ANCIENT WORDS");
             info.Color = t.Mistakes > 0 ? Palette.SpecCrimson : Palette.MutedGray;
-            if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "MISS");
+            if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
         }
 
         void ShowResult(QteResult r, string perfect, string good, string miss)

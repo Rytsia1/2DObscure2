@@ -84,11 +84,13 @@ namespace Obscure
             Func<float> rollProvider = null;
             if (rng != null) rollProvider = () => (float)rng.NextDouble();
             var context = attacker.CreateDamageContext(target, components, hitCount, qteResult, rollProvider);
+            context.isFinisher = skill.isFinisher;
             return DamageCalculator.Calculate(context);
         }
 
         // Break damage scaling: Physical -> STR (PhysicalBreak), Magic -> INT (MagicBreak).
-        public static int BreakDamage(Combatant a, SkillDef skill = null, Effectiveness effect = Effectiveness.Neutral)
+        // GDD Bab 12: Offensive QTE multiplier (Perfect 1.5x, Good 1.0x, Poor 0.5x) also scales Break Power!
+        public static int BreakDamage(Combatant a, SkillDef skill = null, Effectiveness effect = Effectiveness.Neutral, QteResult qteResult = QteResult.Good)
         {
             if (effect == Effectiveness.Immune) return 0;
             bool isMagic = skill != null && skill.kind == SkillKind.Magic;
@@ -96,7 +98,8 @@ namespace Obscure
             int rank = (skill != null && a?.unit != null) ? Math.Max(1, a.unit.skillLoadout.GetRank(skill.id)) : 1;
             float skillMult = skill != null ? skill.GetBreakMultiplier(rank) : 1f;
             float elemMult = effect == Effectiveness.Weak ? 1.5f : effect == Effectiveness.Resist ? 0.75f : 1f;
-            return Math.Max(1, (int)Math.Round(baseBreak * skillMult * elemMult));
+            float qteMult = DamageCalculator.GetQteMultiplier(qteResult);
+            return Math.Max(1, (int)Math.Round(baseBreak * skillMult * elemMult * qteMult));
         }
 
         static float Variance(Random rng) => rng == null ? 1f : 0.9f + (float)rng.NextDouble() * 0.2f;

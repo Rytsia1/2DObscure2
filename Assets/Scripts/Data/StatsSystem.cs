@@ -986,10 +986,11 @@ namespace Obscure
         public float minHitChance = 5f;
         public float maxHitChance = 95f;
         public float dexAccuracyScaling = 2f;
-        public float perfectQteHitBonus = 5f;
-        public float goodQteHitBonus = 2f;
-        public float partialQteHitBonus = -3f;
-        public float missQteHitBonus = -10f;
+        // GDD Bab 5 §7 & Bab 12: QTE does NOT alter Hit Chance. Base bonuses default to 0.
+        public float perfectQteHitBonus = 0f;
+        public float goodQteHitBonus = 0f;
+        public float partialQteHitBonus = 0f;
+        public float missQteHitBonus = 0f;
 
         public static readonly AccuracyConfig Default = new AccuracyConfig();
     }

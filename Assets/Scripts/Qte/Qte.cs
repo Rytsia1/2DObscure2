@@ -216,21 +216,21 @@ namespace Obscure
     // Which QTE an action gets. The one place this decision lives.
     public static class QteFactory
     {
-        // Physical attacks/skills: timing bar. Magic and Heal skills with an incantation: typing. Others: none (null).
-        // Applies DEX timing bonus to TimingQte, while keeping base QteProfile intact.
+        // GDD Bab 12: Only Basic Attack and skills with direct damage use Offensive QTE.
+        // Heals, buffs, debuffs without direct damage do NOT use QTE.
         public static Qte Offense(BattleAction a, Tier tier, QteAssist assist, Random rng)
         {
             bool timing = a.kind == ActionKind.Attack || (a.kind == ActionKind.Skill && a.skill.kind == SkillKind.Physical);
-            bool typing = a.kind == ActionKind.Skill && (a.skill.kind == SkillKind.Magic || a.skill.kind == SkillKind.Heal) && a.skill.word != null;
+            bool typing = a.kind == ActionKind.Skill && a.skill.kind == SkillKind.Magic && a.skill.word != null;
             if (!timing && !typing) return null;
             if (assist == QteAssist.Auto) return new AutoQte();
             var profile = QteConfig.For(tier, assist);
-            float dexBonus = a.actor != null ? a.actor.unit.Derived.QteTimingBonusFraction : 0f;
-            return timing ? TimingQte.Random(profile, rng, dexBonus) : (Qte)TypingQte.For(a.skill, profile, rng);
+            float windowBonus = a.actor != null ? a.actor.unit.Derived.QteTimingBonusFraction : 0f;
+            return timing ? TimingQte.Random(profile, rng, windowBonus) : (Qte)TypingQte.For(a.skill, profile, rng);
         }
 
         // Enemy hits: reaction QTE at the attacker's tier. Self stances need none (null).
-        // Evasion on the target widens the windows by its magnitude; DEX and WIS provide TimingBonusFraction.
+        // GDD Bab 12 §8.2: No attributes scale QTE. Window bonuses come from equipment/talents/passives, clamped to +25%.
         public static Qte Defense(BattleAction a, QteAssist assist)
         {
             var move = a.attack;
@@ -245,12 +245,6 @@ namespace Obscure
             if (a.target != null)
             {
                 statTimingBonus += a.target.unit.Derived.QteTimingBonusFraction;
-                if (move != null && move.element != Element.Physical)
-                {
-                    int wisMod = Math.Max(0, a.target.unit.Mod(Ability.WIS));
-                    var wisCfg = Database.QteStatInteractions[Ability.WIS];
-                    statTimingBonus += Math.Clamp(wisMod * wisCfg.scalingPerModifier, 0f, wisCfg.maxBonus);
-                }
             }
             return new DefenseQte(profile, hits, move?.delay ?? 0f, statTimingBonus);
         }

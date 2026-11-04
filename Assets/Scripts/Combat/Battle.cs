@@ -157,6 +157,55 @@ namespace Obscure
                 if (!c.NullBreak.HasActiveNullBreak)
                     Say($"{c.name}'s Null Break wears off.");
             }
+
+            // Racial Feats turn updates (Bab 6)
+            if (c.IsPhased) c.IsPhased = false; // Phased ends at start of Elf's next turn
+            if (c.FeyStepCooldown > 0) c.FeyStepCooldown--;
+            if (c.IronResolveActive)
+            {
+                c.IronResolveActive = false;
+                c.DamageModifiers.RemoveBySource("iron_resolve");
+            }
+            if (c.IronResolveCooldown > 0) c.IronResolveCooldown--;
+            if (c.OceansEmbraceCooldown > 0) c.OceansEmbraceCooldown--;
+            if (c.OceansEmbraceTurns > 0 && --c.OceansEmbraceTurns == 0)
+            {
+                c.EndOceansEmbrace(c.OceansEmbraceTarget);
+                c.OceansEmbraceTarget = null;
+            }
+            if (c.DraconicOverdriveTurns > 0 && --c.DraconicOverdriveTurns == 0)
+            {
+                c.TriggerDraconicExhaustion();
+            }
+            if (c.DraconicExhaustedTurns > 0 && --c.DraconicExhaustedTurns == 0)
+            {
+                c.DamageModifiers.RemoveBySource("draconic_exhausted");
+            }
+            if (c.LightboundTurns > 0 && --c.LightboundTurns == 0)
+            {
+                c.DamageModifiers.RemoveBySource("lightbound");
+            }
+            if (c.DeterminationTurns > 0 && --c.DeterminationTurns == 0)
+            {
+                c.DamageModifiers.RemoveBySource("determination");
+            }
+
+            // Martial Artist Combo Flow: reset if a full turn passes without attacking (Bab 8 §5.1)
+            if (c.unit?.classDef != null && c.unit.classDef.id == "martial_artist")
+            {
+                if (!c.AttackedThisTurn && c.CurrentCombo > 0)
+                {
+                    c.CurrentCombo = 0;
+                    Say($"{c.name}'s Combo Flow resets.");
+                }
+                c.AttackedThisTurn = false;
+            }
+
+            // Break gauge recovers 20 at start of owner's turn (Bab 10 §5.3)
+            if (c.HasBreakGauge && !c.IsBroken && c.CurrentBreakGauge < c.MaxBreakGauge)
+            {
+                c.CurrentBreakGauge = Math.Min(c.MaxBreakGauge, c.CurrentBreakGauge + 20);
+            }
         }
 
         // Null when the action is legal right now, otherwise a reason for the player.
@@ -201,9 +250,19 @@ namespace Obscure
         static bool IsAlly(Combatant a, Combatant t) => t != null && t.Alive && t.side == a.side;
 
         // Interpose: a Guardian takes single-target hits aimed at the ally it protects.
+        // Fey Step (Elf): Phased targets redirect single-target attacks to the next active party member (Bab 6 & 12).
         public Combatant Intercept(Combatant target)
         {
             if (target == null) return null;
+            if (target.IsPhased)
+            {
+                var redirect = Allies(target).FirstOrDefault(c => c != target && c.Alive && !c.IsPhased);
+                if (redirect != null)
+                {
+                    Say($"{target.name} is Phased! Attack redirects to {redirect.name}.");
+                    target = redirect;
+                }
+            }
             var guard = Allies(target).FirstOrDefault(c => c != target && c.Alive && c.Get(StatusId.Guardian)?.source == target);
             if (guard == null) return target;
             Say($"{guard.name} interposes for {target.name}!");
@@ -241,6 +300,8 @@ namespace Obscure
             {
                 case ActionKind.Attack:
                     var move = a.attack;
+                    QteResult attackQte = power > 1.05f ? QteResult.Perfect : (power < 0.95f ? QteResult.Poor : QteResult.Good);
+                    actor.ApplyMartialArtistCombo(attackQte, false);
                     if (move != null && move.self)
                     {
                         Say($"{actor.name} uses {move.name}.");
@@ -304,7 +365,8 @@ namespace Obscure
                         {
                             QteResult mappedQte = power > 1.05f
                                 ? QteResult.Perfect
-                                : (power < 0.95f ? QteResult.Miss : QteResult.Good);
+                                : (power < 0.95f ? QteResult.Poor : QteResult.Good);
+                            actor.ApplyMartialArtistCombo(mappedQte, s.isFinisher);
                             var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel);
                             foreach (var hitRes in dmgResult.hits)
                             {
@@ -327,7 +389,7 @@ namespace Obscure
 
                                 if (t.Alive && t.HasBreakGauge && actor != null && actor.side != t.side)
                                 {
-                                    int rawBreak = Rules.BreakDamage(actor, s, eff);
+                                    int rawBreak = Rules.BreakDamage(actor, s, eff, mappedQte);
                                     bool broke = t.ApplyBreakDamage(rawBreak, actor, out int reduced);
                                     hit.breakAmount = reduced;
                                     hit.brokeTarget = broke;
@@ -415,7 +477,8 @@ namespace Obscure
             }
 
             // Power from QTE: power > GoodPower guarantees application unless resisted/immune
-            float effChance = (power > QteConfig.GoodPower) ? 1.0f : ap.chance;
+            // GDD Bab 11 §8: Status roll is independent of QTE grade
+            float effChance = ap.chance;
             if (source?.unit != null)
             {
                 if (ap.id == StatusId.Stun && source.unit.HasTalent("crusher"))
@@ -467,10 +530,33 @@ namespace Obscure
         // All damage goes through here: reaction, then element, then HP, then Break Gauge reduction.
         Hit Deal(Combatant attacker, Combatant t, int amount, Element element, QteResult? reaction, SkillDef skill)
         {
+            // GDD Bab 11 & 12: Broken cannot achieve Perfect on Defensive QTE (caps at Good / 50% reduction)
+            if (t.IsBroken && reaction == QteResult.Perfect)
+            {
+                reaction = QteResult.Good;
+            }
+
+            // GDD Bab 11 & 12: Stun, Sleep, Mind Control cause auto-Poor reaction
+            if (t.stunTurns > 0 || t.StatusController.HasStatus(StatusId.Stun) || t.StatusController.HasStatus(StatusId.Sleep) || t.StatusController.HasStatus(StatusId.MindControl))
+            {
+                reaction = QteResult.Poor;
+            }
+
+            // Heavy attack check (Bab 12)
+            bool isHeavy = skill != null && (skill.HasTag("Heavy") || (attacker?.enemy?.attacks != null && attacker.enemy.attacks.Any(a => a.name == skill.name && a.isHeavy)));
+
             if (reaction == QteResult.Perfect)
             {
-                Say($"{t.name} perfectly parries!");
-                return new Hit { target = t, amount = 0, blocked = true };
+                if (isHeavy)
+                {
+                    amount = Math.Max(1, (int)Math.Round(amount * 0.5f));
+                    Say($"{t.name} parries the Heavy attack for 50% damage reduction!");
+                }
+                else
+                {
+                    Say($"{t.name} perfectly parries!");
+                    return new Hit { target = t, amount = 0, blocked = true };
+                }
             }
             var effect = t.Affinities.Against(element);
             if (effect == Effectiveness.Immune)
@@ -484,6 +570,20 @@ namespace Obscure
             {
                 amount = Math.Max(1, (int)Math.Round(amount * QteConfig.GoodDefense));
                 note += " (blocked)";
+            }
+
+            // Elf Fey Step: first attack next turn gets +20% damage (Bab 6)
+            if (attacker != null && attacker.FeyStepBonusPending)
+            {
+                attacker.FeyStepBonusPending = false;
+                amount = Math.Max(1, (int)Math.Round(amount * 1.20f));
+                Say($"{attacker.name}'s Fey Step empowers the strike (+20% damage)!");
+            }
+
+            // Martial Artist: +2% physical damage per combo point (Bab 8 §5.1)
+            if (attacker != null && attacker.unit?.classDef?.id == "martial_artist" && attacker.CurrentCombo > 0)
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * (1f + attacker.CurrentCombo * 0.02f)));
             }
 
             // Background Perk: Charlatan (Bonus damage vs debuffed targets & unacted targets)
@@ -589,9 +689,36 @@ namespace Obscure
             {
                 amount = Math.Max(1, (int)Math.Round(amount * (1f - TalentSystem.InspiringLeaderReduction)));
             }
+
+            // Shield absorption (Bab 11 §6 & Bab 6 §4.1)
+            if (t != null && t.unit.shield > 0 && amount > 0)
+            {
+                int absorbed = Math.Min(t.unit.shield, amount);
+                t.unit.shield -= absorbed;
+                amount -= absorbed;
+                if (t.unit.shield <= 0 && t.OceansEmbraceShieldActive)
+                {
+                    t.EndOceansEmbrace(t);
+                    Say($"{t.name}'s Ocean's Embrace shield breaks and restores 10% HP!");
+                }
+            }
+
+            int hpBefore = t != null ? t.unit.hp : 0;
             t.unit.hp = Math.Max(0, t.unit.hp - amount);
+
+            // Human Determination trigger (Bab 6 §5.1)
+            if (amount > 0 && t.CheckDeterminationTrigger(hpBefore, t.unit.hp))
+            {
+                Say($"{t.name}'s Determination ignites! (Gains Shield and +15% Damage)");
+            }
+
             // GDD Section 12: Sleep ends when target receives direct damage or DoT
-            t.StatusController.OnDamageReceived(amount, false, Say);
+            if (amount > 0)
+            {
+                t.StatusController.OnDamageReceived(amount, false, Say);
+                t.statuses.RemoveAll(s => s.id == StatusId.Sleep);
+            }
+
             Say($"{t.name} takes {amount} damage{(t.guarding ? " (guarded)" : "")}{note}.");
             if (!t.Alive) Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
             else CheckPhase(t);
