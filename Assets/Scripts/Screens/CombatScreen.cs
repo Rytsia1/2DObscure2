@@ -88,8 +88,8 @@ namespace Obscure
             Ui.Rect(t, 0, 0, Ui.Width, 23, Palette.Hex(0x070A14, 220), Ui.Panels);
             Ui.Rect(t, 0, 23, Ui.Width, 1, Palette.Ink4, Ui.Panels);
             string actName = encounter.tier == Tier.Boss ? "ACT 1: THE INNER SANCTUM" : "ACT 1: ASHEN RUINS";
-            actBanner = Ui.Label(t, actName, 10, 6, Palette.AntiqueGoldBright, font: FontKind.Serif);
-            roundLabel = Ui.Label(t, "", 172, 7, Palette.Gold2);
+            actBanner = Ui.Label(t, actName, 10, 6, Palette.AntiqueGoldBright, font: FontKind.DotGothic);
+            roundLabel = Ui.Label(t, "", 172, 7, Palette.Gold2, font: FontKind.DotGothic);
             turnBar = Child("TurnBar");
 
             // 2. 18px Telegraph banner under the header
@@ -109,7 +109,7 @@ namespace Obscure
             // Action Dossier & Combat Log feed panel (Right side of console)
             dossierPanel = Child("DossierPanel");
             Ui.Card(dossierPanel, DossierX, ConsoleY + 4, DossierW, ConsoleH - 8);
-            dossierTitle = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 8, Palette.AntiqueGoldBright, font: FontKind.Serif);
+            dossierTitle = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 8, Palette.AntiqueGoldBright, font: FontKind.DotGothic);
             dossierCostType = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 22, Palette.WarmIvory);
             dossierTarget = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 34, Palette.MutedGray);
             dossierDesc = Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 46, Palette.WarmIvory);
@@ -545,7 +545,7 @@ namespace Obscure
 
         void Option(Menu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null)
         {
-            var s = Ui.Button(phase, PixelFont.Fit(text, CommandMenuW - 16), PartyConsoleW + 6, ConsoleY + 6 + m.items.Count * 22, CommandMenuW, onClick, 20, enabled);
+            var s = Ui.Button(phase, PixelFont.Fit(text, CommandMenuW - 16, FontKind.DotGothic), PartyConsoleW + 6, ConsoleY + 6 + m.items.Count * 22, CommandMenuW, onClick, 20, enabled, font: FontKind.DotGothic);
             s.tooltip = tooltip;
             m.Add(s);
         }

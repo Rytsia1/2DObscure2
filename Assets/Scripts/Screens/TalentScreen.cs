@@ -48,8 +48,8 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            // 1. Static Header: title, hero switcher, navigation shortcuts, talent points badge
-            Ui.Label(Root, "HERO TALENTS", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            // 1. Static Header: title, hero switcher, navigation shortcuts, talent points badge per FELNA — UI System (Page 17)
+            Ui.Label(Root, "HERO TALENTS", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
 
             Ui.Button(Root, "<", 146, 8, 20, () => SwitchHero(-1), 20, showCursor: false);
             heroLabel = Ui.Label(Root, "", 256, 14, Palette.Mist2, Align.Center);

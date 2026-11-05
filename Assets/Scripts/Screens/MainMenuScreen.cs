@@ -28,20 +28,20 @@ namespace Obscure
             Ui.Image(Root, PixelArt.Ridge(Ui.Width, 54, Palette.Hex(0x111733), 11), 0, 290, Ui.Back + 8);
             Ui.Rect(Root, 0, 330, Ui.Width, 30, Palette.Hex(0x0A0F22), Ui.Back + 9);
 
-            // Title block
+            // Title block per FELNA — UI System (Page 04)
             Ui.Divider(Root, 48, 40, 210, Palette.Gold3, Palette.Gold2);
-            Ui.Label(Root, "2D OBSCURE", 48, 54, Palette.Gold1, Align.Left, 3, FontKind.Serif);
+            Ui.Label(Root, "FELNA", 48, 54, Palette.Gold1, Align.Left, 3, FontKind.DotGothic);
             for (int i = 0; i < 8; i++) Ui.Image(Root, PixelArt.Diamond(7, Palette.Gold3, false), 48 + i * 10, 98, Ui.Text);
-            Ui.Label(Root, "A PARTY ROGUELIKE ACROSS EIGHT DUNGEONS", 134, 98, Palette.Mist2);
+            Ui.Label(Root, "THE WORLD'S BETWEEN · EIGHT LAYERS DOWN", 134, 98, Palette.Mist2, font: FontKind.DotGothic);
 
             // Menu list
             var menu = Root.gameObject.AddComponent<Menu>();
             bool hasSave = SaveManager.HasAnySave(out _) || GameSave.HasSavedGame();
-            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, 154, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat));
-            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 178, 190, () => Game?.ContinueGame(), 22, interactable: hasSave, style: ButtonStyle.Flat));
-            LoadGameButton = menu.Add(Ui.Button(Root, "LOAD GAME", 61, 202, 190, () => Game?.Go(GameState.Load), 22, interactable: hasSave, style: ButtonStyle.Flat));
-            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, 226, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat));
-            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, 250, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat));
+            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, 154, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 178, 190, () => Game?.ContinueGame(), 22, interactable: hasSave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            LoadGameButton = menu.Add(Ui.Button(Root, "LOAD GAME", 61, 202, 190, () => Game?.Go(GameState.Load), 22, interactable: hasSave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, 226, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, 250, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
 
             // Footer: key prompts + build tag on an ink band
             Ui.Rect(Root, 0, 334, Ui.Width, 26, Palette.Hex(0x070A14, 220), Ui.Panels);

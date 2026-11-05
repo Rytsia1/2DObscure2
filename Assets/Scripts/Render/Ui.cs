@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Obscure
 {
     public enum Align { Left, Center, Right }
-    public enum ButtonStyle { Slab, Primary, Flat }
+    public enum ButtonStyle { Slab, Primary, Flat, Danger }
 
     public static class Ui
     {
@@ -50,15 +50,23 @@ namespace Obscure
         public static SpriteRenderer Card(Transform parent, int x, int y, int w, int h, Color? fill = null, Color? border = null) =>
             Image(parent, PixelArt.Box(w, h, fill ?? Palette.MidnightNavy, border ?? Palette.DarkBorder), x, y, Panels + 1);
 
+        // Enemy card (.ec): notched corners
+        public static SpriteRenderer EnemyCard(Transform parent, int x, int y, int w, int h, Color? fill = null, Color? border = null) =>
+            Image(parent, PixelArt.NotchedBox(w, h, fill ?? Palette.MidnightNavy, border ?? Palette.DarkBorder), x, y, Panels + 1);
+
+        // Double border card (.rar.r-leg / .rar.r-myt)
+        public static SpriteRenderer DoubleBorderCard(Transform parent, int x, int y, int w, int h, Color? fill = null, Color? border = null) =>
+            Image(parent, PixelArt.DoubleBorderBox(w, h, fill ?? Palette.DeepCharcoal, border ?? Palette.Gold2), x, y, Panels + 1);
+
         // Ink slab button; focus lifts it into a gold frame with gold text and the pixel hand-pointer.
-        // Primary = the one gold call-to-action per view; Flat = menu-list item (.mi) with a gold wash on focus.
+        // Primary = the one gold call-to-action per view; Flat = menu-list item (.mi) with a gold wash on focus; Danger = destructive alert.
         public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 18, bool interactable = true, bool showCursor = true, FontKind font = FontKind.Interface, ButtonStyle style = ButtonStyle.Slab)
         {
             var go = new GameObject("Button:" + text);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(x, -y, 0);
             var box = Image(go.transform, null, 0, 0, Widget);
-            int gHeight = font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
+            int gHeight = font == FontKind.DotGothic ? PixelFont.DotGothicGlyphHeight : font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
             bool flat = style == ButtonStyle.Flat;
             var label = Label(go.transform, text, flat ? 6 : w / 2, (h - gHeight) / 2, Palette.WarmIvory, flat ? Align.Left : Align.Center, order: Widget + 1, font: font);
             var cursor = showCursor ? Image(go.transform, PixelArt.Pointer, -10, (h - 7) / 2, Widget + 1) : null;
@@ -71,9 +79,11 @@ namespace Obscure
             {
                 box.sprite = style == ButtonStyle.Flat ? (on ? PixelArt.MenuHighlight(w, h) : null)
                     : style == ButtonStyle.Primary ? PixelArt.PrimaryBox(w, h, on, sel.interactable)
+                    : style == ButtonStyle.Danger ? PixelArt.DangerBox(w, h, on, sel.interactable)
                     : PixelArt.ButtonBox(w, h, on, sel.interactable);
                 label.Color = !sel.interactable ? Palette.MutedGray
                     : style == ButtonStyle.Primary ? Palette.Ink1
+                    : style == ButtonStyle.Danger ? (on ? Palette.WarmIvory : Palette.HpLow)
                     : on ? Palette.AntiqueGoldBright : Palette.WarmIvory;
                 if (cursor != null) cursor.gameObject.SetActive(on);
             };
@@ -102,11 +112,45 @@ namespace Obscure
         }
 
         // Panel header (.ph): gold diamond + gold title over an ink rule spanning the panel width.
-        public static Label Header(Transform parent, string text, int x, int y, int w, int order = Text)
+        public static Label Header(Transform parent, string text, int x, int y, int w, int order = Text, FontKind font = FontKind.DotGothic)
         {
             Image(parent, PixelArt.Diamond(5, Palette.Gold2), x, y + 1, order);
-            Rect(parent, x - 6, y + 12, w, 1, Palette.Ink4, order);
-            return Label(parent, text, x + 9, y, Palette.Gold2, order: order);
+            Rect(parent, x - 6, y + 13, w, 1, Palette.Ink4, order);
+            return Label(parent, text, x + 9, y, Palette.Gold2, order: order, font: font);
+        }
+
+        // Status tag (.st): ▲ buff, ▼ debuff, ● neutral
+        public static GameObject StatusBadge(Transform parent, string code, string timeOrStack, bool isBuff, int x, int y, int order = Widget)
+        {
+            var go = new GameObject("Status:" + code);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(x, -y, 0);
+            Color fill = isBuff ? Palette.Hex(0x0E2818) : Palette.Hex(0x280E12);
+            Color border = isBuff ? Palette.Hp : Palette.HpLow;
+            Color textCol = isBuff ? Palette.Hp : Palette.HpLow;
+            string prefix = isBuff ? "▲ " : "▼ ";
+            string text = prefix + code + (string.IsNullOrEmpty(timeOrStack) ? "" : " " + timeOrStack);
+            int w = Mathf.Max(28, PixelFont.Measure(text, FontKind.DotGothic) + 6);
+            Image(go.transform, PixelArt.Badge(w, 14, fill, border), 0, 0, order);
+            Label(go.transform, text, w / 2, 2, textCol, Align.Center, order: order + 1, font: FontKind.DotGothic);
+            return go;
+        }
+
+        // Currency tag (.cur): solid gold frame for Hub Gold, dashed ember frame for Run Gold
+        public static GameObject CurrencyTag(Transform parent, int amount, bool isHubGold, int x, int y, int order = Widget)
+        {
+            var go = new GameObject("Currency:" + (isHubGold ? "Hub" : "Run"));
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(x, -y, 0);
+            string lbl = isHubGold ? $"{amount:#,##0} HUB GOLD" : $"{amount:#,##0} RUN GOLD";
+            Color bg = isHubGold ? Palette.Hex(0x221A08) : Palette.Hex(0x241008);
+            Color border = isHubGold ? Palette.Gold2 : Palette.Ember2;
+            Color textCol = isHubGold ? Palette.Gold1 : Palette.Ember1;
+            int w = Mathf.Max(84, PixelFont.Measure(lbl, FontKind.DotGothic) + 16);
+            Image(go.transform, PixelArt.Badge(w, 18, bg, border), 0, 0, order);
+            Image(go.transform, PixelArt.Coin(7, isHubGold), 6, 5, order + 1);
+            Label(go.transform, lbl, 16, 3, textCol, Align.Left, order: order + 1, font: FontKind.DotGothic);
+            return go;
         }
 
         // Key prompt (.hint): keycaps then the action. Returns the x where the next hint can start.
@@ -114,19 +158,19 @@ namespace Obscure
         {
             foreach (var k in keys)
             {
-                int w = Mathf.Max(11, PixelFont.Measure(k) + 6);
-                Badge(parent, k, x, y, w, 11, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1);
+                int w = Mathf.Max(11, PixelFont.Measure(k, FontKind.DotGothic) + 6);
+                Badge(parent, k, x, y, w, 11, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.DotGothic);
                 x += w + 2;
             }
-            Label(parent, action, x + 2, y + 2, Palette.Mist2);
-            return x + 2 + PixelFont.Measure(action) + 14;
+            Label(parent, action, x + 2, y + 2, Palette.Mist2, font: FontKind.DotGothic);
+            return x + 2 + PixelFont.Measure(action, FontKind.DotGothic) + 14;
         }
 
         // Square chip
         public static SpriteRenderer Badge(Transform parent, string text, int x, int y, int w, int h, Color fill, Color border, Color textColor, Align align = Align.Center, int order = Widget, FontKind font = FontKind.Interface)
         {
             var box = Image(parent, PixelArt.Badge(w, h, fill, border), x, y, order);
-            int gHeight = font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
+            int gHeight = font == FontKind.DotGothic ? PixelFont.DotGothicGlyphHeight : font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
             Label(parent, text, align == Align.Center ? x + w / 2 : align == Align.Right ? x + w - 3 : x + 3, y + (h - gHeight) / 2, textColor, align, order: order + 1, font: font);
             return box;
         }

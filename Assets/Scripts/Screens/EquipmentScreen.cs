@@ -105,9 +105,9 @@ namespace Obscure
             menu = Root.gameObject.AddComponent<Menu>();
             menu.onBack = () => Game.Go(returnState);
 
-            // 1. Header: back, title, party portrait switcher, equipment bag
-            var backBtn = Ui.Button(Root, "BACK", 12, 8, 46, () => Game.Go(returnState), 20, showCursor: false);
-            Ui.Label(Root, "EQUIPMENT", 66, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            // 1. Header: back, title, party portrait switcher, equipment bag per FELNA — UI System (Page 11)
+            var backBtn = Ui.Button(Root, "BACK", 12, 8, 46, () => Game.Go(returnState), 20, showCursor: false, font: FontKind.DotGothic);
+            Ui.Label(Root, "EQUIPMENT", 66, 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
             var prevHeroBtn = Ui.Button(Root, "<", 214, 9, 20, () => SwitchHero(-1), 20, showCursor: false);
             for (int i = 0; i < party.Count && i < portraitBoxes.Length; i++)
             {

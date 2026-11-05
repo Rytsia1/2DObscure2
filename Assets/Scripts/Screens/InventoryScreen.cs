@@ -72,20 +72,20 @@ namespace Obscure
             Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
             // 1. Header: title + equipment bag capacity
-            headerTitle = Ui.Label(Root, "INVENTORY", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
-            Ui.Label(Root, "EQUIPMENT BAG", 388, 14, Palette.Mist3);
+            headerTitle = Ui.Label(Root, "INVENTORY", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
+            Ui.Label(Root, "EQUIPMENT BAG", 388, 14, Palette.Mist3, font: FontKind.DotGothic);
             capacityBar = Ui.Image(Root, null, 470, 13, Ui.Widget);
-            capacityLabel = Ui.Label(Root, "", 628, 14, Palette.Gold1, Align.Right);
+            capacityLabel = Ui.Label(Root, "", 628, 14, Palette.Gold1, Align.Right, font: FontKind.DotGothic);
 
             // 2. Category tabs over the item list
-            tabEquipBtn = Ui.Button(Root, "EQUIPMENT", 12, 36, 86, () => SelectCategory(InventoryCategory.Equipment), 20, showCursor: false);
-            tabConsumableBtn = Ui.Button(Root, "CONSUMABLES", 100, 36, 96, () => SelectCategory(InventoryCategory.Consumables), 20, showCursor: false);
-            tabMaterialBtn = Ui.Button(Root, "MATERIALS", 198, 36, 86, () => SelectCategory(InventoryCategory.Materials), 20, showCursor: false);
-            tabKeyBtn = Ui.Button(Root, "KEY ITEMS", 286, 36, 84, () => SelectCategory(InventoryCategory.KeyItems), 20, showCursor: false);
+            tabEquipBtn = Ui.Button(Root, "EQUIPMENT", 12, 36, 86, () => SelectCategory(InventoryCategory.Equipment), 20, showCursor: false, font: FontKind.DotGothic);
+            tabConsumableBtn = Ui.Button(Root, "CONSUMABLES", 100, 36, 96, () => SelectCategory(InventoryCategory.Consumables), 20, showCursor: false, font: FontKind.DotGothic);
+            tabMaterialBtn = Ui.Button(Root, "MATERIALS", 198, 36, 86, () => SelectCategory(InventoryCategory.Materials), 20, showCursor: false, font: FontKind.DotGothic);
+            tabKeyBtn = Ui.Button(Root, "KEY ITEMS", 286, 36, 84, () => SelectCategory(InventoryCategory.KeyItems), 20, showCursor: false, font: FontKind.DotGothic);
 
             Ui.Panel(Root, 12, 56, 380, 246);
-            sortBtn = Ui.Button(Root, "SORT: RARITY", 20, 63, 176, CycleSortMode, 18, showCursor: false);
-            filterBtn = Ui.Button(Root, "FILTER: ALL", 202, 63, 182, CycleFilter, 18, showCursor: false);
+            sortBtn = Ui.Button(Root, "SORT: RARITY", 20, 63, 176, CycleSortMode, 18, showCursor: false, font: FontKind.DotGothic);
+            filterBtn = Ui.Button(Root, "FILTER: ALL", 202, 63, 182, CycleFilter, 18, showCursor: false, font: FontKind.DotGothic);
             Ui.Rect(Root, 18, 85, 368, 1, Palette.Ink4);
 
             var menu = Root.gameObject.AddComponent<Menu>();
@@ -115,8 +115,8 @@ namespace Obscure
             // 3. Item details (gold frame)
             Ui.Panel(Root, 398, 36, 230, 266, Palette.Ink2, Palette.Gold3);
             Ui.Header(Root, "ITEM DETAILS", 412, 44, 218);
-            detailName = Ui.Label(Root, "", 408, 62, Palette.Gold2, Align.Left, 1, FontKind.Serif);
-            detailTypeRarity = Ui.Label(Root, "", 408, 76, Palette.Mist3);
+            detailName = Ui.Label(Root, "", 408, 62, Palette.Gold2, Align.Left, 1, FontKind.DotGothic);
+            detailTypeRarity = Ui.Label(Root, "", 408, 76, Palette.Mist3, font: FontKind.DotGothic);
             Ui.Rect(Root, 404, 88, 218, 1, Palette.Ink4);
             detailBaseStats = Ui.Label(Root, "", 408, 94, Palette.Mist1);
             Ui.Rect(Root, 404, 128, 218, 1, Palette.Ink4);

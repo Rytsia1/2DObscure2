@@ -43,7 +43,7 @@ namespace Obscure
             {
                 Close();
                 onConfirm?.Invoke();
-            }, btnH, showCursor: false, style: ButtonStyle.Primary);
+            }, btnH, showCursor: false, style: ButtonStyle.Danger);
 
             menu.Add(cancelBtn);
             menu.Add(confirmBtn);
@@ -70,7 +70,7 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
 
-            Ui.Label(Root, "SANCTUARY HUB — SAVE CAMPAIGN", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.Serif);
+            Ui.Label(Root, "SANCTUARY HUB — SAVE CAMPAIGN", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
             Ui.Divider(Root, 100, 36, 440, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
             // Left column (x: 20): AutoSave + Slot 1 + Slot 2
@@ -278,7 +278,7 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
 
-            Ui.Label(Root, "LOAD CAMPAIGN PROGRESS", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.Serif);
+            Ui.Label(Root, "LOAD CAMPAIGN PROGRESS", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
             Ui.Divider(Root, 100, 36, 440, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
             // Left column: AutoSave + Slot 1 + Slot 2

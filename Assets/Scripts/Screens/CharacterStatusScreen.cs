@@ -64,15 +64,15 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            // 1. Header: title + service shortcuts
-            Ui.Label(Root, "STATUS", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
-            var skillsBtn = Ui.Button(Root, "SKILLS", 336, 8, 66, () => Game?.Go(GameState.Skills), 20, showCursor: false);
+            // 1. Header: title + service shortcuts per FELNA — UI System (Page 10)
+            Ui.Label(Root, "STATUS", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
+            var skillsBtn = Ui.Button(Root, "SKILLS", 336, 8, 66, () => Game?.Go(GameState.Skills), 20, showCursor: false, font: FontKind.DotGothic);
             skillsBtn.tooltip = "VIEW & UPGRADE SKILL TREES AND SP";
-            var talentsBtn = Ui.Button(Root, "TALENTS", 408, 8, 68, () => Game?.Go(GameState.Talents), 20, showCursor: false);
+            var talentsBtn = Ui.Button(Root, "TALENTS", 408, 8, 68, () => Game?.Go(GameState.Talents), 20, showCursor: false, font: FontKind.DotGothic);
             talentsBtn.tooltip = "VIEW & SELECT HERO TALENT MILESTONES";
-            var gearBtn = Ui.Button(Root, "LOADOUT", 482, 8, 68, () => Game?.Go(GameState.Equipment), 20, showCursor: false);
+            var gearBtn = Ui.Button(Root, "LOADOUT", 482, 8, 68, () => Game?.Go(GameState.Equipment), 20, showCursor: false, font: FontKind.DotGothic);
             gearBtn.tooltip = "VIEW & MODIFY HERO EQUIPMENT LOADOUT";
-            var itemsBtn = Ui.Button(Root, "SATCHEL", 556, 8, 68, () => Game?.Go(GameState.Inventory), 20, showCursor: false);
+            var itemsBtn = Ui.Button(Root, "SATCHEL", 556, 8, 68, () => Game?.Go(GameState.Inventory), 20, showCursor: false, font: FontKind.DotGothic);
             itemsBtn.tooltip = "INVENTORY (EQUIPMENT, CONSUMABLES, MATERIALS, KEYS)";
 
             // 2. Identity column (gold frame): portrait, name, race/class, vitals
@@ -81,21 +81,21 @@ namespace Obscure
             Ui.Rect(Root, 14, 138, 136, 1, Palette.Ink4);
             portrait = Ui.Image(Root, PixelArt.FromRows(CurrentUnit.sprite), 62, 84, Ui.Widget);
             portrait.transform.localScale = new Vector3(2, 2, 1);
-            HeaderLabel = Ui.Label(Root, "", 20, 146, Palette.Mist1, Align.Left, 1, FontKind.Serif);
-            IdentityLabel = Ui.Label(Root, "", 20, 162, Palette.Mist2);
-            Ui.Label(Root, "HP", 20, 180, Palette.Mist3);
+            HeaderLabel = Ui.Label(Root, "", 20, 146, Palette.Mist1, Align.Left, 1, FontKind.DotGothic);
+            IdentityLabel = Ui.Label(Root, "", 20, 162, Palette.Mist2, font: FontKind.DotGothic);
+            Ui.Label(Root, "HP", 20, 180, Palette.Mist3, font: FontKind.DotGothic);
             hpBar = Ui.Image(Root, null, 36, 180, Ui.Widget);
-            Ui.Label(Root, "MP", 20, 194, Palette.Mist3);
+            Ui.Label(Root, "MP", 20, 194, Palette.Mist3, font: FontKind.DotGothic);
             mpBar = Ui.Image(Root, null, 36, 194, Ui.Widget);
-            vitals = Ui.Label(Root, "", 20, 208, Palette.Mist1);
+            vitals = Ui.Label(Root, "", 20, 208, Palette.Mist1, font: FontKind.DotGothic);
 
             // 3. Attributes panel: 6 primary ability scores
             Ui.Panel(Root, 160, 36, 150, 200);
-            Ui.Header(Root, "ATTRIBUTES", 174, 44, 138);
+            Ui.Header(Root, "ATTRIBUTES", 174, 44, 138, font: FontKind.DotGothic);
 
             // 4. Derived combat stats panel: 16 stats in two columns
             Ui.Panel(Root, 316, 36, 312, 200);
-            Ui.Header(Root, "DERIVED COMBAT STATS", 330, 44, 300);
+            Ui.Header(Root, "DERIVED COMBAT STATS", 330, 44, 300, font: FontKind.DotGothic);
 
             // 5. Tooltip card (.tip): formula / explanation for the focused row
             Ui.Image(Root, PixelArt.Box(468, 84, Palette.Ink2, Palette.Mist3), 160, 242, Ui.Panels + 1);

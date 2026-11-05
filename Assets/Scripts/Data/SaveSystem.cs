@@ -327,12 +327,20 @@ namespace Obscure
 
             var invData = run.Inventory != null ? run.Inventory.ToSaveData() : new InventorySaveData();
 
+            int nextAct = activeCommittedSnapshot != null
+                ? activeCommittedSnapshot.nextDungeonAct
+                : run.Act;
+
+            int comAct = activeCommittedSnapshot != null
+                ? activeCommittedSnapshot.committedAct
+                : run.Act;
+
             return new CampaignSaveData
             {
                 hasConfirmedParty = true,
                 seed = run.Seed,
-                committedAct = run.Act,
-                nextDungeonAct = Math.Min(8, run.Act + 1),
+                committedAct = comAct,
+                nextDungeonAct = nextAct,
                 hubGold = run.Gold,
                 playtimeSeconds = SaveManager.TotalPlaytimeSeconds,
                 party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
@@ -348,7 +356,9 @@ namespace Obscure
             };
         }
 
-        public static CampaignSaveData CreateNewGameCommittedSnapshot(IReadOnlyList<CharacterDef> confirmedParty, int seed = 1)
+        public const int StarterGold = 600;
+
+        public static CampaignSaveData CreateNewGameCommittedSnapshot(IReadOnlyList<CharacterDef> confirmedParty, int seed = 1, int starterGold = StarterGold)
         {
             if (confirmedParty == null || confirmedParty.Count != CharacterRoster.PartySize)
                 throw new InvalidOperationException($"Cannot create snapshot with incomplete party (requires {CharacterRoster.PartySize}).");
@@ -359,7 +369,7 @@ namespace Obscure
                 seed = seed,
                 committedAct = 1,
                 nextDungeonAct = 1,
-                hubGold = 0,
+                hubGold = starterGold,
                 playtimeSeconds = 0f,
                 party = confirmedParty.Select(c => SavedCharacterData.FromCharacterDef(c)).ToArray(),
                 inventoryEquipment = Array.Empty<EquipmentInstanceSaveData>(),
@@ -381,6 +391,8 @@ namespace Obscure
 
             // 2. Build new committed baseline from current run state
             activeCommittedSnapshot = CreateCommittedSnapshot(run);
+            activeCommittedSnapshot.committedAct = run.Act;
+            activeCommittedSnapshot.nextDungeonAct = Math.Min(8, run.Act + 1);
         }
 
         // Section 3.2 & 5.4 / 5.5: Discards uncommitted current-dungeon progress and restores committed baseline

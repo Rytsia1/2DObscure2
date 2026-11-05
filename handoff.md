@@ -1,9 +1,9 @@
 # PROJECT HANDOFF & AGENT ONBOARDING CONTEXT
 **Project:** 2DObscure — 2D Turn-Based Roguelike RPG in Unity  
-**Updated:** 2026-11-05 (Felna Save File System & UI Implementation, 5 Save Slots, Hub-Only Saving, Dungeon Commitment Boundary, 292 Passing Tests)  
+**Updated:** 2026-11-05 (Character Creation to Hub Flow, 600 Starter Gold, 394 Passing Tests)  
 **Target Engine:** Unity 6000.3.16f1 (URP 2D, Pixel Perfect Camera)  
 **Primary Language:** C# (.NET Standard 2.1 / C# 9.0+)  
-**Test Suite Status:** **292 / 292 EditMode Tests Passing (100% Pass Rate, 0 Failures)**  
+**Test Suite Status:** **394 / 394 EditMode Tests Passing (100% Pass Rate, 0 Failures)**  
 **Working Tree State:** All changes uncommitted in working tree per `AGENTS.md` guidelines.
 
 ---
@@ -22,7 +22,7 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 - **Races & Classes:** 7 Playable Races with signature Racial Feats and strict +2 attribute point budgets; 9 Playable Classes with signature Starter Passives and Strict Weapon Compatibility.
 - **Combat & Damage:** Consolidated Damage System v1.0 (Physical, Elemental, Almighty — no "Magical" category; Nature is Druid-themed Elemental damage).
 - **Point Buy:** 27-point budget, 6 Primary Ability Scores (STR, DEX, VIT, INT, WIS, CHA) ranging 8–15 prior to racial modifiers.
-- **UI Architecture:** Custom pure sprite-based pixel UI rendered top-left at $640 \times 360$ reference resolution ($\text{PPU} = 1$), driven by [`PixelFont.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/PixelFont.cs), [`Ui.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs), and dedicated screen controllers.
+- **UI Architecture:** Custom procedural sprite-based pixel UI rendered top-left at $640 \times 360$ reference resolution ($\text{PPU} = 1$), driven by [`PixelFont.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/PixelFont.cs), [`Ui.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/Ui.cs), [`Palette.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/Palette.cs), [`PixelArt.cs`](file:///f:/Folder%20dio/Portofolio/2DObscure/2DObscure/Assets/Scripts/Render/PixelArt.cs), and dedicated screen controllers.
 
 ---
 
@@ -44,7 +44,7 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 4. **Save & Load UI Screens:**
    - `SaveScreen.cs`: 2-column card layout displaying 5 slots, metadata, and Save / Overwrite / Delete actions.
    - `LoadScreen.cs`: Slot selection, metadata inspection, disabled empty slots, and Load action returning to Hub.
-   - `ConfirmationModal`: Reusable modal dialog for Overwrite, Delete, Load, and Abandon operations.
+   - `ConfirmationModal`: Reusable modal dialog for Overwrite, Delete, Load, and Abandon operations with `ButtonStyle.Danger`.
    - `MainMenuScreen.cs`: Added `LOAD GAME` and rewired `CONTINUE` to load the latest valid save into the Hub.
    - `HubScreen.cs`: Added `SAVE`, `LOAD`, and `TITLE` utility buttons with Auto Save lifecycle triggers (dungeon clear, abandonment, pre-embark, and hub transactions).
    - `MapScreen.cs`: Added `RETURN TO HUB` (Abandon Expedition) button with confirmation modal.
@@ -61,6 +61,44 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 5. **Control Effect Non-Stacking & Immunity (Bab 11 §8.1):** 1-turn immunity on expiration/cleansing.
 6. **Talent Respec via Scroll of Emptiness (Bab 9 §5):** Consumable to reset and refund allocated talent slots.
 
+### Milestone C: FELNA — UI System & DotGothic16 Font Integration — Nov 2026
+1. **DotGothic16 Procedural Pixel Font Engine (`PixelFont.cs`):**
+   - Added `FontKind.DotGothic` (alias `FontKind.DotGothic16`).
+   - Authentic 10px glyph height (`DotGothicGlyphHeight = 10, DotGothicLineHeight = 13`), scaling cleanly across 720p/1080p target displays.
+   - 103 high-legibility pixel glyphs: Uppercase A–Z, Lowercase a–z, Numerals 0–9, full punctuation, and game symbols (`▲`, `▼`, `●`, `◆`, `★`, `✓`, `×`, `▸`, `·`).
+   - Backwards compatible with existing `FontKind.Interface` and `FontKind.Serif`.
+2. **Starlit Reliquary Design Tokens (`Palette.cs`):**
+   - **Inks:** `Ink0` (#070A14), `Ink1` (#0C1122), `Ink2` (#121A31), `Ink3` (#1A2443), `Ink4` (#25315A), `Ink5` (#3A4878).
+   - **Mists:** `Mist1` (#EEF0F8), `Mist2` (#C3C9DE), `Mist3` (#8F98B8).
+   - **Golds:** `Gold1` (#FFE6A3), `Gold2` (#F2C25B), `Gold3` (#C9932E), `Gold4` (#7A5717).
+   - **Embers:** `Ember1` (#FFC196), `Ember2` (#EF8A3C), `Ember3` (#8A4317).
+   - **Vitals:** `Hp` (#52D18C), `HpLow` (#FF6A55), `Mp` (#5AA2FF), `Xp` (#C79BFF), `Shield` (#9FE3FF).
+   - **Semantics:** `Ok` (#52D18C), `Err` (#FF6A55), `Warn` (#FFB84D).
+   - **Elements & Rarities:** Canonical color tokens and helper methods `Palette.ForHp(cur, max)`, `Palette.ForElement(el)`, `Palette.ElementCode(el)`, `Palette.ForRarity(r)`, `Palette.RarityBadge(r)`, and `Palette.ForClass(classId)`.
+3. **Procedural UI Components (`PixelArt.cs` & `Ui.cs`):**
+   - `PixelArt.NotchedBox`: 2px notched corners for enemy and threat cards (`.ec`).
+   - `PixelArt.DoubleBorderBox`: Concentric double borders for Legendary and Mythic items.
+   - `PixelArt.DangerBox` & `ButtonStyle.Danger`: High-contrast warning style for destructive actions (Delete Save, Abandon Expedition).
+   - `PixelArt.Coin`: Solid gold disc for Hub Gold vs dashed ember diamond for Run Gold.
+   - `Ui.EnemyCard`, `Ui.DoubleBorderCard`, `Ui.StatusBadge`, and `Ui.CurrencyTag`.
+4. **Comprehensive Screen Upgrades:**
+   - Updated headers, labels, buttons, badges, and readouts across all 16 screen controllers:
+     `MainMenuScreen.cs`, `HubScreen.cs`, `CombatScreen.cs`, `InventoryScreen.cs`, `CharacterStatusScreen.cs`, `EquipmentScreen.cs`, `ShopScreen.cs`, `RewardScreen.cs`, `SaveScreens.cs`, `EventScreen.cs`, `RestScreen.cs`, `SettingsScreen.cs`, `EndScreen.cs`, `CharacterCreationScreen.cs`, `SkillTreeScreen.cs`, and `TalentScreen.cs`.
+5. **UI Test Suite (`FelnaUiSystemTests` in `SaveSystemTests.cs`):**
+   - 7 dedicated automated tests covering glyph rendering, font metrics, palette color tokens, element/rarity mappings, UI components, and screen instantiation.
+
+### Milestone D: Character Creation to Hub Flow & 600 Starter Gold — Nov 2026
+1. **Direct Hub Entry Flow:**
+   - Upon confirming the 4-hero party in `CharacterCreationScreen.cs`, players transition directly into the Sanctuary Hub (`GameState.Hub`) via `Game.EnterHubFromCreation()`.
+2. **600 Starter Gold Economy:**
+   - Players begin their campaign with **600 Starter Gold** (`PersistenceCommitHandler.StarterGold = 600`, `GameSave.StarterGold = 600`).
+   - `Run.Gold = 600`, `Run.HubGold = 600`, and committed snapshot `hubGold = 600`.
+   - Dedicated AutoSave slot is automatically written upon Hub arrival with the 4 confirmed heroes and 600 Hub Gold.
+3. **Non-Skipping Dungeon Embarkation:**
+   - Embark button (`EMBARK >>` in `HubScreen.cs`) inspects `ActiveCommittedSnapshot.nextDungeonAct` (Act 1 for brand new games), embarking directly to Dungeon 1 (Act 1) with starter gold intact.
+4. **Test Suite Expansion:**
+   - Added `NewGame_PartyConfirmation_Grants600StarterGold_AndInitializesSnapshot` and `CharacterCreation_EnterHubFromCreation_TransitionsToHubWith600Gold`, raising EditMode test count to 394 tests (100% pass rate).
+
 ---
 
 ## 3. Directory Structure & Key Files
@@ -69,10 +107,10 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 2DObscure/
 ├── AGENTS.md                                                                # Strict agent security & git commit guidelines (NO AUTO-COMMIT)
 ├── handoff.md                                                               # Project handoff documentation
-├── handsoff.md                                                              # Legacy mirror of handoff documentation
 ├── Assets/
 │   ├── Docs/
 │   │   ├── GDD_Terbaru.md                                                   # Master Game Design Document (v1.5, Nov 2026)
+│   │   ├── FELNA — UI System.html                                           # Complete UI System specification (44 pages)
 │   │   ├── Felna_Save_File_System_and_UI_Specification.md                   # Save System & UI Specification
 │   │   ├── Felna_Items_and_Equipment_Catalogue_v2_Cursed_Equipment.xlsx     # 89 Items & Cursed Equipment Catalogue
 │   │   ├── Felna_Layer1_Relic_Framework_31_Relics_No_Mourners_Coin.xlsx     # 31 Layer 1 Relics with Demerits & Magic Shop
@@ -101,6 +139,11 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 │   │   │   ├── InventorySystem.cs                                           # InventoryRuntime, EquipmentInstance, ScrollOfEmptiness
 │   │   │   ├── TalentSystem.cs                                              # TalentProgression, Respec, Milestones
 │   │   │   └── DifficultySystem.cs                                          # Difficulty presets & modifiers
+│   │   ├── Render/
+│   │   │   ├── PixelFont.cs                                                 # Multi-font pixel engine: DotGothic16, Interface, Serif
+│   │   │   ├── Palette.cs                                                   # Starlit Reliquary design tokens, inks, mists, golds, embers, vitals
+│   │   │   ├── PixelArt.cs                                                  # Procedural shapes, NotchedBox, DoubleBorderBox, DangerBox, Coin
+│   │   │   └── Ui.cs                                                        # UI primitives, Buttons, Badges, Cards, CurrencyTags, Headers
 │   │   ├── Run/
 │   │   │   ├── RelicManager.cs                                              # 31 Relics manager, Demerits, Cursed equipment hooks, replace relic
 │   │   │   ├── RelicInstance.cs                                             # Runtime relic state & counter serialization
@@ -111,10 +154,21 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 │   │       ├── SaveScreens.cs                                               # SaveScreen, LoadScreen, ConfirmationModal
 │   │       ├── MapScreen.cs                                                 # Node exploration UI & Return to Hub (Abandon)
 │   │       ├── InventoryScreen.cs                                           # Inventory UI
-│   │       └── BattleScreen.cs                                              # Combat UI & timeline
+│   │       ├── CombatScreen.cs                                              # Combat UI & timeline
+│   │       ├── CharacterStatusScreen.cs                                     # Hero status & attribute sheet
+│   │       ├── EquipmentScreen.cs                                           # Equipment management UI
+│   │       ├── ShopScreen.cs                                                # Wandering caravan & facility shop UI
+│   │       ├── RewardScreen.cs                                              # Victory spoils & card selection
+│   │       ├── RestScreen.cs                                                # Campfire sanctuary UI
+│   │       ├── EventScreen.cs                                               # Narrative choices UI
+│   │       ├── SettingsScreen.cs                                            # Audio, video, and gameplay preferences
+│   │       ├── EndScreen.cs                                                 # Victory/Defeat summary
+│   │       ├── CharacterCreationScreen.cs                                   # Point-buy & roster generation UI
+│   │       ├── SkillTreeScreen.cs                                           # Skill acquisition UI
+│   │       └── TalentScreen.cs                                              # Hero talent selection & respec UI
 │   └── Tests/
 │       └── Editor/
-│           ├── SaveSystemTests.cs                                           # 15 Acceptance criteria tests for Save/Load System & UI
+│           ├── SaveSystemTests.cs                                           # 15 Save criteria tests + 9 FelnaUiSystemTests (Hub flow & Starter Gold)
 │           ├── Layer1RelicTests.cs                                          # 31 Relics, capacity, permanent persistence, replace tests
 │           ├── CursedEquipmentAndSystemRevisionTests.cs                     # 17 Cursed EQ, scaling, initiative, respec, control effects
 │           ├── BattleTests.cs                                               # Turn order, combat actions
@@ -134,14 +188,13 @@ The test suite is verified directly inside the running Unity Editor using `Unity
 ```text
 ======================================================
 TEST RUN RESULT: PASSED (100% Pass Rate)
-Total Tests: 292
-Passed: 292
+Total Tests: 394
+Passed: 394
 Failed: 0
 Inconclusive: 0
 Skipped: 0
-Duration: 2.68s
 ======================================================
-All 292 EditMode tests in 2DObscure passed with 0 failures!
+All 394 EditMode tests in 2DObscure passed with 0 failures!
 ```
 
 ---

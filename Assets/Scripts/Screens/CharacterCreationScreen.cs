@@ -90,8 +90,8 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            // 1. Header: title, current step chip, remaining point-buy budget
-            Ui.Label(Root, "CREATE CHARACTER", 12, 6, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            // 1. Header: title, current step chip, remaining point-buy budget per FELNA — UI System (Page 05-07)
+            Ui.Label(Root, "CREATE CHARACTER", 12, 6, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
             StepLabel = Ui.Label(Root, "", 360, 10, Palette.Mist2, Align.Center);
             RemainingPointsLabel = Ui.Label(Root, "", 626, 10, Palette.Gold1, Align.Right);
 
@@ -212,7 +212,7 @@ namespace Obscure
             menu.Add(randAllBtn);
 
             startBtn = Ui.Button(Root, "CONFIRM 4", 484, 266, 136, () => TryConfirmPartyAndBegin(out _), 22, showCursor: false);
-            startBtn.tooltip = "CONFIRM 4-HERO PARTY, SAVE GAME & START PROLOGUE";
+            startBtn.tooltip = "CONFIRM 4-HERO PARTY, RECEIVE 600 STARTER GOLD & ENTER SANCTUARY HUB";
             menu.Add(startBtn);
 
             Builder.Changed += Refresh;
@@ -559,7 +559,14 @@ namespace Obscure
             Sfx.Play(Sound.Success);
             SetHint(Builder.LastFeedback);
             Refresh();
-            Game?.BeginOpeningSequence();
+            if (Game != null)
+            {
+                Game.EnterHubFromCreation();
+            }
+            else
+            {
+                Game?.Go(GameState.Hub);
+            }
             return true;
         }
 
@@ -584,7 +591,14 @@ namespace Obscure
                 Refresh();
                 return false;
             }
-            Game?.BeginFirstExpedition();
+            if (Game != null)
+            {
+                Game.EnterHubFromCreation();
+            }
+            else
+            {
+                Game?.BeginFirstExpedition();
+            }
             return true;
         }
 

@@ -31,30 +31,30 @@ namespace Obscure
             armoryStock = EquipmentShopManager.GenerateShop(Run?.Act ?? 1, itemCount: 6);
             Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
 
-            // Header banner
-            Ui.Label(Root, "SANCTUARY HUB - EXPEDITION BASE", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.Serif);
+            // Header banner per FELNA — UI System (Page 09: Geistwald City Hub)
+            Ui.Label(Root, "GEISTWALD CITY — SANCTUARY HUB", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
             Ui.Divider(Root, 120, 36, 400, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
-            // Hub Gold badge
+            // Hub Gold badge (solid gold frame)
             int currentGold = Run != null ? Run.Gold : 0;
             Ui.Panel(Root, 460, 10, 164, 24, Palette.Hex(0x1C2210), Palette.Gold1);
-            hubGoldLabel = Ui.Label(Root, $"{currentGold} GOLD", 542, 16, Palette.Gold1, Align.Center);
+            hubGoldLabel = Ui.Label(Root, $"{currentGold:#,##0} HUB GOLD", 542, 16, Palette.Gold1, Align.Center, font: FontKind.DotGothic);
 
             // Navigation bar: 5 Facilities + Embark
             var navMenu = Root.gameObject.AddComponent<Menu>();
             int btnW = 84;
-            var shopBtn = Ui.Button(Root, "SHOP", 20, 48, btnW, () => SwitchFacility(HubFacility.Shop), 20, style: activeFacility == HubFacility.Shop ? ButtonStyle.Primary : ButtonStyle.Slab);
-            var armoryBtn = Ui.Button(Root, "ARMORY", 108, 48, btnW, () => SwitchFacility(HubFacility.Armory), 20, style: activeFacility == HubFacility.Armory ? ButtonStyle.Primary : ButtonStyle.Slab);
-            var blacksmithBtn = Ui.Button(Root, "BLACKSMITH", 196, 48, 92, () => SwitchFacility(HubFacility.Blacksmith), 20, style: activeFacility == HubFacility.Blacksmith ? ButtonStyle.Primary : ButtonStyle.Slab);
-            var trainingBtn = Ui.Button(Root, "TRAINING", 292, 48, btnW, () => SwitchFacility(HubFacility.TrainingGround), 20, style: activeFacility == HubFacility.TrainingGround ? ButtonStyle.Primary : ButtonStyle.Slab);
-            var templeBtn = Ui.Button(Root, "TEMPLE", 380, 48, btnW, () => SwitchFacility(HubFacility.Temple), 20, style: activeFacility == HubFacility.Temple ? ButtonStyle.Primary : ButtonStyle.Slab);
+            var shopBtn = Ui.Button(Root, "SHOP", 20, 48, btnW, () => SwitchFacility(HubFacility.Shop), 20, style: activeFacility == HubFacility.Shop ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
+            var armoryBtn = Ui.Button(Root, "ARMORY", 108, 48, btnW, () => SwitchFacility(HubFacility.Armory), 20, style: activeFacility == HubFacility.Armory ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
+            var blacksmithBtn = Ui.Button(Root, "BLACKSMITH", 196, 48, 92, () => SwitchFacility(HubFacility.Blacksmith), 20, style: activeFacility == HubFacility.Blacksmith ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
+            var trainingBtn = Ui.Button(Root, "TRAINING", 292, 48, btnW, () => SwitchFacility(HubFacility.TrainingGround), 20, style: activeFacility == HubFacility.TrainingGround ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
+            var templeBtn = Ui.Button(Root, "TEMPLE", 380, 48, btnW, () => SwitchFacility(HubFacility.Temple), 20, style: activeFacility == HubFacility.Temple ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
             navMenu.Add(shopBtn);
             navMenu.Add(armoryBtn);
             navMenu.Add(blacksmithBtn);
             navMenu.Add(trainingBtn);
             navMenu.Add(templeBtn);
 
-            var embarkBtn = Ui.Button(Root, "EMBARK >>", 480, 48, 140, OnEmbarkClicked, 22, style: ButtonStyle.Primary);
+            var embarkBtn = Ui.Button(Root, "EMBARK >>", 480, 48, 140, OnEmbarkClicked, 22, style: ButtonStyle.Primary, font: FontKind.DotGothic);
             navMenu.Add(embarkBtn);
 
             Ui.Divider(Root, 20, 72, 600, Palette.DarkBorder, Palette.AntiqueGoldDim);
@@ -64,7 +64,7 @@ namespace Obscure
 
             // Right panel (200x230): Party Status
             Ui.Panel(Root, 420, 76, 200, 230, Palette.DeepCharcoal, Palette.DarkBorder);
-            Ui.Label(Root, "EXPEDITION ROSTER", 430, 84, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Label(Root, "EXPEDITION ROSTER", 430, 84, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.DotGothic);
             Ui.Divider(Root, 430, 98, 180, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
@@ -72,18 +72,19 @@ namespace Obscure
             {
                 var u = party[i];
                 int y = 108 + i * 42;
-                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 100), 430, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.Serif);
-                partyStatusRows[i] = Ui.Label(Root, u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)", 610, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Right);
-                partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(180, 5, u.Alive ? Palette.Emerald : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 430, y + 14, Ui.Widget);
+                Color hpCol = Palette.ForHp(u.hp, u.stats.maxHp);
+                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 100, FontKind.DotGothic), 430, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.DotGothic);
+                partyStatusRows[i] = Ui.Label(Root, u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)", 610, y, u.Alive ? hpCol : Palette.SpecCrimson, Align.Right, font: FontKind.DotGothic);
+                partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(180, 5, u.Alive ? hpCol : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 430, y + 14, Ui.Widget);
             }
 
             // Bottom bar: feedback & Hub utility buttons
-            feedbackLabel = Ui.Label(Root, "WELCOME TO THE HUB. PREPARE GEAR, HEAL, UPGRADE, AND TRAIN BEFORE EMBARKING.", 24, 316, Palette.WarmIvory, Align.Left);
+            feedbackLabel = Ui.Label(Root, "WELCOME TO THE HUB. PREPARE GEAR, HEAL, UPGRADE, AND TRAIN BEFORE EMBARKING.", 24, 316, Palette.WarmIvory, Align.Left, font: FontKind.DotGothic);
 
             var utilMenu = Root.gameObject.AddComponent<Menu>();
-            var saveBtn = Ui.Button(Root, "SAVE", 430, 312, 56, () => Game.Go(GameState.Save), 22, style: ButtonStyle.Slab);
-            var loadBtn = Ui.Button(Root, "LOAD", 490, 312, 56, () => Game.Go(GameState.Load), 22, style: ButtonStyle.Slab);
-            var titleBtn = Ui.Button(Root, "TITLE", 550, 312, 70, OnTitleClicked, 22, style: ButtonStyle.Slab);
+            var saveBtn = Ui.Button(Root, "SAVE", 430, 312, 56, () => Game.Go(GameState.Save), 22, style: ButtonStyle.Slab, font: FontKind.DotGothic);
+            var loadBtn = Ui.Button(Root, "LOAD", 490, 312, 56, () => Game.Go(GameState.Load), 22, style: ButtonStyle.Slab, font: FontKind.DotGothic);
+            var titleBtn = Ui.Button(Root, "TITLE", 550, 312, 70, OnTitleClicked, 22, style: ButtonStyle.Slab, font: FontKind.DotGothic);
             utilMenu.Add(saveBtn);
             utilMenu.Add(loadBtn);
             utilMenu.Add(titleBtn);
@@ -307,15 +308,21 @@ namespace Obscure
             // Pre-embark auto save (Hub lifecycle trigger)
             SaveManager.AutoSave(out _);
 
-            int nextAct = Run.Act + 1;
-            if (nextAct > 8)
+            int targetAct = PersistenceCommitHandler.ActiveCommittedSnapshot != null
+                ? PersistenceCommitHandler.ActiveCommittedSnapshot.nextDungeonAct
+                : Run.Act;
+
+            if (targetAct > 8)
             {
                 Game.Go(GameState.Victory);
                 return;
             }
 
-            var nextMap = MapGenerator.Generate(Run.Seed + nextAct, nextAct);
-            Run.AdvanceToNextDungeon(nextMap);
+            if (Run.Map == null || Run.Map.act < targetAct)
+            {
+                var nextMap = MapGenerator.Generate(Run.Seed + targetAct, targetAct);
+                Run.AdvanceToNextDungeon(nextMap);
+            }
             Game.Go(GameState.Map);
         }
 

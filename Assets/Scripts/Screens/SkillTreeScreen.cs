@@ -70,8 +70,8 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            // 1. Header: title, hero switcher, shortcuts, Skill Points badge
-            titleLabel = Ui.Label(Root, "SKILL TREE", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            // 1. Header: title, hero switcher, shortcuts, Skill Points badge per FELNA — UI System (Page 16)
+            titleLabel = Ui.Label(Root, "SKILL TREE", 12, 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
             Ui.Button(Root, "<", 148, 8, 20, () => SwitchHero(-1), 20, showCursor: false);
             heroLabel = Ui.Label(Root, "", 256, 14, Palette.Mist2, Align.Center);
             Ui.Button(Root, ">", 344, 8, 20, () => SwitchHero(1), 20, showCursor: false);
@@ -92,7 +92,7 @@ namespace Obscure
 
             // 3. Details panel (gold): selected skill + actions
             Ui.Panel(Root, 438, 36, 190, 214, Palette.Ink2, Palette.Gold3);
-            detailName = Ui.Label(Root, "SELECT A SKILL", 448, 44, Palette.Gold2, Align.Left, 1, FontKind.Serif);
+            detailName = Ui.Label(Root, "SELECT A SKILL", 448, 44, Palette.Gold2, Align.Left, 1, FontKind.DotGothic);
             detailTierType = Ui.Label(Root, "", 448, 58, Palette.Mist3);
             detailStats = Ui.Label(Root, "", 448, 70, Palette.Mist1);
             detailRank = Ui.Label(Root, "", 448, 82, Palette.Gold3);

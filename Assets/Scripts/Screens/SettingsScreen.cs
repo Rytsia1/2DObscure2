@@ -13,9 +13,10 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
 
-            Ui.Label(Root, "SETTINGS", 14, 12, Palette.Gold2, Align.Left, 2, FontKind.Serif);
+            // Settings per FELNA — UI System (Page 37)
+            Ui.Label(Root, "SETTINGS", 14, 12, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
             Ui.Panel(Root, 12, 40, 616, 262);
-            Ui.Header(Root, "AUDIO, DISPLAY & COMBAT", 26, 49, 604);
+            Ui.Header(Root, "AUDIO, DISPLAY & COMBAT", 26, 49, 604, font: FontKind.DotGothic);
 
             var s = Game?.Settings ?? GameSettings.Load();
             menu = Root.gameObject.AddComponent<Menu>();

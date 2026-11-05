@@ -34,6 +34,7 @@ namespace Obscure
     public class Game : MonoBehaviour
     {
         public static Game I { get; private set; }
+        public static void SetInstance(Game instance) => I = instance;
         public RunState Run { get; private set; }
         public CharacterRoster Roster { get; private set; } = new CharacterRoster();
         public NewGamePartyBuilder NewGameBuilder { get; private set; } = new NewGamePartyBuilder();
@@ -78,6 +79,11 @@ namespace Obscure
             Go(GameState.MainMenu);
         }
 
+        void OnDestroy()
+        {
+            if (I == this) I = null;
+        }
+
         static void SetupCamera()
         {
             var cam = Camera.main;
@@ -119,6 +125,30 @@ namespace Obscure
             Run = restoredRun;
             Go(GameState.Hub);
             return true;
+        }
+
+        // Transitions from confirmed party creation directly to the Sanctuary Hub with 600 starter gold.
+        public void EnterHubFromCreation(int? seed = null)
+        {
+            int s = seed ?? System.Environment.TickCount;
+            if (Roster != null && NewGameBuilder != null && NewGameBuilder.PendingParty.Count == CharacterRoster.PartySize)
+            {
+                Roster.CommitConfirmedParty(NewGameBuilder.PendingParty);
+            }
+
+            var party = NewGameBuilder != null && NewGameBuilder.PendingParty.Count == CharacterRoster.PartySize
+                ? NewGameBuilder.PendingParty
+                : (Roster != null && Roster.GetActiveParty().Count == CharacterRoster.PartySize
+                    ? Roster.GetActiveParty()
+                    : Database.Party.Select(id => Database.Characters[id]).ToList());
+
+            Run = new RunState(MapGenerator.Generate(s, 1), party, s);
+            Run.Gold = PersistenceCommitHandler.StarterGold;
+
+            var snapshot = PersistenceCommitHandler.CreateNewGameCommittedSnapshot(party, s, starterGold: PersistenceCommitHandler.StarterGold);
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(snapshot);
+            Go(GameState.Hub);
+            SaveManager.AutoSave(out _);
         }
 
         // Transitions from confirmed party creation to the Opening Sequence before the first expedition (Section 2 & 12).

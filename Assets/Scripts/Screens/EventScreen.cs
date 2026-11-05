@@ -25,10 +25,10 @@ namespace Obscure
             Illustration(47, 34, 206, 296);
             Ui.Rect(Root, 253, 34, 1, 296, Palette.Ink4);
 
-            Ui.Label(Root, "EVENT", 268, 46, Palette.Gold2);
+            Ui.Label(Root, "EVENT", 268, 46, Palette.Gold2, font: FontKind.DotGothic);
             string title = e.title.ToUpperInvariant();
-            int titleScale = PixelFont.Measure(title, FontKind.Serif) * 2 <= 310 ? 2 : 1;
-            Ui.Label(Root, title, 268, 58, Palette.Gold1, Align.Left, titleScale, FontKind.Serif);
+            int titleScale = PixelFont.Measure(title, FontKind.DotGothic) * 2 <= 310 ? 2 : 1;
+            Ui.Label(Root, title, 268, 58, Palette.Gold1, Align.Left, titleScale, FontKind.DotGothic);
             Ui.Label(Root, PixelFont.Wrap(e.text.ToUpperInvariant(), 310), 268, 84, Palette.Mist2);
             var hint = Ui.Label(Root, "", 268, 286, Palette.Mist3);
             int hx = Ui.KeyHint(Root, 268, 310, "CHOOSE", "ARROWS");

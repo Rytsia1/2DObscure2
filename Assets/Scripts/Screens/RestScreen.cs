@@ -17,13 +17,13 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 32, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.SpecCrimson);
 
-            Ui.Label(Root, "CAMPFIRE SANCTUARY", 320, 18, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.Serif);
+            Ui.Label(Root, "CAMPFIRE SANCTUARY", 320, 18, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
             Ui.Divider(Root, 160, 42, 320, Palette.DarkBorder, Palette.AntiqueGoldBright);
             Ui.Image(Root, PixelArt.FromRows(Art.IconRest), 305, 52, Ui.World).transform.localScale = new Vector3(3, 3, 1);
 
             // Left panel (270x190): Party Vitality
             Ui.Panel(Root, 28, 108, 274, 192, Palette.DeepCharcoal, Palette.DarkBorder);
-            Ui.Label(Root, "PARTY CONDITION", 38, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Label(Root, "PARTY CONDITION", 38, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.DotGothic);
             Ui.Divider(Root, 38, 126, 254, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
@@ -31,7 +31,7 @@ namespace Obscure
             {
                 var u = party[i];
                 int y = 136 + i * 38;
-                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 130), 40, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.Serif);
+                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 130, FontKind.DotGothic), 40, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.DotGothic);
                 hpRows[i] = Ui.Label(Root, "", 290, y, Palette.WarmIvory, Align.Right);
                 hpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(250, 7, Palette.Emerald, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 40, y + 16, Ui.Widget);
             }

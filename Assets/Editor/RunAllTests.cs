@@ -40,9 +40,18 @@ namespace Obscure.Editor
             }
         }
 
+        [MenuItem("Tools/Force Recompile Scripts")]
+        public static void ForceRecompile()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+            Debug.Log("Requested script compilation and AssetDatabase refresh...");
+        }
+
         [MenuItem("Tools/Run All Tests")]
         public static void Run()
         {
+            AssetDatabase.Refresh();
             var api = ScriptableObject.CreateInstance<TestRunnerApi>();
             api.RegisterCallbacks(new Callbacks());
             api.Execute(new ExecutionSettings(new Filter { testMode = TestMode.EditMode }));

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 2DObscure Design System Palette ("Starlit Reliquary" visual direction).
+// 2DObscure Design System Palette ("Starlit Reliquary" visual direction from FELNA — UI System).
 // Ink-navy grounds, one warm gold accent, element hues reserved for combat meaning.
 // Every color on screen originates from here.
 namespace Obscure
@@ -28,9 +28,36 @@ namespace Obscure
             Mp     = Hex(0x5AA2FF),
             Xp     = Hex(0xC79BFF),
             Shield = Hex(0x9FE3FF),
+            Ok     = Hex(0x52D18C),
+            Err    = Hex(0xFF6A55),
+            Warn   = Hex(0xF2C25B),
+
+            // Elements (hue + 2-letter code)
+            ElementFire      = Hex(0xFF7A45), // FI
+            ElementIce       = Hex(0x8FDCF7), // IC
+            ElementLightning = Hex(0xF5E04A), // LI
+            ElementEarth     = Hex(0xC39A5F), // EA
+            ElementWind      = Hex(0x86E6B0), // WI
+            ElementWater     = Hex(0x4D9BFF), // WA
+            ElementHoly      = Hex(0xFFF1B8), // HO
+            ElementShadow    = Hex(0xA77CF5), // SH
+            ElementPhysical  = Hex(0xC9CED9), // PH
+            ElementAll       = Hex(0xFF7CBF), // AL
+
             // Rarity — always paired with a letter badge
             RarityCommon = Hex(0xA7AFC4), RarityUncommon = Hex(0x5FD08F), RarityRare = Hex(0x5AA2FF),
-            RarityEpic = Hex(0xB98AFF), RarityLegendary = Hex(0xF5A742), RarityMythic = Hex(0xFF6F8E);
+            RarityEpic = Hex(0xB98AFF), RarityLegendary = Hex(0xF5A742), RarityMythic = Hex(0xFF6F8E),
+
+            // Class Accents
+            ClassFighter       = Hex(0xD9634C),
+            ClassBarbarian     = Hex(0xC2452F),
+            ClassMartialArtist = Hex(0xE89A3C),
+            ClassRogue         = Hex(0x7B6BD6),
+            ClassRanger        = Hex(0x4FAE6A),
+            ClassCleric        = Hex(0xE7CF72),
+            ClassWizard        = Hex(0x4D8FF0),
+            ClassWarlock       = Hex(0xA24FD0),
+            ClassDruid         = Hex(0x6FBF52);
 
         // 1. Canonical spec roles, mapped onto the Starlit Reliquary tokens
         public static readonly Color
@@ -91,6 +118,86 @@ namespace Obscure
             'e' => Moss, 'E' => MossBright, 'f' => Frost, 'F' => FrostBright,
             'p' => Arcane, 'P' => Lilac, 'n' => Wood, 'N' => WoodDark, 'c' => Abyss, 'B' => CrimsonBright,
             _ => Color.clear,
+        };
+
+        public static Color ForHp(int cur, int max) => (max > 0 && cur <= max * 0.25f) ? HpLow : Hp;
+
+        public static Color ForElement(Element el) => el switch
+        {
+            Element.Fire => ElementFire,
+            Element.Ice => ElementIce,
+            Element.Lightning => ElementLightning,
+            Element.Earth => ElementEarth,
+            Element.Wind => ElementWind,
+            Element.Water => ElementWater,
+            Element.Holy => ElementHoly,
+            Element.Dark or Element.Shadow => ElementShadow,
+            Element.Arcane => ElementAll,
+            _ => ElementPhysical,
+        };
+
+        public static Color ForElement(string code) => (code ?? "").ToUpperInvariant() switch
+        {
+            "FI" => ElementFire,
+            "IC" => ElementIce,
+            "LI" => ElementLightning,
+            "EA" => ElementEarth,
+            "WI" => ElementWind,
+            "WA" => ElementWater,
+            "HO" => ElementHoly,
+            "SH" or "DK" => ElementShadow,
+            "AL" or "AR" => ElementAll,
+            _ => ElementPhysical,
+        };
+
+        public static string ElementCode(Element el) => el switch
+        {
+            Element.Fire => "FI",
+            Element.Ice => "IC",
+            Element.Lightning => "LI",
+            Element.Earth => "EA",
+            Element.Wind => "WI",
+            Element.Water => "WA",
+            Element.Holy => "HO",
+            Element.Dark or Element.Shadow => "SH",
+            Element.Arcane => "AL",
+            _ => "PH",
+        };
+
+        public static Color ForRarity(EquipmentRarity r) => r switch
+        {
+            EquipmentRarity.Common => RarityCommon,
+            EquipmentRarity.Uncommon => RarityUncommon,
+            EquipmentRarity.Rare => RarityRare,
+            EquipmentRarity.Epic => RarityEpic,
+            EquipmentRarity.Legendary => RarityLegendary,
+            EquipmentRarity.Mythic => RarityMythic,
+            _ => RarityCommon,
+        };
+
+        public static string RarityBadge(EquipmentRarity r) => r switch
+        {
+            EquipmentRarity.Common => "C",
+            EquipmentRarity.Uncommon => "U",
+            EquipmentRarity.Rare => "R",
+            EquipmentRarity.Epic => "E",
+            EquipmentRarity.Legendary => "L",
+            EquipmentRarity.Mythic => "M",
+            _ => "C",
+        };
+
+        public static Color ForClass(string classId) => (classId?.ToLowerInvariant()) switch
+        {
+            "fighter" => ClassFighter,
+            "barbarian" => ClassBarbarian,
+            "martial_artist" or "martialartist" => ClassMartialArtist,
+            "rogue" => ClassRogue,
+            "ranger" => ClassRanger,
+            "cleric" => ClassCleric,
+            "wizard" or "mage" => ClassWizard,
+            "warlock" => ClassWarlock,
+            "druid" => ClassDruid,
+            _ => WarmIvory,
         };
 
         public static Color Hex(int rgb) => new Color32((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, 255);

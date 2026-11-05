@@ -60,6 +60,52 @@ namespace Obscure
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "box");
         }
 
+        // Notched box (.ec): enemy cards have 2px chamfered / notched corners.
+        public static Sprite NotchedBox(int w, int h, Color fill, Color border)
+        {
+            var key = ("notched_box", w, h, fill, border);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                int py = h - 1 - y;
+                for (int x = 0; x < w; x++)
+                {
+                    bool c0 = (x < 2 && py < 2 && (x + py < 2));
+                    bool c1 = (x >= w - 2 && py < 2 && ((w - 1 - x) + py < 2));
+                    bool c2 = (x < 2 && py >= h - 2 && (x + (h - 1 - py) < 2));
+                    bool c3 = (x >= w - 2 && py >= h - 2 && ((w - 1 - x) + (h - 1 - py) < 2));
+                    if (c0 || c1 || c2 || c3)
+                    {
+                        px[y * w + x] = Color.clear;
+                        continue;
+                    }
+                    bool b0 = (x + py == 2) || ((w - 1 - x) + py == 2) || (x + (h - 1 - py) == 2) || ((w - 1 - x) + (h - 1 - py) == 2);
+                    bool edge = (x == 0 || x == w - 1 || py == 0 || py == h - 1);
+                    px[y * w + x] = (edge || b0) ? border : fill;
+                }
+            }
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "notched_box");
+        }
+
+        // Double-border box for Legendary & Mythic items (.rar.r-leg, .rar.r-myt).
+        public static Sprite DoubleBorderBox(int w, int h, Color fill, Color border)
+        {
+            var key = ("double_border_box", w, h, fill, border);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                int py = h - 1 - y;
+                for (int x = 0; x < w; x++)
+                {
+                    int edge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(py, h - 1 - py));
+                    px[y * w + x] = (edge == 0 || edge == 2) ? border : fill;
+                }
+            }
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "double_border_box");
+        }
+
         // Starlit Reliquary button: ink slab with a pressed-in bottom lip.
         // Focused = lifted ink + gold frame; disabled = flat with a dashed border.
         public static Sprite ButtonBox(int w, int h, bool focused, bool interactable)
@@ -103,6 +149,33 @@ namespace Obscure
                 }
             }
             return Cache[key] = SpriteFrom(px, w, h, TopLeft, "btn_primary");
+        }
+
+        // Danger button (.btn.danger): destructive confirmation button with crimson alert style.
+        public static Sprite DangerBox(int w, int h, bool focused, bool interactable)
+        {
+            if (!interactable) return ButtonBox(w, h, false, false);
+            var key = ("btn_danger", w, h, focused);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[w * h];
+            Color fill = focused ? Palette.Hex(0x5A1A1E) : Palette.Hex(0x321014);
+            Color border = focused ? Palette.HpLow : Palette.Hex(0xA83232);
+            for (int y = 0; y < h; y++)
+            {
+                int py = h - 1 - y;
+                for (int x = 0; x < w; x++)
+                {
+                    int edge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(py, h - 1 - py));
+                    px[y * w + x] = edge == 0 ? border : py == h - 2 ? Palette.Hex(0x200A0C) : fill;
+                }
+            }
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "btn_danger");
+        }
+
+        // Currency Coin: solid disc for Hub Gold, diamond for Run Gold
+        public static Sprite Coin(int size, bool isHubGold)
+        {
+            return isHubGold ? Disc(size / 2, Palette.Gold2) : Diamond(size, Palette.Ember2);
         }
 
         // Menu-list focus (.mi.is-focus): gold wash fading out to the right.

@@ -1660,7 +1660,7 @@ namespace Obscure
 
             IsPartyConfirmed = true;
             FlowState = NewGameFlowState.OpeningSequence;
-            LastFeedback = "PARTY CONFIRMED AND SAVED! READY FOR OPENING SEQUENCE.";
+            LastFeedback = "PARTY CONFIRMED! READY TO ENTER SANCTUARY HUB WITH 600 STARTER GOLD.";
             Changed?.Invoke();
             return true;
         }
@@ -1696,6 +1696,7 @@ namespace Obscure
             activeRoster.CommitConfirmedParty(PendingParty);
             FlowState = NewGameFlowState.FirstExpedition;
             var run = activeRoster.BeginExpedition(seed);
+            run.Gold = GameSave.StarterGold;
             GameSave.SaveRunState(run, PendingParty);
             Changed?.Invoke();
             return run;
@@ -1847,6 +1848,7 @@ namespace Obscure
     public static class GameSave
     {
         public const string PrefKey = "obscure.save";
+        public const int StarterGold = 600;
         static GameSaveData memoryCache;
 
         public static bool HasSavedGame()
@@ -1885,7 +1887,8 @@ namespace Obscure
                 isDefeated = false,
                 seed = seed,
                 act = 1,
-                gold = 0,
+                gold = StarterGold,
+                hubGold = StarterGold,
                 currentNodeId = "",
                 clearedNodeIds = Array.Empty<string>(),
                 items = Database.StartingItems.ToArray(),
@@ -1893,7 +1896,7 @@ namespace Obscure
                 relics = Array.Empty<string>(),
                 party = confirmedParty.Select(c => SavedCharacterData.FromCharacterDef(c)).ToArray()
             };
-            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateNewGameCommittedSnapshot(confirmedParty, seed));
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateNewGameCommittedSnapshot(confirmedParty, seed, starterGold: StarterGold));
             WriteSaveData(data);
             return data;
         }

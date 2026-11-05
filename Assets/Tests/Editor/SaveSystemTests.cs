@@ -388,4 +388,258 @@ namespace Obscure.Tests
             }
         }
     }
+
+    [TestFixture]
+    public class FelnaUiSystemTests
+    {
+        GameObject testRoot;
+
+        [SetUp]
+        public void SetUp()
+        {
+            testRoot = new GameObject("TestRoot");
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (testRoot != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(testRoot);
+                else UnityEngine.Object.DestroyImmediate(testRoot);
+            }
+        }
+
+        [Test]
+        public void DotGothic16_FontEngine_MeasuresAndRendersAllGlyphs()
+        {
+            // Verify enum values
+            Assert.AreEqual(FontKind.DotGothic, FontKind.DotGothic16);
+
+            // Verify uppercase and lowercase letters render distinct non-zero widths
+            int upperA = PixelFont.Measure("A", FontKind.DotGothic);
+            int lowerA = PixelFont.Measure("a", FontKind.DotGothic);
+            Assert.Greater(upperA, 0);
+            Assert.Greater(lowerA, 0);
+
+            // Verify numbers and punctuation
+            int digits = PixelFont.Measure("0123456789", FontKind.DotGothic);
+            Assert.Greater(digits, 40);
+
+            // Verify special game symbols: ▲, ▼, ●, ◆, ★, ✓, ×, ▸, ·
+            string symbols = "▲▼●◆★✓×▸·";
+            int symLen = PixelFont.Measure(symbols, FontKind.DotGothic);
+            Assert.Greater(symLen, 20);
+
+            // Verify sprite rendering
+            var sprite = PixelFont.Render("Felna: The World's Between", FontKind.DotGothic);
+            Assert.IsNotNull(sprite);
+            Assert.Greater(sprite.rect.width, 50);
+            Assert.GreaterOrEqual(sprite.rect.height, PixelFont.DotGothicGlyphHeight);
+        }
+
+        [Test]
+        public void StarlitReliquary_PaletteTokens_ConformToUiSpecification()
+        {
+            // Ink canvas
+            Assert.AreEqual(Palette.Hex(0x070A14), Palette.Ink0);
+            Assert.AreEqual(Palette.Hex(0x0C1122), Palette.Ink1);
+            Assert.AreEqual(Palette.Hex(0x121A31), Palette.Ink2);
+            Assert.AreEqual(Palette.Hex(0x1A2443), Palette.Ink3);
+            Assert.AreEqual(Palette.Hex(0x25315A), Palette.Ink4);
+            Assert.AreEqual(Palette.Hex(0x3A4878), Palette.Ink5);
+
+            // Mists
+            Assert.AreEqual(Palette.Hex(0xEEF0F8), Palette.Mist1);
+            Assert.AreEqual(Palette.Hex(0xC3C9DE), Palette.Mist2);
+            Assert.AreEqual(Palette.Hex(0x8F98B8), Palette.Mist3);
+
+            // Golds
+            Assert.AreEqual(Palette.Hex(0xFFE6A3), Palette.Gold1);
+            Assert.AreEqual(Palette.Hex(0xF2C25B), Palette.Gold2);
+            Assert.AreEqual(Palette.Hex(0xC9932E), Palette.Gold3);
+            Assert.AreEqual(Palette.Hex(0x7A5717), Palette.Gold4);
+
+            // Embers
+            Assert.AreEqual(Palette.Hex(0xFFC196), Palette.Ember1);
+            Assert.AreEqual(Palette.Hex(0xEF8A3C), Palette.Ember2);
+            Assert.AreEqual(Palette.Hex(0x8A4317), Palette.Ember3);
+
+            // Vitals
+            Assert.AreEqual(Palette.Hex(0x52D18C), Palette.Hp);
+            Assert.AreEqual(Palette.Hex(0xFF6A55), Palette.HpLow);
+            Assert.AreEqual(Palette.Hex(0x5AA2FF), Palette.Mp);
+            Assert.AreEqual(Palette.Hex(0xC79BFF), Palette.Xp);
+            Assert.AreEqual(Palette.Hex(0x9FE3FF), Palette.Shield);
+        }
+
+        [Test]
+        public void Palette_ForHp_SwitchesToHpLowAtQuarterThreshold()
+        {
+            Assert.AreEqual(Palette.Hp, Palette.ForHp(100, 100));
+            Assert.AreEqual(Palette.Hp, Palette.ForHp(26, 100));
+            Assert.AreEqual(Palette.HpLow, Palette.ForHp(25, 100));
+            Assert.AreEqual(Palette.HpLow, Palette.ForHp(10, 100));
+            Assert.AreEqual(Palette.HpLow, Palette.ForHp(0, 100));
+        }
+
+        [Test]
+        public void Palette_ElementsAndRarities_MapToCanonicalCodesAndColors()
+        {
+            Assert.AreEqual("FI", Palette.ElementCode(Element.Fire));
+            Assert.AreEqual("IC", Palette.ElementCode(Element.Ice));
+            Assert.AreEqual("LI", Palette.ElementCode(Element.Lightning));
+            Assert.AreEqual("EA", Palette.ElementCode(Element.Earth));
+            Assert.AreEqual("WI", Palette.ElementCode(Element.Wind));
+            Assert.AreEqual("WA", Palette.ElementCode(Element.Water));
+            Assert.AreEqual("HO", Palette.ElementCode(Element.Holy));
+            Assert.AreEqual("SH", Palette.ElementCode(Element.Shadow));
+            Assert.AreEqual("PH", Palette.ElementCode(Element.Physical));
+            Assert.AreEqual("AL", Palette.ElementCode(Element.Arcane));
+
+            Assert.AreEqual(Palette.ElementFire, Palette.ForElement(Element.Fire));
+            Assert.AreEqual(Palette.ElementFire, Palette.ForElement("FI"));
+            Assert.AreEqual(Palette.ElementShadow, Palette.ForElement("SH"));
+
+            Assert.AreEqual("C", Palette.RarityBadge(EquipmentRarity.Common));
+            Assert.AreEqual("U", Palette.RarityBadge(EquipmentRarity.Uncommon));
+            Assert.AreEqual("R", Palette.RarityBadge(EquipmentRarity.Rare));
+            Assert.AreEqual("E", Palette.RarityBadge(EquipmentRarity.Epic));
+            Assert.AreEqual("L", Palette.RarityBadge(EquipmentRarity.Legendary));
+            Assert.AreEqual("M", Palette.RarityBadge(EquipmentRarity.Mythic));
+
+            Assert.AreEqual(Palette.RarityLegendary, Palette.ForRarity(EquipmentRarity.Legendary));
+        }
+
+        [Test]
+        public void UiComponents_EnemyCard_DoubleBorderCard_AndButtons_BuildSuccessfully()
+        {
+            var ec = Ui.EnemyCard(testRoot.transform, 10, 10, 60, 40);
+            Assert.IsNotNull(ec);
+            Assert.IsNotNull(ec.sprite);
+
+            var dbc = Ui.DoubleBorderCard(testRoot.transform, 10, 60, 80, 50);
+            Assert.IsNotNull(dbc);
+            Assert.IsNotNull(dbc.sprite);
+
+            bool dangerClicked = false;
+            var dangerBtn = Ui.Button(testRoot.transform, "DISCARD", 10, 120, 100, () => dangerClicked = true, style: ButtonStyle.Danger, font: FontKind.DotGothic);
+            Assert.IsNotNull(dangerBtn);
+            dangerBtn.onClick?.Invoke();
+            Assert.IsTrue(dangerClicked);
+        }
+
+        [Test]
+        public void UiComponents_StatusBadge_AndCurrencyTag_ConstructWithDotGothic()
+        {
+            var buff = Ui.StatusBadge(testRoot.transform, "ATK", "3T", true, 20, 20);
+            Assert.IsNotNull(buff);
+
+            var debuff = Ui.StatusBadge(testRoot.transform, "BRN", "2T", false, 60, 20);
+            Assert.IsNotNull(debuff);
+
+            var hubTag = Ui.CurrencyTag(testRoot.transform, 4820, true, 20, 50);
+            Assert.IsNotNull(hubTag);
+
+            var runTag = Ui.CurrencyTag(testRoot.transform, 312, false, 120, 50);
+            Assert.IsNotNull(runTag);
+        }
+
+        [Test]
+        public void UiScreens_InstantiateAndRenderWithoutExceptions()
+        {
+            var mm = new MainMenuScreen();
+            mm.Open(testRoot.transform);
+            Assert.IsNotNull(mm.NewGameButton);
+            mm.Close();
+
+            var hub = new HubScreen();
+            hub.Open(testRoot.transform);
+            hub.Close();
+
+            var save = new SaveScreen();
+            save.Open(testRoot.transform);
+            save.Close();
+
+            var load = new LoadScreen();
+            load.Open(testRoot.transform);
+            load.Close();
+        }
+
+        [Test]
+        public void NewGame_PartyConfirmation_Grants600StarterGold_AndInitializesSnapshot()
+        {
+            var party = new List<CharacterDef>
+            {
+                new CharacterDef { id = "h1", name = "A", raceId = "human", classId = "fighter", backgroundId = "guard", baseScores = AbilityScores.DefaultBase },
+                new CharacterDef { id = "h2", name = "B", raceId = "elf", classId = "ranger", backgroundId = "outlander", baseScores = AbilityScores.DefaultBase },
+                new CharacterDef { id = "h3", name = "C", raceId = "dwarf", classId = "cleric", backgroundId = "acolyte", baseScores = AbilityScores.DefaultBase },
+                new CharacterDef { id = "h4", name = "D", raceId = "wraith", classId = "mage", backgroundId = "scholar", baseScores = AbilityScores.DefaultBase }
+            };
+
+            Assert.AreEqual(600, GameSave.StarterGold);
+            Assert.AreEqual(600, PersistenceCommitHandler.StarterGold);
+
+            var snap = PersistenceCommitHandler.CreateNewGameCommittedSnapshot(party, seed: 123);
+            Assert.AreEqual(600, snap.hubGold, "Committed snapshot must start with 600 Hub Gold.");
+            Assert.AreEqual(1, snap.committedAct);
+            Assert.AreEqual(1, snap.nextDungeonAct);
+
+            var savedData = GameSave.SaveNewGame(party, seed: 123);
+            Assert.AreEqual(600, savedData.gold, "GameSaveData must have 600 starter gold.");
+            Assert.AreEqual(600, savedData.hubGold, "GameSaveData must have 600 starter hub gold.");
+        }
+
+        [Test]
+        public void CharacterCreation_EnterHubFromCreation_TransitionsToHubWith600Gold()
+        {
+            var gameGo = new GameObject("GameHost");
+            try
+            {
+                var game = gameGo.AddComponent<Game>();
+                Game.SetInstance(game);
+                var origStorage = SaveManager.Storage;
+                var memStorage = new MemorySaveStorage();
+                SaveManager.Storage = memStorage;
+
+                game.StartNewGame();
+                Assert.AreEqual(GameState.CharacterCreation, game.State);
+
+                // Populate 4 heroes with valid point-buy configurations
+                game.NewGameBuilder.RandomizeAll();
+                Assert.IsTrue(game.NewGameBuilder.CanConfirmParty);
+
+                // Call EnterHubFromCreation
+                game.EnterHubFromCreation(seed: 777);
+
+                Assert.AreEqual(GameState.Hub, game.State, "Must transition directly to Sanctuary Hub after character creation.");
+                Assert.IsNotNull(game.Run, "RunState must be initialized.");
+                Assert.AreEqual(600, game.Run.Gold, "Player must possess exactly 600 starter gold.");
+                Assert.AreEqual(600, game.Run.HubGold, "HubGold alias must be 600.");
+                Assert.AreEqual(1, game.Run.Act, "Initial expedition map must be Act 1 (Dungeon 1).");
+                Assert.AreEqual(600, PersistenceCommitHandler.ActiveCommittedSnapshot.hubGold);
+                Assert.AreEqual(1, PersistenceCommitHandler.ActiveCommittedSnapshot.nextDungeonAct);
+
+                // Verify AutoSave was automatically triggered with 600 gold
+                bool autoSaved = SaveManager.AutoSave(out string autoErr);
+                Assert.IsTrue(autoSaved, $"AutoSave failed with error: {autoErr}");
+                var autoMeta = SaveManager.GetSlotMetadata(SaveSlotId.AutoSave);
+                Assert.IsTrue(autoMeta.isOccupied, "AutoSave slot must be occupied upon Hub arrival.");
+                Assert.AreEqual(600, autoMeta.hubGold, "AutoSave metadata must reflect 600 Hub Gold.");
+
+                // Verify embark from Hub targets Dungeon 1 (Act 1)
+                int targetAct = PersistenceCommitHandler.ActiveCommittedSnapshot != null
+                    ? PersistenceCommitHandler.ActiveCommittedSnapshot.nextDungeonAct
+                    : game.Run.Act;
+                Assert.AreEqual(1, targetAct, "First expedition embark must target Dungeon 1 (Act 1).");
+
+                SaveManager.Storage = origStorage;
+            }
+            finally
+            {
+                Game.SetInstance(null);
+                UnityEngine.Object.DestroyImmediate(gameGo);
+            }
+        }
+    }
 }

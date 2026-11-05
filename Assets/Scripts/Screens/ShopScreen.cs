@@ -25,23 +25,23 @@ namespace Obscure
             shopData = Run?.CurrentDungeonShop ?? DungeonShopData.Generate(Run?.Map?.act ?? 1);
             Backdrop.Create(Root, false, 28, Palette.Hex(0x131722), Palette.Hex(0x0C0E17), Palette.Gold3);
 
-            // Header banner
-            Ui.Label(Root, "DUNGEON OUTPOST CARAVAN", 320, 16, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.Serif);
+            // Header banner per FELNA — UI System (Page 24)
+            Ui.Label(Root, "DUNGEON OUTPOST CARAVAN", 320, 16, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
             Ui.Divider(Root, 140, 38, 360, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
             // Run Gold Badge
             int currentRunGold = Run != null ? Run.Gold : 0;
             Ui.Panel(Root, 480, 12, 140, 24, Palette.Hex(0x22120A), Palette.Gold1);
-            goldBadgeLabel = Ui.Label(Root, $"{currentRunGold} RUN GOLD", 550, 18, Palette.Gold1, Align.Center);
+            goldBadgeLabel = Ui.Label(Root, $"{currentRunGold:#,##0} RUN GOLD", 550, 18, Palette.Gold1, Align.Center, font: FontKind.DotGothic);
 
             // Left panel (370x240): Shop Tabs & Inventory Items
             Ui.Panel(Root, 20, 52, 380, 250, Palette.DeepCharcoal, Palette.DarkBorder);
 
             // Tab Buttons
             var tabMenu = Root.gameObject.AddComponent<Menu>();
-            var consTabBtn = Ui.Button(Root, "SUPPLIES", 24, 56, 110, () => SwitchTab(ShopTab.BuyConsumables), 20, style: currentTab == ShopTab.BuyConsumables ? ButtonStyle.Primary : ButtonStyle.Slab);
-            var equipTabBtn = Ui.Button(Root, "EQUIPMENT", 140, 56, 120, () => SwitchTab(ShopTab.BuyEquipment), 20, style: currentTab == ShopTab.BuyEquipment ? ButtonStyle.Primary : ButtonStyle.Slab);
-            var sellTabBtn = Ui.Button(Root, "SELL GEAR", 266, 56, 120, () => SwitchTab(ShopTab.Sell), 20, style: currentTab == ShopTab.Sell ? ButtonStyle.Primary : ButtonStyle.Slab);
+            var consTabBtn = Ui.Button(Root, "SUPPLIES", 24, 56, 110, () => SwitchTab(ShopTab.BuyConsumables), 20, style: currentTab == ShopTab.BuyConsumables ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
+            var equipTabBtn = Ui.Button(Root, "EQUIPMENT", 140, 56, 120, () => SwitchTab(ShopTab.BuyEquipment), 20, style: currentTab == ShopTab.BuyEquipment ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
+            var sellTabBtn = Ui.Button(Root, "SELL GEAR", 266, 56, 120, () => SwitchTab(ShopTab.Sell), 20, style: currentTab == ShopTab.Sell ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
             tabMenu.Add(consTabBtn);
             tabMenu.Add(equipTabBtn);
             tabMenu.Add(sellTabBtn);
@@ -50,7 +50,7 @@ namespace Obscure
 
             // Right panel (210x250): Party Status
             Ui.Panel(Root, 410, 52, 210, 250, Palette.DeepCharcoal, Palette.DarkBorder);
-            Ui.Label(Root, "PARTY VITALITY", 420, 60, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
+            Ui.Label(Root, "PARTY VITALITY", 420, 60, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.DotGothic);
             Ui.Divider(Root, 420, 74, 190, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
@@ -58,14 +58,15 @@ namespace Obscure
             {
                 var u = party[i];
                 int y = 84 + i * 44;
-                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 100), 420, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.Serif);
-                partyHpRows[i] = Ui.Label(Root, u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)", 610, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Right);
-                partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(190, 6, u.Alive ? Palette.Emerald : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 420, y + 16, Ui.Widget);
+                Color hpCol = Palette.ForHp(u.hp, u.stats.maxHp);
+                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 100, FontKind.DotGothic), 420, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.DotGothic);
+                partyHpRows[i] = Ui.Label(Root, u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)", 610, y, u.Alive ? hpCol : Palette.SpecCrimson, Align.Right, font: FontKind.DotGothic);
+                partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(190, 6, u.Alive ? hpCol : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 420, y + 16, Ui.Widget);
             }
 
             // Bottom bar: feedback and leave button
-            feedbackLabel = Ui.Label(Root, "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.", 24, 314, Palette.WarmIvory, Align.Left);
-            var leaveBtn = Ui.Button(Root, "LEAVE CARAVAN", 480, 310, 140, OnLeaveShop, 24, style: ButtonStyle.Primary);
+            feedbackLabel = Ui.Label(Root, "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.", 24, 314, Palette.WarmIvory, Align.Left, font: FontKind.DotGothic);
+            var leaveBtn = Ui.Button(Root, "LEAVE CARAVAN", 480, 310, 140, OnLeaveShop, 24, style: ButtonStyle.Primary, font: FontKind.DotGothic);
             tabMenu.Add(leaveBtn);
 
             RefreshContent();

@@ -27,9 +27,9 @@ namespace Obscure
             int floor = Run != null ? Run.Floor : 1;
             int floors = Run?.Map != null ? Run.Map.Floors : 8;
 
-            // Title block
-            Ui.Label(Root, victory ? "EXPEDITION COMPLETE" : "THE PARTY HAS FALLEN. THIS RUN HAS ENDED.", 320, 14, victory ? Palette.Gold2 : Palette.Mist1, Align.Center);
-            Ui.Label(Root, victory ? "THE ABYSS IS SEALED" : "YOU HAVE FALLEN", 320, 28, victory ? Palette.Gold1 : Palette.Hex(0xFF8A7A), Align.Center, 2, FontKind.Serif);
+            // Title block per FELNA — UI System (Page 35: Dungeon Clear / Page 36: Run Failure)
+            Ui.Label(Root, victory ? "EXPEDITION COMPLETE" : "THE PARTY HAS FALLEN. THIS RUN HAS ENDED.", 320, 14, victory ? Palette.Gold2 : Palette.Mist1, Align.Center, font: FontKind.DotGothic);
+            Ui.Label(Root, victory ? "THE ABYSS IS SEALED" : "YOU HAVE FALLEN", 320, 28, victory ? Palette.Gold1 : Palette.Hex(0xFF8A7A), Align.Center, 2, FontKind.DotGothic);
             int px = 320 - floors * 6;
             for (int i = 0; i < floors; i++)
             {

@@ -46,7 +46,8 @@ namespace Obscure
                 return t == null && !self.Charge.move.allTargets ? null : EnemyAI.Use(b, self, self.Charge.move, t);
             }
             var plan = self.Intent;
-            if (plan == null || (plan.target != null && !plan.target.Alive)) plan = Select(b, self); // planned action became invalid
+            if (plan == null || (plan.target != null && !plan.target.Alive) || self.unit.mp < plan.move.mpCost || self.Cooldown(Combatant.MoveKey(plan.move)) > 0)
+                plan = Select(b, self); // planned action became invalid or unaffordable
             if (plan == null) return null;
             return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
         }
