@@ -10,6 +10,14 @@ namespace Obscure
         BattleAction Decide(Battle battle, Combatant self);
     }
 
+    // What an enemy plans to do this round. charging = this turn only charges (no damage); the release follows next turn.
+    public class EnemyIntent
+    {
+        public EnemyAttack move;
+        public Combatant target; // null for area / self moves
+        public bool charging;
+    }
+
     public static class EnemyAI
     {
         static readonly Dictionary<AiKind, IEnemyBrain> Brains = new Dictionary<AiKind, IEnemyBrain>
@@ -17,14 +25,31 @@ namespace Obscure
             [AiKind.Basic] = new BasicBrain(),
             [AiKind.Tactical] = new TacticalBrain(),
             [AiKind.Boss] = new BossBrain(),
+            [AiKind.Priority] = new PriorityBrain(),
         };
 
+        // Null only when a Priority enemy has no legal action (Battle.NextTurn skips those turns first).
         public static BattleAction Choose(Battle battle, Combatant self)
         {
             if (self.enemy?.attacks == null || self.enemy.attacks.Length == 0)
                 return BattleAction.Attack(self, RandomTarget(battle, self));
             return Brains[self.enemy.ai].Decide(battle, self);
         }
+
+        // Round preparation (Bab 10 §8.9): Priority enemies commit to an action so the HUD can telegraph it.
+        // Initiative decides when they act; this decides what they do.
+        public static void Plan(Battle b, Combatant self)
+        {
+            if (self.enemy?.ai != AiKind.Priority) return;
+            self.Intent = null;
+            if (!self.Alive || self.stunTurns > 0 || self.StatusController.HasStatus(StatusId.Stun) || self.StatusController.HasStatus(StatusId.Sleep)) return;
+            self.Intent = self.Charge != null
+                ? new EnemyIntent { move = self.Charge.move, target = self.Charge.target }
+                : PriorityBrain.Select(b, self);
+        }
+
+        public static bool HasLegalAction(Battle b, Combatant self) =>
+            self.enemy?.ai != AiKind.Priority || self.Charge != null || self.Intent != null || PriorityBrain.Select(b, self) != null;
 
         // ---- helpers shared by brains ----
 
@@ -49,11 +74,27 @@ namespace Obscure
             return BattleAction.Strike(self, move, b.Intercept(target ?? RandomTarget(b, self)));
         }
 
-        // Telegraph wording: how hard the move hits overall.
+        // Telegraph wording: how hard the move hits overall. "HEAVY" is reserved for the real Heavy mechanic.
         public static string Severity(EnemyAttack a)
         {
-            float total = a.power * a.hits;
-            return total < 1.1f ? "LIGHT" : total < 1.45f ? "HEAVY" : "DEADLY";
+            float total = Enumerable.Range(0, a.hits).Sum(a.PowerAt);
+            string size = a.StatusOnly ? "STATUS" : total < 1.1f ? "LIGHT" : total < 1.45f ? "STRONG" : "DEADLY";
+            return a.HasHeavy ? size + " HEAVY" : size;
+        }
+
+        // HUD intent line for actions that must be telegraphed (Heavy, charge, signature, status-only); null otherwise.
+        public static string IntentText(Combatant c)
+        {
+            var i = c.Intent ?? c.Charge;
+            if (i == null || !i.move.NeedsTelegraph) return null;
+            var m = i.move;
+            string stage = c.Intent == null ? "CHARGED" : c.Charge != null ? "RELEASE" : i.charging ? "CHARGING" : m.StatusOnly ? "STATUS" : "HEAVY";
+            string hits = m.hits > 1 ? $" x{m.hits}" : "";
+            string heavy = m.HasHeavy ? " HEAVY" : "";
+            string status = m.apply == null ? "" : " " + string.Join(" ", m.apply.Select(ap => $"{StatusInfo.Name(ap.id)} {ap.chance * 100:0}%"));
+            string who = m.allTargets ? "ALL" : i.target?.tag ?? "?";
+            string when = i.charging || c.Intent == null ? " NEXT TURN" : "";
+            return $"{stage}: {m.name}{hits}{heavy}{status} > {who}{when}".ToUpperInvariant();
         }
     }
 }

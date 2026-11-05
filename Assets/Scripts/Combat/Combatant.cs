@@ -10,17 +10,23 @@ namespace Obscure
     // statuses, cooldowns, break gauge and boss phase live here, so they end with the battle.
     public class Combatant
     {
-        public readonly Unit unit;
+        public Unit unit;                  // replaced only by a boss phase transition (AdvanceToPhase)
         public readonly Side side;
         public readonly int slot;          // formation index, also the turn-order tiebreaker
         public readonly string name, tag;  // log name ("Skeleton B"), turn-bar tag ("SKB")
-        public readonly EnemyDef enemy;    // null for party members
+        public EnemyDef enemy;             // null for party members; the current phase's def for bosses
 
         public bool guarding;   // halves incoming damage until this combatant's next turn starts
         public int stunTurns;   // turns to skip; the skip consumes the turn
         public int phase = 1;   // boss phase
         public readonly List<StatusEffect> statuses = new List<StatusEffect>();
         public readonly Dictionary<string, int> cooldowns = new Dictionary<string, int>();
+
+        // Enemy intent (Bab 10 §8.9, Bab 12 §6.4): planned at round start; a charged move is released on the next turn.
+        public EnemyIntent Intent;
+        public EnemyIntent Charge;
+        public bool IsCharging => Charge != null || (Intent != null && Intent.charging);
+        public static string MoveKey(EnemyAttack m) => "move:" + m.name;
 
         // Break/Stagger System state (PRD Section 9)
         public int MaxBreakGauge;
@@ -145,7 +151,31 @@ namespace Obscure
                 BreakDuration = Math.Max(1, enemy.breakDuration);
                 BreakStunTurns = Math.Max(0, enemy.breakStunTurns);
                 BreakDamageMultiplier = Math.Max(1f, enemy.breakDamageMultiplier);
+                ResetMoveCooldowns();
             }
+        }
+
+        void ResetMoveCooldowns()
+        {
+            foreach (var key in cooldowns.Keys.Where(k => k.StartsWith("move:")).ToList()) cooldowns.Remove(key);
+            foreach (var m in enemy.attacks ?? Array.Empty<EnemyAttack>())
+                if (m.initialCooldown > 0) cooldowns[MoveKey(m)] = m.initialCooldown;
+        }
+
+        // Boss HP bar depleted: the same combatant continues as the next phase with a fresh bar and MP pool.
+        // Statuses, stun and queue position are kept; planned/charged actions belong to the old phase and are dropped.
+        public void AdvanceToPhase(EnemyDef next, int dungeonNumber)
+        {
+            bool wasBroken = IsBroken;
+            enemy = next;
+            unit = new Unit(next, dungeonNumber);
+            phase++;
+            Intent = Charge = null;
+            MaxBreakGauge = Math.Max(0, next.maxBreakGauge);
+            BreakResistance = Math.Max(0, next.breakResistance + Math.Max(0, unit.Mod(Ability.VIT)));
+            if (wasBroken && next.bossBreakRecoverOnPhase2) RecoverBreakGauge();
+            else CurrentBreakGauge = Math.Min(CurrentBreakGauge, MaxBreakGauge);
+            ResetMoveCooldowns();
         }
 
         public bool Alive => unit.Alive;
@@ -531,6 +561,7 @@ namespace Obscure
 
             if (CurrentBreakGauge == 0)
             {
+                Intent = Charge = null; // Broken interrupts a charge (Bab 12 §6.5) and any planned action
                 AddStatus(StatusId.Broken, BreakDuration, BreakDamageMultiplier, source);
                 CurrentCombo = 0; // Broken resets combo
                 if (BreakStunTurns > 0)
@@ -543,6 +574,7 @@ namespace Obscure
         public void RecoverBreakGauge()
         {
             statuses.RemoveAll(s => s.id == StatusId.Broken);
+            StatusController.RemoveStatus(StatusId.Broken);
             if (HasBreakGauge)
                 CurrentBreakGauge = MaxBreakGauge;
         }

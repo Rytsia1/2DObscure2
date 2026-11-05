@@ -5514,25 +5514,12 @@ namespace Obscure
 
             },
 
-        }, e => e.id);
+        }.Concat(Dungeon1Roster.Enemies).ToArray(), e => e.id);
 
 
 
-        public static readonly Dictionary<string, EncounterDef> Encounters = Index(new[]
-
-        {
-
-            new EncounterDef { id = "skel2", tier = Tier.Normal, enemies = new[] { "skeleton", "skeleton" } },
-
-            new EncounterDef { id = "skel3", tier = Tier.Normal, enemies = new[] { "skeleton", "skeleton", "skeleton" }, minFloor = 2 },
-
-            new EncounterDef { id = "elite1", tier = Tier.Elite, enemies = new[] { "cursed_knight" }, music = MusicIds.Battle2 },
-
-            new EncounterDef { id = "elite2", tier = Tier.Elite, enemies = new[] { "skeleton", "cursed_knight" }, minFloor = 4, music = MusicIds.Battle2 },
-
-            new EncounterDef { id = "boss", tier = Tier.Boss, enemies = new[] { "warden" }, music = MusicIds.Battle3 },
-
-        }, e => e.id);
+        // Legacy skeleton/cursed_knight/warden defs remain in Enemies as test fixtures; the run's encounter pool is the Dungeon 1 roster.
+        public static readonly Dictionary<string, EncounterDef> Encounters = Index(Dungeon1Roster.Encounters, e => e.id);
 
 
 

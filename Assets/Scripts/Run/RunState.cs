@@ -188,45 +188,38 @@ namespace Obscure
             mp = stats.maxMp;
         }
 
-        // Bab 10 §7: Linear Tier-Weighted Enemy Scaling
+        // Bab 10 §7: Linear Tier-Weighted Enemy Scaling.
+        // FinalStat = FLOOR(BaseStat x (1 + GrowthRate[Tier, Stat] x (Dungeon - 1))), always from the D1 base, floored once.
+        // Decimal keeps exact results (float 0.12 x 5 x 125 lands just under 200).
+        public enum ScaledStat { HP, MP, ATK, MATK, DEF, MDEF, SPD }
+
+        public static decimal GrowthRate(Tier tier, ScaledStat stat) => (tier, stat) switch
+        {
+            (Tier.Elite, ScaledStat.HP) => 0.13m, (Tier.Elite, ScaledStat.MP) => 0.08m,
+            (Tier.Elite, ScaledStat.ATK) => 0.09m, (Tier.Elite, ScaledStat.MATK) => 0.09m,
+            (Tier.Elite, ScaledStat.DEF) => 0.055m, (Tier.Elite, ScaledStat.MDEF) => 0.055m, (Tier.Elite, ScaledStat.SPD) => 0.03m,
+            (Tier.Boss, ScaledStat.HP) => 0.14m, (Tier.Boss, ScaledStat.MP) => 0.10m,
+            (Tier.Boss, ScaledStat.ATK) => 0.10m, (Tier.Boss, ScaledStat.MATK) => 0.10m,
+            (Tier.Boss, ScaledStat.DEF) => 0.06m, (Tier.Boss, ScaledStat.MDEF) => 0.06m, (Tier.Boss, ScaledStat.SPD) => 0.04m,
+            (_, ScaledStat.HP) => 0.12m, (_, ScaledStat.MP) => 0.06m,
+            (_, ScaledStat.ATK) => 0.08m, (_, ScaledStat.MATK) => 0.08m,
+            (_, ScaledStat.DEF) => 0.05m, (_, ScaledStat.MDEF) => 0.05m, _ => 0.02m, // SPD
+        };
+
+        public static int ScaleStat(int baseValue, Tier tier, ScaledStat stat, int dungeonNumber) =>
+            (int)Math.Floor(baseValue * (1m + GrowthRate(tier, stat) * Math.Max(0, dungeonNumber - 1)));
+
         public static Stats ScaleEnemyStats(Stats baseStats, Tier tier, int dungeonNumber, int baseMagicDef, out int scaledMagicDef)
         {
-            if (dungeonNumber <= 1)
-            {
-                scaledMagicDef = baseMagicDef >= 0 ? baseMagicDef : baseStats.def;
-                return baseStats;
-            }
-
-            int steps = Math.Max(0, dungeonNumber - 1);
-            float hpRate, mpRate, atkRate, matkRate, defRate, mdefRate, spdRate;
-
-            switch (tier)
-            {
-                case Tier.Elite:
-                    hpRate = 0.13f; mpRate = 0.08f; atkRate = 0.09f; matkRate = 0.09f;
-                    defRate = 0.055f; mdefRate = 0.055f; spdRate = 0.03f;
-                    break;
-                case Tier.Boss:
-                    hpRate = 0.14f; mpRate = 0.10f; atkRate = 0.10f; matkRate = 0.10f;
-                    defRate = 0.06f; mdefRate = 0.06f; spdRate = 0.04f;
-                    break;
-                default: // Normal
-                    hpRate = 0.12f; mpRate = 0.06f; atkRate = 0.08f; matkRate = 0.08f;
-                    defRate = 0.05f; mdefRate = 0.05f; spdRate = 0.02f;
-                    break;
-            }
-
-            int hp = (int)Math.Floor((double)baseStats.maxHp * (1.0 + (double)hpRate * steps) + 1e-6);
-            int mp = (int)Math.Floor((double)baseStats.maxMp * (1.0 + (double)mpRate * steps) + 1e-6);
-            int atk = (int)Math.Floor((double)baseStats.atk * (1.0 + (double)atkRate * steps) + 1e-6);
             int baseMag = baseStats.mag > 0 ? baseStats.mag : baseStats.atk;
-            int mag = (int)Math.Floor((double)baseMag * (1.0 + (double)matkRate * steps) + 1e-6);
-            int def = (int)Math.Floor((double)baseStats.def * (1.0 + (double)defRate * steps) + 1e-6);
-            int mDefBase = baseMagicDef >= 0 ? baseMagicDef : baseStats.def;
-            scaledMagicDef = (int)Math.Floor((double)mDefBase * (1.0 + (double)mdefRate * steps) + 1e-6);
-            int spd = (int)Math.Floor((double)baseStats.spd * (1.0 + (double)spdRate * steps) + 1e-6);
-
-            return new Stats(hp, mp, atk, def, spd, mag);
+            scaledMagicDef = ScaleStat(baseMagicDef >= 0 ? baseMagicDef : baseStats.def, tier, ScaledStat.MDEF, dungeonNumber);
+            return new Stats(
+                ScaleStat(baseStats.maxHp, tier, ScaledStat.HP, dungeonNumber),
+                ScaleStat(baseStats.maxMp, tier, ScaledStat.MP, dungeonNumber),
+                ScaleStat(baseStats.atk, tier, ScaledStat.ATK, dungeonNumber),
+                ScaleStat(baseStats.def, tier, ScaledStat.DEF, dungeonNumber),
+                ScaleStat(baseStats.spd, tier, ScaledStat.SPD, dungeonNumber),
+                dungeonNumber <= 1 ? baseStats.mag : ScaleStat(baseMag, tier, ScaledStat.MATK, dungeonNumber));
         }
 
         public AbilityScores BaseScores => abilities.baseScores;

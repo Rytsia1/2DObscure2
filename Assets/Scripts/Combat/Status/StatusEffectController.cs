@@ -151,7 +151,7 @@ namespace Obscure
 
                 if (!owner.Alive)
                 {
-                    log?.Invoke(owner.IsEnemy ? $"{owner.name} is destroyed." : $"{owner.name} falls!");
+                    log?.Invoke(!owner.IsEnemy ? $"{owner.name} falls!" : owner.enemy?.nextPhase != null ? $"{owner.name}'s health bar shatters!" : $"{owner.name} is destroyed.");
                     break;
                 }
             }

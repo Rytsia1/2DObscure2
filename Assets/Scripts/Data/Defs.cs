@@ -45,7 +45,9 @@ namespace Obscure
         }
     }
 
-    public enum AiKind { Basic, Tactical, Boss }
+    // Priority: data-driven, deterministic policy (EnemyAttack.aiPriority / cooldown) planned at round start (Bab 10 §8.9).
+    public enum AiKind { Basic, Tactical, Boss, Priority }
+    public enum TargetRule { Random, LowestHp, LowestDef }
 
     public enum CreationMethod
     {
@@ -130,21 +132,53 @@ namespace Obscure
         public float phase2At;         // boss: HP fraction that triggers phase 2 (0 = no phases)
         public string phase2Text;
         public StatusApply phase2Buff;
+        public string nextPhase;       // boss: EnemyDef id that replaces this one when its HP bar is depleted (separate full bar)
+        public string type, role;      // roster flavour: "Undead", "Vanguard"
+        public TargetRule targetRule;  // Priority AI: who single-target moves aim at
     }
 
-    // One enemy move. Each hit gets its own defense reaction; allTargets hits every living party member.
+    // One enemy move. Each hit gets its own defense reaction; allTargets hits every living party member
+    // with one shared reaction per hit. Statuses roll once per target per attack (Bab 12 §4.3).
     public class EnemyAttack
     {
         public string name;
-        public int hits = 1;
-        public float power = 1f;      // per hit, multiplies Atk
+        public int hits = 1;          // 0 = status-only action: no damage, no Defensive QTE
+        public float power = 1f;      // per hit, multiplies Atk (Physical) or Magic (Elemental)
         public Element element = Element.Physical;
         public bool allTargets;
         public bool self;             // a stance/buff on the user: no damage, no reaction QTE
-        public bool isHeavy;          // Heavy attack: Defensive Perfect reduces 50% damage instead of 100% (Bab 12)
+        public bool isHeavy;          // every hit is Heavy: Defensive Perfect reduces 50% damage instead of 100% (Bab 12)
         public float delay;           // extra hold before the first hit lands (a delayed swing)
         public int phase;             // 0 = any phase, otherwise only in that boss phase
-        public StatusApply[] apply;   // applied to each target not perfectly parried (or to self if self)
+        public StatusApply[] apply;   // rolled once per target per attack; a Perfect parry does not block it (Bab 11 §2.3)
+
+        // Roster data (Dungeon 1 v1.7). Authored D1 damage is turned into ATK/MATK coefficients once
+        // (EnemyDef stats at D1), so dungeon scaling of ATK/MATK is the only scaling damage receives.
+        public int[] hitDamage;       // base damage per hit before mitigation
+        public float[] hitPower;      // per-hit coefficient; null = power for every hit
+        public float[] intervals;     // seconds between hit markers; null = tier default (Steady 350 ms)
+        public int heavyHit = -1;     // index of the single Heavy marker (-1 = none)
+        public int mpCost;            // paid when the attack executes; enemy MP never regenerates
+        public bool telegraph;        // charged: one no-damage turn (shown as intent), released next turn; Broken cancels it
+        public float drain;           // heals the user for this fraction of the final damage dealt
+        public float restoreMp;       // self skill: restores this fraction of Max MP, capped at Max MP (Arcane Charge = 0.5)
+
+        // Priority AI policy (configurable, deterministic). Highest ready priority wins.
+        public int aiPriority;
+        public int cooldown;          // rounds the move is unavailable after it executes
+        public int initialCooldown;   // rounds unavailable at battle / phase start
+        public int minTargets = 1;    // living opponents required (area moves)
+        public float aiMpBelow;       // > 0: only chosen while current MP is below this fraction of Max MP
+
+        public bool StatusOnly => hits == 0 && !self;
+        // MP is consumed only by Skills: a Basic Attack is a free, untelegraphed damaging move, always affordable.
+        public bool IsBasicAttack => mpCost == 0 && !self && hits > 0 && !telegraph;
+        public bool UsesMagic => element != Element.Physical;
+        public bool HasHeavy => isHeavy || heavyHit >= 0;
+        public bool HeavyAt(int hit) => isHeavy || hit == heavyHit;
+        public float PowerAt(int hit) => hitPower != null && hit < hitPower.Length ? hitPower[hit] : power;
+        // Must be shown to the player before it lands (Bab 12 §6.4).
+        public bool NeedsTelegraph => telegraph || HasHeavy || StatusOnly;
     }
 
     public class SkillDef
@@ -242,9 +276,9 @@ namespace Obscure
 
     public class EncounterDef
     {
-        public string id;
+        public string id, name, focus;
         public Tier tier;
-        public string[] enemies;
+        public string[] enemies;   // spawn order = array order (initiative tie-break)
         public int minFloor; // earliest floor this encounter can be rolled on
         public string music;  // MusicIds battle theme; null = the MusicLibrary's default (or random) battle theme
     }

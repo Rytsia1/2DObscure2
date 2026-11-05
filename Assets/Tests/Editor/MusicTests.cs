@@ -40,11 +40,11 @@ namespace Obscure.Tests
             var lib = Library;
             var rng = new System.Random(1);
             Assert.AreEqual(MusicIds.Battle1, lib.defaultBattleMusic);
-            Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["skel2"], rng), "no theme: default");
-            Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["skel3"], rng));
-            Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["elite1"], rng));
-            Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["elite2"], rng));
-            Assert.AreEqual(MusicIds.Battle3, lib.BattleMusicFor(Database.Encounters["boss"], rng));
+            Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["d1_e1"], rng), "no theme: default");
+            Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["d1_e5"], rng));
+            Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["d1_e6"], rng));
+            Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["d1_e7"], rng));
+            Assert.AreEqual(MusicIds.Battle3, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(null, rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(new EncounterDef { music = "no_such_track" }, rng), "unknown id falls back");
             foreach (var e in Database.Encounters.Values.Where(e => e.music != null))
@@ -59,9 +59,9 @@ namespace Obscure.Tests
             {
                 lib.randomBattleMusic = true;
                 var rng = new System.Random(3);
-                var picks = Enumerable.Range(0, 200).Select(_ => lib.BattleMusicFor(Database.Encounters["skel2"], rng)).Distinct();
+                var picks = Enumerable.Range(0, 200).Select(_ => lib.BattleMusicFor(Database.Encounters["d1_e1"], rng)).Distinct();
                 CollectionAssert.AreEquivalent(BattleIds, picks);
-                Assert.AreEqual(MusicIds.Battle3, lib.BattleMusicFor(Database.Encounters["boss"], rng), "an encounter's own theme wins");
+                Assert.AreEqual(MusicIds.Battle3, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng), "an encounter's own theme wins");
             }
             finally { Object.DestroyImmediate(lib); }
         }

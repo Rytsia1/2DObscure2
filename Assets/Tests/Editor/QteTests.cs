@@ -29,9 +29,11 @@ namespace Obscure.Tests
         [Test]
         public void ProfilesMatchTheTuningTable()
         {
-            Assert.AreEqual((0.100f, 0.220f), (N.perfect, N.good));
-            Assert.AreEqual((0.065f, 0.160f), (E.perfect, E.good));
-            Assert.AreEqual((0.040f, 0.110f), (B.perfect, B.good));
+            // GDD Bab 12 §6.1: W_P / W_G total widths 90/240, 80/210, 72/180 ms -> half-widths; T_lead = windup.
+            Assert.AreEqual((0.045f, 0.120f, 1.0f), (N.perfect, N.good, N.windup));
+            Assert.AreEqual((0.040f, 0.105f, 0.9f), (E.perfect, E.good, E.windup));
+            Assert.AreEqual((0.036f, 0.090f, 0.8f), (B.perfect, B.good, B.windup));
+            Assert.AreEqual(0.35f, N.hitInterval, "Steady 350 ms");
             var relaxed = QteConfig.For(Tier.Boss, QteAssist.Relaxed);
             Assert.Greater(relaxed.good, B.good);
             Assert.Greater(relaxed.windup, B.windup);
@@ -42,8 +44,8 @@ namespace Obscure.Tests
         public void AttackTimingProducesPerfectGoodMiss()
         {
             Assert.AreEqual(QteResult.Perfect, TimingAt(N, 0f));
-            Assert.AreEqual(QteResult.Perfect, TimingAt(N, -0.09f));
-            Assert.AreEqual(QteResult.Good, TimingAt(N, 0.15f));
+            Assert.AreEqual(QteResult.Perfect, TimingAt(N, -0.04f));
+            Assert.AreEqual(QteResult.Good, TimingAt(N, 0.10f));
             Assert.AreEqual(QteResult.Miss, TimingAt(N, -0.3f));
 
             var idle = new TimingQte(N, 0.6f);
@@ -57,12 +59,14 @@ namespace Obscure.Tests
         [Test]
         public void TimingDifficultyScalesWithEnemyTier()
         {
-            Assert.AreEqual(QteResult.Perfect, TimingAt(N, 0.08f));
-            Assert.AreEqual(QteResult.Good, TimingAt(E, 0.08f));
-            Assert.AreEqual(QteResult.Good, TimingAt(B, 0.08f));
-            Assert.AreEqual(QteResult.Good, TimingAt(N, 0.18f));
-            Assert.AreEqual(QteResult.Miss, TimingAt(E, 0.18f));
-            Assert.AreEqual(QteResult.Miss, TimingAt(B, 0.18f));
+            // Windows are a few ms apart per tier, finer than the 5 ms frame steps of TimingAt: judge the error directly.
+            Assert.AreEqual(QteResult.Perfect, QteConfig.Judge(0.042f, N));
+            Assert.AreEqual(QteResult.Good, QteConfig.Judge(0.042f, E));
+            Assert.AreEqual(QteResult.Good, QteConfig.Judge(0.042f, B));
+            Assert.AreEqual(QteResult.Good, QteConfig.Judge(0.112f, N));
+            Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.112f, E));
+            Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.112f, B));
+            Assert.AreEqual(QteResult.Perfect, TimingAt(N, 0f));
             Assert.Less(B.sweep, N.sweep, "boss bar moves faster");
         }
 

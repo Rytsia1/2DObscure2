@@ -16,6 +16,7 @@ namespace Obscure
         public event Action<string> Logged;
 
         public int Round { get; private set; }
+        public readonly int Dungeon; // drives enemy stat scaling (Bab 10 §7)
         public RunState run;
         public bool partyHasAttackedInBattle;
         public bool IsInspiringLeaderActive(Side side)
@@ -34,7 +35,7 @@ namespace Obscure
             this.run = run;
             Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant())).ToList();
             var defs = enemies.ToList();
-            int dungeonNum = run != null ? (run.Map != null ? run.Map.act : run.Act) : 1;
+            int dungeonNum = Dungeon = run != null ? (run.Map != null ? run.Map.act : run.Act) : 1;
             Enemies = defs.Select((d, i) =>
             {
                 bool dup = defs.Count(x => x == d) > 1;
@@ -109,6 +110,11 @@ namespace Obscure
                     Say($"{c.name} is asleep and cannot act.");
                     continue;
                 }
+                if (c.IsEnemy && !EnemyAI.HasLegalAction(this, c))
+                {
+                    Say($"{c.name} has no usable action."); // skipped, no replacement turn (Bab 10 §8.10)
+                    continue;
+                }
                 return Active = c;
             }
             return null;
@@ -119,6 +125,7 @@ namespace Obscure
             Round++;
             acted.Clear();
             queue.AddRange(TurnOrder.Build(All));
+            foreach (var e in Enemies) EnemyAI.Plan(this, e); // intents are telegraphed from the start of the round
         }
 
         // Start of the bearer's turn: cooldowns and status durations tick, DoTs bite, Break recovers.
@@ -136,6 +143,7 @@ namespace Obscure
 
             // Process DoTs and status lifecycle via StatusController (GDD Section 8, 10, 11, 12)
             c.StatusController.ProcessTurnStart(this, c, Say);
+            if (!c.Alive) TryAdvancePhase(c); // a DoT can also deplete a boss HP bar
 
             // Synchronize legacy statuses list with StatusController active instances
             for (int i = c.statuses.Count - 1; i >= 0; i--)
@@ -228,6 +236,7 @@ namespace Obscure
             switch (a.kind)
             {
                 case ActionKind.Attack:
+                    if (a.attack != null && a.actor.unit.mp < a.attack.mpCost) return "Not enough MP.";
                     if (a.attack != null && a.attack.self) return null;
                     if (a.attack != null && a.attack.allTargets) return Opponents(a.actor).Any(c => c.Alive) ? null : "Invalid target.";
                     return IsFoe(a.actor, a.target) ? null : "Invalid target.";
@@ -289,6 +298,7 @@ namespace Obscure
 
             var actor = a.actor;
             var hits = new List<Hit>();
+            if (actor.IsEnemy) actor.Intent = null; // the round's plan is being carried out
 
             // GDD Section 11 & 12: Check Action Disruption (Shock / Despair)
             if (actor.StatusController.CheckActionDisruption(a, Rng, out var disruptionReason))
@@ -316,9 +326,22 @@ namespace Obscure
                     {
                         run?.RelicManager?.OnQteResolved(actor, true, attackQte, this);
                     }
+                    if (a.charging)
+                    {
+                        actor.Charge = new EnemyIntent { move = move, target = a.target };
+                        Say($"{actor.name} begins charging {move.name}{(move.allTargets ? "" : $" at {a.target.name}")}!");
+                        break;
+                    }
+                    if (move != null)
+                    {
+                        actor.unit.mp = Math.Max(0, actor.unit.mp - move.mpCost); // only Skills cost MP; it never regenerates on its own
+                        if (move.cooldown > 0) actor.cooldowns[Combatant.MoveKey(move)] = move.cooldown;
+                        if (move.telegraph) actor.Charge = null;
+                    }
                     if (move != null && move.self)
                     {
                         Say($"{actor.name} uses {move.name}.");
+                        if (move.restoreMp > 0f) RestoreMp(actor, (int)Math.Floor(actor.Stats.maxMp * move.restoreMp));
                         foreach (var ap in move.apply ?? Array.Empty<StatusApply>()) Apply(actor, ap, actor, 1f);
                         break;
                     }
@@ -327,18 +350,26 @@ namespace Obscure
                         : move.allTargets ? $"{actor.name} unleashes {move.name}!"
                         : $"{actor.name} uses {move.name} on {a.target.name}.");
                     var element = move?.element ?? Element.Physical;
-                    var struck = new HashSet<Combatant>();
                     for (int i = 0; i < (move?.hits ?? 1); i++)
                     {
                         var reaction = defense != null && i < defense.Count ? defense[i] : (QteResult?)null;
+                        float hitPower = (move?.PowerAt(i) ?? 1f) * power;
+                        bool heavy = move != null && move.HeavyAt(i);
                         foreach (var t in targets.Where(c => c.Alive))
                         {
-                            var hit = Deal(actor, t, Rules.Physical(actor, t, (move?.power ?? 1f) * power, Rng), element, reaction, null);
+                            // Elemental moves scale from MATK vs MDEF, physical from ATK vs DEF (Bab 10 §7.7).
+                            int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng);
+                            var hit = Deal(actor, t, raw, element, reaction, null, heavy);
                             hits.Add(hit);
-                            if (!hit.blocked) struck.Add(t);
+                            if (move != null && move.drain > 0f && actor.Alive)
+                            {
+                                int drained = (int)Math.Floor(hit.amount * move.drain); // from final damage actually dealt
+                                if (drained > 0) hits.Add(Heal(actor, drained));
+                            }
                         }
                     }
-                    foreach (var t in struck)
+                    // Statuses roll once per target per attack and are not blocked by a Perfect parry (Bab 11 §2.3, Bab 12 §4.3).
+                    foreach (var t in targets.Where(c => c != null && c.Alive))
                         foreach (var ap in move?.apply ?? Array.Empty<StatusApply>()) Apply(t, ap, actor, 1f);
                     break;
 
@@ -420,14 +451,7 @@ namespace Obscure
                                 hit.effect = eff;
 
                                 if (t.Alive && t.HasBreakGauge && actor != null && actor.side != t.side)
-                                {
-                                    int rawBreak = Rules.BreakDamage(actor, s, eff, mappedQte);
-                                    bool broke = t.ApplyBreakDamage(rawBreak, actor, out int reduced);
-                                    hit.breakAmount = reduced;
-                                    hit.brokeTarget = broke;
-                                    if (broke)
-                                        Say($"{t.name}'s guard shatters! (BROKEN)");
-                                }
+                                    BreakHit(t, Rules.BreakDamage(actor, s, eff, mappedQte), actor, ref hit);
 
                                 hits.Add(hit);
                             }
@@ -580,7 +604,7 @@ namespace Obscure
         }
 
         // All damage goes through here: reaction, then element, then HP, then Break Gauge reduction.
-        Hit Deal(Combatant attacker, Combatant t, int amount, Element element, QteResult? reaction, SkillDef skill)
+        Hit Deal(Combatant attacker, Combatant t, int amount, Element element, QteResult? reaction, SkillDef skill, bool heavy = false)
         {
             // GDD Bab 11 & 12: Broken cannot achieve Perfect on Defensive QTE (caps at Good / 50% reduction)
             if (t.IsBroken && reaction == QteResult.Perfect)
@@ -595,7 +619,7 @@ namespace Obscure
             }
 
             // Heavy attack check (Bab 12)
-            bool isHeavy = skill != null && (skill.HasTag("Heavy") || (attacker?.enemy?.attacks != null && attacker.enemy.attacks.Any(a => a.name == skill.name && a.isHeavy)));
+            bool isHeavy = heavy || skill != null && (skill.HasTag("Heavy") || (attacker?.enemy?.attacks != null && attacker.enemy.attacks.Any(a => a.name == skill.name && a.isHeavy)));
 
             if (reaction == QteResult.Perfect)
             {
@@ -748,14 +772,31 @@ namespace Obscure
                         Say("[Relic: Executioner's Bell] First strike of battle gains +15% Break Power!");
                     }
                 }
-                bool broke = t.ApplyBreakDamage(rawBreak, attacker, out int reduced);
-                hit.breakAmount = reduced;
-                hit.brokeTarget = broke;
-                if (broke)
-                    Say($"{t.name}'s guard shatters! (BROKEN)");
+                BreakHit(t, rawBreak, attacker, ref hit);
             }
 
             return hit;
+        }
+
+        // Break Gauge reduction; becoming Broken interrupts a charge in progress (Bab 12 §6.5).
+        void BreakHit(Combatant t, int rawBreak, Combatant attacker, ref Hit hit)
+        {
+            bool charging = t.IsCharging;
+            hit.brokeTarget = t.ApplyBreakDamage(rawBreak, attacker, out int reduced);
+            hit.breakAmount = reduced;
+            if (!hit.brokeTarget) return;
+            Say($"{t.name}'s guard shatters! (BROKEN)");
+            if (charging) Say($"{t.name}'s charge is interrupted!");
+        }
+
+        // A boss whose HP bar is depleted continues as its next phase with a fresh bar (same encounter, same combatant).
+        bool TryAdvancePhase(Combatant t)
+        {
+            if (t.Alive || t.enemy?.nextPhase == null || !Database.Enemies.TryGetValue(t.enemy.nextPhase, out var next)) return false;
+            string text = t.enemy.phase2Text;
+            t.AdvanceToPhase(next, Dungeon);
+            Say(text ?? $"{t.name} enters phase {t.phase}!");
+            return true;
         }
 
         public Hit Damage(Combatant t, int amount, string note = "")
@@ -823,8 +864,10 @@ namespace Obscure
             }
 
             Say($"{t.name} takes {amount} damage{(t.guarding ? " (guarded)" : "")}{note}.");
+            if (!t.Alive && TryAdvancePhase(t)) return new Hit { target = t, amount = amount };
             if (!t.Alive)
             {
+                acted.Add(t); // a unit defeated this round never acts again in it, even if revived (Bab 10 §8.6)
                 Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
                 // Relic System: Enemy Defeated (R013 Dirge-Eater's Fang, R022 Zoroa's Dull Crown)
                 if (t.IsEnemy)
@@ -845,6 +888,15 @@ namespace Obscure
             if (d.bossBreakRecoverOnPhase2 && t.IsBroken) t.RecoverBreakGauge();
             Say(d.phase2Text ?? $"{t.name} changes its stance!");
             if (d.phase2Buff != null) Apply(t, d.phase2Buff, t, 1f);
+        }
+
+        // MP restoration skills (e.g. Arcane Charge); never exceeds Max MP.
+        public int RestoreMp(Combatant t, int amount)
+        {
+            int gained = Math.Max(0, Math.Min(amount, t.Stats.maxMp - t.unit.mp));
+            t.unit.mp += gained;
+            Say($"{t.name} restores {gained} MP.");
+            return gained;
         }
 
         public Hit Heal(Combatant t, int amount, Combatant healer = null)

@@ -56,7 +56,7 @@ namespace Obscure
         {
             public Vector2Int pos, size;
             public SpriteRenderer sprite, cardBox, hpBar, hpBack, mpBar, mpBack, brkBar, brkBack;
-            public Label name, role, hp, mp, status, shieldBadge, weaknessLabel;
+            public Label name, role, hp, mp, status, shieldBadge, weaknessLabel, intent;
             public int phase = 1;
         }
 
@@ -118,7 +118,7 @@ namespace Obscure
                 logLabels.Add(Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 8 + i * 17, Palette.WarmIvory));
 
             battle.Logged += AddLog;
-            AddLog(encounter.tier == Tier.Boss ? "The Warden's eye opens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
+            AddLog(encounter.tier == Tier.Boss ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
         }
 
@@ -152,6 +152,8 @@ namespace Obscure
                 h.brkBack = Bar(cx - 30, ly + 36, 60, Palette.OverlayCharcoal, 0, 3);
                 h.brkBar = Bar(cx - 30, ly + 36, 60, Palette.AntiqueGold, 1, 3);
                 h.status = Ui.Label(transform, "", cx, ly + 41, Palette.Frost, Align.Center);
+                // Telegraphed intent (Heavy / charge / signature / status-only), shown from the start of the round.
+                h.intent = Ui.Label(transform, "", cx, pos.y - 12, Palette.Ember, Align.Center, order: Ui.Widget + 3);
                 return;
             }
 
@@ -240,7 +242,10 @@ namespace Obscure
                         }
                     }
                     SetBar(h.hpBar, 60, c.unit.hp, c.Stats.maxHp, 4);
-                    h.status.Set((c.enemy.phase2At > 0 ? $"PHASE {c.phase} " : "") + c.StatusTags);
+                    h.status.Set((c.enemy.phase2At > 0 || c.enemy.nextPhase != null || c.phase > 1 ? $"PHASE {c.phase} " : "") + c.StatusTags);
+                    var intent = c.Alive ? EnemyAI.IntentText(c) : null;
+                    h.intent.Set(intent == null ? "" : PixelFont.Fit(intent, 230));
+                    h.intent.Color = c.IsCharging || (c.Intent?.move.HasHeavy ?? false) ? Palette.CrimsonBright : Palette.Ember;
                     h.status.Color = c.phase > 1 ? Palette.CrimsonBright : c.HasDebuff ? Palette.Ember : Palette.Frost;
                     if (c.phase != h.phase)
                     {
@@ -361,6 +366,7 @@ namespace Obscure
                     Hint($"{c.name.ToUpperInvariant()} ACTS");
                     yield return new WaitForSeconds(EnemyThink);
                     var act = EnemyAI.Choose(Battle, c);
+                    if (act == null) continue; // no legal action left (already filtered by NextTurn)
                     var qte = QteFactory.Defense(act, Assist);
                     if (qte == null)
                     {
@@ -441,10 +447,22 @@ namespace Obscure
             var move = a.attack;
             if (move != null && move.self)
             {
-                Hint($"{move.name.ToUpperInvariant()}: " + string.Join(", ", move.apply.Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant())));
+                var effects = (move.apply ?? Array.Empty<StatusApply>()).Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant()).ToList();
+                if (move.restoreMp > 0f) effects.Add($"RESTORES {move.restoreMp * 100:0}% MP");
+                Hint($"{move.name.ToUpperInvariant()}: " + string.Join(", ", effects));
                 return null;
             }
             string who = move != null && move.allTargets ? "ALL" : a.target.name.ToUpperInvariant();
+            if (a.charging)
+            {
+                Hint($"{a.actor.name.ToUpperInvariant()} CHARGES {move.name.ToUpperInvariant()} > {who} - RELEASES NEXT TURN. BREAK IT TO INTERRUPT!");
+                return null;
+            }
+            if (move != null && move.StatusOnly)
+            {
+                Hint($"{move.name.ToUpperInvariant()} > {who}: " + string.Join(", ", move.apply.Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant())));
+                return null;
+            }
             string element = move != null && move.element != Element.Physical ? " " + move.element.ToString().ToUpperInvariant() : "";
             Hint(move == null ? $"{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
                 : $"{move.name.ToUpperInvariant()}{(move.hits > 1 ? $" X{move.hits}" : "")} > {who}  {EnemyAI.Severity(move)}{element}");

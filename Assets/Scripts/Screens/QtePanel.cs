@@ -144,10 +144,12 @@ namespace Obscure
                 if (next < 0) next = i;
                 bool holding = hold > 0 && e >= w / 2 && e < w / 2 + hold;
                 float p = holding ? Impact / 2 : (e >= w / 2 + hold ? e - hold : e) / w * Impact;
-                var c = holding ? (Mathf.Repeat(d.T, 0.2f) < 0.1f ? Palette.SpecCrimson : Palette.WarmIvory) : i == next ? Palette.WarmIvory : Palette.MutedGray;
+                var c = holding ? (Mathf.Repeat(d.T, 0.2f) < 0.1f ? Palette.SpecCrimson : Palette.WarmIvory)
+                    : d.heavy[i] ? Palette.CrimsonBright // Heavy marker: visible from the start of the bar (Bab 12 §4.2)
+                    : i == next ? Palette.WarmIvory : Palette.MutedGray;
                 SetMarker(i, p, c);
             }
-            if (!d.InTelegraph) info.Set(d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS");
+            if (!d.InTelegraph) info.Set((d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : ""));
 
             for (int i = d.Hits - 1; i >= 0; i--)
                 if (d.HitResult(i) is QteResult r)

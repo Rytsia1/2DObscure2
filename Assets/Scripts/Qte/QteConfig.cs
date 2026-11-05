@@ -38,11 +38,14 @@ namespace Obscure
 
     public static class QteConfig
     {
+        // GDD Bab 12 §6.1 (Dungeon 1-3): W_P / W_G total widths are judged at +/- half, windup = T_lead,
+        // Steady interval 350 ms (§6.2). Normal 90/240 ms lead 1000; Elite 80/210 lead 900; Boss 72/180 lead 800.
+        // Never scaled by enemy stats.
         public static readonly Dictionary<Tier, QteProfile> Profiles = new Dictionary<Tier, QteProfile>
         {
-            [Tier.Normal] = new QteProfile { perfect = 0.100f, good = 0.220f, sweep = 1.4f, telegraph = 1.2f, windup = 1.0f, hitInterval = 0.70f, letterTime = 0.75f, runeLetters = 0 },
-            [Tier.Elite] = new QteProfile { perfect = 0.065f, good = 0.160f, sweep = 1.1f, telegraph = 0.8f, windup = 0.85f, hitInterval = 0.55f, letterTime = 0.60f, runeLetters = 1 },
-            [Tier.Boss] = new QteProfile { perfect = 0.040f, good = 0.110f, sweep = 0.9f, telegraph = 0.6f, windup = 0.75f, hitInterval = 0.50f, letterTime = 0.50f, runeLetters = 2 },
+            [Tier.Normal] = new QteProfile { perfect = 0.045f, good = 0.120f, sweep = 1.4f, telegraph = 1.2f, windup = 1.0f, hitInterval = 0.35f, letterTime = 0.75f, runeLetters = 0 },
+            [Tier.Elite] = new QteProfile { perfect = 0.040f, good = 0.105f, sweep = 1.1f, telegraph = 0.8f, windup = 0.9f, hitInterval = 0.35f, letterTime = 0.60f, runeLetters = 1 },
+            [Tier.Boss] = new QteProfile { perfect = 0.036f, good = 0.090f, sweep = 0.9f, telegraph = 0.6f, windup = 0.8f, hitInterval = 0.35f, letterTime = 0.50f, runeLetters = 2 },
         };
 
         // Relaxed assist: wider windows and more time. Never touches unit stats.

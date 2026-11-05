@@ -11,8 +11,10 @@ namespace Obscure
         public SkillDef skill;
         public ItemDef item;
         public EnemyAttack attack; // enemy move pattern; null = a plain single-hit attack
+        public bool charging;      // enemy spends this turn charging `attack` (no damage, no QTE); released next turn
 
         public static BattleAction Strike(Combatant actor, EnemyAttack attack, Combatant target) => new BattleAction { actor = actor, kind = ActionKind.Attack, attack = attack, target = attack.allTargets || attack.self ? null : target };
+        public static BattleAction Charge(Combatant actor, EnemyAttack attack, Combatant target) => new BattleAction { actor = actor, kind = ActionKind.Attack, attack = attack, target = attack.allTargets ? null : target, charging = true };
         public static BattleAction Attack(Combatant actor, Combatant target) => new BattleAction { actor = actor, kind = ActionKind.Attack, target = target };
         public static BattleAction Guard(Combatant actor) => new BattleAction { actor = actor, kind = ActionKind.Guard };
         public static BattleAction Skill(Combatant actor, SkillDef skill, Combatant target = null) => new BattleAction { actor = actor, kind = ActionKind.Skill, skill = skill, target = target };

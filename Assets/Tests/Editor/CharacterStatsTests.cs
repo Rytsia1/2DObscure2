@@ -365,15 +365,15 @@ namespace Obscure.Tests
         [Test]
         public void QteStatInteractionsAndOutcomeCategoriesWorkWithoutRemovingChallenge()
         {
-            var profile = QteConfig.Profiles[Tier.Elite]; // perfect = 0.065, good = 0.160
+            var profile = QteConfig.Profiles[Tier.Elite]; // perfect = 0.040, good = 0.105 (GDD Bab 12 §6.1 half-widths)
 
-            // An error of 0.165s is just outside the base Elite Good window (0.160s), so base Judge is Miss / PartialSuccess
-            Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.165f, profile, 0f));
-            Assert.AreEqual(QteOutcomeCategory.PartialSuccess, QteConfig.JudgeCategory(0.165f, profile, 0f));
+            // An error of 0.108s is just outside the base Elite Good window (0.105s), so base Judge is Miss / PartialSuccess
+            Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.108f, profile, 0f));
+            Assert.AreEqual(QteOutcomeCategory.PartialSuccess, QteConfig.JudgeCategory(0.108f, profile, 0f));
 
-            // With DEX QTE Timing Bonus (+6% = 0.06f), effective good window is 0.160 * 1.06 = 0.1696s -> Good / Success!
-            Assert.AreEqual(QteResult.Good, QteConfig.Judge(0.165f, profile, 0.06f));
-            Assert.AreEqual(QteOutcomeCategory.Success, QteConfig.JudgeCategory(0.165f, profile, 0.06f));
+            // With DEX QTE Timing Bonus (+6% = 0.06f), effective good window is 0.105 * 1.06 = 0.1113s -> Good / Success!
+            Assert.AreEqual(QteResult.Good, QteConfig.Judge(0.108f, profile, 0.06f));
+            Assert.AreEqual(QteOutcomeCategory.Success, QteConfig.JudgeCategory(0.108f, profile, 0.06f));
 
             // Large errors still Miss even with max DEX bonus (player reaction still required!)
             Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.35f, profile, 0.25f));

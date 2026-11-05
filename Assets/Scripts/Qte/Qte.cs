@@ -149,15 +149,19 @@ namespace Obscure
     {
         public readonly QteProfile profile;
         public readonly float[] impacts, delays;  // impact time and extra hold per hit
+        public readonly bool[] heavy;             // Heavy marker per hit (Perfect only halves that hit)
         readonly QteResult?[] results;
         readonly QteOutcomeCategory?[] categories;
 
-        public DefenseQte(QteProfile profile, int hits, float firstHitDelay = 0f, float timingBonusFraction = 0f)
+        // intervals: seconds between consecutive markers (Accelerando etc.); null = profile.hitInterval (Steady).
+        public DefenseQte(QteProfile profile, int hits, float firstHitDelay = 0f, float timingBonusFraction = 0f,
+            float[] intervals = null, bool[] heavy = null)
         {
             this.profile = profile;
             TimingBonusFraction = timingBonusFraction;
             impacts = new float[hits];
             delays = new float[hits];
+            this.heavy = heavy ?? new bool[hits];
             results = new QteResult?[hits];
             categories = new QteOutcomeCategory?[hits];
             delays[0] = firstHitDelay;
@@ -165,7 +169,7 @@ namespace Obscure
             for (int i = 0; i < hits; i++)
             {
                 impacts[i] = t;
-                t += profile.hitInterval;
+                t += intervals != null && i < intervals.Length ? intervals[i] : profile.hitInterval;
             }
         }
 
@@ -234,7 +238,8 @@ namespace Obscure
         public static Qte Defense(BattleAction a, QteAssist assist)
         {
             var move = a.attack;
-            if (move != null && move.self) return null;
+            // Stances, charge turns and status-only actions have no direct damage, so no Defensive QTE (Bab 11 §2.3).
+            if (a.charging || (move != null && (move.self || move.StatusOnly))) return null;
             int hits = move?.hits ?? 1;
             if (assist == QteAssist.Auto) return new AutoQte(hits);
             var profile = QteConfig.For(a.actor.enemy?.tier ?? Tier.Normal, assist);
@@ -246,7 +251,8 @@ namespace Obscure
             {
                 statTimingBonus += a.target.unit.Derived.QteTimingBonusFraction;
             }
-            return new DefenseQte(profile, hits, move?.delay ?? 0f, statTimingBonus);
+            var heavy = move == null ? null : Enumerable.Range(0, hits).Select(move.HeavyAt).ToArray();
+            return new DefenseQte(profile, hits, move?.delay ?? 0f, statTimingBonus, move?.intervals, heavy);
         }
     }
 

@@ -18,7 +18,7 @@ namespace Obscure.Tests
             {
                 id = "n" + i, type = t, floor = i, lane = 0,
                 next = i < types.Length - 1 ? new[] { "n" + (i + 1) } : Array.Empty<string>(),
-                encounter = t == NodeType.Battle ? "skel2" : t == NodeType.Elite ? "elite1" : t == NodeType.Boss ? "boss" : null,
+                encounter = t == NodeType.Battle ? "d1_e1" : t == NodeType.Elite ? "d1_e7" : t == NodeType.Boss ? "d1_boss" : null,
                 eventId = t == NodeType.Event ? eventId : null,
             }).ToArray(),
         };
