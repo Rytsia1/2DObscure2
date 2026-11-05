@@ -1893,6 +1893,7 @@ namespace Obscure
                 relics = Array.Empty<string>(),
                 party = confirmedParty.Select(c => SavedCharacterData.FromCharacterDef(c)).ToArray()
             };
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateNewGameCommittedSnapshot(confirmedParty, seed));
             WriteSaveData(data);
             return data;
         }

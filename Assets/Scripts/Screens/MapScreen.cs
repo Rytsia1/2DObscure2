@@ -123,8 +123,25 @@ namespace Obscure
             statusBtn.tooltip = "INSPECT PARTY PRIMARY STATS, DERIVED STATS, AND ATTRIBUTES";
             menu.Add(statusBtn);
 
+            var abandonBtn = Ui.Button(Root, "RETURN TO HUB", 466, 308, 162, OnAbandonClicked, 20, style: ButtonStyle.Slab);
+            abandonBtn.tooltip = "ABANDON CURRENT EXPEDITION AND RETURN TO SANCTUARY HUB";
+            menu.Add(abandonBtn);
+
             int hx = Ui.KeyHint(Root, 12, 326, "CHOOSE", "ARROWS");
             Ui.KeyHint(Root, hx, 326, "TRAVEL", "ENTER");
+        }
+
+        void OnAbandonClicked()
+        {
+            new ConfirmationModal(Root, "ABANDON EXPEDITION",
+                "Abandon active expedition?\nAll uncommitted current-dungeon loot, EXP, and Run Gold will be lost.\nPreviously committed progression and Hub Gold will be preserved.",
+                "RETURN TO HUB",
+                () =>
+                {
+                    Run?.AbandonExpedition();
+                    SaveManager.AutoSave(out _);
+                    Game.Go(GameState.Hub);
+                });
         }
 
         HashSet<NodeDef> Ahead(List<NodeDef> from)

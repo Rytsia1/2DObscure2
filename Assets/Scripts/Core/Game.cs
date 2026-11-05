@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -40,7 +40,18 @@ namespace Obscure
         public GameSettings Settings { get; private set; }
         public GameState State { get; private set; }
         public GameScreen CurrentScreen => screen;
-        public bool HasSavedGame => GameSave.HasSavedGame();
+        public bool HasSavedGame => SaveManager.HasAnySave(out _) || GameSave.HasSavedGame();
+
+        public void ApplyLoadedCampaign(CharacterRoster roster, RunState run)
+        {
+            Roster = roster;
+            Run = run;
+        }
+
+        void Update()
+        {
+            SaveManager.RecordPlaytime(Time.unscaledDeltaTime);
+        }
 
         GameScreen screen;
         SpriteRenderer fader;
@@ -95,16 +106,18 @@ namespace Obscure
             Go(GameState.CharacterCreation);
         }
 
-        // Main Menu -> Continue (Section 2):
-        // Loads the existing save, restores the confirmed 4-character party and current progression,
-        // and enters the expedition map directly without opening Character Creation.
+        // Main Menu -> Continue (Section 2 & Save Spec):
+        // Loads the most recent valid save and enters the Sanctuary Hub directly.
         public bool ContinueGame()
         {
+            if (SaveManager.TryContinue(out _))
+                return true;
+
             if (!GameSave.TryLoadContinue(out var restoredRoster, out var restoredRun))
                 return false;
             Roster = restoredRoster;
             Run = restoredRun;
-            Go(GameState.Map);
+            Go(GameState.Hub);
             return true;
         }
 
@@ -121,6 +134,7 @@ namespace Obscure
             if (NewGameBuilder != null && NewGameBuilder.IsPartyConfirmed)
             {
                 Run = NewGameBuilder.BeginFirstExpedition(Roster, s);
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateNewGameCommittedSnapshot(Roster.GetActiveParty(), s));
                 Go(GameState.Map);
                 return;
             }
@@ -133,8 +147,7 @@ namespace Obscure
             int s = seed ?? System.Environment.TickCount;
             var party = Roster != null ? Roster.GetActiveParty() : Database.Party.Select(id => Database.Characters[id]).ToList();
             Run = new RunState(MapGenerator.Generate(s), party, s);
-            if (GameSave.HasSavedGame())
-                GameSave.SaveRunState(Run, party);
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateNewGameCommittedSnapshot(party, s));
             Go(GameState.Map);
         }
 
@@ -216,6 +229,8 @@ namespace Obscure
             GameState.Shop => new ShopScreen(),
             GameState.Hub => new HubScreen(),
             GameState.Talents => new TalentScreen(),
+            GameState.Save => new SaveScreen(),
+            GameState.Load => new LoadScreen(Game.I != null && Game.I.State == GameState.Hub ? GameState.Hub : GameState.MainMenu),
             _ => new EndScreen(true),
         };
 

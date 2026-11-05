@@ -77,8 +77,23 @@ namespace Obscure
                 partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(180, 5, u.Alive ? Palette.Emerald : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 430, y + 14, Ui.Widget);
             }
 
-            // Bottom bar: feedback
+            // Bottom bar: feedback & Hub utility buttons
             feedbackLabel = Ui.Label(Root, "WELCOME TO THE HUB. PREPARE GEAR, HEAL, UPGRADE, AND TRAIN BEFORE EMBARKING.", 24, 316, Palette.WarmIvory, Align.Left);
+
+            var utilMenu = Root.gameObject.AddComponent<Menu>();
+            var saveBtn = Ui.Button(Root, "SAVE", 430, 312, 56, () => Game.Go(GameState.Save), 22, style: ButtonStyle.Slab);
+            var loadBtn = Ui.Button(Root, "LOAD", 490, 312, 56, () => Game.Go(GameState.Load), 22, style: ButtonStyle.Slab);
+            var titleBtn = Ui.Button(Root, "TITLE", 550, 312, 70, OnTitleClicked, 22, style: ButtonStyle.Slab);
+            utilMenu.Add(saveBtn);
+            utilMenu.Add(loadBtn);
+            utilMenu.Add(titleBtn);
+
+            // Auto-save on Hub arrival if not already auto-saved
+            if (Run != null && PersistenceCommitHandler.ActiveCommittedSnapshot == null)
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(Run));
+                SaveManager.AutoSave(out _);
+            }
 
             RenderFacility();
         }
@@ -289,6 +304,9 @@ namespace Obscure
                 return;
             }
 
+            // Pre-embark auto save (Hub lifecycle trigger)
+            SaveManager.AutoSave(out _);
+
             int nextAct = Run.Act + 1;
             if (nextAct > 8)
             {
@@ -299,6 +317,14 @@ namespace Obscure
             var nextMap = MapGenerator.Generate(Run.Seed + nextAct, nextAct);
             Run.AdvanceToNextDungeon(nextMap);
             Game.Go(GameState.Map);
+        }
+
+        void OnTitleClicked()
+        {
+            new ConfirmationModal(Root, "RETURN TO TITLE",
+                "Return to the Main Menu?\nEnsure your progress is saved before exiting the Hub.",
+                "RETURN TO TITLE",
+                () => Game.Go(GameState.MainMenu));
         }
     }
 }

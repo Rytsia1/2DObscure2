@@ -766,6 +766,20 @@ namespace Obscure
             GameSave.SaveRunState(this);
         }
 
+        // Section 5.4: Voluntary abandonment terminates active dungeon, discards uncommitted data, preserves committed progress
+        public void AbandonExpedition()
+        {
+            Status = RunStatus.Defeat;
+            EndedUtc = DateTime.UtcNow;
+            Gold = 0;
+            Current = null;
+            Cleared.Clear();
+            PendingReward = null;
+            BattleBuffs.Clear();
+            PersistenceCommitHandler.RollbackUncommitted(this);
+            Status = RunStatus.Active;
+        }
+
         // Battle-start buffs from events, consumed by the next battle only.
         public List<StatusApply> TakeBattleBuffs()
         {
@@ -1048,6 +1062,94 @@ namespace Obscure
             else
             {
                 CurrentShop = EquipmentShopManager.GenerateShop(Act, Rng);
+            }
+        }
+
+        public void RestoreFromCampaignSave(CampaignSaveData data)
+        {
+            if (data == null) return;
+            Gold = data.hubGold;
+            Current = null;
+            Cleared.Clear();
+            PendingReward = null;
+            BattleBuffs.Clear();
+
+            Relics.Clear();
+            RelicManager.ClearAll();
+            if (data.relicInstances != null && data.relicInstances.Length > 0)
+            {
+                RelicManager.RestoreFromSave(data.relicInstances);
+                foreach (var inst in RelicManager.ActiveRelics)
+                {
+                    if (!Relics.Contains(inst.relicId)) Relics.Add(inst.relicId);
+                }
+            }
+            else if (data.relics != null)
+            {
+                foreach (var rid in data.relics)
+                {
+                    TryAddRelic(rid, out _);
+                }
+            }
+
+            if (data.inventoryEquipment != null || data.inventoryConsumables != null || data.inventoryMaterials != null || data.inventoryKeyItems != null)
+            {
+                var invData = new InventorySaveData
+                {
+                    equipment = data.inventoryEquipment ?? Array.Empty<EquipmentInstanceSaveData>(),
+                    consumables = data.inventoryConsumables ?? Array.Empty<ConsumableStackSaveData>(),
+                    materials = data.inventoryMaterials ?? Array.Empty<MaterialEntrySaveData>(),
+                    keyItems = data.inventoryKeyItems ?? Array.Empty<string>()
+                };
+                Inventory.RestoreFromSave(invData);
+            }
+
+            if (data.party != null)
+            {
+                for (int i = 0; i < Math.Min(Party.Count, data.party.Length); i++)
+                {
+                    var sc = data.party[i];
+                    var u = Party[i];
+                    u.level = Math.Max(1, sc.level);
+                    u.selectedTalentIds.Clear();
+                    if (sc.selectedTalents != null)
+                    {
+                        foreach (var tid in sc.selectedTalents)
+                            if (!string.IsNullOrEmpty(tid) && !u.selectedTalentIds.Contains(tid))
+                                u.selectedTalentIds.Add(tid);
+                    }
+                    u.unspentAsiPoints = sc.unspentAsiPoints;
+                    u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
+
+                    if (sc.equippedInstances != null && sc.equippedInstances.Length > 0)
+                    {
+                        u.equipped.Clear();
+                        u.equippedInstances.Clear();
+                        foreach (var eqData in sc.equippedInstances)
+                        {
+                            var inst = EquipmentInstance.FromSaveData(eqData);
+                            if (inst != null && eqData.slot >= 0)
+                            {
+                                var slot = (EquipmentSlot)eqData.slot;
+                                u.TryEquip(slot, inst, out _);
+                            }
+                        }
+                    }
+
+                    u.RecalculateStats(fillResources: true);
+                    if (sc.hp > 0) u.hp = Math.Min(u.stats.maxHp, sc.hp);
+                    if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);
+                }
+            }
+
+            if (data.hubArmoryStock != null && data.hubArmoryStock.Length > 0)
+            {
+                CurrentShop = new ShopInventory(Act);
+                foreach (var s in data.hubArmoryStock)
+                {
+                    var item = ShopItem.FromSaveData(s);
+                    if (item != null) CurrentShop.items.Add(item);
+                }
             }
         }
 

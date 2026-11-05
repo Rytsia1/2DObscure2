@@ -77,6 +77,8 @@ namespace Obscure
             if (Run.Won)
             {
                 Run.TransferRunGoldToHub();
+                PersistenceCommitHandler.CommitDungeonClear(Run);
+                SaveManager.AutoSave(out _);
                 if (Run.Act >= 8) Game.Go(GameState.Victory);
                 else Game.Go(GameState.Hub);
             }

@@ -9,6 +9,7 @@ namespace Obscure
     {
         public Selectable NewGameButton { get; private set; }
         public Selectable ContinueButton { get; private set; }
+        public Selectable LoadGameButton { get; private set; }
         public Selectable SettingsButton { get; private set; }
         public Selectable ExitButton { get; private set; }
 
@@ -35,10 +36,12 @@ namespace Obscure
 
             // Menu list
             var menu = Root.gameObject.AddComponent<Menu>();
-            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, 160, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat));
-            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 184, 190, () => Game?.ContinueGame(), 22, interactable: GameSave.HasSavedGame(), style: ButtonStyle.Flat));
-            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, 208, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat));
-            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, 232, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat));
+            bool hasSave = SaveManager.HasAnySave(out _) || GameSave.HasSavedGame();
+            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, 154, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat));
+            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 178, 190, () => Game?.ContinueGame(), 22, interactable: hasSave, style: ButtonStyle.Flat));
+            LoadGameButton = menu.Add(Ui.Button(Root, "LOAD GAME", 61, 202, 190, () => Game?.Go(GameState.Load), 22, interactable: hasSave, style: ButtonStyle.Flat));
+            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, 226, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat));
+            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, 250, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat));
 
             // Footer: key prompts + build tag on an ink band
             Ui.Rect(Root, 0, 334, Ui.Width, 26, Palette.Hex(0x070A14, 220), Ui.Panels);
