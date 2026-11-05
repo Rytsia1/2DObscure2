@@ -34,11 +34,12 @@ namespace Obscure
             this.run = run;
             Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant())).ToList();
             var defs = enemies.ToList();
+            int dungeonNum = run != null ? (run.Map != null ? run.Map.act : run.Act) : 1;
             Enemies = defs.Select((d, i) =>
             {
                 bool dup = defs.Count(x => x == d) > 1;
                 char letter = (char)('A' + defs.Take(i).Count(x => x == d));
-                return new Combatant(new Unit(d), Side.Enemy, i, dup ? $"{d.shortName} {letter}" : d.shortName, dup ? d.tag + letter : d.tag, d);
+                return new Combatant(new Unit(d, dungeonNum), Side.Enemy, i, dup ? $"{d.shortName} {letter}" : d.shortName, dup ? d.tag + letter : d.tag, d);
             }).ToList();
             Items = items;
             Rng = rng;
@@ -98,11 +99,13 @@ namespace Obscure
                 if (c.stunTurns > 0 || c.StatusController.HasStatus(StatusId.Stun))
                 {
                     if (c.stunTurns > 0) c.stunTurns--;
+                    c.StatusController.DecrementControlImmunities();
                     Say($"{c.name} is stunned and cannot act.");
                     continue;
                 }
                 if (c.StatusController.HasStatus(StatusId.Sleep))
                 {
+                    c.StatusController.DecrementControlImmunities();
                     Say($"{c.name} is asleep and cannot act.");
                     continue;
                 }
@@ -233,7 +236,7 @@ namespace Obscure
                 case ActionKind.Skill:
                     if (a.skill == null || !a.actor.unit.HasActiveSkill(a.skill.id)) return "Unknown skill.";
                     if (a.actor.Cooldown(a.skill.id) > 0) return "On cooldown.";
-                    if (a.actor.unit.mp < a.actor.GetEffectiveMpCost(a.skill)) return "Not enough MP.";
+                    if (a.actor.unit.mp < a.actor.GetEffectiveMpCost(a.skill, run)) return "Not enough MP.";
                     if (a.skill.requiresShield && a.actor.unit != null && !a.actor.unit.HasEquippedShield()) return "Requires an equipped shield.";
                     if (a.skill.requiredWeaponType != WeaponType.None && a.actor.unit != null && !a.actor.unit.HasEquippedWeaponType(a.skill.requiredWeaponType))
                         return $"Requires a {a.skill.requiredWeaponType}.";
@@ -346,7 +349,7 @@ namespace Obscure
 
                 case ActionKind.Skill:
                     var s = a.skill;
-                    actor.unit.mp -= actor.GetEffectiveMpCost(s);
+                    actor.unit.mp -= actor.GetEffectiveMpCost(s, run);
                     if (s.cooldown > 0) actor.cooldowns[s.id] = s.cooldown;
                     Say($"{actor.name} uses {s.name}.{(power > QteConfig.PerfectPower ? " Critical!" : "")}");
 
@@ -395,7 +398,7 @@ namespace Obscure
                                 {
                                     float relicDmgMult = 1f;
                                     int relicBreak = 0;
-                                    run.RelicManager.ModifyDamageDealt(actor, t, ref relicDmgMult, ref relicBreak, !partyHasAttackedInBattle, this);
+                                    run.RelicManager.ModifyDamageDealt(actor, t, ref relicDmgMult, ref relicBreak, !partyHasAttackedInBattle, this, isSkill: true, skill: s);
                                     partyHasAttackedInBattle = true;
                                     if (Math.Abs(relicDmgMult - 1f) > 0.001f)
                                     {
@@ -500,6 +503,7 @@ namespace Obscure
                     }
                     break;
             }
+            a.actor.StatusController.DecrementControlImmunities();
             Active = null;
             return hits;
         }

@@ -815,6 +815,12 @@ namespace Obscure
         public AbilityScores minAbilityScores = AbilityScores.Zero;
     }
 
+    public enum EquipmentTrait
+    {
+        Standard = 0,
+        Cursed = 1
+    }
+
     // Data-driven Equipment definition supporting 8 slots, Strict Weapon Compatibility, Weapon Properties, and Restrictions.
     [Serializable]
     public class EquipmentDef
@@ -822,6 +828,10 @@ namespace Obscure
         public string id, name, description;
         public string category = "Equipment";
         public string specificType;
+        public EquipmentTrait trait = EquipmentTrait.Standard;
+        public string boon;
+        public string curse;
+        public bool IsCursed => trait == EquipmentTrait.Cursed;
         public EquipmentType equipmentType = EquipmentType.Weapon;
         public EquipmentSlot slot = EquipmentSlot.MainHand;
         public WeaponType weaponType = WeaponType.None;

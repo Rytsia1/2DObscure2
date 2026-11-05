@@ -10,7 +10,10 @@ namespace Obscure
         Survival,
         Utility,
         Economy,
-        Exploration
+        Exploration,
+        Break,
+        Progression,
+        Hybrid
     }
 
     public enum RelicProposedRarity

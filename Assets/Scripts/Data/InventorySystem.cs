@@ -134,6 +134,10 @@ namespace Obscure
                 ? se
                 : null;
 
+        public bool IsCursed => Definition != null && Definition.IsCursed;
+        public string Boon => Definition?.boon;
+        public string Curse => Definition?.curse;
+
         public EquipmentInstance()
         {
             instanceId = Guid.NewGuid().ToString("N");
@@ -549,6 +553,26 @@ namespace Obscure
 
         public int GetConsumableCount(string itemId) =>
             consumables.Where(c => c.itemId == itemId).Sum(c => c.count);
+
+        // Bab 9 §5: Talent Respec — Scroll of Emptiness
+        public bool UseScrollOfEmptiness(Unit target, out string error)
+        {
+            if (target == null)
+            {
+                error = "Target character is null.";
+                return false;
+            }
+
+            if (!RemoveConsumable("CON_SCROLL_OF_EMPTINESS", 1) && !RemoveConsumable("scroll_of_emptiness", 1))
+            {
+                error = "No Scroll of Emptiness in inventory.";
+                return false;
+            }
+
+            TalentSystem.Respec(target);
+            error = null;
+            return true;
+        }
 
         public void AddMaterial(string materialId, int amount = 1)
         {

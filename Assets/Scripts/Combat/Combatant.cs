@@ -206,10 +206,14 @@ namespace Obscure
         {
             get
             {
-                float bgSpeedMult = wayfarerSpeedBuffTurns > 0 ? 1.10f : 1.0f;
-                return Scale(
-                    unit.stats.spd,
-                    (1 - Mag(StatusId.Slow) - Mag(StatusId.Freeze)) * StatusController.GetSpeedMultiplier() * bgSpeedMult);
+                // Bab 10 §8.2 Effective Speed Formula: clamp(1 + TotalSpeedBonus - TotalSpeedPenalty, 0.50, 1.50)
+                float bgSpeedBonus = wayfarerSpeedBuffTurns > 0 ? 0.10f : 0f;
+                float legacyPenalty = (StatusController != null && StatusController.ActiveInstances.Count > 0) ? 0f : (Mag(StatusId.Slow) + Mag(StatusId.Freeze));
+                float statusMult = StatusController != null ? StatusController.GetSpeedMultiplier() : 1f;
+                float totalBonus = bgSpeedBonus + Math.Max(0f, statusMult - 1f);
+                float totalPenalty = legacyPenalty + Math.Max(0f, 1f - statusMult);
+                float speedMod = Math.Clamp(1f + totalBonus - totalPenalty, 0.50f, 1.50f);
+                return Math.Max(1, (int)Math.Floor(unit.stats.spd * speedMod));
             }
         }
         public int Initiative => Speed;
@@ -283,7 +287,7 @@ namespace Obscure
 
         // Wizard Starter Passive — Arcane Affinity: reduces the MP cost of Arcane Spells.
         // Sage Background Perk — Learned Mind: percentage reduction with min 1 MP floor.
-        public int GetEffectiveMpCost(SkillDef skill)
+        public int GetEffectiveMpCost(SkillDef skill, RunState run = null)
         {
             if (skill == null) return 0;
             int baseCost = skill.mpCost;
@@ -309,7 +313,20 @@ namespace Obscure
                 cost = (int)Math.Round(cost * (1f - TalentSystem.KeenMindMpReduction));
                 if (cost < TalentSystem.KeenMindMinFloor) cost = TalentSystem.KeenMindMinFloor;
             }
-            return Math.Max(0, cost);
+
+            // Relic modifiers (R025 Arcanum Unbound: +20% MP, R026 The Empty Chalice: -30% MP)
+            if (run?.RelicManager != null)
+            {
+                run.RelicManager.ModifyMpCost(this, skill, ref cost);
+            }
+
+            // Cursed Equipment: EQ075 Fists of the Hollow Saint: +1 MP cost
+            if (unit != null && unit.equipped != null && unit.equipped.Values.Any(e => e.id == "EQ075"))
+            {
+                cost += 1;
+            }
+
+            return Math.Max(1, cost);
         }
 
         // Human Racial Feat — Determination: Shield 20% Max HP + All Damage Bonus +15% for 2 turns when dropped to <= 30% HP (1/battle)

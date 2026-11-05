@@ -272,6 +272,11 @@ namespace Obscure
         public int intValue;
         public int maxPerBattle;
 
+        public string demerit;
+        public int buyPrice;
+        public int sellPrice;
+        public bool HasDemerit => !string.IsNullOrEmpty(demerit) && demerit != "— (tidak memiliki demerit)";
+
         public string Description => !string.IsNullOrEmpty(gameplayEffect) ? gameplayEffect : description;
     }
 

@@ -4,10 +4,10 @@
 
 | Item | Keterangan |
 | --- | --- |
-| Dokumen | GDD Terpadu v1.0 |
-| Tanggal | 4 November 2026 |
+| Dokumen | GDD Terpadu v1.5 |
+| Tanggal | 5 November 2026 |
 | Status | Konsolidasi seluruh dokumen desain project ke dalam satu GDD. Isi bab mengikuti versi terbaru setiap dokumen sumber setelah sinkronisasi QTE, equipment, dan race pada November 2026. |
-| Cakupan | Visi dan core loop, dunia dan cerita, karakter (character creation, race, background, class, talent), combat (struktur, damage dan status, QTE), item dan ekonomi, presentasi (art, style guide, UI, audio), serta status proyek |
+| Cakupan | Visi dan core loop, dunia dan cerita, karakter (character creation, race, background, class, talent), combat (struktur, damage dan status, QTE), item, relic, dungeon modifier, dan ekonomi, presentasi (art, style guide, UI, audio), serta status proyek |
 
 ## Ringkasan Game
 
@@ -18,10 +18,12 @@
 | Party | 4 karakter |
 | Karakter | 7 race, 9 class, 10 background, 6 Ability Score |
 | Struktur | 8 dungeon berurutan (8 layer The World's Between), masing-masing dengan boss |
-| Difficulty | Hardcore Tactical Survival: party wipe mengakhiri run |
-| Combat | Giliran individual per karakter dengan reaction-based QTE ofensif dan defensif |
+| Difficulty | Hardcore Tactical Survival dengan filosofi Relentless Tactical Survival: kejam tetapi tidak sewenang-wenang; party wipe mengakhiri run |
+| Combat | Shared initiative queue berbasis Speed tanpa RNG, satu giliran per unit per round, dengan reaction-based QTE ofensif dan defensif |
 | Equipment | 8 slot, 6 rarity, random affix, Legendary dan Mythic Effect |
-| Ekonomi | Gold berbasis run, Dungeon Shop, dan fasilitas hub |
+| Relic | Item pasif permanen milik party, maksimal 5, tanpa duplikat; dibeli dan dijual di Magic Shop |
+| Dungeon Modifier | Efek sementara yang dapat di-stack dan diambil lagi, dengan cap per efek; hilang saat dungeon clear |
+| Ekonomi | Run Gold dan Hub Gold; Dungeon Shop dan enam fasilitas Hub (Shop, Armory, Blacksmith, Training Ground, Temple, Magic Shop) |
 | Visual | Modern pixel art, anime JRPG, dark fantasy; kamera combat side-view |
 
 ## Cara Membaca Dokumen Ini
@@ -29,7 +31,7 @@
 - Setiap bab berasal dari satu dokumen sumber, ditulis di bawah judul bab. Lampiran A memetakan semua sumber.
 - Penomoran di dalam bab mengikuti dokumen sumbernya. Rujukan "§x" di dalam sebuah bab menunjuk ke bab itu sendiri; rujukan ke bab lain ditulis "Bab N §x".
 - Beberapa bab berbahasa Inggris karena dokumen sumbernya berbahasa Inggris. Isinya tidak diterjemahkan agar maknanya tidak bergeser.
-- Penanda status dari dokumen sumber (TBD, OPEN, RECOMMENDED, CONFIRMED, *tuning*) dipertahankan. Bab 19 merangkum konflik, asumsi, dan isu yang masih terbuka.
+- Penanda status dari dokumen sumber (TBD, OPEN, RECOMMENDED, CONFIRMED, *tuning*) dipertahankan. Bab 21 merangkum konflik, asumsi, dan isu yang masih terbuka.
 - Jika dua bab tampak berbeda, bab yang lebih spesifik berlaku. Contoh: aturan QTE di Bab 12 berlaku di atas ringkasan QTE di bab lain, dan nilai race di Bab 6 berlaku di atas ringkasan di bab lain.
 
 ## Daftar Isi
@@ -47,19 +49,21 @@
     - Bab 8 — Class System
     - Bab 9 — Talents System
 - **Bagian IV — Combat**
-    - Bab 10 — Combat Structure dan Broken
+    - Bab 10 — Combat Structure, Turn Order, dan Enemy Scaling
     - Bab 11 — Damage dan Status Effect
     - Bab 12 — QTE System
 - **Bagian V — Item dan Ekonomi**
     - Bab 13 — Inventory dan Equipment
-    - Bab 14 — Shop dan Run Economy
+    - Bab 14 — Relic System
+    - Bab 15 — Dungeon Modifier System
+    - Bab 16 — Shop, Fasilitas Hub, dan Run Economy
 - **Bagian VI — Presentasi**
-    - Bab 15 — Art Direction dan Visual Production
-    - Bab 16 — Visual Style Guide
-    - Bab 17 — UI/UX Design
-    - Bab 18 — Audio Direction
+    - Bab 17 — Art Direction dan Visual Production
+    - Bab 18 — Visual Style Guide
+    - Bab 19 — UI/UX Design
+    - Bab 20 — Audio Direction
 - **Bagian VII — Status Proyek**
-    - Bab 19 — Konflik, Asumsi, dan Isu Terbuka
+    - Bab 21 — Konflik, Asumsi, dan Isu Terbuka
     - Lampiran A — Peta Dokumen Sumber
     - Lampiran B — Riwayat Sinkronisasi November 2026
 
@@ -150,7 +154,7 @@ Belum diputuskan apakah ada unlock permanen atau progres antar-run. Jangan menga
 
 ## Bab 3 — Difficulty System
 
-> Sumber: Difficulty System v0.2.
+> Sumber: Difficulty System v0.4.
 
 ### 1. Design Overview
 
@@ -180,6 +184,7 @@ values and details are labeled **TBD** rather than assumed.
   Element                Current Design
   ---------------------- --------------------------------------------------
   Difficulty direction   Hardcore Tactical Survival
+  Design philosophy      Relentless Tactical Survival (§2.1)
   Party size             4 characters
   Combat format          Turn-based, individual character turns
   Reaction mechanic      QTE
@@ -187,6 +192,95 @@ values and details are labeled **TBD** rather than assumed.
   Dungeon progression    Sequential; fixed order
   Run currency           Gold is run-based
   Failure                Run ends; return to Main Menu; New Game required
+
+#### 2.1 Design Philosophy --- Relentless Tactical Survival
+
+**CONFIRMED.** Hardcore Tactical Survival is the difficulty direction;
+**Relentless Tactical Survival** is the philosophy that guides every
+difficulty decision within that direction.
+
+> Felna tidak harus memberikan pemain pertarungan yang adil. Felna harus
+> memberikan pemain kesempatan yang adil untuk memahami dan menghadapi
+> pertarungan yang tidak adil.
+
+*Felna does not have to give the player fair fights. Felna must give the
+player a fair chance to understand and face unfair fights.*
+
+Felna may feel cruel, but it must never feel arbitrary. The player must
+always have enough information, meaningful choices, counterplay, and the
+opportunity to learn from failure.
+
+#### 2.2 Five Pillars
+
+1.  **Combat Brutality:** combat can punish mistakes and poor tactical
+    decisions.
+2.  **Survival Pressure:** HP, MP, items, and Gold must be managed
+    carefully.
+3.  **Dungeon Cruelty:** the dungeon journey tests the consistency of the
+    player's decisions, not only a single battle.
+4.  **Boss Oppression:** bosses must feel threatening and require the
+    player to understand their mechanics.
+5.  **Permanent Consequences:** run failure has real consequences.
+
+#### 2.3 Operational Principles
+
+-   **No Free Victory:** victory must be earned through decisions and
+    execution.
+-   **Every Resource Matters:** every resource has strategic value.
+-   **Mistakes Have Consequences:** mistakes can change the state of the
+    party and the run.
+-   **Knowledge Is Power:** information and understanding of enemy
+    patterns are part of the player's power.
+-   **Survival Is an Achievement:** surviving is an accomplishment, not
+    an automatic outcome.
+
+#### 2.4 Design Directions
+
+  -----------------------------------------------------------------------
+  Area           Direction              Meaning
+  -------------- ---------------------- ---------------------------------
+  Punishment     Brutal but Recoverable Mistakes can severely harm the
+                                        party, but as long as at least
+                                        one member is active, the player
+                                        still has a chance to save the
+                                        expedition.
+
+  Recovery       Limited Recovery       Recovery exists, but its amount,
+                                        price, frequency, and access must
+                                        be strategic decisions.
+
+  RNG            Controlled RNG         Variation and uncertainty are
+                                        allowed, but random outcomes must
+                                        never arbitrarily decide victory
+                                        or defeat.
+  -----------------------------------------------------------------------
+
+The three directions combine with an emphasis on **strategic fairness**.
+
+How the current systems already follow these directions:
+
+-   **Brutal but Recoverable:** a battle continues while at least one
+    character is active, and only a full party wipe ends the run (§3.2).
+-   **Limited Recovery:** recovery values, Recovery Camp, and costs remain
+    open (§8) and must be designed as strategic choices, not free
+    resets.
+-   **Controlled RNG:** enemy QTE timing patterns are fixed per attack
+    rather than random (Bab 12 §6.2), dangerous actions are telegraphed
+    (Bab 12 §6.4), and random player-side effects such as Lucky and
+    Second Chance only offer a second attempt rather than deciding the
+    outcome.
+-   **Controlled RNG --- Control Effects:** Stun, Sleep, Mind Control,
+    Madness, and Silence do not stack with themselves: a new application
+    of an active Control Effect neither extends nor refreshes its
+    duration. Different Control Effects can still coexist. After a
+    Control Effect ends, the unit is immune to that same effect until the
+    end of its next turn (Bab 11 §8.1). These rules apply to all units,
+    players and enemies alike.
+-   **Controlled RNG --- no bad-luck protection:** CONFIRMED. Hit Chance,
+    Critical Hit, and Status Effect Chance rolls are independent; there
+    is no pity system that adjusts odds after consecutive failures.
+    Fairness comes from telegraphs, fixed enemy patterns, and Control
+    Effect limits instead.
 
 ### 3. Core Difficulty Rules
 
@@ -382,6 +476,20 @@ balancing pass.
                                       enemy and boss design
                                       constraints, and assist settings
                                       (§7.1).
+
+  0.3                                 Difficulty philosophy confirmed:
+                                      Relentless Tactical Survival,
+                                      five pillars, operational
+                                      principles, and the Brutal but
+                                      Recoverable, Limited Recovery,
+                                      and Controlled RNG directions
+                                      (§2.1--2.4).
+
+  0.4                                 Controlled RNG rules: Control
+                                      Effects do not stack with
+                                      themselves and grant per-status
+                                      Control Immunity; no bad-luck
+                                      protection (§2.4).
 
   -----------------------------------------------------------------------
 
@@ -2604,333 +2712,403 @@ QTE sync (4 November 2026): shared QTE rules added to §2.2; counter trigger def
 
 ## Bab 9 — Talents System
 
-> Sumber: Talents System v0.2.
+> Sumber: Felna Talent System Specification (November 2026, berbasis Talents System v0.2).
 
 ### 1. Overview
 
-The Talent System provides characters with passive bonuses that support
-different combat roles and build directions. Talents complement a
-character's Class Skills and do not replace class identity.
+Talent adalah bonus pasif yang mendukung peran combat dan arah build karakter. Talent melengkapi Class Skills dan tidak menggantikan identitas class.
 
-The system is divided into: - **Shared Talents:** Available to
-characters of any class. - **Class-Specific Talents:** Designed around
-the identity and mechanics of a particular class.
+Sistem Talent memiliki dua kategori:
 
-Only effects explicitly defined in the current design discussion are
-treated as specified. Values labeled **proposed** or **TBD** are not
-final.
+1. **Shared Talent** — dapat dipilih oleh karakter dari class apa pun.
+2. **Class-Specific Talent** — hanya dapat dipilih oleh karakter dari class yang memiliki Talent tersebut.
 
-### 2. Talent Selection and Progression
+Arah desain pemilihan Talent mengikuti konsep **Feat dalam Dungeons & Dragons**: pemain memilih sendiri Talent yang diinginkan dari daftar Talent yang memenuhi syarat. Pemilihan tidak menggunakan random draft atau penawaran Talent acak.
 
-Characters receive Talent selections at these level milestones:
+### 2. Talent Selection dan Level Progression
 
-    Character Level Talent Selection
-  ----------------- ------------------
-                  3 Select a Talent
-                  6 Select a Talent
-                  9 Select a Talent
-                 12 Select a Talent
-                 15 Select a Talent
+Karakter memperoleh kesempatan memilih satu Talent pada level berikut:
 
-#### 2.1 Talent Offer Structure
+| Level Karakter | Pilihan |
+|---:|---|
+| 3 | Pilih 1 Talent |
+| 6 | Pilih 1 Talent |
+| 9 | Pilih 1 Talent |
+| 12 | Pilih 1 Talent |
+| 15 | Pilih 1 Talent |
 
-**Proposal, pending confirmation:** - 1 Shared Talent - 2 Class-Specific
-Talents
+Pada setiap milestone, pemain membuka daftar Talent yang dapat dipilih oleh karakter tersebut, kemudian memilih satu Talent secara manual.
 
-#### 2.2 Talent Rules
+#### 2.1 Fully Flexible Selection
 
--   Talent selections are intended to be unique for a character;
-    already-selected Talents are not offered again.
--   Talent choices contribute to character build specialization.
--   Talent respec is available in the Hub and uses a special currency.
--   Respec currency cost and exact restrictions are **TBD**.
+**Status: CONFIRMED**
 
-### 3. Shared Talents
+Pemain bebas memilih Talent dari Shared Talent Pool maupun Class-Specific Talent Pool tanpa kuota kategori.
+
+Aturannya:
+
+- Tidak ada jumlah minimum atau maksimum Shared Talent yang harus dimiliki.
+- Tidak ada jumlah minimum atau maksimum Class-Specific Talent yang harus dimiliki.
+- Pemain boleh mengambil seluruh pilihan Talent dari Shared Talent.
+- Pemain boleh mengambil seluruh pilihan Talent dari Class-Specific Talent.
+- Pemain juga boleh mengombinasikan kedua kategori sesuai kebutuhan build.
+- Class-Specific Talent hanya tersedia untuk class yang bersangkutan.
+
+Contoh pilihan Talent untuk karakter Fighter:
+
+| Level | Talent | Kategori |
+|---:|---|---|
+| 3 | Weapon Adept | Class-Specific |
+| 6 | Durable | Shared |
+| 9 | Tactical Opening | Class-Specific |
+| 12 | Alert | Shared |
+| 15 | Master of Arms | Class-Specific |
+
+Contoh tersebut hanya ilustrasi kombinasi; efek dan angka Talent yang masih berstatus proposed/TBD belum dianggap final.
+
+#### 2.2 Talent Selection Rules
+
+- Setiap karakter memilih satu Talent pada setiap milestone level yang ditentukan.
+- Talent yang sudah dimiliki karakter tidak dapat dipilih kembali.
+- Pemain memilih Talent secara manual dari daftar yang tersedia.
+- Tidak ada random Talent draft.
+- Tidak ada sistem rarity untuk pilihan Talent.
+- Tidak ada kewajiban mengambil Talent dari kategori tertentu.
+
+**Prerequisite Talent:** belum ditetapkan. Jika nantinya ada Talent yang membutuhkan Talent lain atau level tertentu, persyaratan tersebut harus ditentukan secara eksplisit per Talent.
+
+### 3. Shared Talent Pool
+
+Shared Talent dapat dipilih oleh karakter dari class apa pun.
+
+> Catatan status: efek atau angka yang ditandai proposed/TBD di bawah masih perlu dikonfirmasi dan diseimbangkan. Nama Talent yang masih berupa konsep juga belum otomatis menjadi bagian final pool.
 
 #### 3.1 Alert
 
-**Effect:** Reduces the Critical Chance of an enemy attacking the
-character who owns Alert.
+**Efek:** Mengurangi Critical Chance musuh ketika musuh menyerang karakter pemilik Alert.
 
--   Proposed value: **−10 percentage points Critical Chance** for the
-    attacking enemy against this character.
--   Applies to attacks targeting the Talent owner, not the entire party.
--   Final value is subject to balancing.
+- Nilai usulan: **−10 percentage points Critical Chance** bagi musuh terhadap karakter ini.
+- Hanya berlaku untuk serangan yang menargetkan pemilik Talent, bukan seluruh party.
+- Nilai final masih menunggu balancing.
 
 #### 3.2 Healer
 
-**Effect:** Increases the amount of HP restored by the character.
+**Efek:** Meningkatkan jumlah HP yang dipulihkan oleh karakter.
 
--   Proposed value: **+15% healing**.
--   Applies to healing from both Skills and Items.
--   Final value is subject to balancing.
+- Nilai usulan: **+15% healing**.
+- Berlaku untuk pemulihan dari Skill maupun Item.
+- Nilai final masih menunggu balancing.
 
 #### 3.3 Durable
 
-**Effect:** Improves the character's ability to survive incoming damage.
+**Efek:** Meningkatkan kemampuan karakter bertahan dari damage.
 
--   Proposed values: **+10% Max HP** and **5% Damage Reduction**.
--   Damage Reduction is treated as an All Damage Taken −5% modifier and
-    stacks multiplicatively; Defensive QTE is applied afterward.
--   Both effects are proposed as one Talent.
--   Final values are subject to balancing.
+- Nilai usulan: **+10% Max HP** dan **5% Damage Reduction**.
+- Damage Reduction diperlakukan sebagai modifier All Damage Taken −5% dan di-stack secara multiplicative.
+- Defensive QTE diterapkan setelah modifier Damage Reduction.
+- Kedua efek merupakan satu Talent.
+- Nilai final masih menunggu balancing.
 
 #### 3.4 Keen Mind
 
-**Effect:** Focuses on MP efficiency.
+**Efek:** Mengurangi biaya MP untuk penggunaan Skill.
 
--   Proposed value: **−10% MP Cost** for Skills.
--   Example: a Skill costing 10 MP costs 9 MP after the reduction.
--   MP-cost rounding and minimum-cost rules should be finalized during
-    implementation and balancing.
+- Nilai usulan: **−10% MP Cost**.
+- Contoh: Skill dengan biaya 10 MP menjadi 9 MP setelah pengurangan.
+- Aturan pembulatan biaya MP dan biaya minimum perlu ditetapkan saat implementasi/balancing.
 
 #### 3.5 Arcane Reserve
 
-**Effect:** Increases the character's Max MP.
+**Efek:** Meningkatkan Max MP karakter.
 
--   Exact bonus value: **TBD**.
+- Besaran bonus: **TBD**.
 
 #### 3.6 Poisoner
 
-**Effect:** Increases the effectiveness of Poison applied by the
-character.
+**Efek:** Meningkatkan efektivitas Poison yang diberikan oleh karakter pemilik Talent.
 
--   Exact potency, duration, or other Poison parameters affected:
-    **TBD**.
--   Intended to improve Poison applied by its owner.
+- Parameter Poison yang ditingkatkan (potency, duration, atau parameter lain): **TBD**.
+- Efek ditujukan untuk Poison yang diaplikasikan oleh pemilik Talent.
 
 #### 3.7 Crusher
 
-**Effect:** Increases the character's chance to inflict Stun on enemies.
+**Efek:** Meningkatkan peluang karakter memberikan Stun kepada musuh.
 
--   Exact chance bonus: **TBD**.
--   Does not itself guarantee Stun.
+- Besaran bonus peluang: **TBD**.
+- Talent ini tidak menjamin Stun terjadi.
 
 #### 3.8 Slasher
 
-**Effect:** Increases the character's chance to inflict Bleed on
-enemies.
+**Efek:** Meningkatkan peluang karakter memberikan Bleed kepada musuh.
 
--   Exact chance bonus: **TBD**.
--   Does not itself guarantee Bleed.
+- Besaran bonus peluang: **TBD**.
+- Talent ini tidak menjamin Bleed terjadi.
 
 #### 3.9 Piercer
 
-**Effect:** When the character attacks a target, a portion of the
-target's Physical Resistance is ignored.
+**Efek:** Ketika karakter menyerang target, sebagian Physical Resistance target diabaikan.
 
--   Exact resistance reduction or penetration value: **TBD**.
--   Scope across attack types and whether it applies to every hit:
-    **TBD**.
+- Besaran pengurangan/penetrasi resistance: **TBD**.
+- Cakupan jenis serangan dan apakah berlaku pada setiap hit: **TBD**.
 
 #### 3.10 Lucky
 
-**Effect:** Gives the player a chance to retry a failed QTE.
+**Efek:** Memberikan peluang untuk mengulang QTE yang gagal.
 
--   Proposed activation chance: **20%** when a QTE fails.
--   The player must perform the retry; Lucky does not automatically
-    convert the failed QTE into a success.
--   Maximum **1 activation per QTE**.
--   Maximum **3 activations per battle**.
--   The activation counter resets at the start of the next battle.
--   After reaching the battle limit, Lucky cannot activate again during
-    that battle.
--   Lucky triggers only on a Poor caused by player input. Auto-Poor
-    results (Stun, Sleep, Mind Control, Down) cannot be retried.
--   Retry flow: the animation pauses at the wind-up frame, a "Lucky!"
-    banner shows for 400 ms, and the timing bar repeats with the same
-    lead time and timing window. The retry result is final.
--   In a sequence QTE, only the failed marker is retried.
--   Damage, Break Power, and Martial Artist combo use the final result.
--   Shared QTE: if several targets have Lucky, the quota of the first
-    character in party order is used.
--   Lucky is not a QTE window modifier and does not count toward the
-    +25% window cap.
--   Remaining activations are shown as 3 pips under the portrait.
--   A QTE can be retried at most once from any source. If a character
-    has both Lucky and the Halfling Racial Feat Second Chance, Lucky
-    rolls first; Second Chance is offered only if Lucky does not
-    trigger (Bab 12 §8.5).
+- Peluang aktivasi usulan: **20%** ketika QTE gagal.
+- Pemain harus melakukan ulang QTE; Lucky tidak otomatis mengubah hasil gagal menjadi berhasil.
+- Maksimal **1 aktivasi per QTE**.
+- Maksimal **3 aktivasi per battle**.
+- Counter aktivasi di-reset pada awal battle berikutnya.
+- Setelah mencapai batas battle, Lucky tidak dapat aktif lagi selama battle tersebut.
+- Lucky hanya terpicu pada hasil Poor yang disebabkan input pemain. Hasil Auto-Poor (Stun, Sleep, Mind Control, Down) tidak dapat diulang.
+- Alur retry: animasi berhenti pada frame wind-up, banner "Lucky!" muncul selama 400 ms, lalu timing bar diulang dengan lead time dan timing window yang sama. Hasil retry menjadi hasil final.
+- Pada sequence QTE, hanya marker yang gagal yang diulang.
+- Damage, Break Power, dan Martial Artist Combo menggunakan hasil final.
+- Pada Shared QTE, jika beberapa target memiliki Lucky, kuota karakter pertama berdasarkan urutan party yang digunakan.
+- Lucky bukan QTE window modifier dan tidak dihitung dalam cap +25% QTE window.
+- Sisa aktivasi ditampilkan sebagai 3 pip di bawah portrait.
+- Sebuah QTE hanya dapat di-retry satu kali dari sumber mana pun. Jika karakter memiliki Lucky dan Halfling Racial Feat Second Chance, Lucky melakukan roll terlebih dahulu; Second Chance ditawarkan hanya jika Lucky tidak aktif (Bab 12 §8.5).
+
+**Status:** mekanisme telah dispesifikasikan di GDD v0.2; angka peluang dan balancing final masih perlu konfirmasi.
 
 #### 3.11 Inspiring Leader
 
-**Effect:** Grants the party a temporary bonus to damage resistance
-while the Talent owner remains alive.
+**Efek:** Memberikan bonus sementara pada damage resistance seluruh party selama pemilik Talent masih hidup.
 
--   Proposed bonus: **10% Damage Reduction**.
--   Damage Reduction is treated as an All Damage Taken −10% modifier and
-    stacks multiplicatively; Defensive QTE is applied afterward.
--   Target: **the entire party, including the Talent owner**.
--   Duration: **3 turns**.
--   The effect ends immediately if the Talent owner dies, even if the
-    duration has not elapsed.
--   Final value and turn-timing behavior are subject to balancing and
-    battle-system definitions.
+- Bonus usulan: **10% Damage Reduction**.
+- Damage Reduction diperlakukan sebagai modifier All Damage Taken −10% dan di-stack secara multiplicative.
+- Defensive QTE diterapkan setelah modifier Damage Reduction.
+- Target: seluruh party, termasuk pemilik Talent.
+- Durasi: **3 turns**.
+- Efek langsung berakhir jika pemilik Talent mati, meskipun durasi belum habis.
+- Nilai final dan timing turn masih perlu balancing/penetapan lebih lanjut.
 
-### 4. Additional Shared Talent Concepts
+#### 3.12 Additional Shared Talent Concepts
 
-These names were previously proposed for the Shared Talent pool. Their
-effects are not finalized in this document:
+Nama berikut pernah diusulkan untuk Shared Talent Pool, tetapi efeknya belum difinalisasi:
 
--   Vitality
--   Battle Rhythm
--   Iron Will
--   Efficient Casting
--   Quick Reflex --- Defensive QTE window +10% (QTE window modifier)
--   Fortune Seeker
--   Keen Eye
--   Steady Hand --- Offensive QTE window +10% (QTE window modifier)
--   Survivor's Instinct
+- Vitality
+- Battle Rhythm
+- Iron Will
+- Efficient Casting
+- Quick Reflex — Defensive QTE window +10% (QTE window modifier).
+- Fortune Seeker
+- Keen Eye
+- Steady Hand — Offensive QTE window +10% (QTE window modifier).
+- Survivor's Instinct
 
-As of v0.2, only Quick Reflex and Steady Hand have QTE effects. The
-other names have no QTE interaction; consider renaming Battle Rhythm
-when its effect is defined, because the name suggests a QTE effect.
+Dalam GDD v0.2, hanya Quick Reflex dan Steady Hand yang memiliki efek QTE. Efek Talent lainnya belum ditentukan. Nama Battle Rhythm dapat dipertimbangkan ulang setelah efeknya ditetapkan karena namanya mengisyaratkan interaksi QTE.
 
-Confirm their effects and values before treating these entries as locked
-design.
+### 4. Class-Specific Talent Pools
 
-### 5. Class-Specific Talent Pools
+Class-Specific Talent dirancang untuk memperkuat identitas dan mekanik inti masing-masing class.
 
-Class-Specific Talents are intended to reinforce each class's core
-identity.
+| Class | Core Identity |
+|---|---|
+| Fighter | Weapon Techniques |
+| Barbarian | Berserk State |
+| Martial Artist | QTE Combo Flow |
+| Rogue | Exploit |
+| Ranger | Hunt Mark; mark memengaruhi Ranger itu sendiri |
+| Cleric | Divine Protection; hybrid healing, protection, dan Holy offense |
+| Wizard | Elemental Specialization; tidak memiliki permanent element specialization |
+| Warlock | Curse Mastery; efek Curse bersifat independen dan dapat aktif bersamaan |
+| Druid | Nature's Control; hybrid nature damage, control, dan healing |
 
-  -----------------------------------------------------------------------
-  Class                               Core Identity
-  ----------------------------------- -----------------------------------
-  Fighter                             Weapon Techniques
+#### 4.1 Proposed Class-Specific Talent Names
 
-  Barbarian                           Berserk State
+Nama-nama berikut merupakan kandidat yang tercantum dalam GDD. Efek detail dan angka balancing selain yang disebutkan pada §4.2 masih perlu ditentukan.
 
-  Martial Artist                      QTE Combo Flow
+**Fighter**
+- Weapon Adept
+- Guard Specialist
+- Tactical Opening
+- Weapon Precision
+- Master of Arms
 
-  Rogue                               Exploit
+**Barbarian**
+- Bloodlust
+- Unbreakable Rage
+- Berserk Fury
+- Raging Momentum
+- Last Stand
 
-  Ranger                              Hunt Mark; the mark affects the
-                                      Ranger themself
+**Martial Artist**
+- Flowing Strikes
+- Perfect Timing
+- Combo Discipline
+- Finisher Mastery
+- Unbroken Rhythm
 
-  Cleric                              Divine Protection; hybrid healing,
-                                      protection, and Holy offense
+**Rogue**
+- Opportunist
+- Exploit Weakness
+- Dirty Fighting
+- Shadow Step
+- Executioner
 
-  Wizard                              Elemental Specialization; no
-                                      permanent element specialization
+**Ranger**
+- Hunter's Instinct
+- Marked Prey
+- Deadly Precision
+- Longshot
+- Predator's Patience
 
-  Warlock                             Curse Mastery; Curse effects are
-                                      independent and can coexist
+**Cleric**
+- Divine Grace
+- Sanctuary
+- Holy Retribution
+- Guardian's Resolve
+- Last Benediction
 
-  Druid                               Nature's Control; hybrid nature
-                                      damage, control, and healing
-  -----------------------------------------------------------------------
+**Wizard**
+- Elemental Adept
+- Focused Casting
+- Elemental Insight
+- Arcane Efficiency
+- Elemental Mastery
 
-#### 5.1 Proposed Class-Specific Talent Names
+**Warlock**
+- Lingering Malice
+- Curse Potency
+- Dark Knowledge
+- Soul Harvester
+- Doom Weaver
 
-These names were proposed in the design discussion. Detailed effects and
-balancing values remain subject to review.
+**Druid**
+- Nature's Embrace
+- Wild Growth
+- Root Mastery
+- Nature's Wrath
+- Primal Balance
 
-**Fighter** - Weapon Adept - Guard Specialist - Tactical Opening -
-Weapon Precision - Master of Arms
+#### 4.2 QTE-Related Class-Specific Talents
 
-**Barbarian** - Bloodlust - Unbreakable Rage - Berserk Fury - Raging
-Momentum - Last Stand
+Efek berikut tercantum sebagai usulan dengan nilai yang sudah dispesifikasikan dalam GDD v0.2:
 
-**Martial Artist** - Flowing Strikes - Perfect Timing - Combo
-Discipline - Finisher Mastery - Unbroken Rhythm
+| Talent | Class | Effect |
+|---|---|---|
+| Flowing Strikes | Martial Artist | Combo dimulai dari 2 pada awal setiap battle. |
+| Perfect Timing | Martial Artist | Offensive dan Defensive QTE window +10%. |
+| Combo Discipline | Martial Artist | Reset akibat tidak menyerang terjadi setelah 2 turn, bukan 1 turn. |
+| Finisher Mastery | Martial Artist | Finisher coefficient per combo point +0.03. |
+| Unbroken Rhythm | Martial Artist | Sekali per battle, Combo tidak reset ketika karakter menjadi Broken. |
+| Guard Specialist | Fighter | Defensive QTE window +10%. |
+| Deadly Precision | Ranger | Offensive QTE window +10% untuk ranged attacks. |
 
-**Rogue** - Opportunist - Exploit Weakness - Dirty Fighting - Shadow
-Step - Executioner
+Semua efek QTE window dari Talent, Passive, dan Equipment di-stack secara additive hingga shared cap **+25%**.
 
-**Ranger** - Hunter's Instinct - Marked Prey - Deadly Precision -
-Longshot - Predator's Patience
+Talent hanya boleh memengaruhi QTE melalui:
+- QTE window modifier; atau
+- QTE retry.
 
-**Cleric** - Divine Grace - Sanctuary - Holy Retribution - Guardian's
-Resolve - Last Benediction
+Talent tidak boleh mengubah nilai Damage Reduction atau memberikan automatic QTE grade.
 
-**Wizard** - Elemental Adept - Focused Casting - Elemental Insight -
-Arcane Efficiency - Elemental Mastery
+### 5. Talent Respec — Scroll of Emptiness
 
-**Warlock** - Lingering Malice - Curse Potency - Dark Knowledge - Soul
-Harvester - Doom Weaver
+#### 5.1 Overview
 
-**Druid** - Nature's Embrace - Wild Growth - Root Mastery - Nature's
-Wrath - Primal Balance
+**Scroll of Emptiness** adalah item Rare bertipe Consumable yang digunakan untuk mereset seluruh pilihan Talent milik satu karakter. Setelah reset, pemain dapat memilih kembali Talent karakter tersebut dari awal.
 
-#### 5.2 QTE-Related Class-Specific Talents (proposed values)
+#### 5.2 Item Properties
 
-  -----------------------------------------------------------------------
-  Talent                              Effect
-  ----------------------------------- -----------------------------------
-  Flowing Strikes (Martial Artist)    Combo starts at 2 at the start of
-                                      each battle.
+| Aspek | Aturan |
+|---|---|
+| Item Name | Scroll of Emptiness |
+| Rarity | Rare |
+| Type | Consumable |
+| Target | 1 karakter |
+| Efek | Reset seluruh Talent karakter yang ditargetkan |
+| Konsumsi | 1 Scroll untuk 1 karakter |
+| Penggunaan | Hanya di luar combat |
+| Lokasi penggunaan | Hub atau Node Map |
 
-  Perfect Timing (Martial Artist)     Offensive and Defensive QTE window
-                                      +10%.
+#### 5.3 Usage Rules
 
-  Combo Discipline (Martial Artist)   Reset from not attacking happens
-                                      after 2 turns instead of 1.
+1. Scroll of Emptiness hanya dapat digunakan ketika karakter sedang berada di luar combat.
+2. Scroll dapat digunakan di Hub.
+3. Scroll dapat digunakan di Node Map.
+4. Scroll tidak dapat digunakan selama combat berlangsung.
+5. Satu Scroll hanya mereset Talent satu karakter.
+6. Setelah digunakan, Scroll dikonsumsi.
+7. Seluruh Talent yang dimiliki karakter target di-reset.
+8. Setelah reset, pemain memilih ulang Talent karakter tersebut berdasarkan level dan milestone Talent yang sudah dicapai.
+9. Pemilihan ulang tetap mengikuti aturan **Fully Flexible Selection** pada §2.1.
 
-  Finisher Mastery (Martial Artist)   Finisher coefficient per combo
-                                      point +0.03.
+Penggunaan di Node Map memungkinkan pemain mengubah build setelah menyelesaikan combat atau sebelum memasuki encounter berikutnya tanpa harus kembali ke Hub.
 
-  Unbroken Rhythm (Martial Artist)    Once per battle, combo is not
-                                      reset when becoming Broken.
+#### 5.4 Acquisition Sources
 
-  Guard Specialist (Fighter)          Defensive QTE window +10%.
+Scroll of Emptiness merupakan item Rare dan dapat diperoleh melalui:
 
-  Deadly Precision (Ranger)           Offensive QTE window +10% for
-                                      ranged attacks.
-  -----------------------------------------------------------------------
+- **Dungeon:** dapat ditemukan sebagai loot atau reward dungeon.
+- **Vendor:** dapat muncul dalam stok vendor.
+- **Hub Shop:** dapat dibeli melalui toko di Hub.
 
-All QTE window effects from talents, passives, and equipment stack
-additively up to a shared cap of +25%. Talents may affect QTE only through
-window modifiers or retry; no talent changes damage reduction values or
-grants an automatic grade.
+Frekuensi kemunculan, harga, drop rate, dan stok item belum ditentukan.
 
-### 6. Open Design Decisions
+### 6. Design Decisions Summary
 
-1.  Confirm whether each Talent milestone offers **1 Shared + 2
-    Class-Specific Talents**.
-2.  Set final numeric values for Alert, Healer, Durable, Keen Mind,
-    Lucky, and Inspiring Leader.
-3.  Define Arcane Reserve's Max MP bonus.
-4.  Define which Poison properties Poisoner improves.
-5.  Define Crusher's Stun chance bonus and Slasher's Bleed chance bonus.
-6.  Define Piercer's Physical Resistance penetration value and attack
-    scope.
-7.  Confirm whether the other proposed Shared Talent names and effects
-    belong to the final pool.
-8.  Define complete effects and numeric values for all Class-Specific
-    Talents.
-9.  Define respec currency cost and restrictions.
-10. Specify turn timing and refresh behavior for Inspiring Leader.
-11. Lucky's retry behavior and the QTE-related talents in §4 and §5.2
-    are specified as of v0.2; final numeric balancing remains open.
+| Topik | Keputusan |
+|---|---|
+| Kategori Talent | Shared Talent dan Class-Specific Talent |
+| Level milestone | Level 3, 6, 9, 12, dan 15 |
+| Jumlah pilihan | 1 Talent pada setiap milestone |
+| Metode pemilihan | Manual; pemain memilih dari daftar yang tersedia |
+| Random draft | Tidak digunakan |
+| Rarity pada pilihan Talent | Tidak digunakan |
+| Batas kategori | Fully Flexible; tidak ada kuota Shared/Class-Specific |
+| Class restriction | Class-Specific Talent hanya untuk class terkait |
+| Duplicate selection | Talent yang sudah dimiliki tidak dapat dipilih lagi |
+| Respec | Menggunakan Scroll of Emptiness |
+| Respec target | Satu karakter per Scroll |
+| Scroll rarity/type | Rare Consumable |
+| Lokasi penggunaan Scroll | Hub dan Node Map |
+| Combat restriction | Scroll tidak dapat digunakan selama combat |
+| Sumber Scroll | Dungeon, Vendor, dan Hub Shop |
 
-------------------------------------------------------------------------
+### 7. Open Design Decisions
 
-### Change Log
+Hal-hal berikut masih perlu ditentukan sebelum seluruh Talent System dianggap final:
 
-  -----------------------------------------------------------------------
-  Version                             Notes
-  ----------------------------------- -----------------------------------
-  0.1                                 Initial Talent System draft
-                                      assembled from current design
-                                      discussion. Includes Lucky's battle
-                                      activation cap and Inspiring
-                                      Leader's duration and life
-                                      condition.
+1. Nilai final Alert, Healer, Durable, Keen Mind, Lucky, dan Inspiring Leader.
+2. Bonus Max MP untuk Arcane Reserve.
+3. Parameter Poison yang ditingkatkan oleh Poisoner.
+4. Bonus peluang Stun dari Crusher.
+5. Bonus peluang Bleed dari Slasher.
+6. Nilai Physical Resistance penetration dan cakupan serangan Piercer.
+7. Efek dan status final Vitality, Battle Rhythm, Iron Will, Efficient Casting, Fortune Seeker, Keen Eye, dan Survivor's Instinct.
+8. Konfirmasi apakah semua konsep Shared Talent tambahan masuk ke pool final.
+9. Efek lengkap dan nilai balancing seluruh Class-Specific Talent yang belum dispesifikasikan.
+10. Apakah akan ada Talent prerequisite atau persyaratan level khusus di luar milestone pemilihan.
+11. Harga Scroll of Emptiness di Hub Shop.
+12. Drop rate dan frekuensi kemunculan Scroll di Dungeon.
+13. Frekuensi dan aturan stok Scroll pada Vendor.
+14. Apakah ada batas jumlah Scroll of Emptiness yang dapat dibawa atau disimpan.
 
-  0.2                                 QTE sync: Lucky retry flow,
-                                      Damage Reduction stacking, QTE
-                                      window talents, Martial Artist,
-                                      Fighter, and Ranger QTE talent
-                                      effects.
+---
 
-  -----------------------------------------------------------------------
+### 8. Revision Notes
+
+#### Update — Talent Selection & Respec
+
+Keputusan desain terbaru:
+
+- Struktur penawaran **1 Shared + 2 Class-Specific** tidak digunakan.
+- Talent dipilih secara manual oleh pemain dari pool yang memenuhi syarat.
+- Sistem pemilihan menggunakan pendekatan feat-like seperti Dungeons & Dragons.
+- Pemilihan kategori menggunakan aturan **Fully Flexible** tanpa kuota Shared Talent atau Class-Specific Talent.
+- Respec menggunakan item **Scroll of Emptiness**.
+- Scroll of Emptiness adalah Rare Consumable; satu item hanya berlaku untuk satu karakter.
+- Scroll dapat diperoleh di Dungeon, Vendor, dan Hub Shop.
+- Scroll hanya dapat digunakan di luar combat, baik di Hub maupun Node Map.
 
 # Bagian IV — Combat
 
-## Bab 10 — Combat Structure dan Broken
+## Bab 10 — Combat Structure, Turn Order, dan Enemy Scaling
 
-> Sumber: GDD Visual Direction v0.2 §5.1 dan §5.3. Penomoran §5.x dipertahankan agar rujukan lama tetap berlaku.
+> Sumber: GDD Visual Direction v0.2 §5.1 dan §5.3, serta Scaling and Turn Order System v1.0. Penomoran §5.x dipertahankan agar rujukan lama tetap berlaku; Scaling and Turn Order System dimulai dari §6 (penomoran aslinya digeser +5).
 
 ### 5. Combat
 
@@ -2942,7 +3120,7 @@ Ringkasan struktur combat dan definisi kerja Broken. Aturan QTE lengkap ada di B
 
 - Pemain memilih aksi/skill dan target; skill kemudian diselesaikan melalui aturan hit, damage, healing, status, dan QTE yang relevan.
 
-- Enemy turn order, initiative formula, action economy, dan defend/item rules masih TBD.
+- Turn order, initiative, dan action economy ditetapkan di §8; aturan defend dan item masih TBD.
 
 - Aksi musuh berbahaya (Heavy, signature boss, charge, status-only) ditelegraph sejak awal round. Charge dibatalkan jika musuh menjadi Broken; counter pemain hanya terpicu oleh Defensive Perfect. Detail: Bab 12 §6.4–6.5.
 
@@ -2950,9 +3128,451 @@ Ringkasan struktur combat dan definisi kerja Broken. Aturan QTE lengkap ada di B
 
 Broken digunakan oleh beberapa class mechanic (contoh: reset combo Martial Artist). Definisi kerja (asumsi A5 di Bab 12 (QTE System), menunggu konfirmasi): setiap karakter dan musuh memiliki Break gauge (100; boss 200) yang diisi Break Power dari hit lawan dan berkurang 20 di awal giliran pemiliknya. Saat penuh, target menjadi Broken sampai akhir giliran berikutnya miliknya, lalu gauge kembali ke 0. Selama Broken, karakter pemain tidak bisa meraih Perfect pada Defensive QTE, dan musuh yang sedang charge membatalkan serangannya.
 
+### 6. Enemy Scaling dan Turn Order — Purpose
+
+This document defines two connected systems:
+
+1. **Enemy Stat Scaling System** — scales enemy attributes according to dungeon progression and enemy tier.
+2. **Initiative & Turn Order System** — determines when party members and enemies act, and defines how each combat round is executed.
+
+The systems are designed for Felna's party-based, turn-based combat with four party members, individual character turns, and reaction QTEs.
+
+The design follows the **Relentless Tactical Survival** philosophy: combat may be punishing, but the player must receive readable information, meaningful choices, and opportunities for counterplay. Initiative is deterministic; Speed affects acting order but does not grant extra turns by itself.
+
+### 7. Enemy Stat Scaling System
+
+#### 7.1 Scaling Model
+
+Felna uses **Linear Tier-Weighted Scaling**.
+
+An enemy's Dungeon 1 reference stats are scaled according to:
+
+- The dungeon number (`D`), from 1 to 8.
+- The enemy tier (`T`): Normal, Elite, or Boss.
+- The stat-specific growth rate assigned to that tier.
+
+The same formula is applied to all listed enemy attributes. Each stat has its own growth rate.
+
+#### 7.2 Core Formula
+
+```text
+FinalStat = floor(BaseStat × DungeonTierMultiplier)
+
+DungeonTierMultiplier = 1 + (GrowthRate[Tier, Stat] × (DungeonNumber - 1))
+```
+
+Where:
+
+| Variable | Definition |
+|---|---|
+| `BaseStat` | Enemy's Dungeon 1 reference value for the relevant stat. |
+| `DungeonNumber` | Current dungeon, an integer from 1 to 8. |
+| `Tier` | Normal, Elite, or Boss. |
+| `GrowthRate` | Per-dungeon growth rate for the selected stat and tier. |
+| `floor()` | Round the final result down to the nearest integer. |
+
+**Important:** Dungeon 1 is the baseline. The multiplier is 1.00 at Dungeon 1. Growth is linear and is calculated from the number of dungeon steps after Dungeon 1, not by repeatedly multiplying the previous dungeon's rounded stat.
+
+#### 7.3 Confirmed Growth Rates
+
+Growth rates below are applied for every dungeon increment after Dungeon 1.
+
+| Stat | Normal | Elite | Boss |
+|---|---:|---:|---:|
+| HP | +12% | +13% | +14% |
+| MP | +6% | +8% | +10% |
+| ATK | +8% | +9% | +10% |
+| MATK | +8% | +9% | +10% |
+| DEF | +5% | +5.5% | +6% |
+| MDEF | +5% | +5.5% | +6% |
+| SPD | +2% | +3% | +4% |
+
+#### 7.4 Dungeon 8 Multipliers
+
+Dungeon 8 is seven dungeon increments after Dungeon 1.
+
+| Stat | Normal | Elite | Boss |
+|---|---:|---:|---:|
+| HP | 1.84× | 1.91× | 1.98× |
+| MP | 1.42× | 1.56× | 1.70× |
+| ATK | 1.56× | 1.63× | 1.70× |
+| MATK | 1.56× | 1.63× | 1.70× |
+| DEF | 1.35× | 1.385× | 1.42× |
+| MDEF | 1.35× | 1.385× | 1.42× |
+| SPD | 1.14× | 1.21× | 1.28× |
+
+#### 7.5 Scaling Examples
+
+Examples below use the previously proposed enemy roster values as Dungeon 1 reference stats. They demonstrate the formula; they do not establish a separate roster or change the underlying base values.
+
+| Enemy | Tier | Base Stat | Dungeon 8 Multiplier | Dungeon 8 Result |
+|---|---|---:|---:|---:|
+| Hollow Squire | Normal | SPD 9 | 1.14× | SPD 10 |
+| Gravebound Archer | Normal | SPD 13 | 1.14× | SPD 14 |
+| Soul Reaper | Elite | SPD 15 | 1.21× | SPD 18 |
+| Royal Ossuary Knight | Elite | SPD 8 | 1.21× | SPD 9 |
+| Zoroa — Phase 1 | Boss | SPD 14 | 1.28× | SPD 17 |
+| Zoroa — Phase 2 | Boss | SPD 17 | 1.28× | SPD 21 |
+
+Additional MP examples:
+
+| Enemy | Tier | Base MP | Dungeon 8 Multiplier | Dungeon 8 Result |
+|---|---|---:|---:|---:|
+| Hollow Squire | Normal | 35 | 1.42× | 49 |
+| Soul Reaper | Elite | 100 | 1.56× | 156 |
+| Zoroa — Phase 1 | Boss | 180 | 1.70× | 306 |
+| Zoroa — Phase 2 | Boss | 220 | 1.70× | 374 |
+
+#### 7.6 Scaling Application Rules
+
+1. **Base-stat convention:** all enemy archetype base stats are Dungeon 1 reference values. Apply the dungeon/tier multiplier exactly once.
+2. **Tier convention:** Normal, Elite, and Boss determine the growth-rate column. Do not apply a second generic tier multiplier on top of this table.
+3. **Rounding:** calculate from the original base stat and apply `floor()` once to the final stat. Do not round intermediate multipliers or scale from the previous dungeon's rounded result.
+4. **HP and MP:** scale maximum HP and maximum MP. Scaling MP does not reduce skill costs, increase damage directly, or grant automatic MP regeneration.
+5. **ATK and MATK:** scale the relevant offensive stat. Do not independently scale Skill Power when the damage formula already uses the scaled ATK/MATK; doing both would double-count enemy offensive growth.
+6. **DEF and MDEF:** scale the relevant defensive stat and use the existing damage formula.
+7. **SPD:** scale enemy Speed before calculating Effective SPD for initiative.
+8. **No automatic scaling:** status chance, status resistance, Break Gauge, hit count, number of targets, skill costs, skill behavior, and QTE timing do not scale through this table. They remain governed by their own enemy, skill, status, or QTE specifications.
+9. **No action-economy scaling:** increased SPD does not grant an enemy additional actions or turns.
+10. **Player stats:** this table is for enemy stat scaling. Player character stats are not scaled by dungeon number through this system.
+
+#### 7.7 Interaction with Damage Calculation
+
+Enemy damage continues to use the existing damage formulas. Scaling changes the applicable enemy stat, not the skill's individual coefficient.
+
+- Physical damage uses the scaled ATK where the skill's formula calls for ATK.
+- Elemental and Almighty damage use the scaled MATK where the skill's formula calls for MATK.
+- Skill Power and per-skill scaling coefficients remain as authored for that skill unless a separate skill-specific design explicitly changes them.
+- Enemy defensive stats are scaled before the existing damage calculation is resolved.
+
+#### 7.8 Relationship to QTE Difficulty
+
+Enemy stat scaling and QTE difficulty are separate systems.
+
+- Enemy HP, MP, ATK, MATK, DEF, MDEF, and SPD scale using this document.
+- QTE Perfect/Good timing windows remain determined by enemy tier as defined in the QTE System.
+- QTE lead time follows the dungeon-group multipliers defined in the QTE System.
+- Do not use the enemy stat multiplier to modify QTE timing windows or QTE lead time.
+
+---
+
+### 8. Initiative & Turn Order System
+
+#### 8.1 System Model
+
+Felna uses a **Dynamic Initiative Queue** with a **round-based shared turn order**.
+
+- Party members and enemies use one shared initiative queue.
+- Each active unit can take one normal turn per round.
+- Speed determines the order in which units act.
+- The queue is recalculated at the beginning of every new round.
+- Speed does not grant extra turns or extra actions by itself.
+- Initiative is deterministic; no random initiative roll is made.
+
+This is not an Active Time Battle system. Units do not accumulate action points or continuously fill an action gauge.
+
+#### 8.2 Effective Speed Formula
+
+Calculate Effective SPD before building the initiative queue:
+
+```text
+SpeedModifier = clamp(1 + TotalSpeedBonus - TotalSpeedPenalty, 0.50, 1.50)
+
+EffectiveSPD = max(1, floor(ScaledSPD × SpeedModifier))
+```
+
+Where:
+
+| Variable | Definition |
+|---|---|
+| `ScaledSPD` | The unit's SPD after applicable base-stat and, for enemies, dungeon/tier scaling. |
+| `TotalSpeedBonus` | Sum of all applicable percentage Speed bonuses, expressed as decimals. |
+| `TotalSpeedPenalty` | Sum of all applicable percentage Speed penalties, expressed as decimals. |
+| `clamp(value, 0.50, 1.50)` | Restricts the final Speed modifier to a minimum of 0.50× and maximum of 1.50×. |
+| `floor()` | Rounds the calculated Effective SPD down to an integer. |
+| `max(1, ...)` | Ensures Effective SPD cannot fall below 1. |
+
+Speed bonuses and penalties stack additively with each other before the modifier cap is applied.
+
+**Example:** a unit has Scaled SPD 20, a +10% Speed bonus, and a −20% Speed penalty.
+
+```text
+SpeedModifier = clamp(1 + 0.10 - 0.20, 0.50, 1.50)
+              = 0.90
+
+EffectiveSPD = max(1, floor(20 × 0.90))
+             = 18
+```
+
+#### 8.3 Initiative Score
+
+```text
+InitiativeScore = EffectiveSPD
+```
+
+Units are sorted by Initiative Score in descending order. A higher Effective SPD always acts earlier than a lower Effective SPD.
+
+There is no random roll, hidden bonus, or additional initiative statistic.
+
+#### 8.4 Tie-Breaking Rules
+
+When two or more units have the same Initiative Score, resolve their order using the following rules:
+
+1. **Party before enemies:** a player-controlled party member acts before an enemy with the same Initiative Score.
+2. **Party tie:** party members act in ascending Party Slot order (Slot 1, then Slot 2, Slot 3, and Slot 4).
+3. **Enemy tie:** enemies act in ascending Enemy Spawn Order. The enemy that entered the encounter first acts before enemies that spawned later.
+
+These tie-breakers are deterministic and remain stable for the entire round.
+
+#### 8.5 Building the Initiative Queue
+
+At the beginning of a round:
+
+1. Collect all units that are currently active and eligible to participate in combat.
+2. Read each unit's current Scaled SPD or player SPD.
+3. Apply active Speed bonuses and penalties.
+4. Calculate Effective SPD.
+5. Set Initiative Score equal to Effective SPD.
+6. Sort all eligible units by descending Initiative Score.
+7. Resolve ties using the tie-breaking rules in §8.4.
+8. Display the resulting queue in the Combat HUD.
+
+The queue is then executed from first position to last position.
+
+#### 8.6 Initiative Refresh and Speed Changes
+
+The initiative queue is recalculated at the beginning of every new round, not after every individual action.
+
+| Situation | Turn-order behavior |
+|---|---|
+| Battle begins | Calculate the initial queue before Round 1 starts. |
+| A new round begins | Recalculate the queue for all eligible units. |
+| Speed buff is active before the queue is built | Include the buff in that round's Effective SPD. |
+| Speed penalty is active before the queue is built | Include the penalty in that round's Effective SPD. |
+| Speed buff is applied during a round | It affects initiative beginning with the next round. |
+| Speed penalty is applied during a round | It affects initiative beginning with the next round. |
+| Speed buff or penalty expires during a round | Its removal affects initiative beginning with the next round. |
+| A unit is defeated before its position | Skip that unit when its position is reached. |
+| A unit is summoned during a round | It joins the initiative queue at the beginning of the next round. |
+| A unit is revived during a round | It rejoins the initiative queue at the beginning of the next round. |
+
+**Battle-start exception:** effects granted at the start of battle are applied before the initial Round 1 initiative calculation. For example, a Wayfarer Rank V Speed activation that occurs at battle start is included in the initial queue if it successfully activates.
+
+A Speed change never causes a unit to jump ahead of another unit in the middle of an already-running round.
+
+#### 8.7 Turn Frequency and Action Economy
+
+The standard action economy is:
+
+| Rule | Specification |
+|---|---|
+| Normal turn frequency | One turn per eligible unit per round. |
+| Main action | One main action per unit turn. |
+| Basic Attack | Consumes the unit's main action. |
+| Active Skill | Consumes the unit's main action. |
+| Heavy Attack | Consumes the enemy's main action. |
+| Signature Attack | Consumes the boss's main action. |
+| Extra action | Not granted by default. |
+| Extra turn | Not granted by default. |
+| SPD interaction | SPD changes acting order only; it does not increase action count or turn frequency. |
+
+A skill or mechanic may grant an extra action or extra turn only if that effect is explicitly defined in that skill or mechanic's own specification. It must not be inferred from Speed.
+
+#### 8.8 Enemy Turn Order
+
+Enemies use the same shared initiative queue as party members. There is no separate enemy phase in which all enemies automatically act together.
+
+When an enemy's position in the queue is reached:
+
+1. Confirm that the enemy is still active and able to act.
+2. Resolve its start-of-turn effects and action eligibility.
+3. If it is able to act, execute its selected action.
+4. Resolve the action's effects, damage, status applications, and applicable QTEs.
+5. Mark the enemy's turn as completed and continue to the next queue position.
+
+Enemy SPD determines where the enemy appears in the shared queue. An enemy with high SPD may act before several party members, but it still receives only one normal turn in that round.
+
+#### 8.9 Enemy Intent and Telegraph Timing
+
+At the beginning of each round, enemies determine their planned actions using their configured AI, encounter pattern, and current battle state. The game then calculates and displays the initiative queue.
+
+- Dangerous actions that require player awareness—such as Heavy attacks, boss signature attacks, charge actions, and status-only actions—must be telegraphed from the beginning of the round, consistent with the QTE System.
+- The Combat HUD displays enemy intent for actions that require telegraphing.
+- The player can use the displayed intent and initiative order to plan party actions before the enemy's turn arrives.
+- A charge action is cancelled if its enemy becomes Broken before executing the charge.
+- If an enemy becomes unable to act before its position in the queue, its action is skipped.
+
+The initiative system determines **when** an enemy acts. The enemy's configured AI and encounter pattern determine **what** it attempts to do. These are separate responsibilities.
+
+#### 8.10 Invalid or Unavailable Turns
+
+When a unit's position in the queue is reached:
+
+- If the unit has been defeated or is otherwise unable to participate, skip its turn.
+- If a control status prevents the unit from acting, resolve the status according to the Status Effect System and do not grant a replacement turn.
+- If an enemy's planned action has become invalid, the enemy must use a valid action/target according to its configured AI rules. If no legal action is available, its turn is skipped.
+- Skipped turns do not move the unit to the front of the queue and do not create an additional turn later in the same round.
+
+#### 8.11 Start-of-Turn Processing
+
+When an eligible unit reaches its position in the queue, process its start-of-turn sequence in this order:
+
+1. Confirm that the unit is active and has not already been defeated.
+2. Resolve Damage-over-Time ticks due at the start of that unit's turn.
+3. Recheck the unit's state. If the unit is defeated or Down and cannot act, skip the remainder of its turn.
+4. Reduce the unit's Break Gauge by 20, following the existing Broken specification.
+5. Check control statuses and other effects that determine whether the unit can act.
+6. If the unit can act, allow it to perform its one main action for the turn.
+
+This sequence does not override status-specific duration, immunity, cleanse, or recovery rules. Those continue to follow the Status Effect System.
+
+#### 8.12 Round End
+
+A round ends after every unit in that round's initiative queue has either:
+
+- Completed its turn; or
+- Had its turn skipped because it was defeated, unable to act, or had no legal action.
+
+After the round ends:
+
+1. Advance to the next round.
+2. Apply round-boundary updates required by the relevant status, buff, debuff, and combat systems.
+3. Determine enemy planned actions for the new round.
+4. Recalculate Effective SPD and build the new initiative queue.
+5. Display the new queue and begin the next round.
+
+No unit carries an unused normal turn into the next round.
+
+---
+
+### 9. Combat HUD Requirements
+
+The Combat HUD must communicate the initiative queue clearly.
+
+It must:
+
+- Display the current actor distinctly.
+- Display upcoming party and enemy turns in queue order.
+- Distinguish current, upcoming, and altered/delayed turns.
+- Show enemy intent for actions that require telegraphing.
+- Update the displayed queue at the beginning of each round after initiative recalculation.
+- Communicate when a unit's turn is skipped because it is defeated or unable to act.
+- Reflect Speed-related queue changes on the next round, not in the middle of the current queue.
+
+The initiative display must not imply that a high-Speed unit receives multiple normal turns in one round.
+
+### 10. Worked Initiative Example
+
+The following example demonstrates a single round. Values are Effective SPD after all applicable scaling and modifiers.
+
+| Queue Position | Unit | Side | Effective SPD |
+|---:|---|---|---:|
+| 1 | Ranger | Party | 24 |
+| 2 | Soulbound Hound | Enemy | 21 |
+| 3 | Martial Artist | Party | 19 |
+| 4 | Gravebound Archer | Enemy | 16 |
+| 5 | Cleric | Party | 14 |
+| 6 | Hollow Squire | Enemy | 12 |
+| 7 | Fighter | Party | 10 |
+
+The units act in this exact order. The Soulbound Hound does not receive another turn after the Fighter; it must wait until the next round's queue is built.
+
+#### 10.1 Equal-Speed Example
+
+If a party member and an enemy both have Effective SPD 15, the party member acts first. If two party members both have Effective SPD 15, the lower Party Slot acts first. If two enemies both have Effective SPD 15, the lower Enemy Spawn Order acts first.
+
+### 11. Scaling and Initiative Integration
+
+Enemy SPD scaling must be completed before initiative calculation.
+
+```text
+Enemy Base SPD
+      ↓
+Dungeon + Tier Scaling
+      ↓
+Scaled SPD
+      ↓
+Apply active Speed bonuses and penalties
+      ↓
+Effective SPD (floor, minimum 1)
+      ↓
+Initiative Score
+      ↓
+Shared Initiative Queue
+```
+
+Do not apply the dungeon/tier SPD multiplier again inside the initiative formula.
+
+#### 11.1 Dungeon 8 SPD Example
+
+Using the previously proposed Dungeon 1 reference values:
+
+| Enemy | Tier | Base SPD | D8 Multiplier | Scaled SPD before temporary modifiers |
+|---|---|---:|---:|---:|
+| Hollow Squire | Normal | 9 | 1.14× | 10 |
+| Gravebound Archer | Normal | 13 | 1.14× | 14 |
+| Soul Reaper | Elite | 15 | 1.21× | 18 |
+| Royal Ossuary Knight | Elite | 8 | 1.21× | 9 |
+| Zoroa — Phase 1 | Boss | 14 | 1.28× | 17 |
+| Zoroa — Phase 2 | Boss | 17 | 1.28× | 21 |
+
+These values become the Scaled SPD inputs to the Effective SPD formula. Temporary Speed modifiers are applied only after this step.
+
+### 12. Compatibility with Existing Combat Rules
+
+This document works alongside, and does not replace, the following systems:
+
+- **Combat Structure:** party-based combat with individual character turns.
+- **Damage and Status Effects:** damage, control effects, status duration, resistance, and immunity continue to follow their dedicated rules.
+- **Broken:** Break Gauge behavior, Broken duration, and charge cancellation continue to follow the Broken specification. The start-of-turn Break Gauge reduction is included in §8.11.
+- **QTE System:** QTE timing, QTE result values, Heavy defensive rules, and enemy telegraph requirements remain defined by the QTE System.
+- **Background System:** Speed bonuses such as Wayfarer's Speed progression feed into Effective SPD. They do not independently grant extra turns.
+
+### 13. Implementation Constants
+
+| Constant | Value |
+|---|---:|
+| Dungeon count | 8 |
+| Party size | 4 |
+| Minimum Effective SPD | 1 |
+| Minimum Speed modifier | 0.50× |
+| Maximum Speed modifier | 1.50× |
+| Initiative randomness | None |
+| Normal turns per unit per round | 1 |
+| Normal main actions per unit turn | 1 |
+| Break Gauge reduction at start of owner's turn | 20 |
+| Initiative recalculation | At the beginning of every round |
+| Mid-round Speed change | Applied to the next round's queue |
+
+### 14. Design Rationale
+
+- **Readable tactics:** deterministic initiative allows the player to plan around a visible queue.
+- **Meaningful Speed investment:** Speed improves turn priority without creating runaway extra-turn loops.
+- **Consistent enemy pressure:** faster enemies can act earlier, but dungeon scaling does not silently multiply their action count.
+- **Controlled information:** dangerous enemy actions are telegraphed at round preparation so the player has a fair opportunity to respond.
+- **Stable execution:** the queue does not reorder during a round, preventing sudden turn-order changes while the player is making decisions.
+
+### 15. Change Log (Scaling and Turn Order System)
+
+| Version | Date | Notes |
+|---|---|---|
+| 1.0 | 2026-11-05 | Initial combined specification for Linear Tier-Weighted Enemy Stat Scaling and Dynamic Initiative Queue / Round-Based Turn Order. |
+
+---
+
+### 16. Source and Decision Notes
+
+This document incorporates the following existing project decisions and approved design choices:
+
+- The GDD defines an 8-dungeon sequential expedition, four-character party, individual character turns, and reaction QTE combat.
+- The GDD requires dangerous enemy actions to be telegraphed and charge actions to be cancelled when the enemy becomes Broken.
+- The GDD's existing Broken definition includes a 20-point Break Gauge reduction at the beginning of the owner's turn.
+- The GDD's Background System states that Speed affects turn order and that Wayfarer's Speed perk does not directly grant extra turns.
+- Enemy stat growth rates and the initiative/turn-order specifications in this document are the confirmed design decisions established for this system. The example enemy base stats are reference examples from the proposed Dungeon 1 enemy roster and should be maintained in the enemy roster data source.
+
 ## Bab 11 — Damage dan Status Effect
 
-> Sumber: Consolidated Damage & Status Effect GDD v1.1.
+> Sumber: Consolidated Damage & Status Effect GDD v1.2.
 
 ### 1. Damage Types dan Elemen
 
@@ -3205,7 +3825,7 @@ Nullification adalah pengecualian: jika komponen dinullifikasi, hasilnya 0 dan m
 
 - Status instances independen: instance baru tidak refresh/extend instance lama.
 
-- Tidak ada batas jumlah instance aktif untuk status yang sama.
+- Tidak ada batas jumlah instance aktif untuk status yang sama, kecuali Control Effect (§8.1).
 
 - Status Effect berbeda dapat coexist pada target.
 
@@ -3214,6 +3834,26 @@ Nullification adalah pengecualian: jika komponen dinullifikasi, hasilnya 0 dan m
 - Status Effect Resistance mengurangi chance aplikasi, bukan duration atau potency setelah aplikasi.
 
 - Roll status independen dari grade QTE, termasuk saat damage component bernilai 0 karena Defense atau Nullification.
+
+- Tidak ada bad-luck protection. Setiap roll Hit Chance, Critical Hit, dan Status Effect Chance bersifat independen dan tidak dipengaruhi hasil roll sebelumnya.
+
+#### 8.1 Control Effect
+
+Control Effect adalah status yang menghilangkan kontrol atas karakter atau mengunci penggunaan Skill: **Stun, Sleep, Mind Control, Madness, dan Silence**. Aturan ini berlaku untuk semua unit, baik karakter pemain maupun musuh.
+
+- **Tidak dapat di-stack per status.** Selama sebuah Control Effect aktif pada target, aplikasi baru dari status yang sama gagal tanpa roll. Durasi yang tersisa tidak bertambah dan tidak di-refresh, walaupun aplikasi baru memiliki durasi lebih panjang. Contoh: target terkena Stun 3 giliran; serangan lain yang memberi Stun tidak mengubah durasi Stun tersebut.
+
+- **Control Effect yang berbeda tetap dapat masuk.** Target yang sedang terkena Stun masih dapat terkena Silence, Sleep, Mind Control, atau Madness, masing-masing dengan roll dan durasinya sendiri.
+
+- **Control Immunity per status.** Saat sebuah Control Effect berakhir dengan cara apa pun (durasi habis, Sleep terbangun karena damage, atau cleanse), target kebal terhadap status yang sama sampai akhir giliran berikutnya miliknya. Control Effect lain tetap dapat masuk selama periode ini.
+
+- Pada serangan multi-hit yang menerapkan status per hit, setelah satu hit berhasil menerapkan sebuah Control Effect, hit berikutnya tidak dapat menerapkan status yang sama. Hit berikutnya tetap dapat menerapkan Control Effect yang berbeda.
+
+- Status lain yang tidak menghilangkan kontrol (Freeze, Shock, Despair, Confusion, Charm, Fear) tidak termasuk Control Effect dan mengikuti aturan umum §8.
+
+- Aplikasi yang gagal karena aturan ini ditampilkan sebagai "IMMUNE", dan Control Immunity ditampilkan sebagai ikon status pada target yang menyebut status mana yang sedang kebal.
+
+- Durasi Control Immunity adalah nilai baseline yang dapat di-balance lewat data.
 
 ### 9. Status Effect Resistance
 
@@ -3324,7 +3964,11 @@ Mental Effects adalah kategori Status Effect yang memengaruhi pikiran, persepsi,
 
 - Exact status-specific exceptions, boss encounters, dan skill-level duration tables.
 
-### 15. Revision Note v1.1
+### 15. Revision Note
+
+v1.2 (5 November 2026): Control Effect (Stun, Sleep, Mind Control, Madness, Silence) tidak dapat di-stack per status (durasi tidak bertambah atau refresh), Control Effect berbeda tetap dapat masuk, dan Control Immunity per status setelah efek berakhir (§8.1); tidak ada bad-luck protection (§8).
+
+v1.1:
 
 Sinkronisasi dengan Bab 12 (QTE System) (4 November 2026): grade Miss diganti Poor; Defensive QTE, cakupan Offensive QTE, dan interaksi Break Power ditambahkan (§2.3–2.5); finisher tidak bisa Critical (§3); Damage Reduction talent sebagai All Damage Taken (§6); rounding Floor dikonfirmasi dan batasan desain multi-hit/multi-target ditambahkan (§7); roll status independen dari QTE (§8). Sleep dan Mind Control ditetapkan sebagai kondisi auto-Poor.
 
@@ -6032,9 +6676,354 @@ Inventory & Equipment System v1.0 dianggap selesai ketika:
 Revision v1.1 (4 November 2026): kategori affix QTE (§6.1.1) dan batasan Special Effect terkait QTE (§7.3) ditambahkan sesuai Bab 12 (QTE System).
 Revision v1.2 (4 November 2026): equipment slots diubah dari lima menjadi delapan (Main Hand, Second Hand, Head, Body, Leg, Foot, Accessory 1, Accessory 2), selaras dengan Character Creation System dan GDD Draft v0.1. Valid Equipment Type affix QTE disesuaikan. Weapon two-handed hanya menempati Main Hand (keputusan 4 November 2026).
 
-## Bab 14 — Shop dan Run Economy
+## Bab 14 — Relic System
 
-> Sumber: GDD Shop System v1.0.
+> Sumber: Magic Shop & New Relic System (5 November 2026) dan Felna_Layer1_Relic_List (draft).
+
+### 1. Overview
+
+Relic adalah item pasif yang memberikan efek kepada party. Relic merupakan bagian dari **progresi permanen pemain**, bukan item sementara per layer. Relic adalah sistem terpisah dari equipment:
+
+- Tidak menempati equipment slot karakter.
+- Tidak memiliki equipment affix.
+- Tidak dapat di-upgrade melalui Blacksmith.
+- Dimiliki party atau pemain secara keseluruhan, bukan karakter tertentu.
+- Semua relic yang dimiliki otomatis aktif selama dungeon.
+
+Revisi ini menggantikan aturan lama yang menyatakan relic hilang saat layer selesai, dungeon clear, atau run failure.
+
+### 2. Aturan Inti (Confirmed)
+
+| Aspek | Aturan |
+| --- | --- |
+| Kepemilikan | Permanen |
+| Kapasitas | Maksimal **5 relic** |
+| Koleksi atau penyimpanan cadangan | Tidak ada |
+| Aktivasi | Semua relic yang dimiliki otomatis aktif |
+| Kepemilikan karakter | Party-wide, bukan karakter tertentu |
+| Duplikat | Tidak boleh memiliki lebih dari satu relic dengan ID yang sama |
+| Penggantian di Hub | Boleh kapan saja |
+| Penjualan | Hanya melalui Magic Shop (Bab 16 §11) |
+| Pembelian | Melalui Magic Shop dengan Hub Gold |
+| Layer transition | Relic tetap dimiliki dan aktif |
+| Dungeon clear | Relic tetap dimiliki |
+| Run failure | Relic tetap dimiliki (lihat konflik di Bab 21 §21.1) |
+
+### 3. Kapasitas, Kepemilikan, dan Aktivasi
+
+#### 3.1 Kapasitas
+
+- Pemain dapat memiliki maksimal lima relic pada satu waktu, dan boleh memiliki kurang dari lima.
+- Tidak ada Relic Collection, storage, stash, atau inventory cadangan di luar lima slot.
+- Pemain tidak harus memenuhi seluruh slot sebelum dapat mengganti relic.
+- Pengelolaan relic dilakukan di Hub.
+
+#### 3.2 Aktivasi dan efek
+
+- Semua relic yang dimiliki otomatis aktif; tidak ada relic loadout sebelum masuk dungeon dan tidak ada status relic nonaktif.
+- Efek berlaku sesuai kondisi, trigger, target, dan batas aktivasi pada definisi masing-masing relic.
+- Jika teks relic menyebut karakter tertentu (misalnya "karakter yang memberi killing blow" atau "karakter dengan HP terendah"), efek mengenai karakter tersebut, tetapi kepemilikan relic tetap party-wide.
+- Efek relic yang menargetkan karakter tidak memengaruhi karakter Down atau mati, kecuali teks relic menyebutkannya secara eksplisit.
+
+#### 3.3 Duplikasi
+
+- Pemain tidak dapat memiliki lebih dari satu salinan relic dengan ID yang sama.
+- Penanganan reward yang menghasilkan relic yang sudah dimiliki (reroll, reward alternatif, atau penolakan otomatis): TBD.
+
+### 4. Memperoleh dan Mengganti Relic
+
+#### 4.1 Sumber relic
+
+- Node dan event di dalam dungeon, termasuk reward, treasure, event bertag `relic`, dan boss reward.
+- Pembelian di Magic Shop (Bab 16 §11).
+- Apakah relic dapat dibeli di Dungeon Shop: TBD.
+
+#### 4.2 Memperoleh relic di dungeon
+
+| Kondisi | Hasil |
+| --- | --- |
+| Pemain memiliki kurang dari lima relic | Relic baru ditambahkan ke slot kosong dan langsung aktif |
+| Pemain sudah memiliki lima relic | Pemain memilih salah satu relic untuk diganti, atau menolak relic baru |
+| Relic lama diganti | Relic lama hilang; relic baru langsung aktif |
+| Relic baru ditolak | Kepemilikan tidak berubah; relic yang ditolak tidak masuk ke penyimpanan mana pun |
+
+Apakah relic yang diganti atau ditolak dapat muncul kembali sebagai reward di layer yang sama: TBD.
+
+#### 4.3 Mengganti relic di Hub
+
+1. Pemain membuka pengelolaan relic di Hub.
+2. Sistem menampilkan relic yang dimiliki (maksimal lima).
+3. Pemain memilih relic yang ingin diganti.
+4. Pemain memilih relic pengganti dari sumber yang tersedia.
+5. Sistem memperbarui kepemilikan, dan relic baru otomatis aktif untuk dungeon berikutnya.
+
+Detail UI, animasi, dan sumber relic pengganti di luar Magic Shop masih dapat dirinci.
+
+### 5. Persistence dan Lifecycle
+
+| Momen | Status relic |
+| --- | --- |
+| Dibeli di Magic Shop | Menjadi kepemilikan permanen |
+| Diperoleh di dungeon | Ditambahkan jika ada slot; jika penuh, pemain memilih penggantian atau penolakan |
+| Selama layer | Semua relic yang dimiliki aktif |
+| Berpindah layer | Tetap dimiliki dan aktif |
+| Boss battle | Tetap aktif |
+| Dungeon clear | Tetap dimiliki |
+| Run failure | Tetap dimiliki |
+| Kembali ke Hub | Dapat dikelola, diganti, atau dijual |
+| Save dan load | Kepemilikan disimpan sebagai persistent player data |
+
+Tidak ada lagi proses penghapusan relic saat dungeon clear atau run failure. Counter aktivasi dan state sementara efek relic (misalnya Shield dari relic, batas per battle, batas per dungeon) tetap mengikuti lifecycle efek masing-masing.
+
+### 6. Rarity Relic
+
+Rarity relic memakai tingkatan sendiri, terpisah dari rarity equipment: Common, Uncommon, Rare, Epic. Aturan affix equipment tidak berlaku untuk relic. Balancing rarity, drop rate, dan distribusinya belum dikonfirmasi.
+
+### 7. Interaksi dengan Sistem Lain
+
+| Sistem | Aturan |
+| --- | --- |
+| Equipment (Bab 13) | Relic tidak memakai equipment slot, affix, atau Blacksmith Upgrade |
+| Magic Shop (Bab 16 §11) | Relic dapat dibeli di sini dan hanya dapat dijual di sini |
+| Hub Gold (Bab 16) | Mata uang transaksi relic; harga TBD |
+| QTE (Bab 12) | Relic yang dipicu Perfect mengikuti batas Bab 12 §8.3: pemulihan resource maksimal 2% Max HP atau Max MP per pemicu dan maksimal satu pemicu per giliran karakter. Efek ini tidak aktif saat Auto-Good (Bab 12 §10.1). Relic yang mengubah timing window masuk cap bersama +25% |
+| Damage (Bab 11) | Bonus dan pengurangan damage dari relic adalah modifier multiplicative pada step yang sesuai di Bab 11 §7, sebelum Defensive QTE |
+| Status (Bab 11) | Bonus Status Effect Resistance dari relic additive dengan sumber lain dan tunduk pada cap 75% |
+| Race (Bab 6) | Draconic Presence (Dragonborn) memperlihatkan efek relic sebelum diambil; Luminescent Insight (Liichtian) menandai relic yang membawa curse |
+| Dungeon Modifier (Bab 15) | Sistem terpisah; relic tidak dihitung dalam stack atau cap modifier |
+
+### 8. Data dan Save System
+
+**Persistent player data**
+
+- `ownedRelics`: daftar relic yang dimiliki pemain, maksimal lima. Setiap entri merujuk ke `relicId` atau relic instance sesuai kebutuhan implementasi.
+- Data tetap tersimpan setelah dungeon clear dan run failure.
+
+**Run state**
+
+- Counter aktivasi relic dan status trigger atau state sementara yang relevan selama run.
+- State sementara tidak mengubah kepemilikan permanen.
+
+Saat save dan load, kepemilikan dipulihkan dari persistent player data; counter dan state aktivasi dipulihkan dari run save jika run dilanjutkan. Ketika run berakhir, state sementara dibersihkan, tetapi kepemilikan tidak dihapus. Nama field final, serialisasi, dan skema data belum ditentukan.
+
+### 9. UI dan UX
+
+**Hub — Relic Management**
+
+- Menampilkan lima slot relic; slot kosong tetap terlihat.
+- Menampilkan nama, ikon, rarity, deskripsi, dan efek relic.
+- Menyediakan aksi mengganti relic kapan saja. Penjualan dilakukan melalui Magic Shop.
+
+**Dungeon**
+
+- HUD dan layar party menampilkan relic yang dimiliki dan aktif, beserta efek dan sisa batas aktivasinya.
+- Jika memperoleh relic saat kapasitas penuh, tampilkan pilihan mengganti atau menolak, dengan relic baru dan kelima relic yang dimiliki ditampilkan berdampingan.
+- Tidak ada peringatan bahwa relic akan hilang saat dungeon clear.
+
+### 10. Draft Relic Layer 1
+
+Relic Layer 1 bertema kerajaan kuno yang runtuh dan Zoroa, The Harvester of Soul (Bab 4 §6). Seluruh relic di bawah adalah **draft** dari Felna_Layer1_Relic_List; angkanya adalah baseline awal untuk playtest.
+
+| ID | Relic | Kategori | Efek | Rarity | Batas |
+| --- | --- | --- | --- | --- | --- |
+| R001 | Ashen Signet | Offensive | Saat menyerang musuh dengan HP di atas 80%, damage +8% | Common | Pasif |
+| R002 | Soulglass Shard | Resource | Setiap 3 Perfect Offensive QTE, pulihkan 2 MP kepada karakter aktif | Uncommon | Counter |
+| R003 | Rustbound Medal | Defensive | Karakter dengan HP di bawah 30% menerima 10% lebih sedikit direct damage | Uncommon | Pasif |
+| R004 | Gravekeeper's Thread | Survival | Setelah battle, karakter dengan HP terendah memulihkan 3% Max HP | Common | Pasif |
+| R005 | Warden's Broken Key | Utility | Pada event bertag `hidden` atau `trap`, tampilkan satu petunjuk tambahan jika tersedia | Rare | Pasif |
+| R006 | Crown of the Unremembered | Offensive | Damage terhadap musuh yang terkena status effect +7% | Rare | Pasif |
+| R007 | Mourner's Coin | Economy | Run Gold yang ditemukan +10% (dibulatkan ke bawah) | Uncommon | Pasif |
+| R008 | Pale Lantern | Exploration | Saat memilih jalur, tampilkan tipe satu node tersembunyi di depan | Rare | Pasif |
+| R009 | Soul-Tether Ring | Defensive | Sekali per battle, damage yang akan membuat karakter Down menyisakan 1 HP | Epic | 1/battle |
+| R010 | Executioner's Bell | Offensive | Serangan pertama party di setiap battle mendapat Break Power +15% | Uncommon | Per battle |
+| R011 | Hollow Knight's Buckle | Defensive | Jika minimal 2 karakter Down, karakter aktif mendapat All Damage Taken −8% | Rare | Pasif |
+| R012 | Last King's Seal | Offensive | Damage terhadap Boss +5% | Rare | Pasif |
+| R013 | Dirge-Eater's Fang | Resource | Karakter yang memberi killing blow memulihkan 1 MP, maksimal 3 MP per battle | Rare | Cap/battle |
+| R014 | Pallbearer's Gloves | Utility | Membuka peti tidak memicu satu trap minor pertama di dungeon | Epic | 1/dungeon |
+| R015 | Veil of Dust | Defensive | Resistance terhadap Burn, Poison, dan Bleed +10% | Uncommon | Pasif |
+| R016 | Royal Gravewax | Survival | Item pemulihan HP memulihkan tambahan 5% dari nilai dasarnya | Rare | Pasif |
+| R017 | Oathstone of the Fallen | Offensive | Jika karakter tidak menerima damage sejak giliran terakhirnya, serangan direct damage berikutnya +6% | Uncommon | Kondisional |
+| R018 | Whispering Reliquary | Exploration | Pada event bertag `relic` atau `cursed_reward`, tampilkan indikator risiko tambahan | Rare | Pasif |
+| R019 | Black-Iron Rosary | Defensive | Setelah Perfect Defensive QTE, karakter mendapat Shield 2% Max HP, maksimal sekali per giliran karakter | Epic | Kondisional |
+| R020 | Sovereign's Last Breath | Resource | Saat Boss mencapai 25% HP, seluruh party memulihkan 3 MP, sekali per battle | Epic | 1/battle |
+| R021 | Coffin Nail | Offensive | Damage terhadap musuh Broken +10% | Rare | Pasif |
+| R022 | Zoroa's Dull Crown | Offensive | Setelah party mengalahkan 5 musuh dalam satu battle, damage seluruh party +4% sampai battle berakhir | Epic | Stack trigger |
+
+#### 10.1 Catatan penyelarasan draft Layer 1
+
+| Catatan | Status setelah revisi permanen |
+| --- | --- |
+| Draft: "Relic diasumsikan ikut terbawa ke dungeon berikutnya" | Sesuai: relic permanen |
+| Draft: "Aturan stack/duplikasi relic belum ditentukan" | Digantikan: duplikat tidak diperbolehkan |
+| Nilai relic dirancang untuk satu layer | Perlu ditinjau ulang. Relic Layer 1 dengan angka flat (misalnya R002 2 MP, R013 1 MP, R020 3 MP) akan makin lemah di dungeon akhir, sedangkan relic berbasis persentase tetap relevan |
+| R014 "1/dungeon" | Konsisten; batas berlaku per dungeon dan reset di dungeon berikutnya |
+| R002 dan R019 (dipicu Perfect QTE) | Sesuai batas Bab 12 §8.3; tidak aktif saat Auto-Good |
+| R009 Soul-Tether Ring | Berinteraksi dengan Determination (Human): HP 1 setelah hit memenuhi syarat HP ≤ 30%, sehingga Determination tetap terpicu |
+| R017 menyebut "positioning" di design intent | Tidak ada sistem posisi di combat; efek tetap berlaku sebagai timing serangan |
+
+### 11. Perubahan terhadap Aturan Lama
+
+| Aturan lama | Aturan baru |
+| --- | --- |
+| Relic hanya aktif pada layer tempat ditemukan | Semua relic yang dimiliki otomatis aktif selama dungeon |
+| Relic hilang saat dungeon clear | Relic tetap dimiliki setelah dungeon clear |
+| Relic hilang saat run failure | Relic tetap dimiliki setelah run failure |
+| Relic dihapus saat berpindah layer | Relic tetap dimiliki dan aktif saat berpindah layer |
+| Kapasitas lima sebagai batas relic sementara per layer | Kapasitas lima sebagai batas kepemilikan permanen |
+| `ownedRelics` hanya di run state | Kepemilikan disimpan dalam persistent player data |
+| `removedRelics` menyimpan relic yang diganti atau ditolak | Hanya state pilihan reward sementara, bukan daftar kepemilikan |
+| Penjualan relic di Dungeon Shop belum ditentukan | Relic hanya dapat dijual di Magic Shop; pembelian di Dungeon Shop masih TBD |
+
+### 12. Open Questions
+
+1. Apakah relic yang diganti atau ditolak dapat muncul kembali sebagai reward di layer yang sama?
+2. Apa yang terjadi jika reward menghasilkan relic yang sudah dimiliki?
+3. Jika membeli relic saat kapasitas penuh, apakah pemain langsung memilih relic yang diganti dalam transaksi?
+4. Apakah relic memiliki level, upgrade, atau sistem perkembangan lain?
+5. Apakah harga relic tetap atau mengikuti formula berdasarkan rarity?
+6. Apakah efek relic yang dirancang untuk satu layer perlu diseimbangkan ulang untuk durasi permanen (lihat §10.1)?
+7. Bagaimana relic berinteraksi dengan New Game setelah run failure (lihat Bab 21 §21.1)?
+
+## Bab 15 — Dungeon Modifier System
+
+> Sumber: Keputusan Dungeon Modifier (November 2026) dan Felna_Dungeon_Modifier_List (draft).
+
+### 1. Overview
+
+Dungeon Modifier adalah efek sementara berbasis run yang diperoleh dari node di dalam dungeon, seperti Reward, Event, Shrine, Camp, Treasure, dan Cursed Node. Modifier bisa berupa buff, debuff, atau buff dengan drawback. Berbeda dari relic, modifier dirancang untuk ditumpuk: mengambil modifier yang sama berkali-kali adalah cara utama membangun kekuatan sementara di dalam satu layer.
+
+### 2. Aturan Inti (Confirmed)
+
+| Aturan | Keputusan |
+| --- | --- |
+| Persistence | Modifier **tidak** dibawa ke layer berikutnya dan hilang saat dungeon clear. Aturan ini diputuskan saat relic masih sementara; relic sekarang permanen (Bab 14), tetapi modifier tetap sementara |
+| Stacking | Modifier **dapat di-stack** |
+| Pengambilan ulang | Modifier yang sudah diambil **dapat diambil lagi** |
+| Batas efek | Beberapa efek memiliki **cap** atau batas maksimal |
+
+#### 2.1 Perbandingan dengan relic
+
+| Aspek | Relic (Bab 14) | Dungeon Modifier |
+| --- | --- | --- |
+| Persistence | Permanen, termasuk setelah run failure | Hilang saat dungeon clear |
+| Duplikat | Tidak boleh | Boleh, dan menjadi stack |
+| Muncul lagi setelah diambil | Tidak dapat dimiliki ganda; kemunculan ulang sebagai reward TBD | Ya |
+| Kapasitas | 5 relic | Dibatasi cap per efek |
+| Durasi | Selama dimiliki | Sesuai durasi masing-masing modifier, paling lama sampai dungeon clear |
+
+### 3. Aturan Turunan
+
+#### 3.1 Persistence dan lifecycle
+
+| Momen | Status modifier |
+| --- | --- |
+| Modifier diperoleh | Menjadi stack baru, atau langsung diterapkan jika bersifat sekali pakai |
+| Selama layer berlangsung | Aktif sesuai durasinya; durasi berkurang sesuai satuan modifier (battle, reward, atau sekali pakai) |
+| Boss battle | Modifier yang masih aktif tetap berlaku |
+| Dungeon clear | Semua modifier dihapus setelah layar reward boss, termasuk yang durasinya masih tersisa |
+| Run failure | Semua modifier hilang bersama run |
+| Save dan load di tengah layer | Stack, sisa durasi, dan status trigger tersimpan di run state |
+
+#### 3.2 Pengambilan ulang
+
+- Modifier yang sudah diambil tidak dikeluarkan dari pool dan dapat ditawarkan lagi.
+- Modifier yang bersifat sekali pakai (misalnya pemulihan langsung) dapat diambil berulang kali; setiap pengambilan langsung diterapkan.
+
+### 4. Aturan Stacking dan Cap (Usulan, Perlu Konfirmasi)
+
+Keputusan inti menetapkan bahwa modifier dapat di-stack dan sebagian efek memiliki cap. Aturan berikut mendefinisikan cara kerjanya agar dapat diimplementasikan.
+
+#### 4.1 Cara stack bekerja
+
+- Setiap pengambilan membuat satu stack dengan durasinya sendiri. Stack lama tidak di-refresh oleh stack baru dan berakhir sesuai durasinya masing-masing.
+- Stack dari modifier yang sama dijumlahkan secara additive. Contoh: Battle Focus ×3 = Physical Damage +15%.
+- Total satu modifier diperlakukan sebagai satu modifier dalam formula damage dan ditumpuk secara multiplicative dengan sumber lain (Bab 11 §6).
+- Stack yang melebihi cap tetap tercatat, tetapi efeknya tidak melewati cap. Stack yang tertahan cap berlaku ketika stack lain berakhir.
+
+#### 4.2 Cap umum
+
+| Jenis efek | Cap |
+| --- | --- |
+| Buff biasa | Maksimal 3 stack per modifier |
+| Buff dengan drawback (Cursed Shrine) | Maksimal 2 stack; drawback ikut ditumpuk |
+| Debuff | Maksimal 3 stack per modifier |
+| Total All Damage Taken reduction dari semua modifier | Maksimal 25% |
+| Timing window QTE | Masuk cap bersama +25% (Bab 12 §3.4); debuff window tetap dibatasi batas bawah W_P 66 ms |
+| Biaya skill | Minimum 1 MP |
+| Status Effect Resistance | Tetap tunduk pada cap 75% (Bab 11) |
+| Speed | Tidak boleh memberi atau menghapus extra turn |
+| Efek sekali pakai | Tidak ada cap stack; diterapkan saat diambil |
+
+#### 4.3 Penawaran modifier
+
+- Jumlah stack yang sudah dimiliki ditampilkan pada pilihan, misalnya "Battle Focus ×2 → ×3".
+- Modifier yang sudah mencapai cap stack tetap boleh ditawarkan, tetapi diberi tanda "Maksimal" dan pilihan lain disarankan oleh UI.
+- Kapasitas jumlah modifier aktif tidak dibatasi; batasnya adalah cap per efek. Aturan ini perlu dikonfirmasi.
+
+### 5. Draft Modifier dengan Aturan Stacking Baru
+
+Daftar berikut berasal dari Felna_Dungeon_Modifier_List (status Draft atau Adaptasi konsep GDD). Kolom stacking di draft ("Tidak stack; refresh durasi") digantikan oleh keputusan §2 dan cap usulan §4.
+
+| ID | Modifier | Polaritas | Efek per stack | Durasi | Cap usulan |
+| --- | --- | --- | --- | --- | --- |
+| MOD-001 | Battle Focus | Buff | Physical Damage +5% | 2 battle | 3 stack (+15%) |
+| MOD-002 | Arcane Current | Buff | Elemental Damage +5% | 2 battle | 3 stack (+15%) |
+| MOD-003 | Piercing Insight | Buff | Abaikan 5% Physical Resistance target | 2 battle | 3 stack (15%) |
+| MOD-004 | Steady Focus | Buff | Offensive QTE window +10% | 2 battle | Cap bersama +25% |
+| MOD-005 | Quick Instinct | Buff | Defensive QTE window +10% | 2 battle | Cap bersama +25% |
+| MOD-006 | Inspiring Formation | Buff | Damage Reduction +5% | 2 battle | 3 stack; total DR modifier ≤ 25% |
+| MOD-007 | Vital Spark | Buff | Healing received +10% | 2 battle | 3 stack (+30%) |
+| MOD-008 | Mana Well | Buff | Active Skill MP Cost −5% | 2 battle | 3 stack (−15%), minimum 1 MP |
+| MOD-009 | Treasure Sense | Buff | Gold dari reward berikutnya +15% | Sampai satu reward Gold | 3 stack (+45%); semua stack terpakai pada reward yang sama |
+| MOD-010 | Scavenger's Eye | Buff | Peluang consumable pada roll reward naik | Satu roll reward | 3 stack |
+| MOD-011 | Second Wind | Buff | Pulihkan 8% Max HP setiap karakter | Sekali pakai | Tanpa cap stack |
+| MOD-012 | Quiet Mind | Buff | Pulihkan 5% Max MP setiap karakter | Sekali pakai | Tanpa cap stack |
+| MOD-013 | Iron Guard | Buff | All Damage Taken −8% | Battle berikutnya | 3 stack; total DR modifier ≤ 25% |
+| MOD-014 | Elemental Ward | Buff | Damage dari satu elemen −15% | Battle berikutnya | 2 stack per elemen (−30%) |
+| MOD-015 | Fortune's Favor | Buff | Bonus Gold kecil setelah menang battle berikutnya | Battle berikutnya | 3 stack |
+| MOD-016 | Blood Price | Buff + Drawback | Physical dan Elemental Damage +12%; healing received −10% | 2 battle | 2 stack |
+| MOD-017 | Glass Resolve | Buff + Drawback | Damage +15%; All Damage Taken +10% | Battle berikutnya | 2 stack |
+| MOD-018 | Fractured Focus | Debuff | Offensive QTE window −10% | Battle berikutnya | 3 stack (−30%), W_P minimal 66 ms |
+| MOD-019 | Withering Curse | Debuff | Healing received −15% | 2 battle | 3 stack (−45%) |
+| MOD-020 | Heavy Steps | Debuff | Speed −5% | Battle berikutnya | 3 stack (−15%) |
+| MOD-021 | Leaking Mana | Debuff | Active Skill MP Cost +1 MP | Battle berikutnya | 3 stack (+3 MP) |
+| MOD-022 | Marked Prey | Buff | Damage terhadap musuh Broken +10% | 2 battle | 3 stack (+30%) |
+| MOD-023 | Last Stand | Buff | Karakter aktif terakhir mendapat Damage Reduction +10% | Sampai akhir battle berikutnya | 2 stack (+20%); total DR modifier ≤ 25% |
+| MOD-024 | Elemental Attunement | Buff | Satu elemen pilihan mendapat Damage +12% | 2 battle | 2 stack per elemen (+24%); beberapa elemen boleh aktif bersamaan |
+
+MOD-004 dan MOD-005 di draft bernama Steady Hand dan Quick Reflex. Keduanya diganti menjadi Steady Focus dan Quick Instinct agar tidak tertukar dengan talent bernama sama di Bab 9.
+
+#### 5.1 Catatan penyelarasan draft
+
+| Catatan di draft | Status sekarang |
+| --- | --- |
+| Review: "Persistence — apakah modifier dibawa ke dungeon berikutnya?" | Diputuskan: tidak, sama seperti relic |
+| Review: "Stacking — bisakah dua modifier aktif bersamaan?" | Diputuskan: modifier dapat di-stack, termasuk salinan identik |
+| Kolom stacking "Tidak stack; refresh durasi" | Digantikan oleh §4.1: setiap stack memiliki durasinya sendiri |
+| Nama MOD-004 Steady Hand dan MOD-005 Quick Reflex | Diganti: Steady Focus dan Quick Instinct |
+| Review: "QTE cap — apakah modifier masuk cap +25%?" | Usulan §4.2: ya, masuk cap bersama |
+| MOD-024: "Satu attunement aktif; pilihan baru mengganti" | Digantikan: elemen berbeda boleh aktif bersamaan; elemen yang sama menjadi stack |
+| MOD-010, MOD-015: nilai peluang dan jumlah Gold TBD | Tetap terbuka; bergantung pada reward table dan ekonomi Shop (Bab 16) |
+| Review: rarity, drop rate, node types, scaling dungeon | Tetap terbuka |
+
+### 6. Data dan UI
+
+#### 6.1 Data
+
+- Definisi modifier: `modifierId`, `displayName`, `category`, `polarity`, `effectType`, `valuePerStack`, `duration` (jumlah dan satuan), `stackCap`, `categoryCapGroup`, `target`.
+- Run state: daftar instance aktif (`modifierId`, sisa durasi, status trigger). Jumlah stack dihitung dari jumlah instance aktif.
+- Run state modifier di-reset saat dungeon clear dan saat run berakhir.
+
+#### 6.2 UI
+
+- HUD menampilkan ikon modifier dengan angka stack (×n) dan sisa durasi stack yang paling cepat berakhir.
+- Tooltip menampilkan total efek saat ini, cap, dan daftar stack beserta durasinya.
+- Debuff dan drawback memakai bingkai yang berbeda dari buff, dengan pembeda bentuk dan tidak hanya warna.
+- Layar reward boss mengingatkan bahwa semua modifier akan hilang. Relic tidak hilang.
+
+## Bab 16 — Shop, Fasilitas Hub, dan Run Economy
+
+> Sumber: GDD Shop System v1.0, ditambah Temple (§10) dan Magic Shop (§11).
 
 ### 1. Overview
 
@@ -6070,7 +7059,7 @@ The Dungeon Shop is encountered inside a dungeon run. It uses Run Gold and is in
 
 #### 3.2 Hub Shops and Facilities
 
-The Hub contains five distinct facilities. Hub purchases and services use the persistent Hub Gold balance.
+The Hub contains six distinct facilities. Hub purchases and services use the persistent Hub Gold balance.
 
 |**Facility Name**|**Primary Function**|**Confirmed Scope**|
 |---|---|---|
@@ -6078,7 +7067,8 @@ The Hub contains five distinct facilities. Hub purchases and services use the pe
 |Armory|Equipment|Purchase equipment for characters.|
 |Blacksmith|Equipment upgrades|Upgrade owned equipment.|
 |Training Ground|Skills|Manage character skills and upgrade<br>skills.|
-|Temple|Revive|Revive characters who are dead.|
+|Temple|Revive and Recovery|Revive dead characters and restore living characters (§10).|
+|Magic Shop|Relics and rare items|Buy and sell relics; buy Rare and Epic items (§11).|
 
 ### 4. Gold Economy
 
@@ -6086,15 +7076,8 @@ The Hub contains five distinct facilities. Hub purchases and services use the pe
 
 |**Balance**|**Description**|**Persistence**|
 |---|---|---|
-||Gold acquired and held during the||
-|Run Gold|current dungeon run; spent at Dungeon<br>Shop.|Temporary; cleared on run failure.|
-
-Hub Gold
-
-||**GAME DESIGN DOCUMENT  |  SHOP SYSTEM**|
-|---|---|
-|Gold secured by completing a dungeon;|Persistent between runs, subject to the|
-|spent at Hub facilities.|game's overall reset rules.|
+|Run Gold|Gold acquired and held during the current dungeon run; spent at Dungeon Shop.|Temporary; cleared on run failure.|
+|Hub Gold|Gold secured by completing a dungeon; spent at Hub facilities.|Persistent between runs, subject to the game's overall reset rules.|
 
 #### 4.2 Successful Dungeon Completion
 
@@ -6150,7 +7133,7 @@ A character can be revived during a run by using a special revive item. The item
 
 The Temple provides a service to revive dead characters after a successful return to the Hub. This allows players to restore their party without needing to spend a rare revive item during the dungeon.
 
-The Temple's exact cost, requirements, revival presentation, and any limits are TBD.
+Temple costs, requirements, and the Recovery service are defined in §10.
 
 ### 7. Player Flow
 
@@ -6174,7 +7157,7 @@ The Temple's exact cost, requirements, revival presentation, and any limits are 
 
 - There are two shop contexts: Dungeon Shop and Hub shops.
 
-- Hub facilities are named Shop, Armory, Blacksmith, Training Ground, and Temple.
+- Hub facilities are named Shop, Armory, Blacksmith, Training Ground, Temple, and Magic Shop.
 
 - Run Gold is temporary; all remaining Run Gold transfers to Hub Gold after successful dungeon completion.
 
@@ -6196,8 +7179,6 @@ The Temple's exact cost, requirements, revival presentation, and any limits are 
 
 - Revive item name, price, stock, and any target/use restrictions.
 
-- Temple revive price, requirements, and possible restrictions.
-
 - Blacksmith upgrade materials, costs, levels, and success/failure rules.
 
 - Training Ground skill management and upgrade costs/rules.
@@ -6212,16 +7193,121 @@ The Temple's exact cost, requirements, revival presentation, and any limits are 
 |Hub|Town/base area between dungeon runs.|
 |Run Gold|TemporaryGold held duringa dungeon run.|
 |Hub Gold|Gold secured after successful dungeon completion.|
-||**GAME DESIGN DOCUMENT  |  SHOP SYSTEM**|
 |Revive|Restore a dead character to a living/active state.|
 |Dead|Character state in which the character cannot participate in<br>combat until revived.|
 |Run Failure|Allpartycharacters are dead.|
 
-_End of document_
+### 10. Temple
+
+#### 10.1 Overview
+
+Temple adalah fasilitas di Hub yang menyediakan layanan **Revive** dan **Recovery** bagi karakter party setelah kembali dari dungeon. Kondisi karakter tidak otomatis dipulihkan ketika pemain kembali ke Hub; pemain harus memakai layanan Temple dan membayarnya dengan **Hub Gold**.
+
+#### 10.2 Revive
+
+Revive menghidupkan kembali karakter yang telah mati.
+
+- Biaya Revive pertama dalam satu kunjungan Temple adalah **500 Hub Gold**.
+- Setiap Revive berikutnya dalam kunjungan yang sama naik **50% secara majemuk** dari biaya Revive sebelumnya.
+- Pemain bebas menentukan urutan karakter yang di-Revive.
+- Perhitungan biaya kembali ke biaya dasar setiap kali pemain memulai kunjungan Temple yang baru.
+
+```text
+C_n = ceil(500 × 1.5^(n − 1))
+```
+
+`C_n` adalah biaya Revive ke-`n` dalam satu kunjungan; hasilnya dibulatkan ke atas.
+
+|**Urutan Revive**|**Biaya**|
+|---|---|
+|Pertama|500 Hub Gold|
+|Kedua|750 Hub Gold|
+|Ketiga|1.125 Hub Gold|
+|Keempat|1.688 Hub Gold|
+|Kelima|2.532 Hub Gold|
+
+#### 10.3 Recovery
+
+Satu layanan Recovery untuk karakter yang masih hidup mencakup:
+
+- Mengembalikan HP hingga penuh.
+- Mengembalikan MP hingga penuh.
+- Menghapus debuff dan status effect negatif yang sedang aktif; cleanse sudah termasuk tanpa biaya tambahan.
+
+Biaya dan aturan:
+
+- **300 Hub Gold per karakter**, flat, tidak bergantung pada jumlah HP/MP yang hilang atau jumlah status yang dihapus.
+- Pemain memilih karakter yang ingin di-Recovery; tidak wajib memulihkan seluruh party.
+- Karakter harus hidup untuk memakai Recovery. Karakter yang mati harus di-Revive terlebih dahulu.
+
+#### 10.4 Urutan Layanan dan Contoh
+
+Jika karakter mati dan juga membutuhkan pemulihan: Revive dulu, lalu Recovery. Keduanya layanan terpisah dengan biaya masing-masing.
+
+Contoh: dua karakter mati dan tiga karakter perlu Recovery.
+
+|**Layanan**|**Biaya**|
+|---|---|
+|Revive karakter pertama|500 Hub Gold|
+|Revive karakter kedua|750 Hub Gold|
+|Recovery tiga karakter|3 × 300 = 900 Hub Gold|
+|**Total**|**2.150 Hub Gold**|
+
+#### 10.5 Belum Ditentukan
+
+- Apakah Recovery dapat digunakan berulang kali pada karakter yang sama dalam satu kunjungan.
+- Apakah ada kondisi khusus atau status effect tertentu yang tidak dapat dihapus oleh Recovery.
+- Detail antarmuka dan alur interaksi Temple.
+
+### 11. Magic Shop
+
+#### 11.1 Overview
+
+Magic Shop adalah fasilitas Hub (nama resmi: **Magic Shop**, bukan Magical Shop) yang menyediakan dua kategori barang:
+
+1. Relic (Bab 14).
+2. Item dengan rarity Rare ke atas, kecuali Legendary dan Mythic. Berdasarkan urutan rarity equipment (Common, Uncommon, Rare, Epic, Legendary, Mythic), kategori ini berarti **Rare dan Epic**.
+
+Jenis item non-relic yang termasuk kategori kedua (equipment, consumable, material, atau lainnya) belum ditentukan, sehingga tidak semua jenis item otomatis termasuk stok Magic Shop.
+
+#### 11.2 Currency
+
+- Currency: **Hub Gold**.
+- Harga beli setiap item dan relic: TBD.
+- Nilai jual relic: TBD.
+
+#### 11.3 Pembelian
+
+- Tampilkan nama, rarity, deskripsi atau efek, dan harga barang, beserta saldo Hub Gold.
+- Saat membeli relic, tampilkan kapasitas relic yang sedang terpakai.
+- Tampilkan feedback jika Hub Gold tidak mencukupi.
+- Setelah transaksi berhasil, perbarui saldo dan kepemilikan.
+- Relic yang dibeli menjadi milik permanen dan tunduk pada batas lima relic. Jika kapasitas penuh, pemain perlu mengosongkan slot dengan menjual atau mengganti relic terlebih dahulu. Detail UX saat kapasitas penuh: TBD.
+
+#### 11.4 Penjualan Relic
+
+- Relic **hanya dapat dijual melalui Magic Shop**.
+- Pemain boleh menjual relic kapan saja di Hub, tanpa menunggu semua slot terisi.
+- Penjualan mengurangi jumlah relic yang dimiliki dan mengosongkan satu slot.
+- Harga jual dan formulanya: TBD. Aturan penjualan item non-relic: belum ditentukan.
+
+#### 11.5 Stok dan Refresh — TBD
+
+Belum ditentukan: jumlah relic dan item yang tersedia, stok tetap atau acak, pengaruh dungeon progression terhadap stok, waktu dan mekanisme refresh, batas pembelian per item, serta apakah seluruh relic dapat tersedia atau hanya subset tertentu. Angka, peluang, atau jadwal refresh tidak ditetapkan tanpa keputusan desain.
+
+#### 11.6 Open Questions
+
+1. Jenis item non-relic apa saja yang termasuk kategori Rare/Epic?
+2. Apakah Magic Shop menjual equipment, consumable, material, atau kategori lain? Jika menjual equipment, bagaimana pembagian perannya dengan Armory?
+3. Apakah Magic Shop menerima penjualan item non-relic?
+4. Berapa harga beli dan nilai jual relic?
+5. Bagaimana stok dan refresh bekerja, dan apakah stok berubah mengikuti dungeon progression?
+6. Apakah ada batas pembelian per item?
+7. Apakah semua relic dapat dibeli dan dijual atau hanya subset tertentu?
 
 # Bagian VI — Presentasi
 
-## Bab 15 — Art Direction dan Visual Production
+## Bab 17 — Art Direction dan Visual Production
 
 > Sumber: GDD Visual Direction v0.2 §13. Penomoran §13.x dipertahankan.
 
@@ -6390,7 +7476,7 @@ Assets/ Art/ Characters/ Enemies/ Bosses/ Environment/ UI/ VFX/ Portraits/ Anima
 
 **Revision note (4 November 2026):** §5.1–5.3 disinkronkan dengan Bab 12 (QTE System).
 
-## Bab 16 — Visual Style Guide
+## Bab 18 — Visual Style Guide
 
 > Sumber: Game Visual Style Guide v1.0.
 
@@ -6776,7 +7862,7 @@ Prototype acceptance: visual readability at target resolution; consistent pixel 
 |Status UI behavior|Icon stacking, duration, frames, immunity<br>labels may be unspecified.|Approve icon size, stacking, duration<br>display, and immunity presentation.|
 |Asset implementation|This guide specifies future asset direction.|Create asset inventory and track each<br>asset’s production status.|
 
-## Bab 17 — UI/UX Design
+## Bab 19 — UI/UX Design
 
 > Sumber: Game UI Design Document (design.md).
 
@@ -7701,7 +8787,7 @@ These items should be finalized before implementation:
 
 **Revision note (4 November 2026):** §5.16, QTE settings, and the 8 equipment slots synced with Bab 12 (QTE System).
 
-## Bab 18 — Audio Direction
+## Bab 20 — Audio Direction
 
 > Sumber: GDD Visual Direction v0.2 §10. Penomoran §10.x dipertahankan.
 
@@ -7727,15 +8813,17 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 
 # Bagian VII — Status Proyek
 
-## Bab 19 — Konflik, Asumsi, dan Isu Terbuka
+## Bab 21 — Konflik, Asumsi, dan Isu Terbuka
 
-### 19.1 Konflik versi yang perlu diputuskan
+### 21.1 Konflik versi yang perlu diputuskan
 
 | Area | Konflik | Status di GDD ini |
 | --- | --- | --- |
 | Race System v1.1 | Ada dua versi v1.1 yang dibuat terpisah. Versi lain memakai lineage Dragonborn Ember (Fire, +2 STR), Frost (Ice, +2 STR), Storm (Lightning, +2 CHA), dan Umbral (Shadow, +2 CHA), serta Exhausted −15% damage | Bab 6 memakai lineage Crimson (Fire), Stone (Earth), Azure (Lightning), Frost (Ice) dan Exhausted −20%. Nilai Racial Feat lainnya sama di kedua versi |
+| Relic dan run failure | Bab 14 menetapkan relic tetap dimiliki setelah run failure dan disimpan sebagai persistent player data. Bab 3 §3.2 dan Bab 16 §5.3 menetapkan bahwa run failure mengembalikan pemain ke Main Menu dan pemain harus memulai New Game | Belum diputuskan apakah relic ikut terbawa ke New Game. Jika ya, relic menjadi satu-satunya meta-progression lintas New Game dan perlu dicek terhadap pilar Permanent Consequences (Bab 3 §2.2) |
+| Nama talent dan modifier | Talent Barbarian **Last Stand** bernama sama dengan MOD-023 Last Stand; talent Ranger **Marked Prey** bernama sama dengan MOD-022 Marked Prey | Belum diganti. Salah satu dari tiap pasangan perlu diganti nama, seperti pada Steady Focus dan Quick Instinct |
 
-### 19.2 Asumsi yang belum dikonfirmasi
+### 21.2 Asumsi yang belum dikonfirmasi
 
 | Kode | Asumsi | Lokasi |
 | --- | --- | --- |
@@ -7746,35 +8834,44 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | A5 | Definisi kerja Break gauge dan Broken | Bab 10 §5.3, Bab 12 §3.1 |
 | — | Tafsiran "QTE Counter Power" (Dragonborn), "QTE Stability" (Merfolk), dan Iron Resolve sebagai active ability | Bab 12 §8.5, Bab 6 |
 
-### 19.3 Keputusan baru yang menggantikan catatan lama
+### 21.3 Keputusan baru yang menggantikan catatan lama
 
 | Catatan lama | Keputusan sekarang |
 | --- | --- |
-| Tema dungeon TBD (Bab 15 §13.11, Bab 16 §20) | Identitas delapan layer dan boss-nya sudah ditetapkan di Bab 4 §6. Palet, arsitektur, dan prop per layer tetap perlu dirancang |
+| Tema dungeon TBD (Bab 17 §13.11, Bab 18 §20) | Identitas delapan layer dan boss-nya sudah ditetapkan di Bab 4 §6. Palet, arsitektur, dan prop per layer tetap perlu dirancang |
 | Jumlah equipment slot belum pasti | 8 slot: Main Hand, Second Hand, Head, Body, Leg, Foot, Accessory 1, Accessory 2. Weapon two-handed hanya menempati Main Hand (Bab 13) |
 | Nama grade QTE belum pasti | Perfect / Good / Poor (Bab 12) |
 | Arah rounding belum dikonfirmasi | Floor, sekali per hit (Bab 11 §7) |
 | Nilai combo Martial Artist TBD | Ditetapkan di Bab 8 §5.1 dan Bab 12 §7 |
 | Detail race TBD | Ditetapkan di Bab 6 |
+| Persistensi dan duplikasi relic belum ditentukan (draft relic Layer 1) | Relic permanen: kapasitas 5, milik seluruh party, tanpa duplikat, tetap dimiliki setelah dungeon clear dan run failure, dapat diganti di Hub dan dijual di Magic Shop (Bab 14 §2). Aturan sebelumnya (relic hilang saat dungeon clear) sudah tidak berlaku |
+| Persistence dan stacking modifier masih Open (draft Modifier List) | Modifier hilang saat dungeon clear; dapat di-stack dan diambil lagi, dengan cap per efek (Bab 15 §2). Relic sekarang permanen, tetapi modifier tetap sementara |
+| Enemy turn order, initiative, action economy, dan enemy stat scaling TBD | Ditetapkan: Dynamic Initiative Queue berbasis Effective SPD tanpa RNG, satu giliran per unit per round, dan Linear Tier-Weighted Scaling (Bab 10 §7–8) |
+| Struktur pemilihan talent dan respec belum ditentukan | Pemilihan manual di level 3, 6, 9, 12, 15 tanpa kuota kategori; respec memakai Scroll of Emptiness (Bab 9 §2 dan §5) |
+| Biaya dan aturan Temple TBD | Revive 500 Hub Gold, naik 50% majemuk per Revive dalam satu kunjungan; Recovery 300 Hub Gold per karakter (Bab 16 §10) |
+| Filosofi difficulty hanya tercatat di Difficulty Design Supplement | Relentless Tactical Survival, lima pilar, prinsip operasional, serta arah Brutal but Recoverable, Limited Recovery, dan Controlled RNG dikonfirmasi (Bab 3 §2.1–2.4). Proposal enemy difficulty di supplement masih menunggu review |
+| Status bisa dirantai tanpa batas (jumlah instance status tidak dibatasi) | Control Effect (Stun, Sleep, Mind Control, Madness, Silence) tidak dapat di-stack per status dan memberi Control Immunity per status; Control Effect berbeda tetap dapat masuk; berlaku untuk semua unit; tidak ada bad-luck protection (Bab 11 §8.1, Bab 3 §2.4) |
 
-### 19.4 Indeks isu terbuka per bab
+### 21.4 Indeks isu terbuka per bab
 
 | Area | Lokasi | Contoh isu |
 | --- | --- | --- |
-| Struktur combat | Bab 10 §5.1 | Enemy turn order, initiative formula, action economy, aturan defend dan item |
+| Struktur combat | Bab 10 §5.1 | Aturan defend dan item |
 | Damage dan status | Bab 11 §14 | Skill scaling, nilai DoT, angka Freeze/Shock/Despair/Fear/Confusion, detail cleanse |
 | Class | Bab 8 §14 | SP per level dan biaya skill, koefisien damage, MP cost, detail beberapa core mechanic |
-| Talents | Bab 9 §6 | Struktur milestone, nilai final, respec |
+| Talents | Bab 9 §7 | Nilai final talent, efek talent konsep, prerequisite, harga dan drop Scroll of Emptiness |
 | Character creation | Bab 5 §10 | Point Buy budget, derived-stat formula, starting equipment |
-| Difficulty | Bab 3 §8 | Enemy stat scaling, pemulihan HP/MP, Recovery Camp, Character Down, meta-progression |
-| Shop | Bab 14 §8.2 | Formula harga, sell value, refresh cost dan weight |
+| Difficulty | Bab 3 §8 | Pemulihan HP/MP di dalam dungeon, Recovery Camp, Character Down, meta-progression |
+| Dungeon Modifier | Bab 15 §4–5 | Konfirmasi cap stacking, kapasitas modifier aktif, nilai Scavenger's Eye dan Fortune's Favor, drop rate |
+| Relic | Bab 14 §12 | Reward relic duplikat, kemunculan ulang relic yang ditolak, harga, rebalancing relic untuk durasi permanen, interaksi dengan New Game |
+| Shop dan fasilitas Hub | Bab 16 §8.2, §10.5, §11.6 | Formula harga, sell value, refresh; Recovery berulang di Temple; stok, harga, dan cakupan item Magic Shop |
 | Lore | Bab 4 §8 | Protagonis, sejarah layer, nasib lima petualang legendaris |
-| Art | Bab 15 §13.11, Bab 16 §20 | Resolusi target, tipografi, nilai HEX rarity, status UI |
-| UI | Bab 17 §11 | Save/continue, pause, party formation, overflow inventory |
+| Art | Bab 17 §13.11, Bab 18 §20 | Resolusi target, tipografi, nilai HEX rarity, status UI |
+| UI | Bab 19 §11 | Save/continue, pause, party formation, overflow inventory |
 
-### 19.5 Prioritas desain berikutnya
+### 21.5 Prioritas desain berikutnya
 
-1. **Fondasi combat math:** enemy turn order, initiative, dan action economy (Bab 10) menjadi dependensi untuk QTE, status, dan class.
+1. **Keputusan relic dan New Game:** tentukan apakah relic bertahan melewati New Game (§21.1), karena keputusan ini menentukan ada tidaknya meta-progression.
 2. **Ekonomi resource:** MP cost skill, healing, HP musuh, dan pemulihan antar battle. Tanpa angka ini, keseimbangan QTE terhadap ekonomi survival belum bisa diverifikasi penuh (Bab 12, Fase 3).
 3. **Enemy design per layer:** komposisi musuh, pola QTE, dan serangan signature boss untuk delapan layer di Bab 4 §6.
 
@@ -7784,19 +8881,23 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | --- | --- | --- | --- |
 | GDD Visual Direction | v0.2 | Bab 1, 2, 10, 15, 18 | Bagian ringkasan yang sudah tercakup di bab detail tidak dimasukkan |
 | Game Design Document Draft | v0.1 | — | Tidak dimasukkan; seluruh isinya sudah tercakup di v0.2 |
-| Difficulty System | v0.2 | Bab 3 | Lengkap |
+| Difficulty System | v0.4 | Bab 3 | Lengkap, ditambah keputusan filosofi dari Difficulty Design Supplement |
 | Felna — Game Story & World Lore | Canon reference | Bab 4 | Lengkap |
 | Character Creation System — Design Summary | — | Bab 5 | Ringkasan race, class, dan rarity draft diganti oleh Bab 6, 8, dan 13 |
 | PRD Race System | v1.1 | Bab 6 | Lengkap |
 | Background System | — | Bab 7 | Lengkap |
 | Class System | v1.1 | Bab 8 | Lengkap |
-| Talents System | v0.2 | Bab 9 | Lengkap |
-| Consolidated Damage & Status Effect GDD | v1.1 | Bab 11 | Lengkap |
+| Felna Talent System Specification | Nov 2026 (basis Talents System v0.2) | Bab 9 | Lengkap; menggantikan Talents System v0.2 |
+| Consolidated Damage & Status Effect GDD | v1.2 | Bab 11 | Lengkap |
 | Master Checklist QTE dan Spesifikasi Fase 2 | Rev. 4 Nov 2026 | Bab 12 | Keputusan dasar checklist ditambah seluruh spesifikasi, diurutkan berdasarkan nomor item |
 | Inventory & Equipment System | v1.2 | Bab 13 | Lengkap |
-| GDD Shop System | v1.0 | Bab 14 | Lengkap |
-| Game Visual Style Guide | v1.0 | Bab 16 | Lengkap, tanpa document control dan daftar isi sumber |
-| Game UI Design Document (design.md) | Draft | Bab 17 | Lengkap |
+| Magic Shop & New Relic System, dan Felna_Layer1_Relic_List | 5 Nov 2026; draft | Bab 14, Bab 16 §11 | Relic permanen menggantikan aturan relic sementara; daftar 22 relic Layer 1 dimasukkan sebagai draft |
+| Scaling and Turn Order System | v1.0 | Bab 10 §6–16 | Lengkap; penomoran digeser +5 agar tidak bentrok dengan §5 |
+| Temple | — | Bab 16 §10 | Lengkap |
+| Keputusan Dungeon Modifier dan Felna_Dungeon_Modifier_List | Nov 2026; draft | Bab 15 | Empat aturan inti dari diskusi; 24 modifier dimasukkan sebagai draft dengan cap usulan |
+| GDD Shop System | v1.0 | Bab 16 | Lengkap |
+| Game Visual Style Guide | v1.0 | Bab 18 | Lengkap, tanpa document control dan daftar isi sumber |
+| Game UI Design Document (design.md) | Draft | Bab 19 | Lengkap |
 
 ## Lampiran B — Riwayat Sinkronisasi November 2026
 
@@ -7809,3 +8910,8 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 - Difficulty System v0.2: skala kesulitan QTE, batasan desain musuh dan boss, pencatatan Assist.
 - PRD Race System v1.1: seluruh nilai baseline ditetapkan tanpa TBD.
 - GDD Terpadu v1.0: seluruh dokumen digabungkan menjadi satu dokumen ini.
+- GDD Terpadu v1.1: Bab 14 Relic System ditambahkan (kapasitas 5, milik seluruh party, tanpa duplikat, tidak dibawa ke layer berikutnya); bab sesudahnya bergeser satu nomor.
+- GDD Terpadu v1.5: Talent System baru (pemilihan manual, Scroll of Emptiness), Scaling and Turn Order System, relic permanen dengan Magic Shop, dan Temple digabungkan.
+- GDD Terpadu v1.4: Control Effect (Stun, Sleep, Mind Control, Madness, Silence) tidak dapat di-stack per status (durasi tidak bertambah), Control Effect berbeda tetap dapat masuk, dan Control Immunity per status berlaku sampai akhir giliran berikutnya target, untuk semua unit; tidak ada bad-luck protection untuk Hit Chance, Critical, dan Status Effect Chance.
+- GDD Terpadu v1.3: filosofi difficulty Relentless Tactical Survival dan tiga arah desain dikonfirmasi di Bab 3; MOD-004 dan MOD-005 diganti nama menjadi Steady Focus dan Quick Instinct.
+- GDD Terpadu v1.2: Bab 15 Dungeon Modifier System ditambahkan (persistence sama dengan relic, dapat di-stack dan diambil lagi, cap per efek); bab sesudahnya bergeser satu nomor.

@@ -143,7 +143,7 @@ namespace Obscure
             RecalculateStats(fillResources: true);
         }
 
-        public Unit(EnemyDef d)
+        public Unit(EnemyDef d, int dungeonNumber = 1)
         {
             id = d.id;
             name = d.name;
@@ -154,30 +154,29 @@ namespace Obscure
             isEnemyUnit = true;
 
             abilities.baseScores = d.abilityScores.Equals(default) ? AbilityScores.Uniform(10) : d.abilityScores;
-            stats = d.stats;
+            stats = ScaleEnemyStats(d.stats, d.tier, dungeonNumber, d.magicDef, out int mDef);
             var mods = abilities.AbilityModifiers;
-            int mDef = d.magicDef >= 0 ? d.magicDef : d.stats.def;
             Derived = new DerivedStats
             {
-                maxHp = d.stats.maxHp,
-                maxMp = d.stats.maxMp,
+                maxHp = stats.maxHp,
+                maxMp = stats.maxMp,
                 maxShield = 0,
-                physicalPower = d.stats.atk,
-                rangedPower = d.stats.atk,
-                magicPower = d.stats.mag > 0 ? d.stats.mag : d.stats.atk,
-                healingPower = d.stats.mag > 0 ? d.stats.mag : d.stats.atk,
+                physicalPower = stats.atk,
+                rangedPower = stats.atk,
+                magicPower = stats.mag > 0 ? stats.mag : stats.atk,
+                healingPower = stats.mag > 0 ? stats.mag : stats.atk,
                 supportPower = 10 + mods.cha * 2,
                 criticalChance = Math.Max(0, 5 + mods.dex * 2),
                 criticalDamage = 150,
                 armorPenetration = Math.Max(0, mods.str),
                 magicPenetration = Math.Max(0, mods.intel),
-                physicalDefense = d.stats.def,
+                physicalDefense = stats.def,
                 magicDefense = mDef,
                 evasion = Math.Max(0, 5 + mods.dex * 2),
                 blockPower = 50,
                 statusResistance = Math.Max(0, (mods.vit + mods.wis) * 3),
                 staggerResistance = d.breakResistance + Math.Max(0, mods.vit * 2),
-                initiative = d.stats.spd,
+                initiative = stats.spd,
                 actionSpeed = 100 + mods.dex * 5,
                 qteTimingBonus = 0,
                 qteStability = 0,
@@ -187,6 +186,47 @@ namespace Obscure
             };
             hp = stats.maxHp;
             mp = stats.maxMp;
+        }
+
+        // Bab 10 §7: Linear Tier-Weighted Enemy Scaling
+        public static Stats ScaleEnemyStats(Stats baseStats, Tier tier, int dungeonNumber, int baseMagicDef, out int scaledMagicDef)
+        {
+            if (dungeonNumber <= 1)
+            {
+                scaledMagicDef = baseMagicDef >= 0 ? baseMagicDef : baseStats.def;
+                return baseStats;
+            }
+
+            int steps = Math.Max(0, dungeonNumber - 1);
+            float hpRate, mpRate, atkRate, matkRate, defRate, mdefRate, spdRate;
+
+            switch (tier)
+            {
+                case Tier.Elite:
+                    hpRate = 0.13f; mpRate = 0.08f; atkRate = 0.09f; matkRate = 0.09f;
+                    defRate = 0.055f; mdefRate = 0.055f; spdRate = 0.03f;
+                    break;
+                case Tier.Boss:
+                    hpRate = 0.14f; mpRate = 0.10f; atkRate = 0.10f; matkRate = 0.10f;
+                    defRate = 0.06f; mdefRate = 0.06f; spdRate = 0.04f;
+                    break;
+                default: // Normal
+                    hpRate = 0.12f; mpRate = 0.06f; atkRate = 0.08f; matkRate = 0.08f;
+                    defRate = 0.05f; mdefRate = 0.05f; spdRate = 0.02f;
+                    break;
+            }
+
+            int hp = (int)Math.Floor((double)baseStats.maxHp * (1.0 + (double)hpRate * steps) + 1e-6);
+            int mp = (int)Math.Floor((double)baseStats.maxMp * (1.0 + (double)mpRate * steps) + 1e-6);
+            int atk = (int)Math.Floor((double)baseStats.atk * (1.0 + (double)atkRate * steps) + 1e-6);
+            int baseMag = baseStats.mag > 0 ? baseStats.mag : baseStats.atk;
+            int mag = (int)Math.Floor((double)baseMag * (1.0 + (double)matkRate * steps) + 1e-6);
+            int def = (int)Math.Floor((double)baseStats.def * (1.0 + (double)defRate * steps) + 1e-6);
+            int mDefBase = baseMagicDef >= 0 ? baseMagicDef : baseStats.def;
+            scaledMagicDef = (int)Math.Floor((double)mDefBase * (1.0 + (double)mdefRate * steps) + 1e-6);
+            int spd = (int)Math.Floor((double)baseStats.spd * (1.0 + (double)spdRate * steps) + 1e-6);
+
+            return new Stats(hp, mp, atk, def, spd, mag);
         }
 
         public AbilityScores BaseScores => abilities.baseScores;
@@ -721,8 +761,7 @@ namespace Obscure
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
-            RelicManager.ClearAll();
-            Relics.Clear();
+            // GDD Bab 14 §2: Relics are permanent player progression and remain owned on run failure
             HubEconomy.HandleRunFailure(this);
             GameSave.SaveRunState(this);
         }
@@ -812,6 +851,18 @@ namespace Obscure
         public void AddRelic(string id)
         {
             TryAddRelic(id, out _);
+        }
+
+        public bool TryReplaceRelic(string oldId, string newId, out string error)
+        {
+            if (!RelicManager.ReplaceRelic(oldId, newId, out error))
+                return false;
+
+            Relics.Remove(oldId);
+            if (!Relics.Contains(newId))
+                Relics.Add(newId);
+
+            return true;
         }
 
         public static UpgradeDef GetUpgradeFor(Unit u)
@@ -1016,9 +1067,7 @@ namespace Obscure
             BattleBuffs.Clear();
             CurrentDungeonShop = DungeonShopData.Generate(nextMap.act, Rng);
             CurrentShop = CurrentDungeonShop.equipmentShop;
-            // Confirmed Rule 4: Temporary dungeon-specific items - removed upon dungeon clear
-            RelicManager.ClearDungeonRelics();
-            Relics.Clear();
+            // GDD Bab 14 §2: Relics are permanent player progression and remain owned upon dungeon clear
             return true;
         }
 

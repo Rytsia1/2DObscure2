@@ -11,8 +11,38 @@ namespace Obscure
     {
         [SerializeField] private List<StatusEffectInstance> activeInstances = new List<StatusEffectInstance>();
         public readonly StatusResistanceProfile ResistanceProfile = new StatusResistanceProfile();
+        private readonly Dictionary<StatusId, int> controlImmunityTurns = new Dictionary<StatusId, int>();
 
         public bool isBoss;
+
+        // Bab 11 §8.1: Stun, Sleep, Mind Control, Madness, Silence
+        public static bool IsControlEffect(StatusId id) =>
+            id == StatusId.Stun || id == StatusId.Sleep || id == StatusId.MindControl || id == StatusId.Madness || id == StatusId.Silence;
+
+        public bool HasControlImmunity(StatusId id) =>
+            controlImmunityTurns.TryGetValue(id, out int turns) && turns > 0;
+
+        public void GrantControlImmunity(StatusId id, int turns = 1)
+        {
+            if (IsControlEffect(id))
+            {
+                controlImmunityTurns[id] = Math.Max(controlImmunityTurns.GetValueOrDefault(id, 0), turns);
+            }
+        }
+
+        public void DecrementControlImmunities()
+        {
+            var keys = controlImmunityTurns.Keys.ToList();
+            foreach (var k in keys)
+            {
+                if (controlImmunityTurns[k] > 0)
+                {
+                    controlImmunityTurns[k]--;
+                    if (controlImmunityTurns[k] <= 0)
+                        controlImmunityTurns.Remove(k);
+                }
+            }
+        }
 
         // Lifecycle events (Prompt Section 11)
         public event Action<StatusEffectInstance> OnStatusApplied;
@@ -43,9 +73,17 @@ namespace Obscure
             if (apply == null || target == null || !target.Alive)
                 return false;
 
-            // 1. Check Immunity (GDD Section 13: Bosses are 100% immune to all Mental Effects)
+            // 1. Check Immunity & Bab 11 §8.1 Control Effect Rules
             if (ResistanceProfile.IsImmune(apply.id, isBoss))
                 return false;
+
+            if (IsControlEffect(apply.id))
+            {
+                if (HasControlImmunity(apply.id))
+                    return false;
+                if (HasStatus(apply.id))
+                    return false;
+            }
 
             // 2. Roll Universal Status Effect Resistance (GDD Section 9)
             // A perfect QTE (chance >= 1f with high power) may guarantee unless immune or resisted
@@ -136,6 +174,10 @@ namespace Obscure
                     if (inst.statusId == StatusId.ResistanceDown)
                     {
                         ResistanceProfile.RemoveReduction(inst.magnitude);
+                    }
+                    if (IsControlEffect(inst.statusId))
+                    {
+                        GrantControlImmunity(inst.statusId, 1);
                     }
                     log?.Invoke($"{owner.name}'s {inst.Definition.name} wears off.");
                     OnStatusExpired?.Invoke(inst);
@@ -318,6 +360,8 @@ namespace Obscure
             int removed = activeInstances.RemoveAll(i => i.statusId == id);
             if (id == StatusId.ResistanceDown)
                 ResistanceProfile.ClearReductions();
+            if (removed > 0 && IsControlEffect(id))
+                GrantControlImmunity(id, 1);
             return removed;
         }
 
