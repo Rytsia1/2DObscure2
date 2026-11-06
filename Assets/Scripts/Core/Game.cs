@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load, Party, HubShop, Armory, Blacksmith, Temple, MagicShop, DungeonClear }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -13,6 +13,15 @@ namespace Obscure
         protected Transform Root { get; private set; }
         protected static Game Game => Game.I;
         protected static RunState Run => Game.I != null ? Game.I.Run : null;
+
+        // Back target for service screens (Status, Equipment, Inventory, Skills, Talents): the hub-side screen
+        // they were opened from, else the map during a run, else the title.
+        protected static GameState ReturnTarget()
+        {
+            var prev = Game.I != null ? Game.I.PreviousState : GameState.MainMenu;
+            if (prev == GameState.Hub || prev == GameState.Party || prev == GameState.CharacterStatus || prev == GameState.Map) return prev;
+            return Game.I != null ? Game.I.LastBase : GameState.MainMenu;
+        }
 
         public void Open(Transform parent)
         {
@@ -40,6 +49,8 @@ namespace Obscure
         public NewGamePartyBuilder NewGameBuilder { get; private set; } = new NewGamePartyBuilder();
         public GameSettings Settings { get; private set; }
         public GameState State { get; private set; }
+        public GameState PreviousState { get; private set; }
+        public GameState LastBase { get; private set; } = GameState.MainMenu; // last Hub or Map visited
         public GameScreen CurrentScreen => screen;
         public bool HasSavedGame => SaveManager.HasAnySave(out _) || GameSave.HasSavedGame();
 
@@ -70,6 +81,7 @@ namespace Obscure
             // Screen origin at the camera's top-left so children use pixel coordinates.
             transform.position = new Vector3(-Ui.Width / 2, Ui.Height / 2, 0);
             SetupCamera();
+            UiPointerDispatcher.Ensure(gameObject);
             Settings = GameSettings.Load();
             Sfx.Init(gameObject);
             MusicManager.Create(gameObject);
@@ -89,6 +101,9 @@ namespace Obscure
             var cam = Camera.main;
             if (cam == null) cam = new GameObject("Main Camera", typeof(Camera)) { tag = "MainCamera" }.GetComponent<Camera>();
             cam.orthographic = true;
+            cam.orthographicSize = Ui.Height * 0.5f;
+            cam.nearClipPlane = 0.1f;
+            cam.farClipPlane = 100f;
             cam.backgroundColor = Palette.Void;
             cam.transform.position = new Vector3(0, 0, -10);
             var ppc = cam.GetComponent<PixelPerfectCamera>();
@@ -96,7 +111,7 @@ namespace Obscure
             ppc.assetsPPU = 1;
             ppc.refResolutionX = Ui.Width;
             ppc.refResolutionY = Ui.Height;
-            ppc.gridSnapping = PixelPerfectCamera.GridSnapping.UpscaleRenderTexture;
+            ppc.gridSnapping = PixelPerfectCamera.GridSnapping.PixelSnapping;
             ppc.cropFrame = PixelPerfectCamera.CropFrame.Windowbox;
         }
 
@@ -203,7 +218,9 @@ namespace Obscure
             if (!Application.isPlaying)
             {
                 screen?.Close();
+                PreviousState = State;
                 State = next;
+                if (next == GameState.Hub || next == GameState.Map) LastBase = next;
                 screen = Create(next);
                 if (transform != null)
                     screen.Open(transform);
@@ -220,7 +237,9 @@ namespace Obscure
         {
             yield return Fade(0, 1);
             screen?.Close();
+            PreviousState = State;
             State = next;
+            if (next == GameState.Hub || next == GameState.Map) LastBase = next;
             screen = Create(next);
             screen.Open(transform);
             yield return Fade(1, 0);
@@ -260,6 +279,13 @@ namespace Obscure
             GameState.Hub => new HubScreen(),
             GameState.Talents => new TalentScreen(),
             GameState.Save => new SaveScreen(),
+            GameState.Party => new PartyScreen(),
+            GameState.HubShop => new HubShopScreen(),
+            GameState.Armory => new ArmoryScreen(),
+            GameState.Blacksmith => new BlacksmithScreen(),
+            GameState.Temple => new TempleScreen(),
+            GameState.MagicShop => new MagicShopScreen(),
+            GameState.DungeonClear => new DungeonClearScreen(),
             GameState.Load => new LoadScreen(Game.I != null && Game.I.State == GameState.Hub ? GameState.Hub : GameState.MainMenu),
             _ => new EndScreen(true),
         };

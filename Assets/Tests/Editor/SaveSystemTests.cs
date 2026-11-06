@@ -564,6 +564,19 @@ namespace Obscure.Tests
             var load = new LoadScreen();
             load.Open(testRoot.transform);
             load.Close();
+
+            // Hub service boards (C, H1, H2, I, V1, V2) and the step-paged creation (B1-B3) render without a run
+            foreach (GameScreen s in new GameScreen[] { new PartyScreen(), new HubShopScreen(), new ArmoryScreen(), new BlacksmithScreen(), new TempleScreen(), new MagicShopScreen(), new SkillTreeScreen(), new TalentScreen(),
+                new MapScreen(), new EventScreen(), new RewardScreen(), new DungeonClearScreen(), new EndScreen(false), new SettingsScreen() })
+            {
+                s.Open(testRoot.transform);
+                s.Close();
+            }
+            var creation = new CharacterCreationScreen();
+            creation.Open(testRoot.transform);
+            foreach (CharacterCreationScreen.Page p in Enum.GetValues(typeof(CharacterCreationScreen.Page)))
+                creation.GoToPage(p);
+            creation.Close();
         }
 
         [Test]
@@ -639,6 +652,79 @@ namespace Obscure.Tests
             {
                 Game.SetInstance(null);
                 UnityEngine.Object.DestroyImmediate(gameGo);
+            }
+        }
+
+        [Test]
+        public void Ui_Selectable_UniversalRegistrationAndPointerHitTesting_Works()
+        {
+            var host = new GameObject("TestSelectableHost");
+            try
+            {
+                bool clicked = false;
+                var btn = Ui.Button(host.transform, "TEST BUTTON", 100, 50, 80, () => clicked = true, 20);
+
+                Assert.IsNotNull(btn);
+                Assert.IsTrue(Selectable.All.Contains(btn), "Selectable must be registered in Selectable.All when enabled.");
+
+                // Button is placed at (100, -50) locally under host (which is at (0, 0))
+                var pos = btn.transform.position;
+                Assert.AreEqual(100f, pos.x, 0.01f);
+                Assert.AreEqual(-50f, pos.y, 0.01f);
+
+                // Inside points
+                Assert.IsTrue(btn.Contains(new Vector2(100, -50)), "Top-left corner of button should be contained.");
+                Assert.IsTrue(btn.Contains(new Vector2(140, -60)), "Center of button should be contained.");
+                Assert.IsTrue(btn.Contains(new Vector2(180, -70)), "Bottom-right corner of button should be contained.");
+
+                // Outside points
+                Assert.IsFalse(btn.Contains(new Vector2(99, -50)), "Point to left of button should not be contained.");
+                Assert.IsFalse(btn.Contains(new Vector2(181, -50)), "Point to right of button should not be contained.");
+                Assert.IsFalse(btn.Contains(new Vector2(140, -49)), "Point above button should not be contained.");
+                Assert.IsFalse(btn.Contains(new Vector2(140, -71)), "Point below button should not be contained.");
+                Assert.IsFalse(btn.Contains(new Vector2(float.NaN, float.NaN)), "NaN coordinates must return false.");
+
+                // Direct activation
+                btn.onClick.Invoke();
+                Assert.IsTrue(clicked, "Direct invocation of onClick must work.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void HubScreen_HtmlSpecificationLayout_RendersAllComponentsCleanly()
+        {
+            var hubHost = new GameObject("HubHost");
+            var gameGo = new GameObject("GameMock");
+            try
+            {
+                var game = gameGo.AddComponent<Game>();
+                Game.SetInstance(game);
+                game.EnterHubFromCreation(seed: 999);
+
+                var hub = new HubScreen();
+                hub.Open(hubHost.transform);
+
+                var root = hubHost.transform.Find("HubScreen");
+                Assert.IsNotNull(root, "HubScreen root must exist.");
+
+                // Board D: facilities are a menu panel; each facility opens its own screen
+                var facility = root.Find("FacilityMenu");
+                Assert.IsNotNull(facility, "FacilityMenu panel must be rendered.");
+
+                // Verify registered selectables count includes facilities and top-bar buttons
+                Assert.Greater(Selectable.All.Count, 5, "HubScreen must populate multiple clickable Selectables.");
+
+                hub.Close();
+            }
+            finally
+            {
+                Game.SetInstance(null);
+                UnityEngine.Object.DestroyImmediate(gameGo);
+                UnityEngine.Object.DestroyImmediate(hubHost);
             }
         }
     }

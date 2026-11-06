@@ -37,9 +37,62 @@ namespace Obscure
         {
             get
             {
+                var mouse = Mouse.current;
+                if (mouse == null) return new Vector2(float.NaN, float.NaN);
+                Vector2 screenPos = mouse.position.ReadValue();
                 var cam = Camera.main;
-                if (Mouse.current == null || cam == null) return new Vector2(float.NaN, float.NaN);
-                return cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+                if (cam == null) return new Vector2(float.NaN, float.NaN);
+
+                var ppc = cam.GetComponent<UnityEngine.Rendering.Universal.PixelPerfectCamera>();
+                if (ppc != null && ppc.enabled && ppc.pixelRatio > 0)
+                {
+                    int ratio = ppc.pixelRatio;
+                    int viewW = ppc.refResolutionX * ratio;
+                    int viewH = ppc.refResolutionY * ratio;
+                    float viewX = (Screen.width - viewW) * 0.5f;
+                    float viewY = (Screen.height - viewH) * 0.5f;
+
+                    float normX = (screenPos.x - viewX) / viewW;
+                    float normY = (screenPos.y - viewY) / viewH;
+                    if (normX < 0f || normX > 1f || normY < 0f || normY > 1f)
+                        return new Vector2(float.NaN, float.NaN);
+
+                    float pixelX = normX * Ui.Width;
+                    float pixelY = (1f - normY) * Ui.Height;
+                    return new Vector2(-Ui.Width * 0.5f + pixelX, Ui.Height * 0.5f - pixelY);
+                }
+
+                if (cam.orthographic)
+                {
+                    float targetAspect = (float)Ui.Width / Ui.Height;
+                    float screenAspect = (float)Screen.width / Mathf.Max(1, Screen.height);
+                    float viewW, viewH, viewX, viewY;
+                    if (screenAspect > targetAspect)
+                    {
+                        viewH = Screen.height;
+                        viewW = viewH * targetAspect;
+                        viewX = (Screen.width - viewW) * 0.5f;
+                        viewY = 0f;
+                    }
+                    else
+                    {
+                        viewW = Screen.width;
+                        viewH = viewW / targetAspect;
+                        viewX = 0f;
+                        viewY = (Screen.height - viewH) * 0.5f;
+                    }
+
+                    float normX = (screenPos.x - viewX) / viewW;
+                    float normY = (screenPos.y - viewY) / viewH;
+                    if (normX < 0f || normX > 1f || normY < 0f || normY > 1f)
+                        return new Vector2(float.NaN, float.NaN);
+
+                    float pixelX = normX * Ui.Width;
+                    float pixelY = (1f - normY) * Ui.Height;
+                    return new Vector2(-Ui.Width * 0.5f + pixelX, Ui.Height * 0.5f - pixelY);
+                }
+
+                return cam.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, -cam.transform.position.z));
             }
         }
     }

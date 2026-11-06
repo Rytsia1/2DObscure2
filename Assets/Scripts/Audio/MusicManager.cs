@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -78,6 +79,51 @@ namespace Obscure
         }
 
         public void Stop() => Play(null);
+
+        // Music stops abruptly on the exact dramatic point without fading out
+        public void StopImmediately()
+        {
+            if (fade != null) { StopCoroutine(fade); fade = null; }
+            if (Source != null) Source.Stop();
+            target = null;
+            playing = null;
+            level = 0f;
+            Apply();
+        }
+
+        // Special 5-7s Zoroa Phase 1 -> Phase 2 transition sequence
+        public Coroutine PlayZoroaPhaseTransition(Action onPhase2Entered = null)
+        {
+            if (fade != null) StopCoroutine(fade);
+            fade = StartCoroutine(ZoroaTransitionRoutine(onPhase2Entered));
+            return fade;
+        }
+
+        IEnumerator ZoroaTransitionRoutine(Action onPhase2Entered)
+        {
+            // Phase 1 HP depleted: music stops abruptly on dramatic point
+            StopImmediately();
+
+            // 0–2s: Low-frequency impact & soul energy -> 2–4s: choir swell -> 4–5s: rising strings & brass
+            var transitionClip = Sfx.GetZoroaPhaseTransitionClip();
+            if (transitionClip != null && Source != null)
+            {
+                Source.clip = transitionClip;
+                Source.loop = false;
+                level = 1f;
+                Apply();
+                Source.Play();
+                yield return new WaitForSecondsRealtime(transitionClip.length);
+            }
+            else
+            {
+                yield return new WaitForSecondsRealtime(Sfx.ZoroaPhaseTransitionDuration);
+            }
+
+            // 5–7s: Full orchestra enters Phase 2!
+            onPhase2Entered?.Invoke();
+            Play(MusicIds.ZoroaP2);
+        }
 
         public void SetVolume(float volume)
         {

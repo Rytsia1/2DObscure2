@@ -5,90 +5,19 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Hub Screen:
-    // Conforms to 640x360 reference resolution, Serif headers, and retro JRPG aesthetics.
-    // Represents the central sanctuary between dungeon expeditions.
-    // Houses the 5 Hub Facilities using GOLD:
-    // 1. Shop (Consumables, unlimited stock)
-    // 2. Armory (Equipment merchant)
-    // 3. Blacksmith (Upgrade equipment)
-    // 4. Training Ground (Manage skills & loadouts)
-    // 5. Temple (Revive fallen party members)
+    // Hub — Starlit Reliquary "D · Hub — Geistwald City" board at 640x360:
+    // night town scene, top bar (safe-zone label, city name, Auto Saved tag, Save / Load / Main Menu, Hub Gold),
+    // facility menu (each facility opens its own screen), run progress panel, party strip,
+    // and a tooltip describing the focused facility.
     public class HubScreen : GameScreen
     {
-        enum HubFacility { Shop, Armory, Blacksmith, TrainingGround, Temple }
-
-        HubFacility activeFacility = HubFacility.Shop;
-        ShopInventory armoryStock;
-        Transform facilityContent;
+        Menu menu;
+        SpriteRenderer tipBox;
+        Label tipTitle, tipText;
         Label feedbackLabel;
-        Label hubGoldLabel;
-        readonly Label[] partyStatusRows = new Label[4];
-        readonly SpriteRenderer[] partyHpGauges = new SpriteRenderer[4];
 
         protected override void Build()
         {
-            armoryStock = EquipmentShopManager.GenerateShop(Run?.Act ?? 1, itemCount: 6);
-            Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
-
-            // Header banner per FELNA — UI System (Page 09: Geistwald City Hub)
-            Ui.Label(Root, "GEISTWALD CITY — SANCTUARY HUB", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
-            Ui.Divider(Root, 120, 36, 400, Palette.DarkBorder, Palette.AntiqueGoldBright);
-
-            // Hub Gold badge (solid gold frame)
-            int currentGold = Run != null ? Run.Gold : 0;
-            Ui.Panel(Root, 460, 10, 164, 24, Palette.Hex(0x1C2210), Palette.Gold1);
-            hubGoldLabel = Ui.Label(Root, $"{currentGold:#,##0} HUB GOLD", 542, 16, Palette.Gold1, Align.Center, font: FontKind.DotGothic);
-
-            // Navigation bar: 5 Facilities + Embark
-            var navMenu = Root.gameObject.AddComponent<Menu>();
-            int btnW = 84;
-            var shopBtn = Ui.Button(Root, "SHOP", 20, 48, btnW, () => SwitchFacility(HubFacility.Shop), 20, style: activeFacility == HubFacility.Shop ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            var armoryBtn = Ui.Button(Root, "ARMORY", 108, 48, btnW, () => SwitchFacility(HubFacility.Armory), 20, style: activeFacility == HubFacility.Armory ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            var blacksmithBtn = Ui.Button(Root, "BLACKSMITH", 196, 48, 92, () => SwitchFacility(HubFacility.Blacksmith), 20, style: activeFacility == HubFacility.Blacksmith ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            var trainingBtn = Ui.Button(Root, "TRAINING", 292, 48, btnW, () => SwitchFacility(HubFacility.TrainingGround), 20, style: activeFacility == HubFacility.TrainingGround ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            var templeBtn = Ui.Button(Root, "TEMPLE", 380, 48, btnW, () => SwitchFacility(HubFacility.Temple), 20, style: activeFacility == HubFacility.Temple ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            navMenu.Add(shopBtn);
-            navMenu.Add(armoryBtn);
-            navMenu.Add(blacksmithBtn);
-            navMenu.Add(trainingBtn);
-            navMenu.Add(templeBtn);
-
-            var embarkBtn = Ui.Button(Root, "EMBARK >>", 480, 48, 140, OnEmbarkClicked, 22, style: ButtonStyle.Primary, font: FontKind.DotGothic);
-            navMenu.Add(embarkBtn);
-
-            Ui.Divider(Root, 20, 72, 600, Palette.DarkBorder, Palette.AntiqueGoldDim);
-
-            // Left panel (390x230): Facility Content
-            Ui.Panel(Root, 20, 76, 390, 230, Palette.DeepCharcoal, Palette.DarkBorder);
-
-            // Right panel (200x230): Party Status
-            Ui.Panel(Root, 420, 76, 200, 230, Palette.DeepCharcoal, Palette.DarkBorder);
-            Ui.Label(Root, "EXPEDITION ROSTER", 430, 84, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.DotGothic);
-            Ui.Divider(Root, 430, 98, 180, Palette.DarkBorder, Palette.AntiqueGoldDim);
-
-            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < partyStatusRows.Length && i < party.Count; i++)
-            {
-                var u = party[i];
-                int y = 108 + i * 42;
-                Color hpCol = Palette.ForHp(u.hp, u.stats.maxHp);
-                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 100, FontKind.DotGothic), 430, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.DotGothic);
-                partyStatusRows[i] = Ui.Label(Root, u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)", 610, y, u.Alive ? hpCol : Palette.SpecCrimson, Align.Right, font: FontKind.DotGothic);
-                partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(180, 5, u.Alive ? hpCol : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 430, y + 14, Ui.Widget);
-            }
-
-            // Bottom bar: feedback & Hub utility buttons
-            feedbackLabel = Ui.Label(Root, "WELCOME TO THE HUB. PREPARE GEAR, HEAL, UPGRADE, AND TRAIN BEFORE EMBARKING.", 24, 316, Palette.WarmIvory, Align.Left, font: FontKind.DotGothic);
-
-            var utilMenu = Root.gameObject.AddComponent<Menu>();
-            var saveBtn = Ui.Button(Root, "SAVE", 430, 312, 56, () => Game.Go(GameState.Save), 22, style: ButtonStyle.Slab, font: FontKind.DotGothic);
-            var loadBtn = Ui.Button(Root, "LOAD", 490, 312, 56, () => Game.Go(GameState.Load), 22, style: ButtonStyle.Slab, font: FontKind.DotGothic);
-            var titleBtn = Ui.Button(Root, "TITLE", 550, 312, 70, OnTitleClicked, 22, style: ButtonStyle.Slab, font: FontKind.DotGothic);
-            utilMenu.Add(saveBtn);
-            utilMenu.Add(loadBtn);
-            utilMenu.Add(titleBtn);
-
             // Auto-save on Hub arrival if not already auto-saved
             if (Run != null && PersistenceCommitHandler.ActiveCommittedSnapshot == null)
             {
@@ -96,204 +25,214 @@ namespace Obscure
                 SaveManager.AutoSave(out _);
             }
 
-            RenderFacility();
+            BuildScene();
+            BuildTopBar();
+            BuildFacilityMenu();
+            BuildProgress();
+            BuildPartyStrip();
         }
 
-        void SwitchFacility(HubFacility facility)
+        // ------------------------------------------------------------- scene
+
+        void BuildScene()
         {
-            activeFacility = facility;
-            RenderFacility();
+            Backdrop.Create(Root, false, 14, Palette.Hex(0x070B1C), Palette.Hex(0x101A3A), Palette.Hex(0x28284F), Palette.Hex(0x3A2F55));
+            var rng = new System.Random(11);
+            for (int i = 0; i < 40; i++)
+                Ui.Rect(Root, rng.Next(8, Ui.Width - 8), rng.Next(6, 150), 1, 1, i % 5 == 0 ? Palette.Gold1 : i % 2 == 0 ? Palette.Mist1 : Palette.Mist2, Ui.Back + 1);
+
+            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 187, Palette.Hex(0x1A2146), 3), 0, 173, Ui.Back + 2);
+
+            // Town silhouettes (placeholder for hub art), windows and the dungeon gate
+            Gable(210, 155, 75, 85, Palette.Hex(0x141B3C));
+            Gable(295, 180, 60, 60, Palette.Hex(0x171F44));
+            Ui.Rect(Root, 365, 160, 85, 80, Palette.Hex(0x121939), Ui.Back + 3);
+            Ui.Rect(Root, 390, 125, 34, 35, Palette.Hex(0x121939), Ui.Back + 3);
+            Ui.Rect(Root, 472, 98, 36, 142, Palette.Hex(0x0F1534), Ui.Back + 3);
+            Ui.Rect(Root, 466, 106, 48, 134, Palette.Hex(0x0F1534), Ui.Back + 3);
+            Ui.Image(Root, PixelArt.Box(20, 32, Palette.Hex(0x2A1A10), Palette.Ember2), 480, 208, Ui.Back + 4);
+            Ui.Rect(Root, 235, 206, 7, 9, Palette.Gold2, Ui.Back + 4);
+            Ui.Rect(Root, 320, 211, 7, 9, Palette.Gold2, Ui.Back + 4);
+            Ui.Rect(Root, 390, 196, 7, 9, Palette.Ember2, Ui.Back + 4);
+            Ui.Rect(Root, 0, 239, Ui.Width, 121, Palette.Hex(0x0B1024), Ui.Back + 5);
+
+            // Vignette
+            Color vign = Palette.Hex(0x05070F, 110);
+            Ui.Rect(Root, 0, Ui.Height - 12, Ui.Width, 12, vign, Ui.Back + 6);
+            Ui.Rect(Root, 0, 0, 12, Ui.Height, vign, Ui.Back + 6);
+            Ui.Rect(Root, Ui.Width - 12, 0, 12, Ui.Height, vign, Ui.Back + 6);
         }
 
-        void RefreshHeaderAndParty()
+        // Pitched-roof house silhouette.
+        void Gable(int x, int y, int w, int h, Color c)
         {
-            int currentGold = Run != null ? Run.Gold : 0;
-            hubGoldLabel?.Set($"{currentGold} GOLD");
-
-            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < partyStatusRows.Length && i < party.Count; i++)
+            int roof = h * 2 / 5;
+            for (int i = 0; i < roof; i += 2)
             {
-                var u = party[i];
-                if (partyStatusRows[i] != null) partyStatusRows[i].Set(u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)");
-                if (partyHpGauges[i] != null) partyHpGauges[i].sprite = PixelArt.GaugeBar(180, 5, u.Alive ? Palette.Emerald : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp));
+                int inset = (roof - i) * w / (2 * roof);
+                Ui.Rect(Root, x + inset, y + i, w - 2 * inset, 2, c, Ui.Back + 3);
             }
+            Ui.Rect(Root, x, y + roof, w, h - roof, c, Ui.Back + 3);
         }
 
-        void RenderFacility()
+        // ------------------------------------------------------------ top bar
+
+        void BuildTopBar()
         {
-            if (facilityContent != null) UnityEngine.Object.Destroy(facilityContent.gameObject);
-            facilityContent = new GameObject("FacilityContent").transform;
-            facilityContent.SetParent(Root, false);
+            Ui.Image(Root, PixelArt.Gradient(Ui.Width, 48, Palette.Hex(0x070A14, 218), Palette.Hex(0x070A14, 0)), 0, 0, Ui.Panels);
+            Ui.Label(Root, "HUB · SAFE ZONE", 14, 9, Palette.Mist3, font: FontKind.Interface);
+            Ui.Label(Root, "Geistwald City", 14, 19, Palette.Gold2);
 
-            RefreshHeaderAndParty();
+            int gold = Run != null ? Run.Gold : 0;
+            int gw = Mathf.Max(84, PixelFont.Measure($"{gold:#,##0} HUB GOLD", FontKind.DotGothic) + 16);
+            int x = 626 - gw;
+            Ui.CurrencyTag(Root, gold, true, x, 11);
 
-            var menu = facilityContent.gameObject.AddComponent<Menu>();
+            x -= 6 + 66;
+            Ui.Button(Root, "Main Menu", x, 11, 66, OnTitleClicked, 18, showCursor: false, style: ButtonStyle.Flat);
+            x -= 4 + 40;
+            Ui.Button(Root, "Load", x, 11, 40, () => Game.Go(GameState.Load), 18, showCursor: false);
+            x -= 4 + 40;
+            Ui.Button(Root, "Save", x, 11, 40, () => Game.Go(GameState.Save), 18, showCursor: false);
 
-            switch (activeFacility)
-            {
-                case HubFacility.Shop:
-                    RenderHubShop(menu);
-                    break;
-                case HubFacility.Armory:
-                    RenderArmory(menu);
-                    break;
-                case HubFacility.Blacksmith:
-                    RenderBlacksmith(menu);
-                    break;
-                case HubFacility.TrainingGround:
-                    RenderTrainingGround(menu);
-                    break;
-                case HubFacility.Temple:
-                    RenderTemple(menu);
-                    break;
-            }
+            var auto = SaveManager.GetSlotMetadata(SaveSlotId.AutoSave);
+            string when = auto != null && auto.isOccupied && auto.lastSavedTicks > 0 ? new DateTime(auto.lastSavedTicks).ToString("HH:mm") : "HUB";
+            string tag = $"AUTO SAVED · {when}";
+            Ui.Tag(Root, tag, x - 8 - PixelFont.Measure(tag) - 8, 14, TagKind.Keep, 13);
         }
 
-        void RenderHubShop(Menu menu)
+        // ------------------------------------------------------- facility menu
+
+        void BuildFacilityMenu()
         {
-            Ui.Label(facilityContent, "CONSUMABLES OUTPOST - UNLIMITED STOCK", 28, 82, Palette.Gold2, Align.Left, 1, FontKind.Serif);
-            var catalog = HubEconomy.GenerateHubShopCatalog();
-            int y = 104;
-            foreach (var c in catalog)
-            {
-                string text = $"{c.name.ToUpperInvariant()} (UNLIMITED) - {c.cost} HUB GOLD";
-                var btn = Ui.Button(facilityContent, PixelFont.Fit(text, 370), 28, y, 374, () =>
-                {
-                    if (HubEconomy.TryBuyHubConsumable(Run, c.itemId, 1, out string err))
-                    {
-                        Sfx.Play(Sound.Success);
-                        feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {c.name.ToUpperInvariant()} WITH GOLD!", 520));
-                        RenderFacility();
-                    }
-                    else
-                    {
-                        Sfx.Play(Sound.Deny);
-                        feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-                    }
-                }, 24);
-                btn.tooltip = c.description.ToUpperInvariant();
-                menu.Add(btn);
-                y += 32;
-            }
-        }
+            var nav = new GameObject("FacilityMenu").transform;
+            nav.SetParent(Root, false);
+            const int px = 14, py = 48, pw = 165, ph = 224;
+            Ui.Panel(nav, px, py, pw, ph);
 
-        void RenderArmory(Menu menu)
-        {
-            Ui.Label(facilityContent, "ARMORY - WEAPONS & ARMOR", 28, 82, Palette.Gold2, Align.Left, 1, FontKind.Serif);
-            var items = armoryStock.items;
-            int y = 104;
-            for (int i = 0; i < items.Count && i < 5; i++)
-            {
-                var itm = items[i];
-                string name = itm.item?.Definition?.name ?? "Equipment";
-                string status = itm.isSold ? "[SOLD OUT]" : $"{itm.cost} HUB GOLD";
-                var btn = Ui.Button(facilityContent, PixelFont.Fit($"{name.ToUpperInvariant()} - {status}", 370), 28, y, 374, () =>
-                {
-                    if (HubEconomy.TryBuyHubEquipment(Run, armoryStock, itm.shopItemId, out var bought, out string err))
-                    {
-                        Sfx.Play(Sound.Success);
-                        feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {itm.cost} GOLD!", 520));
-                        RenderFacility();
-                    }
-                    else
-                    {
-                        Sfx.Play(Sound.Deny);
-                        feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-                    }
-                }, 24);
-                btn.tooltip = itm.item?.Definition?.description?.ToUpperInvariant() ?? "";
-                if (itm.isSold) btn.label.Color = Palette.Mist3;
-                menu.Add(btn);
-                y += 32;
-            }
-        }
-
-        void RenderBlacksmith(Menu menu)
-        {
-            Ui.Label(facilityContent, "BLACKSMITH FORGE - UPGRADE EQUIPMENT", 28, 82, Palette.Gold2, Align.Left, 1, FontKind.Serif);
-            var invEquip = Run?.Inventory?.equipment ?? new List<EquipmentInstance>();
-            if (invEquip.Count == 0)
-            {
-                Ui.Label(facilityContent, "NO EQUIPMENT IN INVENTORY TO UPGRADE.", 215, 160, Palette.Mist3, Align.Center);
-                return;
-            }
-
-            int y = 104;
-            for (int i = 0; i < invEquip.Count && i < 5; i++)
-            {
-                var eq = invEquip[i];
-                int cost = eq.GetUpgradeCostGold();
-                string title = $"{eq.Definition?.name.ToUpperInvariant()} +{eq.upgradeLevel} -> +{eq.upgradeLevel + 1} ({cost}G)";
-                var btn = Ui.Button(facilityContent, PixelFont.Fit(title, 370), 28, y, 374, () =>
-                {
-                    if (HubEconomy.TryBlacksmithUpgrade(Run, eq, out string err))
-                    {
-                        Sfx.Play(Sound.Success);
-                        feedbackLabel?.Set(PixelFont.Fit($"UPGRADED {eq.Definition?.name.ToUpperInvariant()} TO +{eq.upgradeLevel}!", 520));
-                        RenderFacility();
-                    }
-                    else
-                    {
-                        Sfx.Play(Sound.Deny);
-                        feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-                    }
-                }, 24);
-                btn.tooltip = $"UPGRADE STATS BY +5% BASE STATS. REQUIRES {cost} GOLD.";
-                menu.Add(btn);
-                y += 32;
-            }
-        }
-
-        void RenderTrainingGround(Menu menu)
-        {
-            Ui.Label(facilityContent, "TRAINING GROUND - SKILLS & LOADOUT", 28, 82, Palette.Gold2, Align.Left, 1, FontKind.Serif);
-            Ui.Label(facilityContent, "MANAGE ACTIVE AND PASSIVE CLASS SKILL LOADOUTS.", 28, 104, Palette.WarmIvory);
-
-            var openSkillsBtn = Ui.Button(facilityContent, "OPEN FULL SKILL TREE SCREEN >>", 28, 130, 374, () =>
-            {
-                Game.Go(GameState.Skills);
-            }, 26, style: ButtonStyle.Primary);
-            openSkillsBtn.tooltip = "INSPECT 5-TIER SKILL TREES, UPGRADE RANKS, AND ALLOCATE SKILL POINTS.";
-            menu.Add(openSkillsBtn);
-
-            var openTalentsBtn = Ui.Button(facilityContent, "MANAGE HERO TALENTS & RESPEC >>", 28, 164, 374, () =>
-            {
-                Game.Go(GameState.Talents);
-            }, 26, style: ButtonStyle.Primary);
-            openTalentsBtn.tooltip = "CHOOSE TALENT MILESTONES (LVL 3, 6, 9, 12, 15) AND RESPEC TALENTS.";
-            menu.Add(openTalentsBtn);
-        }
-
-        void RenderTemple(Menu menu)
-        {
-            Ui.Label(facilityContent, "TEMPLE OF RESURRECTION - REVIVE HEROES", 28, 82, Palette.Gold2, Align.Left, 1, FontKind.Serif);
+            menu = Root.gameObject.AddComponent<Menu>();
+            menu.onFocus = ShowTip;
             var party = Run?.Party ?? new List<Unit>();
-            int y = 104;
-            for (int i = 0; i < party.Count; i++)
+            int sp = party.Sum(u => u.skillLoadout?.SkillPoints ?? 0);
+            int dead = party.Count(u => !u.Alive);
+            int relics = Run?.Relics.Count ?? 0;
+
+            int y = py + 5;
+            Item(nav, "Character / Party", y, () => Game.Go(GameState.Party), "VIEW THE PARTY, STATUS AND LINEUP.");
+            Item(nav, "Equipment", y += 19, () => Game.Go(GameState.Equipment), "EQUIP GEAR ON EACH MEMBER AND COMPARE STATS.");
+            Item(nav, "Inventory", y += 19, () => Game.Go(GameState.Inventory), "EQUIPMENT BAG, CONSUMABLES, MATERIALS AND KEY ITEMS.");
+            Item(nav, "Shop", y += 19, () => Game.Go(GameState.HubShop), "CONSUMABLES FOR HUB GOLD. UNLIMITED STOCK.", note: "CONSUMABLES");
+            Item(nav, "Armory", y += 19, () => Game.Go(GameState.Armory), "WEAPONS AND ARMOR FOR HUB GOLD.", note: "EQUIPMENT");
+            Item(nav, "Blacksmith", y += 19, () => Game.Go(GameState.Blacksmith), "UPGRADE GEAR. UPGRADES RAISE BASE STATS ONLY.");
+            Item(nav, "Training Ground", y += 19, () => Game.Go(GameState.Skills), "SPEND SKILL POINTS AND CHOOSE TALENTS.", buff: sp > 0 ? $"{sp} SP" : null);
+            Item(nav, "Temple", y += 19, () => Game.Go(GameState.Temple), "REVIVE FALLEN MEMBERS AND RECOVER HP / MP.", danger: dead > 0 ? $"{dead} DEAD" : null);
+            Item(nav, "Magic Shop", y += 19, () => Game.Go(GameState.MagicShop), "BUY AND SELL PERMANENT RELICS.", note: $"RELICS {relics}/5");
+
+            y += 22;
+            Ui.Rect(nav, px + 6, y, pw - 12, 1, Palette.Ink5, Ui.Panels + 2);
+            int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
+            var gate = Ui.Button(nav, "Dungeon Entrance", px + 14, y + 5, pw - 20, OnEmbarkClicked, 22, style: ButtonStyle.Flat);
+            gate.label.Color = Palette.Gold1;
+            var baseVisual = gate.visual;
+            gate.visual = on => { baseVisual(on); gate.label.Color = on ? Palette.Gold1 : Palette.Gold2; };
+            gate.visual(false);
+            Ui.Badge(gate.transform, "Z", pw - 36, 5, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, order: Ui.Widget + 1, font: FontKind.Interface);
+            gate.tooltip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR." : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.";
+            gate.name = "Dungeon Entrance";
+            menu.Add(gate);
+
+            feedbackLabel = Ui.Label(Root, "", 190, 262, Palette.Err, font: FontKind.Interface);
+
+            // Tooltip (.tip) beside the town — describes the focused facility.
+            tipBox = Ui.Image(Root, null, 451, 105, Ui.Overlay - 2);
+            tipTitle = Ui.Label(Root, "", 457, 110, Palette.Gold1, order: Ui.Overlay - 1);
+            tipText = Ui.Label(Root, "", 457, 124, Palette.Mist2, order: Ui.Overlay - 1, font: FontKind.Interface);
+            menu.Focus(menu.items.Count - 1, false, true); // Dungeon Entrance is the default focus
+        }
+
+        void Item(Transform nav, string text, int y, Action go, string tip, string note = null, string buff = null, string danger = null)
+        {
+            const int x = 31, w = 143;
+            var b = Ui.Button(nav, text, x, y, w, go, 18, style: ButtonStyle.Flat);
+            b.tooltip = tip;
+            b.name = text;
+            if (note != null) Ui.Label(b.transform, note, w - 4, 6, Palette.Mist2, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
+            if (buff != null)
+            {
+                int bw = PixelFont.Measure(buff) + 12;
+                Ui.Image(b.transform, PixelArt.Badge(bw, 12, Palette.Ink0, Palette.Hex(0x3B9A67)), w - 4 - bw, 3, Ui.Widget + 1);
+                Ui.Image(b.transform, PixelArt.Diamond(5, Palette.Hex(0x9AF0BF)), w - bw, 6, Ui.Widget + 2);
+                Ui.Label(b.transform, buff, w - 4 - bw + 9, 5, Palette.Hex(0x9AF0BF), order: Ui.Widget + 2, font: FontKind.Interface);
+            }
+            if (danger != null)
+            {
+                int dw = PixelFont.Measure(danger) + 8;
+                Ui.Image(b.transform, PixelArt.Badge(dw, 12, Palette.Hex(0x3A1418), Palette.Err), w - 4 - dw, 3, Ui.Widget + 1);
+                Ui.Label(b.transform, danger, w - dw, 5, Palette.Hex(0xFFD2CC), order: Ui.Widget + 2, font: FontKind.Interface);
+            }
+            menu.Add(b);
+        }
+
+        void ShowTip(Selectable s)
+        {
+            if (tipBox == null || s == null) return;
+            string body = PixelFont.Wrap(s.tooltip ?? "", 106);
+            int h = 22 + (body.Count(c => c == '\n') + 1) * PixelFont.LineHeight;
+            tipBox.sprite = PixelArt.Box(118, h, Palette.Ink2, Palette.Gold3);
+            tipTitle.Set(s.name);
+            tipText.Set(body);
+        }
+
+        // ------------------------------------------------------------ progress
+
+        void BuildProgress()
+        {
+            const int x = 14, y = 290, w = 165, h = 56;
+            Ui.Panel(Root, x, y, w, h);
+            int act = Run != null ? Run.Act : 1;
+            int cleared = Math.Clamp(act - 1, 0, 8);
+            Ui.Label(Root, "RUN PROGRESS", x + 7, y + 7, Palette.Mist3, font: FontKind.Interface);
+            Ui.Label(Root, $"{cleared} / 8 cleared", x + w - 7, y + 5, Palette.Gold2, Align.Right);
+            int bw = (w - 14 - 7 * 2) / 8;
+            for (int i = 1; i <= 8; i++)
+            {
+                int bx = x + 7 + (i - 1) * (bw + 2), by = y + 20;
+                bool done = i < act, now = i == act;
+                var sprite = done ? PixelArt.Badge(bw, 11, Palette.Ink4, Palette.Mist3)
+                    : now ? PixelArt.Badge(bw, 11, Palette.Hex(0x2B2210), Palette.Gold2)
+                    : PixelArt.DashedBadge(bw, 11, Color.clear, Palette.Ink5);
+                Ui.Image(Root, sprite, bx, by, Ui.Widget);
+                Ui.Label(Root, i.ToString(), bx + bw / 2, by + 2, done ? Palette.Mist2 : now ? Palette.Gold1 : Palette.Ink5, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
+            }
+            Ui.Label(Root, "PROGRESS RESETS IF THE PARTY FALLS.", x + 7, y + 36, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(Root, "EQUIPMENT IS ALWAYS KEPT.", x + 7, y + 45, Palette.Mist2, font: FontKind.Interface);
+        }
+
+        // ---------------------------------------------------------- party strip
+
+        void BuildPartyStrip()
+        {
+            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            const int cw = 98, ch = 32, gap = 5, y = 314;
+            int x0 = 626 - 4 * cw - 3 * gap;
+            for (int i = 0; i < 4 && i < party.Count; i++)
             {
                 var u = party[i];
-                string status = u.Alive ? "ALIVE (NORMAL)" : $"FALLEN (REVIVE FOR {HubEconomy.TempleReviveCost} GOLD)";
-                var btn = Ui.Button(facilityContent, PixelFont.Fit($"{u.name.ToUpperInvariant()} - {status}", 370), 28, y, 374, () =>
-                {
-                    if (HubEconomy.TryTempleRevive(Run, u, out string err))
-                    {
-                        Sfx.Play(Sound.Success);
-                        feedbackLabel?.Set(PixelFont.Fit($"REVIVED {u.name.ToUpperInvariant()} AT THE TEMPLE!", 520));
-                        RenderFacility();
-                    }
-                    else
-                    {
-                        Sfx.Play(Sound.Deny);
-                        feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-                    }
-                }, 24);
-                btn.tooltip = u.Alive ? "HERO IS ALIVE AND HEALTHY" : $"EXPEND {HubEconomy.TempleReviveCost} GOLD TO REVIVE HERO TO 50% HP";
-                if (u.Alive) btn.label.Color = Palette.Emerald;
-                else btn.label.Color = Palette.SpecCrimson;
-                menu.Add(btn);
-                y += 32;
+                int x = x0 + i * (cw + gap);
+                Ui.Panel(Root, x, y, cw, ch);
+                Color c = Palette.ForClass(u.classDef?.id);
+                Ui.Image(Root, PixelArt.Box(20, 20, Color.Lerp(c, Palette.Ink1, 0.7f), Palette.Ink5), x + 5, y + 6, Ui.Widget);
+                Ui.Rect(Root, x + 12, y + 10, 6, 5, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 1);
+                Ui.Rect(Root, x + 8, y + 19, 14, 4, c, Ui.Widget + 1);
+                Ui.Label(Root, PixelFont.Fit(u.name, 46, FontKind.DotGothic), x + 29, y + 4, u.Alive ? Palette.Mist1 : Palette.Mist3, order: Ui.Widget);
+                Ui.Label(Root, $"LV {u.level}", x + cw - 5, y + 6, Palette.Mist3, Align.Right, order: Ui.Widget, font: FontKind.Interface);
+                float hp = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
+                Ui.Image(Root, PixelArt.GaugeBar(cw - 34, 4, hp, hp < 0.25f ? Palette.HpLow : Palette.Hp), x + 29, y + 17, Ui.Widget);
+                Ui.Image(Root, PixelArt.GaugeBar(cw - 34, 4, (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp), x + 29, y + 23, Ui.Widget);
             }
         }
+
+        // ------------------------------------------------------------- actions
 
         void OnEmbarkClicked()
         {
@@ -301,11 +240,10 @@ namespace Obscure
             if (Run.Party.All(u => !u.Alive))
             {
                 Sfx.Play(Sound.Deny);
-                feedbackLabel?.Set("ALL HEROES ARE DEAD! VISIT THE TEMPLE TO REVIVE AT LEAST ONE HERO BEFORE EMBARKING.");
+                feedbackLabel?.Set("ALL HEROES ARE DOWN — REVIVE AT THE TEMPLE FIRST.");
                 return;
             }
 
-            // Pre-embark auto save (Hub lifecycle trigger)
             SaveManager.AutoSave(out _);
 
             int targetAct = PersistenceCommitHandler.ActiveCommittedSnapshot != null

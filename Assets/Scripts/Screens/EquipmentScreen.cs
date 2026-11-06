@@ -96,7 +96,7 @@ namespace Obscure
                 party = Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
 
             heroIndex = Math.Clamp(initialHero, 0, Math.Max(0, party.Count - 1));
-            returnState = backTo ?? (Game.I?.Run != null ? GameState.Map : GameState.MainMenu);
+            returnState = backTo ?? ReturnTarget();
         }
 
         protected override void Build()
@@ -107,8 +107,8 @@ namespace Obscure
 
             // 1. Header: back, title, party portrait switcher, equipment bag per FELNA — UI System (Page 11)
             var backBtn = Ui.Button(Root, "BACK", 12, 8, 46, () => Game.Go(returnState), 20, showCursor: false, font: FontKind.DotGothic);
-            Ui.Label(Root, "EQUIPMENT", 66, 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic);
-            var prevHeroBtn = Ui.Button(Root, "<", 214, 9, 20, () => SwitchHero(-1), 20, showCursor: false);
+            Ui.Label(Root, "Equipment", 66, 13, Palette.Gold2, Align.Left, 1, FontKind.DotGothic);
+            var prevHeroBtn = Ui.Button(Root, "Q", 214, 9, 20, () => SwitchHero(-1), 20, showCursor: false);
             for (int i = 0; i < party.Count && i < portraitBoxes.Length; i++)
             {
                 int px = 238 + i * 26;
@@ -118,7 +118,7 @@ namespace Obscure
                 var s = PixelArt.FromRows(face);
                 Ui.Image(Root, s, px + (22 - (int)s.rect.width) / 2, 30 - (int)s.rect.height, Ui.Widget + 1);
             }
-            var nextHeroBtn = Ui.Button(Root, ">", 342, 9, 20, () => SwitchHero(1), 20, showCursor: false);
+            var nextHeroBtn = Ui.Button(Root, "E", 342, 9, 20, () => SwitchHero(1), 20, showCursor: false);
             bagBtn = Ui.Button(Root, "", 520, 8, 108, () => Game.Go(GameState.Inventory), 20, showCursor: false);
 
             // 2. Paper doll: all 8 slots around the hero
@@ -320,7 +320,7 @@ namespace Obscure
             for (int i = 0; i < portraitBoxes.Length; i++)
                 if (portraitBoxes[i] != null)
                     portraitBoxes[i].sprite = PixelArt.Badge(22, 26, Palette.Ink1, i == heroIndex ? Palette.Gold2 : Palette.Ink5);
-            bagBtn.label.Set($"BAG {inventory.EquipmentCount}/{InventoryRuntime.MaxEquipmentCapacity}");
+            bagBtn.label.Set($"BAG {inventory.EquipmentCount} / {InventoryRuntime.MaxEquipmentCapacity}");
 
             // Paper doll
             heroLabel.Set(PixelFont.Fit($"{hero.name} - {hero.classDef?.name ?? hero.role}".ToUpperInvariant(), 110));

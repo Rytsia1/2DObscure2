@@ -21,6 +21,9 @@ namespace Obscure.Tests
                 (MusicIds.Battle1, "When the journey becomes a battle - Battle Theme 1", MusicCategory.Battle),
                 (MusicIds.Battle2, "Every shadow hides a challenge - Battle theme 2", MusicCategory.Battle),
                 (MusicIds.Battle3, "Let every strike become a melody - Battle theme 3", MusicCategory.Battle),
+                (MusicIds.Hub, "A Haven at the World's End", MusicCategory.Exploration),
+                (MusicIds.ZoroaP1, "Requiem The Harvester", MusicCategory.Boss),
+                (MusicIds.ZoroaP2, "The Soul Reaping", MusicCategory.Boss),
             };
             foreach (var (id, file, category) in expected)
             {
@@ -44,7 +47,7 @@ namespace Obscure.Tests
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["d1_e5"], rng));
             Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["d1_e6"], rng));
             Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["d1_e7"], rng));
-            Assert.AreEqual(MusicIds.Battle3, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng));
+            Assert.AreEqual(MusicIds.ZoroaP1, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(null, rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(new EncounterDef { music = "no_such_track" }, rng), "unknown id falls back");
             foreach (var e in Database.Encounters.Values.Where(e => e.music != null))
@@ -61,7 +64,7 @@ namespace Obscure.Tests
                 var rng = new System.Random(3);
                 var picks = Enumerable.Range(0, 200).Select(_ => lib.BattleMusicFor(Database.Encounters["d1_e1"], rng)).Distinct();
                 CollectionAssert.AreEquivalent(BattleIds, picks);
-                Assert.AreEqual(MusicIds.Battle3, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng), "an encounter's own theme wins");
+                Assert.AreEqual(MusicIds.ZoroaP1, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng), "an encounter's own theme wins");
             }
             finally { Object.DestroyImmediate(lib); }
         }
@@ -72,8 +75,11 @@ namespace Obscure.Tests
             var lib = Library;
             var rng = new System.Random(1);
             Assert.AreEqual(MusicIds.MainMenu, lib.MusicFor(GameState.MainMenu, null, rng));
+            Assert.AreEqual(MusicIds.Hub, lib.MusicFor(GameState.Hub, null, rng));
             Assert.IsNull(lib.MusicFor(GameState.Settings, null, rng), "settings keeps the menu music going");
             Assert.IsNull(lib.MusicFor(GameState.CharacterStatus, null, rng));
+            foreach (var hubService in new[] { GameState.Party, GameState.HubShop, GameState.Armory, GameState.Blacksmith, GameState.Temple, GameState.MagicShop })
+                Assert.IsNull(lib.MusicFor(hubService, null, rng), "hub services keep the hub track");
             foreach (var quiet in new[] { GameState.CharacterCreation, GameState.OpeningSequence })
                 Assert.AreEqual("", lib.MusicFor(quiet, null, rng), quiet.ToString());
             foreach (var exploring in new[] { GameState.Map, GameState.Reward, GameState.Rest, GameState.Event, GameState.GameOver, GameState.Victory })
@@ -240,6 +246,79 @@ namespace Obscure.Tests
             var denySamples = Sfx.GenerateToneSamples((110, 0.14f));
             Assert.Greater(denySamples.Length, 0);
             Assert.LessOrEqual(denySamples.Max(Mathf.Abs), 0.95f, "Deny tone should not clip");
+        }
+
+        [Test]
+        public void ZoroaPhaseTransition_AudioClipAndSynthesis_MatchSixSecondSpecification()
+        {
+            var clip = Resources.Load<AudioClip>(Sfx.ZoroaTransitionResourcePath);
+            Assert.IsNotNull(clip, "Resources/Sfx/zoroa_phase_transition.wav should exist or load");
+            Assert.AreEqual(6.0f, clip.length, 0.05f, "Zoroa phase transition must be 6 seconds (within 5-7s range)");
+            Assert.AreEqual(44100, clip.frequency);
+
+            var samples = Sfx.GenerateZoroaPhaseTransitionSamples();
+            Assert.AreEqual(Mathf.RoundToInt(6.0f * Sfx.Rate), samples.Length);
+            Assert.LessOrEqual(samples.Max(Mathf.Abs), 0.95f, "Transition audio should not clip");
+            Assert.AreEqual(0f, samples[samples.Length - 1], 1e-4f, "Ends with smooth fade-out to zero");
+
+            // Verify Stage 1 (0.0s - 2.0s): Low-frequency impact & soul energy
+            float stage1Rms = Rms(samples, 0f, 2.0f);
+            Assert.Greater(stage1Rms, 0.12f, "Stage 1 must have pronounced low-frequency impact and soul energy");
+
+            // Verify Stage 2 (2.0s - 4.0s): Choir swell
+            float stage2Rms = Rms(samples, 2.0f, 4.0f);
+            Assert.Greater(stage2Rms, 0.05f, "Stage 2 must have audible choir presence");
+
+            // Verify Stage 3 (4.0s - 5.5s): Rising strings & brass
+            float stage3Rms = Rms(samples, 4.0f, 5.5f);
+            Assert.Greater(stage3Rms, stage2Rms, "Stage 3 rising strings & brass must swell louder than Stage 2 choir");
+
+            // Verify Stage 4 (5.5s - 6.0s): Climax
+            float stage4Rms = Rms(samples, 5.5f, 6.0f);
+            Assert.Greater(stage4Rms, 0.20f, "Climax before entering Phase 2 orchestra must be high intensity");
+        }
+
+        [Test]
+        public void MusicManager_StopImmediately_AbruptlyCutsPlayingTrack()
+        {
+            var host = new GameObject("TestMusicHost");
+            try
+            {
+                var mgr = MusicManager.Create(host);
+                mgr.Play(MusicIds.ZoroaP1);
+                Assert.AreEqual(MusicIds.ZoroaP1, mgr.CurrentId);
+
+                // Stop immediately (Phase 1 HP depleted)
+                mgr.StopImmediately();
+                Assert.IsNull(mgr.CurrentId, "Track id reset on abrupt stop");
+                Assert.IsFalse(mgr.Fading, "No fade coroutine active on abrupt stop");
+                Assert.IsFalse(mgr.Source.isPlaying, "Source abruptly stopped");
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
+        public void BossPhaseTransition_FiresEventOnPhaseAdvancement()
+        {
+            var battle = new Battle(
+                Database.Party.Select(id => new Unit(Database.Characters[id])),
+                new[] { Database.Enemies["zoroa_p1"] },
+                new System.Collections.Generic.List<string>(Database.StartingItems),
+                new System.Random(1));
+            var boss = battle.Enemies[0];
+
+            Combatant transitionedBoss = null;
+            battle.BossPhaseTransitioning += b => transitionedBoss = b;
+
+            // Deplete boss HP to trigger TryAdvancePhase
+            battle.Damage(boss, boss.unit.hp + 50);
+
+            Assert.IsNotNull(transitionedBoss, "BossPhaseTransitioning event should fire when Phase 1 HP is depleted");
+            Assert.AreEqual("zoroa_p2", boss.enemy.id, "Boss advances to Phase 2");
+            Assert.AreEqual(2, boss.phase);
         }
 
         static float Rms(float[] s, float from, float to)

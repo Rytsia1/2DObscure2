@@ -7,7 +7,9 @@ using UnityEngine;
 namespace Obscure
 {
     public enum Align { Left, Center, Right }
-    public enum ButtonStyle { Slab, Primary, Flat, Danger }
+    // Card = selectable list/grid card (.pnl.flat → .pnl.gold on focus); label sits top-left.
+    public enum ButtonStyle { Slab, Primary, Flat, Danger, Card }
+    public enum TagKind { Cls, Keep, Temp, Cond, Gold }
 
     public static class Ui
     {
@@ -28,7 +30,7 @@ namespace Obscure
             return sr;
         }
 
-        public static Label Label(Transform parent, string text, int x, int y, Color color, Align align = Align.Left, int scale = 1, int order = Text, FontKind font = FontKind.Interface)
+        public static Label Label(Transform parent, string text, int x, int y, Color color, Align align = Align.Left, int scale = 1, int order = Text, FontKind font = FontKind.DotGothic)
         {
             var sr = Image(parent, null, 0, 0, order, color);
             var label = sr.gameObject.AddComponent<Label>();
@@ -60,28 +62,32 @@ namespace Obscure
 
         // Ink slab button; focus lifts it into a gold frame with gold text and the pixel hand-pointer.
         // Primary = the one gold call-to-action per view; Flat = menu-list item (.mi) with a gold wash on focus; Danger = destructive alert.
-        public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 18, bool interactable = true, bool showCursor = true, FontKind font = FontKind.Interface, ButtonStyle style = ButtonStyle.Slab)
+        public static Selectable Button(Transform parent, string text, int x, int y, int w, Action onClick, int h = 18, bool interactable = true, bool showCursor = true, FontKind font = FontKind.DotGothic, ButtonStyle style = ButtonStyle.Slab)
         {
+            UiPointerDispatcher.Ensure();
             var go = new GameObject("Button:" + text);
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(x, -y, 0);
             var box = Image(go.transform, null, 0, 0, Widget);
             int gHeight = font == FontKind.DotGothic ? PixelFont.DotGothicGlyphHeight : font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
-            bool flat = style == ButtonStyle.Flat;
-            var label = Label(go.transform, text, flat ? 6 : w / 2, (h - gHeight) / 2, Palette.WarmIvory, flat ? Align.Left : Align.Center, order: Widget + 1, font: font);
+            bool flat = style == ButtonStyle.Flat, card = style == ButtonStyle.Card;
+            var label = Label(go.transform, text, flat || card ? 6 : w / 2, card ? 4 : (h - gHeight) / 2, Palette.WarmIvory, flat || card ? Align.Left : Align.Center, order: Widget + 1, font: font);
             var cursor = showCursor ? Image(go.transform, PixelArt.Pointer, -10, (h - 7) / 2, Widget + 1) : null;
             var sel = go.AddComponent<Selectable>();
             sel.size = new Vector2Int(w, h);
             sel.onClick = onClick;
             sel.label = label;
             sel.interactable = interactable;
+            if (!Selectable.All.Contains(sel)) Selectable.All.Add(sel);
             sel.visual = on =>
             {
                 box.sprite = style == ButtonStyle.Flat ? (on ? PixelArt.MenuHighlight(w, h) : null)
                     : style == ButtonStyle.Primary ? PixelArt.PrimaryBox(w, h, on, sel.interactable)
                     : style == ButtonStyle.Danger ? PixelArt.DangerBox(w, h, on, sel.interactable)
+                    : card ? PixelArt.Box(w, h, Palette.Ink2, on || sel.selected ? Palette.Gold3 : Palette.Ink4)
                     : PixelArt.ButtonBox(w, h, on, sel.interactable);
                 label.Color = !sel.interactable ? Palette.MutedGray
+                    : card ? (on || sel.selected ? Palette.Gold1 : Palette.Mist1)
                     : style == ButtonStyle.Primary ? Palette.Ink1
                     : style == ButtonStyle.Danger ? (on ? Palette.WarmIvory : Palette.HpLow)
                     : on ? Palette.AntiqueGoldBright : Palette.WarmIvory;
@@ -166,8 +172,71 @@ namespace Obscure
             return x + 2 + PixelFont.Measure(action, FontKind.DotGothic) + 14;
         }
 
+        // Tag chip (.tag): cls = ink, keep = gold solid, temp = ember dashed, cond = mist dashed, gold = class/selected accent.
+        // Returns the chip width so callers can lay tags out in a row.
+        public static int Tag(Transform parent, string text, int x, int y, TagKind kind = TagKind.Cls, int h = 11, int order = Widget)
+        {
+            text = (text ?? "").ToUpperInvariant();
+            int w = PixelFont.Measure(text, FontKind.Interface) + 8;
+            var (fill, border, ink) = kind switch
+            {
+                TagKind.Keep => (Palette.Hex(0x1D1608), Palette.Gold3, Palette.Gold1),
+                TagKind.Temp => (Palette.Hex(0x22120A), Palette.Ember2, Palette.Ember1),
+                TagKind.Cond => (Color.clear, Palette.Mist3, Palette.Mist2),
+                TagKind.Gold => (Palette.Ink3, Palette.Gold3, Palette.Gold1),
+                _ => (Palette.Ink3, Palette.Ink5, Palette.Mist1),
+            };
+            bool dashed = kind == TagKind.Temp || kind == TagKind.Cond;
+            Image(parent, dashed ? PixelArt.DashedBadge(w, h, fill, border) : PixelArt.Badge(w, h, fill, border), x, y, order);
+            Label(parent, text, x + 4, y + (h - PixelFont.GlyphHeight) / 2, ink, order: order + 1, font: FontKind.Interface);
+            return w;
+        }
+
+        // Inventory / equipment slot (.slot): ink well, rarity-tinted border, item icon, rarity letter top-left.
+        // Empty slots show the slot's silhouette dimmed so the player can still tell what goes there.
+        public static void ItemSlot(Transform parent, int x, int y, int size, EquipmentDef item, EquipmentSlot slot, bool selected = false, int order = Widget, string count = null)
+        {
+            Color rc = item != null ? Palette.ForRarity(item.rarity) : Palette.Ink4;
+            Color border = selected ? Palette.Gold2 : item != null ? Color.Lerp(rc, Palette.Ink4, 0.45f) : Palette.Ink4;
+            Image(parent, PixelArt.Box(size, size, Palette.Ink0, border), x, y, order);
+            if (selected) Image(parent, PixelArt.Badge(size + 4, size + 4, Color.clear, Palette.Gold3), x - 2, y - 2, order);
+            var icon = PixelArt.FromRows(Art.GearIcon(slot, item));
+            int iw = (int)icon.rect.width, ih = (int)icon.rect.height;
+            Image(parent, icon, x + (size - iw) / 2, y + (size - ih) / 2, order + 1, item != null ? rc : Palette.Ink4);
+            if (item != null)
+            {
+                Image(parent, PixelArt.Badge(7, 8, rc, rc), x, y, order + 2);
+                Label(parent, Palette.RarityBadge(item.rarity), x + 1, y + 1, Palette.Ink0, order: order + 3, font: FontKind.Interface);
+            }
+            if (!string.IsNullOrEmpty(count))
+                Label(parent, count, x + size - 2, y + size - 9, Palette.Mist1, Align.Right, order: order + 3, font: FontKind.Interface);
+        }
+
+        // Relic token (.relic): octagon in the relic's rarity color with a 2-letter code; empty = dashed ink.
+        public static void Relic(Transform parent, int x, int y, int size, RelicDef relic, int order = Widget)
+        {
+            Color c = relic != null ? RelicColor(relic) : Palette.Ink5;
+            Image(parent, PixelArt.Octagon(size, Palette.Ink0, c, relic == null), x, y, order);
+            if (relic != null) Label(parent, RelicCode(relic), x + size / 2, y + (size - PixelFont.GlyphHeight) / 2, c, Align.Center, order: order + 1, font: FontKind.Interface);
+        }
+
+        public static Color RelicColor(RelicDef r) => r.proposedRarity switch
+        {
+            RelicProposedRarity.Uncommon => Palette.RarityUncommon,
+            RelicProposedRarity.Rare => Palette.RarityRare,
+            RelicProposedRarity.Epic => Palette.RarityEpic,
+            _ => Palette.RarityCommon,
+        };
+
+        public static string RelicCode(RelicDef r)
+        {
+            var words = (r?.name ?? "?").Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return "?";
+            return (words.Length >= 2 ? $"{words[0][0]}{words[1][0]}" : words[0].Substring(0, Math.Min(2, words[0].Length))).ToUpperInvariant();
+        }
+
         // Square chip
-        public static SpriteRenderer Badge(Transform parent, string text, int x, int y, int w, int h, Color fill, Color border, Color textColor, Align align = Align.Center, int order = Widget, FontKind font = FontKind.Interface)
+        public static SpriteRenderer Badge(Transform parent, string text, int x, int y, int w, int h, Color fill, Color border, Color textColor, Align align = Align.Center, int order = Widget, FontKind font = FontKind.DotGothic)
         {
             var box = Image(parent, PixelArt.Badge(w, h, fill, border), x, y, order);
             int gHeight = font == FontKind.DotGothic ? PixelFont.DotGothicGlyphHeight : font == FontKind.Serif ? PixelFont.SerifGlyphHeight : PixelFont.GlyphHeight;
@@ -184,7 +253,7 @@ namespace Obscure
         FontKind font;
         public string Text { get; private set; }
 
-        public void Init(SpriteRenderer renderer, int px, int py, Align a, int s, FontKind f = FontKind.Interface)
+        public void Init(SpriteRenderer renderer, int px, int py, Align a, int s, FontKind f = FontKind.DotGothic)
         {
             sr = renderer; x = px; y = py; align = a; scale = s; font = f;
             transform.localScale = new Vector3(s, s, 1);
@@ -203,42 +272,179 @@ namespace Obscure
         }
     }
 
+    [ExecuteAlways]
     public class Selectable : MonoBehaviour
     {
+        public static readonly List<Selectable> All = new List<Selectable>();
+
         public Vector2Int size;
         public Action onClick;
         public Action<int> onAdjust;
         public Action<bool> visual;
         public Label label;
         public bool interactable = true;
+        public bool selected; // persistent "chosen" state for Card style (gold frame without focus)
         public string tooltip;
+        public Menu menu;
+
+        void Awake()
+        {
+            All.RemoveAll(s => s == null);
+            if (!All.Contains(this)) All.Add(this);
+        }
+
+        void OnEnable()
+        {
+            All.RemoveAll(s => s == null);
+            if (!All.Contains(this)) All.Add(this);
+        }
+
+        void OnDisable()
+        {
+            All.Remove(this);
+            All.RemoveAll(s => s == null);
+        }
+
+        void OnDestroy()
+        {
+            All.Remove(this);
+            All.RemoveAll(s => s == null);
+        }
 
         public bool Contains(Vector2 world)
         {
+            if (float.IsNaN(world.x) || float.IsNaN(world.y)) return false;
             var p = (Vector2)transform.position;
-            return world.x >= p.x && world.x < p.x + size.x && world.y <= p.y && world.y > p.y - size.y;
+            return world.x >= p.x && world.x <= p.x + size.x && world.y <= p.y && world.y >= p.y - size.y;
+        }
+    }
+
+    public class UiPointerDispatcher : MonoBehaviour
+    {
+        public static UiPointerDispatcher Instance { get; private set; }
+        Selectable currentHovered;
+        Vector2 lastMousePos = new Vector2(float.NaN, float.NaN);
+
+        public static void Ensure(GameObject fallbackHost = null)
+        {
+            if (Instance != null) return;
+            var host = fallbackHost ?? (Game.I != null ? Game.I.gameObject : null);
+            if (host == null)
+            {
+                var go = new GameObject("UiPointerDispatcher");
+                Instance = go.AddComponent<UiPointerDispatcher>();
+                if (Application.isPlaying) DontDestroyOnLoad(go);
+            }
+            else
+            {
+                Instance = host.GetComponent<UiPointerDispatcher>() ?? host.AddComponent<UiPointerDispatcher>();
+            }
+        }
+
+        void Awake()
+        {
+            if (Instance == null) Instance = this;
+        }
+
+        void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        void Update()
+        {
+            if (Controls.Locked) return;
+
+            Vector2 mouse = Controls.MouseWorld;
+            bool mouseMoved = mouse != lastMousePos;
+            lastMousePos = mouse;
+
+            Selectable hit = null;
+            if (!float.IsNaN(mouse.x) && !float.IsNaN(mouse.y))
+            {
+                for (int i = Selectable.All.Count - 1; i >= 0; i--)
+                {
+                    var s = Selectable.All[i];
+                    if (s != null && s.isActiveAndEnabled && s.Contains(mouse))
+                    {
+                        hit = s;
+                        break;
+                    }
+                }
+            }
+
+            if (mouseMoved && hit != currentHovered)
+            {
+                if (currentHovered != null && currentHovered.visual != null)
+                {
+                    if (currentHovered.menu == null || currentHovered.menu.Current != currentHovered)
+                        currentHovered.visual(false);
+                }
+
+                currentHovered = hit;
+
+                if (currentHovered != null)
+                {
+                    if (currentHovered.menu != null)
+                    {
+                        currentHovered.menu.Focus(currentHovered, false);
+                    }
+                    else
+                    {
+                        currentHovered.visual?.Invoke(true);
+                    }
+                }
+            }
+
+            if (Controls.Click)
+            {
+                if (hit != null)
+                {
+                    if (hit.interactable)
+                    {
+                        Sfx.Play(Sound.Confirm);
+                        if (hit.menu != null) hit.menu.Focus(hit, false);
+                        hit.onClick?.Invoke();
+                    }
+                    else
+                    {
+                        Sfx.Play(Sound.Deny);
+                    }
+                }
+            }
         }
     }
 
     public class Menu : MonoBehaviour
     {
+        public static Menu ActiveMenu;
         public readonly List<Selectable> items = new List<Selectable>();
         public Action onBack;
         public Action<Selectable> onFocus;
         int index, bornFrame;
-        Vector2 lastMouse;
 
-        // Hover only focuses after the mouse moves, so a resting cursor never steals the keyboard default on a new screen.
         void Awake()
         {
             bornFrame = Time.frameCount;
-            lastMouse = Controls.MouseWorld;
+            ActiveMenu = this;
         }
 
-        public Selectable Current => index < items.Count ? items[index] : null;
+        void OnEnable()
+        {
+            ActiveMenu = this;
+        }
+
+        void OnDestroy()
+        {
+            if (ActiveMenu == this) ActiveMenu = null;
+        }
+
+        public Selectable Current => index >= 0 && index < items.Count ? items[index] : null;
 
         public Selectable Add(Selectable s)
         {
+            if (s == null) return null;
+            s.menu = this;
             items.Add(s);
             if (items.Count - 1 == index) Focus(index, false, true);
             return s;
@@ -246,25 +452,30 @@ namespace Obscure
 
         public void Focus(int i, bool sound = true, bool force = false)
         {
+            if (i < 0 || i >= items.Count) return;
             if (i == index && !force) return;
             Current?.visual?.Invoke(false);
             index = i;
             Current?.visual?.Invoke(true);
+            ActiveMenu = this;
             if (sound) Sfx.Play(Sound.Move);
             onFocus?.Invoke(Current);
+        }
+
+        public void Focus(Selectable s, bool sound = true)
+        {
+            int idx = items.IndexOf(s);
+            if (idx >= 0) Focus(idx, sound);
         }
 
         void Update()
         {
             if (Controls.Locked || items.Count == 0 || Time.frameCount == bornFrame) return;
 
-            var mouse = Controls.MouseWorld;
-            int hit = items.FindIndex(s => s.Contains(mouse));
-            if (mouse != lastMouse && hit >= 0) Focus(hit);
-            lastMouse = mouse;
-            if (Controls.Click && hit >= 0) { Focus(hit, false); Activate(); return; }
+            // Only the currently active menu processes keyboard / gamepad navigation
+            if (ActiveMenu != null && ActiveMenu != this) return;
 
-            var adjust = Current.onAdjust;
+            var adjust = Current?.onAdjust;
             if (adjust != null && (Controls.Left || Controls.Right)) { adjust(Controls.Left ? -1 : 1); Sfx.Play(Sound.Move); }
             else if (Controls.Up || Controls.Left) Focus((index - 1 + items.Count) % items.Count);
             else if (Controls.Down || Controls.Right) Focus((index + 1) % items.Count);
@@ -273,9 +484,9 @@ namespace Obscure
             else if (Controls.Back && onBack != null) { Sfx.Play(Sound.Back); onBack(); }
         }
 
-        void Activate()
+        public void Activate()
         {
-            if (Current.onClick == null) return;
+            if (Current == null || Current.onClick == null) return;
             if (!Current.interactable) { Sfx.Play(Sound.Deny); return; }
             Sfx.Play(Sound.Confirm);
             Current.onClick();

@@ -53,7 +53,32 @@ MonoBehaviour:
     fadeIn: -1
     fadeOut: -1
     lowPassCutoff: 22000
+  - id: hub
+    clip: {fileID: 8300000, guid: 87cee3ef34e279d4181c4b0c77d5a4b3, type: 3}
+    category: 2
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
+  - id: zoroa_p1
+    clip: {fileID: 8300000, guid: 016496a12d223e84daf9c5b3aa2ba40e, type: 3}
+    category: 3
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
+  - id: zoroa_p2
+    clip: {fileID: 8300000, guid: 44bcb8c15c73630478f36cf1418ee805, type: 3}
+    category: 3
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
   menuMusic: main_menu
+  hubMusic: hub
   creationMusic: 
   explorationMusic: map
   defaultBattleMusic: battle_1

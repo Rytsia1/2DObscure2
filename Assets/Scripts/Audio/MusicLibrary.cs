@@ -5,11 +5,16 @@ using UnityEngine;
 // All background music in one asset (Resources/MusicLibrary). Gameplay asks for music by id, never by clip.
 namespace Obscure
 {
-    public enum MusicCategory { Menu, Battle, Exploration }
+    public enum MusicCategory { Menu, Battle, Exploration, Boss }
 
     public static class MusicIds
     {
         public const string MainMenu = "main_menu", Map = "map", Battle1 = "battle_1", Battle2 = "battle_2", Battle3 = "battle_3";
+        public const string Hub = "hub";
+        public const string ZoroaP1 = "zoroa_p1", ZoroaP2 = "zoroa_p2";
+        public const string RequiemTheHarvester = ZoroaP1;
+        public const string TheSoulReaping = ZoroaP2;
+        public const string AHavenAtTheWorldsEnd = Hub;
     }
 
     [Serializable]
@@ -33,6 +38,7 @@ namespace Obscure
 
         [Header("Selection (empty id = silence)")]
         public string menuMusic = MusicIds.MainMenu;
+        public string hubMusic = MusicIds.Hub;
         public string creationMusic = "";       // character creation and prologue
         public string explorationMusic = MusicIds.Map; // map, rewards, rest, events, run summary
         public string defaultBattleMusic = MusicIds.Battle1;
@@ -66,6 +72,8 @@ namespace Obscure
         {
             GameState.MainMenu => menuMusic,
             GameState.Settings or GameState.CharacterStatus => null, // overlays: the music underneath carries on
+            GameState.Hub => hubMusic,
+            GameState.Party or GameState.HubShop or GameState.Armory or GameState.Blacksmith or GameState.Temple or GameState.MagicShop => null, // hub services keep the hub track
             GameState.CharacterCreation or GameState.OpeningSequence => creationMusic,
             GameState.Combat => BattleMusicFor(run?.CurrentEncounter, rng),
             _ => explorationMusic,

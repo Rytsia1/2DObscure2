@@ -34,14 +34,35 @@ namespace Obscure
             for (int i = 0; i < 8; i++) Ui.Image(Root, PixelArt.Diamond(7, Palette.Gold3, false), 48 + i * 10, 98, Ui.Text);
             Ui.Label(Root, "THE WORLD'S BETWEEN · EIGHT LAYERS DOWN", 134, 98, Palette.Mist2, font: FontKind.DotGothic);
 
-            // Menu list
+            // Vignette: darken the screen edges
+            Color vign = Palette.Hex(0x05070F, 110);
+            Ui.Rect(Root, 0, 0, Ui.Width, 10, vign, Ui.Back + 10);
+            Ui.Rect(Root, 0, 0, 14, Ui.Height, vign, Ui.Back + 10);
+            Ui.Rect(Root, Ui.Width - 14, 0, 14, Ui.Height, vign, Ui.Back + 10);
+
+            // Menu list: Continue first (with save summary), then New Game, Load, Settings, Exit
             var menu = Root.gameObject.AddComponent<Menu>();
-            bool hasSave = SaveManager.HasAnySave(out _) || GameSave.HasSavedGame();
-            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, 154, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 178, 190, () => Game?.ContinueGame(), 22, interactable: hasSave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            LoadGameButton = menu.Add(Ui.Button(Root, "LOAD GAME", 61, 202, 190, () => Game?.Go(GameState.Load), 22, interactable: hasSave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, 226, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, 250, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            bool hasSave = SaveManager.HasAnySave(out var best);
+            bool legacySave = !hasSave && GameSave.HasSavedGame();
+
+            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 165, 190, () => Game?.ContinueGame(), hasSave ? 32 : 22, interactable: hasSave || legacySave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            int y = 165 + (hasSave ? 34 : 24);
+            if (hasSave)
+            {
+                // Two-line item: title on top, save summary below in body text
+                var lbl = ContinueButton.label;
+                lbl.Init(lbl.GetComponent<SpriteRenderer>(), 6, 3, Align.Left, 1, FontKind.DotGothic);
+                lbl.Set("CONTINUE");
+                var m = SaveManager.GetSlotMetadata(best);
+                string when = m.lastSavedTicks > 0 ? new System.DateTime(m.lastSavedTicks).ToString("d MMM HH:mm") : "";
+                string sub = $"{SaveSlotMetadata.FormatSlotName(best)} · GEISTWALD CITY · {Mathf.Max(0, m.committedAct - 1)} OF 8 CLEARED · {when}".ToUpperInvariant();
+                Ui.Label(ContinueButton.transform, PixelFont.Fit(sub, 180, FontKind.Interface), 6, 20, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+            }
+            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, y, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            LoadGameButton = menu.Add(Ui.Button(Root, "LOAD GAME", 61, y + 24, 190, () => Game?.Go(GameState.Load), 22, interactable: hasSave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, y + 48, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, y + 72, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
+            if (!ContinueButton.interactable) menu.Focus(NewGameButton, false);
 
             // Footer: key prompts + build tag on an ink band
             Ui.Rect(Root, 0, 334, Ui.Width, 26, Palette.Hex(0x070A14, 220), Ui.Panels);

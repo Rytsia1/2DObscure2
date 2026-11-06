@@ -14,6 +14,7 @@ namespace Obscure
 
         protected override void Build()
         {
+            if (!victory) { BuildDefeat(); return; }
             if (victory)
             {
                 Backdrop.Create(Root, true, 24);
@@ -85,6 +86,66 @@ namespace Obscure
             menu.Add(Ui.Button(Root, "NEW RUN", 190, 300, 130, () => Game.StartRun(), 24, style: ButtonStyle.Primary));
             menu.Add(Ui.Button(Root, "TITLE", 330, 300, 120, () => Game.EndRun(), 24));
             Ui.Label(Root, victory ? "START A FRESH EXPEDITION OR RETURN TO THE TITLE." : "CHOOSE NEW RUN TO BEGIN AGAIN FROM THE FIRST FLOOR.", 320, 334, Palette.Mist2, Align.Center);
+        }
+
+        // Starlit Reliquary "S · Run Failure (party wipe)": DEFEAT title, Lost (dashed ember, not committed)
+        // vs Kept (gold, committed by earlier clears) panels, one gold "Return to Main Menu".
+        void BuildDefeat()
+        {
+            Backdrop.Create(Root, false, 4, Palette.Hex(0x2A1016), Palette.Hex(0x0C0A14), Palette.Hex(0x05060C));
+            int act = Run != null ? Run.Act : 1, floor = Run != null ? Run.Floor : 1;
+            var s = Run != null ? Run.Stats : new RunStats();
+
+            ResultArt.Title(Root, "DEFEAT", 320, 18, Palette.Hex(0xFF8A7A));
+            Ui.Label(Root, "The party has fallen. This run has ended.", 320, 56, Palette.Mist1, Align.Center);
+            Ui.Label(Root, $"FELL IN DUNGEON {act} OF 8 · NODE {floor} · PROGRESS FROM EARLIER CLEARS IS SAFE", 320, 71, Palette.Mist2, Align.Center, font: FontKind.Interface);
+
+            // Lost: gained in this dungeon, not committed
+            const int lx = 55, y = 86, w = 260, h = 196;
+            Ui.Image(Root, PixelArt.DashedBadge(w, h, Palette.Hex(0x22120A, 180), Palette.Ember2), lx, y, Ui.Panels);
+            int tx = lx + 8 + Ui.Tag(Root, "LOST", lx + 8, y + 7, TagKind.Temp, 12) + 6;
+            Ui.Label(Root, $"Gained in Dungeon {act}", tx, y + 7, Palette.Ember1);
+            Ui.Label(Root, "NOT COMMITTED", lx + w - 8, y + 9, Palette.Ember2, Align.Right, font: FontKind.Interface);
+            for (int x = lx + 4; x < lx + w - 4; x += 4) Ui.Rect(Root, x, y + 24, 2, 1, Palette.Ember3, Ui.Panels + 1);
+            int gw = Mathf.Max(84, PixelFont.Measure($"{s.goldEarned:#,##0} RUN GOLD", FontKind.DotGothic) + 16);
+            Ui.CurrencyTag(Root, s.goldEarned, false, lx + 10, y + 34);
+            Ui.Rect(Root, lx + 12, y + 42, gw - 4, 2, Palette.Ember1, Ui.Widget + 2); // struck through
+            Ui.Label(Root, $"RUN GOLD HELD IN DUNGEON {act}.", lx + gw + 16, y + 39, Palette.Mist2, font: FontKind.Interface);
+            int ly = y + 64;
+            foreach (var line in new[] { $"EQUIPMENT FOUND IN DUNGEON {act}", "EXP AND LEVELS GAINED HERE", "SP GAINED HERE, AND SKILLS BOUGHT WITH IT", "CONSUMABLES, MATERIALS AND KEY ITEMS FOUND HERE" })
+            {
+                Ui.Image(Root, PixelArt.Diamond(5, Palette.Ember2), lx + 12, ly + 1, Ui.Text);
+                Ui.Label(Root, line, lx + 22, ly, Palette.Mist1, font: FontKind.Interface);
+                ly += 14;
+            }
+
+            // Kept: committed by earlier clears
+            const int kx = 325;
+            Ui.Panel(Root, kx, y, w, h, Palette.Hex(0x1D1608, 220), Palette.Gold3);
+            tx = kx + 8 + Ui.Tag(Root, "KEPT", kx + 8, y + 7, TagKind.Keep, 12) + 6;
+            Ui.Label(Root, act > 1 ? $"Committed by Dungeons 1-{act - 1}" : "Committed progress", tx, y + 7, Palette.Gold1);
+            Ui.Rect(Root, kx + 2, y + 24, w - 4, 1, Palette.Gold4, Ui.Panels + 1);
+            for (int i = 1; i <= 8; i++)
+            {
+                var pip = i < act ? PixelArt.Diamond(9, Palette.Gold2) : i == act ? PixelArt.Diamond(9, Palette.Ember2, false) : PixelArt.Diamond(9, Palette.Ink5, false);
+                Ui.Image(Root, pip, kx + 10 + (i - 1) * 12, y + 34, Ui.Text);
+            }
+            Ui.Label(Root, $"{act - 1} / 8 cleared", kx + 112, y + 33, Palette.Gold1);
+            Ui.Label(Root, PixelFont.Wrap($"DUNGEON PROGRESS STAYS. DUNGEON {act} IS YOUR NEXT DUNGEON AGAIN.", w - 20), kx + 10, y + 50, Palette.Mist2, font: FontKind.Interface);
+            int hub = PersistenceCommitHandler.ActiveCommittedSnapshot?.hubGold ?? (Run != null ? Run.Gold : 0);
+            Ui.CurrencyTag(Root, hub, true, kx + 10, y + 76);
+            int rx = kx + 10 + Mathf.Max(84, PixelFont.Measure($"{hub:#,##0} HUB GOLD", FontKind.DotGothic) + 16) + 8;
+            foreach (var id in (Run?.Relics ?? new System.Collections.Generic.List<string>()).Take(5))
+            {
+                if (!Database.Relics.TryGetValue(id, out var r)) continue;
+                Ui.Relic(Root, rx, y + 75, 18, r);
+                rx += 21;
+            }
+            Ui.Label(Root, PixelFont.Wrap("LEVELS, SKILLS, EQUIPMENT AND ITEMS FROM EARLIER CLEARS, PLUS OWNED RELICS.", w - 20), kx + 10, y + 102, Palette.Mist1, font: FontKind.Interface);
+
+            var menu = Root.gameObject.AddComponent<Menu>();
+            menu.Add(Ui.Button(Root, "Return to Main Menu", 320 - 80, 300, 160, () => Game.EndRun(), 24, style: ButtonStyle.Primary));
+            Ui.Label(Root, $"FROM THE MAIN MENU, START A NEW EXPEDITION INTO DUNGEON {act} OR LOAD A SAVE.", 320, 332, Palette.Mist2, Align.Center, font: FontKind.Interface);
         }
     }
 }

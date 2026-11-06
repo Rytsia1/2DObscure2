@@ -1,9 +1,9 @@
 # PROJECT HANDOFF & AGENT ONBOARDING CONTEXT
 **Project:** 2DObscure — 2D Turn-Based Roguelike RPG in Unity  
-**Updated:** 2026-11-05 (Character Creation to Hub Flow, 600 Starter Gold, 394 Passing Tests)  
+**Updated:** 2026-11-06 (Hub Music & Zoroa Boss Phase Transition Audio, 399 Passing Tests)  
 **Target Engine:** Unity 6000.3.16f1 (URP 2D, Pixel Perfect Camera)  
 **Primary Language:** C# (.NET Standard 2.1 / C# 9.0+)  
-**Test Suite Status:** **394 / 394 EditMode Tests Passing (100% Pass Rate, 0 Failures)**  
+**Test Suite Status:** **399 / 399 EditMode Tests Passing (100% Pass Rate, 0 Failures)**  
 **Working Tree State:** All changes uncommitted in working tree per `AGENTS.md` guidelines.
 
 ---
@@ -99,6 +99,59 @@ The core loop consists of assembling a 4-hero party, traversing 8 sequential dun
 4. **Test Suite Expansion:**
    - Added `NewGame_PartyConfirmation_Grants600StarterGold_AndInitializesSnapshot` and `CharacterCreation_EnterHubFromCreation_TransitionsToHubWith600Gold`, raising EditMode test count to 394 tests (100% pass rate).
 
+### Milestone E: UI Input System & Pointer Click Overhaul + HTML System Visual Alignment — Nov 2026
+1. **Camera Orthographic Size Fix (`Game.SetupCamera`):**
+   - Configured `cam.orthographic = true; cam.orthographicSize = Ui.Height * 0.5f;` (180f).
+   - Fixed the critical bug where Unity's default `orthographicSize = 5` squashed world mouse coordinates to $[-8.88, +8.88] \times [-5, +5]$, making it impossible for the mouse to hit buttons placed across $640 \times 360$ (world range $[-320, +320] \times [-180, +180]$).
+   - Set `PixelPerfectCamera.gridSnapping = PixelSnapping` for UI and SpriteRenderer compatibility.
+2. **Robust Viewport & Letterbox Mouse Coordinate Mapping (`Controls.MouseWorld`):**
+   - Implemented exact screen-to-world conversion that calculates the active 16:9 pixel-perfect viewport rectangle across any monitor aspect ratio or docked editor Game View window.
+   - Screen pixel coordinates map directly to $640 \times 360$ pixel coordinates and then into camera world space. Points in letterbox/pillarbox bars return `NaN`.
+3. **Universal Selectable Hit-Testing & Pointer Dispatcher (`Ui.cs`):**
+   - Registered all active `Selectable` buttons into `Selectable.All` on enable/disable.
+   - Added `UiPointerDispatcher`: a centralized controller that tracks mouse movement, updates button hover visuals and tooltips, and processes mouse clicks cleanly.
+   - Every single button created via `Ui.Button` is now 100% hoverable and clickable by mouse, whether it was added to a `Menu` or created standalone.
+   - Fixed multi-menu input competition: `Menu.ActiveMenu` ensures keyboard input only navigates the currently focused menu, while pointer clicks directly dispatch to the hit element.
+4. **Visual Alignment with `FELNA — UI System.html`:**
+   - **`HubScreen.cs` (Page 09 Geistwald City Hub):** Redesigned layout to faithfully match the HTML specification:
+     - Top Bar: `Hub · safe zone` subtitle, `GEISTWALD CITY` gold title, `Auto Saved · Hub` badge, `SAVE`, `LOAD`, `TITLE` buttons, and `HUB GOLD` coin badge.
+     - Left Navigation Panel ($170 \times 222$): Vertical facilities menu (`CHARACTER / PARTY`, `EQUIPMENT`, `INVENTORY`, `SHOP (ITEMS)`, `ARMORY (GEAR)`, `BLACKSMITH`, `TRAINING GROUND`, `TEMPLE (REVIVE)`, `MAGIC SHOP (RELICS)`, and `DUNGEON ENTRANCE >>`).
+     - Bottom-Left Panel ($170 \times 86$): Run Progress display with 8 Act boxes (cleared, current, locked) and failure reset notice.
+     - Bottom-Right Strip ($436 \times 86$): 4 Expedition Roster hero cards showing class code, level, and real-time HP/MP gauges.
+     - Center/Right Viewport: Full facility interactive panel for the active station.
+   - **`SaveScreens.cs` (Pages 40 & 41 Save/Load Game):**
+     - Top Bar with `< BACK` shortcut, title, Hub-only badge, and subtitle.
+     - Left column with AutoSave and 4 manual slot cards, all fully clickable.
+     - Right column with committed campaign summary panel and selected slot action area.
+   - **`CharacterStatusScreen.cs` & `SkillTreeScreen.cs`:**
+     - Connected tab buttons (`SKILLS`, `TALENTS`, hero switcher, skill nodes) into active selectables and menus.
+   - **Default Typography:** Set `Ui.Button`, `Ui.Label`, `Ui.Badge`, and `Ui.Header` defaults to `FontKind.DotGothic` (matching DotGothic16).
+5. **Verification & Regression Testing:**
+   - Recompiled and ran test suite via Unity MCP: **396 / 396 EditMode tests passing (100% pass rate, 0 failures)**.
+   - Added `[ExecuteAlways]` to `Selectable` to ensure seamless component registration during both EditMode unit tests and live PlayMode runtime.
+   - All changes maintained unstaged in working tree per `AGENTS.md` guidelines.
+
+### Milestone F: Hub Music & Zoroa Boss Phase Transition Audio System — Nov 2026
+1. **New Audio Assets Integration:**
+   - `A Haven at the World's End.ogg` (`MusicIds.Hub = "hub"`): Sanctuary Hub BGM, configured as 2D streaming Vorbis audio. Plays during `GameState.Hub` and persists uninterrupted across all hub sub-screens (`Party`, `HubShop`, `Armory`, `Blacksmith`, `Temple`, `MagicShop`).
+   - `Requiem The Harvester.ogg` (`MusicIds.ZoroaP1 = "zoroa_p1"`): Boss theme for Zoroa, The Harvester of Souls (Phase 1), registered in `MusicLibrary.asset` under `MusicCategory.Boss`.
+   - `The Soul Reaping.ogg` (`MusicIds.ZoroaP2 = "zoroa_p2"`): Escalated orchestral boss theme for Zoroa (Phase 2), registered in `MusicLibrary.asset` under `MusicCategory.Boss`.
+2. **5–7 Second Multi-Stage Phase Transition:**
+   - **Phase 1 HP Depleted:** Phase 1 music abruptly cuts out on the exact dramatic moment via `MusicManager.StopImmediately()`.
+   - **0–2s:** Deep low-frequency sub-bass impact (75Hz -> 38Hz exponential glide) and mystical soul energy sound (spectral shimmering FM wisps). Boss pulses with soul energy.
+   - **2–4s:** Ominous Gothic minor choir swell (A2-E3-A3-C4-E4 with vocal vowel formants) rising toward crescendo.
+   - **4–5.5s:** Ascending strings glissando (2-octave rise) and aggressive saturated brass rasp building overwhelming tension.
+   - **5.5–7s:** Full orchestra enters Phase 2! `MusicManager.Play(MusicIds.ZoroaP2)` triggers `The Soul Reaping.ogg` with full orchestral power.
+3. **Audio Synthesis & Resource Baking (`Sfx.cs`):**
+   - Synthesized procedural audio generator `Sfx.GenerateZoroaPhaseTransitionSamples()` producing 264,600 samples (6.0s at 44.1 kHz, RMS calibrated across all 4 stages without clipping).
+   - Pre-baked resource asset at `Assets/Resources/Sfx/zoroa_phase_transition.wav` with automatic procedural synthesis fallback in `Sfx.GetZoroaPhaseTransitionClip()`.
+4. **Combat Orchestration (`Battle.cs` & `CombatScreen.cs`):**
+   - Added `Battle.BossPhaseTransitioning` event triggered when `TryAdvancePhase(Combatant)` is invoked.
+   - Handled in `CombatScreen.RunBossPhaseTransition(Combatant)` across both attack execution and turn-start DoTs, giving the player full audiovisual presentation of Zoroa's ascension before Phase 2 combat resumes.
+5. **Test Suite Expansion (`MusicTests.cs`):**
+   - Expanded to 14 comprehensive automated tests covering all 8 music tracks, hub state routing, encounter defaults, abrupt stopping, audio synthesis waveforms/RMS stages, and event firing.
+   - EditMode test suite raised to **399 passing tests (100% pass rate, 0 failures)**.
+
 ---
 
 ## 3. Directory Structure & Key Files
@@ -188,13 +241,13 @@ The test suite is verified directly inside the running Unity Editor using `Unity
 ```text
 ======================================================
 TEST RUN RESULT: PASSED (100% Pass Rate)
-Total Tests: 394
-Passed: 394
+Total Tests: 399
+Passed: 399
 Failed: 0
 Inconclusive: 0
 Skipped: 0
 ======================================================
-All 394 EditMode tests in 2DObscure passed with 0 failures!
+All 399 EditMode tests in 2DObscure passed with 0 failures!
 ```
 
 ---

@@ -292,6 +292,63 @@ namespace Obscure
         }
 
         // Square chip for tags, status, rarity and stats: 1px border on a dark fill.
+        // Consumable / material icons (.pi placeholders) tinted with one color; gear uses Art.GearIcon.
+        static readonly Dictionary<string, string[]> ItemIconRows = new Dictionary<string, string[]>
+        {
+            ["potion"] = new[] { "...####...", "....##....", "....##....", "..######..", ".########.", ".########.", ".########.", "..######.." },
+            ["scroll"] = new[] { "##########", ".########.", ".########.", ".########.", ".########.", ".########.", ".########.", "##########" },
+            ["ore"]    = new[] { "...###....", "..######..", ".########.", "##########", ".########.", "..######.." },
+            ["herb"]   = new[] { "....##....", "...####...", "..######..", ".###..###.", "..######..", "....##....", "....##....", "....##...." },
+        };
+
+        public static Sprite ItemIcon(string kind, Color color)
+        {
+            if (!ItemIconRows.TryGetValue(kind ?? "", out var rows)) rows = ItemIconRows["scroll"];
+            var key = ("item_icon", kind, color);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            int w = rows[0].Length, h = rows.Length;
+            var px = new Color32[w * h];
+            for (int r = 0; r < h; r++)
+                for (int x = 0; x < w; x++)
+                    px[(h - 1 - r) * w + x] = rows[r][x] == '#' ? (Color32)color : default;
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "item_icon");
+        }
+
+        // Relic frame (.relic): octagon, never square like gear. Optional inner diamond; dashed edge for empty slots.
+        public static Sprite Octagon(int size, Color fill, Color border, bool dashed = false)
+        {
+            var key = ("octagon", size, fill, border, dashed);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            int cut = Mathf.Max(2, size / 4), r = size / 2;
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    int dx = Mathf.Min(x, size - 1 - x), dy = Mathf.Min(y, size - 1 - y);
+                    if (dx + dy < cut) continue; // outside the cut corners
+                    bool edge = dx == 0 || dy == 0 || dx + dy == cut;
+                    bool diamond = Mathf.Abs(x - r) + Mathf.Abs(y - r) == r - cut / 2;
+                    if (edge) px[y * size + x] = dashed && ((x + y) / 2) % 2 == 1 ? fill : border;
+                    else px[y * size + x] = diamond ? Color.Lerp(fill, border, 0.55f) : fill;
+                }
+            return Cache[key] = SpriteFrom(px, size, size, TopLeft, "octagon");
+        }
+
+        // Dashed 1px frame (.tag.temp / .tag.cond / locked & upcoming states): 2 on, 2 off.
+        public static Sprite DashedBadge(int w, int h, Color fill, Color border)
+        {
+            var key = ("badge_dashed", w, h, fill, border);
+            if (Cache.TryGetValue(key, out var s) && s != null) return s;
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    bool edge = x == 0 || x == w - 1 || y == 0 || y == h - 1;
+                    px[y * w + x] = edge ? (((x + y) / 2) % 2 == 0 ? border : fill) : fill;
+                }
+            return Cache[key] = SpriteFrom(px, w, h, TopLeft, "badge_dashed");
+        }
+
         public static Sprite Badge(int w, int h, Color fill, Color border)
         {
             var key = ("badge_reliquary", w, h, fill, border);

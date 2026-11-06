@@ -70,6 +70,7 @@ namespace Obscure
         string turnText = "";
         BattleAction chosen;
         Qte activeQte;
+        Combatant pendingPhaseTransitionBoss;
         readonly System.Random qteRng = new System.Random();
 
         static Vector2Int[] EnemySlots(int count) => count switch
@@ -118,6 +119,7 @@ namespace Obscure
                 logLabels.Add(Ui.Label(dossierPanel, "", DossierX + 6, ConsoleY + 8 + i * 17, Palette.WarmIvory));
 
             battle.Logged += AddLog;
+            battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
             AddLog(encounter.tier == Tier.Boss ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
         }
@@ -359,6 +361,12 @@ namespace Obscure
             {
                 var c = Battle.NextTurn();
                 Refresh();
+                if (pendingPhaseTransitionBoss != null)
+                {
+                    var boss = pendingPhaseTransitionBoss;
+                    pendingPhaseTransitionBoss = null;
+                    yield return RunBossPhaseTransition(boss);
+                }
                 if (c == null) { yield return null; continue; }
 
                 if (c.IsEnemy)
@@ -432,7 +440,69 @@ namespace Obscure
             HideDossier();
             foreach (var h in Battle.Perform(action, power, defense)) Feedback(h);
             Refresh();
-            yield return new WaitForSeconds(AfterAction);
+            if (pendingPhaseTransitionBoss != null)
+            {
+                var boss = pendingPhaseTransitionBoss;
+                pendingPhaseTransitionBoss = null;
+                yield return RunBossPhaseTransition(boss);
+            }
+            else
+            {
+                yield return new WaitForSeconds(AfterAction);
+            }
+        }
+
+        // Special 5-7s Zoroa Phase 1 -> Phase 2 transition sequence
+        IEnumerator RunBossPhaseTransition(Combatant boss)
+        {
+            ClearPhase();
+            HideDossier();
+
+            // Phase 1 HP habis: Musik berhenti mendadak pada titik dramatis
+            MusicManager.I?.StopImmediately();
+
+            Hint(boss.enemy?.phase2Text ?? $"{boss.name.ToUpperInvariant()}'S FIRST SOUL-SHELL SHATTERS!");
+            var hud = huds.TryGetValue(boss, out var h) ? h : null;
+            if (hud != null)
+            {
+                hud.phase = boss.phase;
+                StartCoroutine(Flash(hud, boss));
+            }
+
+            // Start 5-7s transition audio (0-2s impact & soul energy -> 2-4s choir swell -> 4-5s rising strings/brass -> 5-7s Phase 2 full orchestra)
+            MusicManager.I?.PlayZoroaPhaseTransition(() =>
+            {
+                Hint($"{boss.name.ToUpperInvariant()} AWAKENS — THE SOUL REAPING (PHASE 2)!");
+                Refresh();
+            });
+
+            // 0–2 detik: Low-frequency impact dan suara energi jiwa
+            for (float t = 0f; t < 2.0f; t += 0.2f)
+            {
+                if (hud != null) hud.sprite.color = Color.Lerp(Color.white, Palette.CrimsonBright, Mathf.PingPong(t * 3f, 1f));
+                yield return new WaitForSeconds(0.2f);
+            }
+
+            // 2–4 detik: Choir mulai meningkat
+            Hint("THE CHOIR OF LOST SOULS AWAKENS...");
+            for (float t = 0f; t < 2.0f; t += 0.2f)
+            {
+                if (hud != null) hud.sprite.color = Color.Lerp(Palette.CrimsonBright, Palette.Gold2, Mathf.PingPong(t * 2f, 1f));
+                yield return new WaitForSeconds(0.2f);
+            }
+
+            // 4–5.5 detik: Rising strings dan brass
+            Hint("THE HARVESTER RISES ANEW — ASCENSION IMMINENT!");
+            for (float t = 0f; t < 1.6f; t += 0.2f)
+            {
+                if (hud != null) hud.sprite.color = Color.Lerp(Color.white, Palette.CrimsonBright, Mathf.PingPong(t * 5f, 1f));
+                yield return new WaitForSeconds(0.2f);
+            }
+
+            // 5–7 detik: Full orchestra masuk ke Phase 2
+            if (hud != null) hud.sprite.color = Color.white;
+            Refresh();
+            yield return new WaitForSeconds(0.4f);
         }
 
         static QteAssist Assist => Game.I != null ? Game.I.Settings.Assist : QteAssist.Standard;

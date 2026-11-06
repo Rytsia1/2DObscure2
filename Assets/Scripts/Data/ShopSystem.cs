@@ -281,6 +281,29 @@ namespace Obscure
             return true;
         }
 
+        // Temple Recovery (UI System V1): full HP and MP for a living character, clears debuffs.
+        public const int TempleRecoveryCost = 300;
+
+        public static bool TryTempleRecovery(RunState run, Unit unit, out string error)
+        {
+            if (run == null) { error = "RunState is null."; return false; }
+            if (unit == null) { error = "Target unit is null."; return false; }
+            if (!unit.Alive) { error = $"{unit.name} must be revived before Recovery."; return false; }
+            if (run.Gold < TempleRecoveryCost)
+            {
+                error = $"Not enough Gold. Recovery requires {TempleRecoveryCost} Gold, but party only has {run.Gold} Gold.";
+                return false;
+            }
+
+            run.Gold -= TempleRecoveryCost;
+            unit.temporaryModifiers.Clear();
+            unit.RecalculateStats();
+            unit.hp = unit.stats.maxHp;
+            unit.mp = unit.stats.maxMp;
+            error = null;
+            return true;
+        }
+
         public static bool TryUseReviveItemOutOfCombat(RunState run, Unit target, out string error)
         {
             if (run == null) { error = "RunState is null."; return false; }

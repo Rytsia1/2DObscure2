@@ -166,7 +166,7 @@ namespace Obscure
             new EncounterDef { id = "d1_e7", name = "Ossuary Threshold", tier = Tier.Elite, minFloor = 2, focus = "Telegraph, charge, Heavy, Break interrupt",
                 enemies = new[] { "royal_ossuary_knight" }, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_boss", name = "Zoroa", tier = Tier.Boss, focus = "Signature multi-hit, resources, Break timing, Phase 2 escalation",
-                enemies = new[] { "zoroa_p1" }, music = MusicIds.Battle3 }, // Phase 2 replaces Phase 1; never spawned alongside it
+                enemies = new[] { "zoroa_p1" }, music = MusicIds.ZoroaP1 }, // Phase 2 replaces Phase 1; never spawned alongside it
         };
     }
 }

@@ -16,6 +16,8 @@ namespace Obscure
         public const string UiClickResourcePath = "Sfx/ui_click";
         public const float UiConfirmDuration = 0.6f;
         public const string UiConfirmResourcePath = "Sfx/ui_confirm";
+        public const float ZoroaPhaseTransitionDuration = 6.0f;
+        public const string ZoroaTransitionResourcePath = "Sfx/zoroa_phase_transition";
 
         static AudioSource source;
         static readonly Dictionary<Sound, AudioClip> Clips = new Dictionary<Sound, AudioClip>();
@@ -268,6 +270,135 @@ namespace Obscure
             var clip = AudioClip.Create("sfx", data.Length, 1, Rate, false);
             clip.SetData(data, 0);
             return clip;
+        }
+
+        public static AudioClip GetZoroaPhaseTransitionClip()
+        {
+            var asset = Resources.Load<AudioClip>(ZoroaTransitionResourcePath);
+            return asset != null ? asset : SynthesizeZoroaPhaseTransition();
+        }
+
+        public static AudioClip SynthesizeZoroaPhaseTransition()
+        {
+            var data = GenerateZoroaPhaseTransitionSamples();
+            var clip = AudioClip.Create("zoroa_phase_transition", data.Length, 1, Rate, false);
+            clip.SetData(data, 0);
+            return clip;
+        }
+
+        public static float[] GenerateZoroaPhaseTransitionSamples()
+        {
+            int count = Mathf.RoundToInt(ZoroaPhaseTransitionDuration * Rate); // 264,600 samples (6.0s at 44.1 kHz)
+            var samples = new float[count];
+            const float twoPi = Mathf.PI * 2f;
+
+            float SmoothStep(float edge0, float edge1, float x)
+            {
+                float val = Mathf.Clamp01((x - edge0) / (edge1 - edge0));
+                return val * val * (3f - 2f * val);
+            }
+
+            float ChoirVoice(float t, float baseHz)
+            {
+                float vib = 1f + 0.008f * Mathf.Sin(twoPi * 5.2f * t);
+                float f = baseHz * vib;
+                return 0.28f * Mathf.Sin(twoPi * f * t) +
+                       0.22f * Mathf.Sin(twoPi * 2f * f * t + 0.3f) +
+                       0.18f * Mathf.Sin(twoPi * 3f * f * t + 0.7f) +
+                       0.12f * Mathf.Sin(twoPi * 4f * f * t + 1.2f) +
+                       0.08f * Mathf.Sin(twoPi * 5f * f * t + 1.8f) +
+                       0.14f * Mathf.Sin(twoPi * (f + 1.4f) * t + 0.5f) +
+                       0.14f * Mathf.Sin(twoPi * (f - 1.2f) * t + 1.1f);
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                float t = (float)i / Rate;
+                float s = 0f;
+
+                // 1. Stage 0.0s - 2.0s: Low-frequency impact & soul energy sound
+                if (t < 2.5f)
+                {
+                    float fSub = 36f + 44f * Mathf.Exp(-t / 0.35f);
+                    float impactEnv = Mathf.Exp(-t / 0.75f);
+                    float subBass = 0.50f * Mathf.Sin(twoPi * fSub * t) * impactEnv;
+                    float thump = 0.25f * Mathf.Sin(twoPi * 110f * t) * Mathf.Exp(-t / 0.09f);
+                    float rumble = 0.18f * Mathf.Sin(twoPi * 42f * t) * Mathf.Exp(-t / 1.6f);
+
+                    float soulEnv = (t < 0.1f ? t / 0.1f : 1f) * Mathf.Exp(-t / 2.0f);
+                    float soulMod = Mathf.Sin(twoPi * 3.8f * t);
+                    float wisp1 = 0.14f * Mathf.Sin(twoPi * (290f + 25f * soulMod) * t);
+                    float wisp2 = 0.11f * Mathf.Sin(twoPi * (435f - 20f * soulMod) * t + 0.8f);
+                    float wisp3 = 0.08f * Mathf.Sin(twoPi * (580f + 35f * soulMod) * t + 1.5f);
+                    float shimmer = 0.06f * Mathf.Sin(twoPi * (1480f + 50f * soulMod) * t) +
+                                    0.04f * Mathf.Sin(twoPi * (2240f - 30f * soulMod) * t);
+                    float soulSound = soulEnv * (wisp1 + wisp2 + wisp3 + shimmer);
+
+                    s += subBass + thump + rumble + soulSound;
+                }
+
+                // 2. Stage 2.0s - 4.0s: Choir begins swelling
+                if (t >= 1.6f && t <= 5.8f)
+                {
+                    float choirEnv;
+                    if (t < 3.8f) choirEnv = SmoothStep(1.6f, 3.8f, t);
+                    else if (t <= 5.2f) choirEnv = 1f;
+                    else choirEnv = SmoothStep(5.8f, 5.2f, t);
+
+                    float cChord = 0.28f * ChoirVoice(t, 110.0f) +   // A2
+                                   0.26f * ChoirVoice(t, 164.81f) +  // E3
+                                   0.24f * ChoirVoice(t, 220.0f) +   // A3
+                                   0.22f * ChoirVoice(t, 261.63f) +  // C4
+                                   0.20f * ChoirVoice(t, 329.63f);   // E4
+                    s += 0.70f * choirEnv * cChord;
+                }
+
+                // 3. Stage 4.0s - 5.5s+: Rising strings and brass
+                if (t >= 3.6f)
+                {
+                    float orchEnv;
+                    if (t < 5.5f) orchEnv = SmoothStep(3.6f, 5.5f, t);
+                    else if (t <= 5.8f) orchEnv = 1f;
+                    else orchEnv = SmoothStep(6.0f, 5.8f, t);
+
+                    // Rising strings: 2 octaves ascending glissando
+                    float strProgress = SmoothStep(3.6f, 5.5f, t);
+                    float strHz = 220f * Mathf.Pow(2f, strProgress * 2f);
+                    float strWave = Mathf.Sin(twoPi * strHz * t) +
+                                    0.55f * Mathf.Sin(twoPi * strHz * 2f * t + 0.4f) +
+                                    0.35f * Mathf.Sin(twoPi * strHz * 3f * t + 0.9f) +
+                                    0.25f * Mathf.Sin(twoPi * strHz * 4f * t + 1.3f) +
+                                    0.18f * Mathf.Sin(twoPi * (strHz + 1.8f) * t + 0.7f) +
+                                    0.18f * Mathf.Sin(twoPi * (strHz - 1.6f) * t + 1.2f);
+                    float tremolo = 0.85f + 0.15f * Mathf.Sin(twoPi * 12f * t);
+                    float strings = 0.28f * orchEnv * tremolo * strWave;
+
+                    // Rising brass: powerful rasp with harmonic saturation
+                    float brassF = 130.81f + strProgress * 34f;
+                    float brassWave = Mathf.Sin(twoPi * brassF * t) +
+                                      0.75f * Mathf.Sin(twoPi * brassF * 2f * t + 0.2f) +
+                                      0.50f * Mathf.Sin(twoPi * brassF * 3f * t + 0.6f) +
+                                      0.35f * Mathf.Sin(twoPi * brassF * 4f * t + 1.1f);
+                    float brassSat = (float)System.Math.Tanh(brassWave * (1.2f + 1.8f * orchEnv));
+                    float brass = 0.32f * orchEnv * brassSat;
+
+                    float swellNoise = Mathf.Sin(twoPi * 78f * t) * Mathf.Sin(twoPi * 38f * t);
+                    float timpani = 0.20f * orchEnv * swellNoise;
+
+                    s += strings + brass + timpani;
+                }
+
+                // Clean cosine window at the end
+                if (t > 5.92f)
+                {
+                    float u = Mathf.Clamp01((t - 5.92f) / 0.08f);
+                    s *= 0.5f * (1f + Mathf.Cos(Mathf.PI * u));
+                }
+
+                samples[i] = Mathf.Clamp(s, -0.95f, 0.95f);
+            }
+
+            return samples;
         }
     }
 }

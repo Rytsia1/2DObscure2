@@ -45,7 +45,8 @@ namespace Obscure.Editor
         {
             AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
             UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
-            Debug.Log("Requested script compilation and AssetDatabase refresh...");
+            UnityEditor.EditorUtility.RequestScriptReload();
+            Debug.Log("Requested script compilation, reload, and AssetDatabase refresh...");
         }
 
         [MenuItem("Tools/Run All Tests")]

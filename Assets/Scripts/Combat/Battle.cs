@@ -14,6 +14,7 @@ namespace Obscure
         public readonly Random Rng;
         public readonly List<string> Log = new List<string>();
         public event Action<string> Logged;
+        public event Action<Combatant> BossPhaseTransitioning;
 
         public int Round { get; private set; }
         public readonly int Dungeon; // drives enemy stat scaling (Bab 10 §7)
@@ -794,6 +795,7 @@ namespace Obscure
         {
             if (t.Alive || t.enemy?.nextPhase == null || !Database.Enemies.TryGetValue(t.enemy.nextPhase, out var next)) return false;
             string text = t.enemy.phase2Text;
+            BossPhaseTransitioning?.Invoke(t);
             t.AdvanceToPhase(next, Dungeon);
             Say(text ?? $"{t.name} enters phase {t.phase}!");
             return true;

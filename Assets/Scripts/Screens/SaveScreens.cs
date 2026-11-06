@@ -70,8 +70,11 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
 
-            Ui.Label(Root, "SANCTUARY HUB — SAVE CAMPAIGN", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
-            Ui.Divider(Root, 100, 36, 440, Palette.DarkBorder, Palette.AntiqueGoldBright);
+            Ui.Button(Root, "< BACK", 16, 10, 56, () => Game.Go(GameState.Hub), 20, style: ButtonStyle.Slab, showCursor: false);
+            Ui.Label(Root, "SAVE GAME", 80, 12, Palette.AntiqueGoldBright, Align.Left, 2, FontKind.DotGothic);
+            Ui.Badge(Root, "HUB ONLY", 210, 12, 70, 18, Palette.Hex(0x131826), Palette.Gold3, Palette.Gold2);
+            Ui.Label(Root, "Saves progress committed by your last Dungeon Clear", 290, 15, Palette.Mist2, font: FontKind.DotGothic);
+            Ui.Divider(Root, 16, 36, 608, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
             // Left column (x: 20): AutoSave + Slot 1 + Slot 2
             RenderSlotCard(SaveSlotId.AutoSave, 20, 46);
@@ -278,8 +281,11 @@ namespace Obscure
         {
             Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
 
-            Ui.Label(Root, "LOAD CAMPAIGN PROGRESS", 320, 14, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
-            Ui.Divider(Root, 100, 36, 440, Palette.DarkBorder, Palette.AntiqueGoldBright);
+            Ui.Button(Root, "< BACK", 16, 10, 56, () => Game.Go(returnState), 20, style: ButtonStyle.Slab, showCursor: false);
+            Ui.Label(Root, "LOAD GAME", 80, 12, Palette.AntiqueGoldBright, Align.Left, 2, FontKind.DotGothic);
+            Ui.Badge(Root, "RESTORES CAMPAIGN", 210, 12, 116, 18, Palette.Hex(0x131826), Palette.Gold3, Palette.Gold2);
+            Ui.Label(Root, "Restores your campaign and returns to the Sanctuary Hub", 336, 15, Palette.Mist2, font: FontKind.DotGothic);
+            Ui.Divider(Root, 16, 36, 608, Palette.DarkBorder, Palette.AntiqueGoldBright);
 
             // Left column: AutoSave + Slot 1 + Slot 2
             RenderSlotCard(SaveSlotId.AutoSave, 20, 46);
@@ -321,17 +327,14 @@ namespace Obscure
 
             Ui.Panel(cardGo.transform, x, y, 290, 56, fillColor, borderColor);
 
-            if (meta.isOccupied)
+            var btn = Ui.Button(cardGo.transform, "", x, y, 290, () =>
             {
-                var btn = Ui.Button(cardGo.transform, "", x, y, 290, () =>
-                {
-                    selectedSlot = slot;
-                    RefreshCards();
-                    RefreshActionArea();
-                }, 56, showCursor: false);
-                var menu = Root.gameObject.GetComponent<Menu>() ?? Root.gameObject.AddComponent<Menu>();
-                menu.Add(btn);
-            }
+                selectedSlot = slot;
+                RefreshCards();
+                RefreshActionArea();
+            }, 56, showCursor: false);
+            var menu = Root.gameObject.GetComponent<Menu>() ?? Root.gameObject.AddComponent<Menu>();
+            menu.Add(btn);
 
             string slotName = SaveSlotMetadata.FormatSlotName(slot);
             if (slot == SaveSlotId.AutoSave) slotName += " [SYSTEM]";
