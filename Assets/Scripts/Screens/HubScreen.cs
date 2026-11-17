@@ -18,10 +18,14 @@ namespace Obscure
 
         protected override void Build()
         {
-            // Auto-save on Hub arrival if not already auto-saved
+            // Auto-save on Hub arrival if not already auto-saved or returning from dungeon map
             if (Run != null && PersistenceCommitHandler.ActiveCommittedSnapshot == null)
             {
                 PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(Run));
+                SaveManager.AutoSave(out _);
+            }
+            else if (Run != null && Game?.PreviousState == GameState.Map)
+            {
                 SaveManager.AutoSave(out _);
             }
 
@@ -84,12 +88,12 @@ namespace Obscure
             Ui.Label(Root, "Geistwald City", 14, 19, Palette.Gold2);
 
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Mathf.Max(84, PixelFont.Measure($"{gold:#,##0} HUB GOLD", FontKind.DotGothic) + 16);
+            int gw = Ui.CurrencyTagWidth(gold, true);
             int x = 626 - gw;
             Ui.CurrencyTag(Root, gold, true, x, 11);
 
             x -= 6 + 66;
-            Ui.Button(Root, "Main Menu", x, 11, 66, OnTitleClicked, 18, showCursor: false, style: ButtonStyle.Flat);
+            Ui.Button(Root, "Main Menu", x, 11, 66, OnTitleClicked, 18, showCursor: false);
             x -= 4 + 40;
             Ui.Button(Root, "Load", x, 11, 40, () => Game.Go(GameState.Load), 18, showCursor: false);
             x -= 4 + 40;
@@ -98,7 +102,7 @@ namespace Obscure
             var auto = SaveManager.GetSlotMetadata(SaveSlotId.AutoSave);
             string when = auto != null && auto.isOccupied && auto.lastSavedTicks > 0 ? new DateTime(auto.lastSavedTicks).ToString("HH:mm") : "HUB";
             string tag = $"AUTO SAVED · {when}";
-            Ui.Tag(Root, tag, x - 8 - PixelFont.Measure(tag) - 8, 14, TagKind.Keep, 13);
+            Ui.Tag(Root, tag, x - 8 - PixelFont.Measure(tag, FontKind.Interface) - 8, 14, TagKind.Keep, 13);
         }
 
         // ------------------------------------------------------- facility menu
@@ -159,14 +163,14 @@ namespace Obscure
             if (note != null) Ui.Label(b.transform, note, w - 4, 6, Palette.Mist2, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
             if (buff != null)
             {
-                int bw = PixelFont.Measure(buff) + 12;
+                int bw = PixelFont.Measure(buff, FontKind.Interface) + 12;
                 Ui.Image(b.transform, PixelArt.Badge(bw, 12, Palette.Ink0, Palette.Hex(0x3B9A67)), w - 4 - bw, 3, Ui.Widget + 1);
                 Ui.Image(b.transform, PixelArt.Diamond(5, Palette.Hex(0x9AF0BF)), w - bw, 6, Ui.Widget + 2);
                 Ui.Label(b.transform, buff, w - 4 - bw + 9, 5, Palette.Hex(0x9AF0BF), order: Ui.Widget + 2, font: FontKind.Interface);
             }
             if (danger != null)
             {
-                int dw = PixelFont.Measure(danger) + 8;
+                int dw = PixelFont.Measure(danger, FontKind.Interface) + 8;
                 Ui.Image(b.transform, PixelArt.Badge(dw, 12, Palette.Hex(0x3A1418), Palette.Err), w - 4 - dw, 3, Ui.Widget + 1);
                 Ui.Label(b.transform, danger, w - dw, 5, Palette.Hex(0xFFD2CC), order: Ui.Widget + 2, font: FontKind.Interface);
             }
@@ -176,9 +180,10 @@ namespace Obscure
         void ShowTip(Selectable s)
         {
             if (tipBox == null || s == null) return;
-            string body = PixelFont.Wrap(s.tooltip ?? "", 106);
+            int w = Mathf.Max(118, PixelFont.Measure(s.name) + 14);
+            string body = PixelFont.Wrap(s.tooltip ?? "", w - 12, FontKind.Interface);
             int h = 22 + (body.Count(c => c == '\n') + 1) * PixelFont.LineHeight;
-            tipBox.sprite = PixelArt.Box(118, h, Palette.Ink2, Palette.Gold3);
+            tipBox.sprite = PixelArt.Box(w, h, Palette.Ink2, Palette.Gold3);
             tipTitle.Set(s.name);
             tipText.Set(body);
         }
@@ -192,7 +197,7 @@ namespace Obscure
             int act = Run != null ? Run.Act : 1;
             int cleared = Math.Clamp(act - 1, 0, 8);
             Ui.Label(Root, "RUN PROGRESS", x + 7, y + 7, Palette.Mist3, font: FontKind.Interface);
-            Ui.Label(Root, $"{cleared} / 8 cleared", x + w - 7, y + 5, Palette.Gold2, Align.Right);
+            Ui.Label(Root, $"{cleared}/8 CLEARED", x + w - 7, y + 7, Palette.Gold2, Align.Right, font: FontKind.Interface);
             int bw = (w - 14 - 7 * 2) / 8;
             for (int i = 1; i <= 8; i++)
             {
@@ -204,7 +209,7 @@ namespace Obscure
                 Ui.Image(Root, sprite, bx, by, Ui.Widget);
                 Ui.Label(Root, i.ToString(), bx + bw / 2, by + 2, done ? Palette.Mist2 : now ? Palette.Gold1 : Palette.Ink5, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
             }
-            Ui.Label(Root, "PROGRESS RESETS IF THE PARTY FALLS.", x + 7, y + 36, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(Root, "A WIPE RESETS RUN PROGRESS.", x + 7, y + 36, Palette.Mist2, font: FontKind.Interface);
             Ui.Label(Root, "EQUIPMENT IS ALWAYS KEPT.", x + 7, y + 45, Palette.Mist2, font: FontKind.Interface);
         }
 

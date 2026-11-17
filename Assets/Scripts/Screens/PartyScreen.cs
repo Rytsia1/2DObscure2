@@ -55,7 +55,7 @@ namespace Obscure
             string size = party.Count >= CharacterRoster.PartySize ? $"{party.Count} / 4 · PARTY FULL" : $"{party.Count} / 4";
             Ui.Tag(page, size, Left + PixelFont.Measure("Party", FontKind.DotGothic) + 10, 13, TagKind.Keep, 13);
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Mathf.Max(84, PixelFont.Measure($"{gold:#,##0} HUB GOLD", FontKind.DotGothic) + 16);
+            int gw = Ui.CurrencyTagWidth(gold, true);
             Ui.CurrencyTag(page, gold, true, RightEdge - gw, 10);
 
             // Member cards
@@ -90,7 +90,7 @@ namespace Obscure
             foreach (var role in party.Select(u => u.classDef?.role).Where(r => !string.IsNullOrEmpty(r)).Distinct())
             {
                 string t = PixelFont.Fit(role.ToUpperInvariant(), colW - 12);
-                int w = PixelFont.Measure(t) + 8;
+                int w = PixelFont.Measure(t, FontKind.Interface) + 8;
                 if (tx + w > cx + colW - 6) { tx = cx; ty += 14; }
                 tx += Ui.Tag(page, t, tx, ty) + 3;
             }
@@ -112,7 +112,7 @@ namespace Obscure
             Ui.Label(page, "NEEDS ATTENTION", cx, cy, Palette.Mist3, font: FontKind.Interface);
             var ko = party.Where(u => !u.Alive).Select(u => u.name).ToList();
             string note = ko.Count == 0 ? "ALL MEMBERS READY." : $"{string.Join(", ", ko)} {(ko.Count == 1 ? "IS" : "ARE")} KO — REVIVE AT THE TEMPLE BEFORE ENTERING A DUNGEON.";
-            Ui.Label(page, PixelFont.Wrap(note.ToUpperInvariant(), colW - 8), cx, cy + 12, ko.Count == 0 ? Palette.Ok : Palette.Err, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap(note.ToUpperInvariant(), colW - 8, FontKind.Interface), cx, cy + 12, ko.Count == 0 ? Palette.Ok : Palette.Err, font: FontKind.Interface);
 
             // Footer
             menu.Add(Ui.Button(page, "Back", Left, FooterY, 52, () => Game?.Go(BackTo), 22, showCursor: false));
@@ -144,7 +144,7 @@ namespace Obscure
             if (!u.Alive)
             {
                 const string ko = "KO · INCAPACITATED";
-                int kw = PixelFont.Measure(ko) + 8;
+                int kw = PixelFont.Measure(ko, FontKind.Interface) + 8;
                 Ui.Image(t, PixelArt.Badge(kw, 12, Palette.Hex(0x3A1418), Palette.Err), (w - kw) / 2, 46, Ui.Widget + 3);
                 Ui.Label(t, ko, (w - kw) / 2 + 4, 49, Palette.Hex(0xFFD2CC), order: Ui.Widget + 4, font: FontKind.Interface);
             }

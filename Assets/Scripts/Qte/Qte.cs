@@ -224,13 +224,15 @@ namespace Obscure
         // Heals, buffs, debuffs without direct damage do NOT use QTE.
         public static Qte Offense(BattleAction a, Tier tier, QteAssist assist, Random rng)
         {
-            bool timing = a.kind == ActionKind.Attack || (a.kind == ActionKind.Skill && a.skill.kind == SkillKind.Physical);
-            bool typing = a.kind == ActionKind.Skill && a.skill.kind == SkillKind.Magic && a.skill.word != null;
-            if (!timing && !typing) return null;
+            bool hasDirectDamage = a.kind == ActionKind.Attack
+                || (a.kind == ActionKind.Skill && a.skill != null && (a.skill.kind == SkillKind.Physical || (a.skill.kind == SkillKind.Magic && (a.skill.power > 0f || a.skill.HasDamageSystemComponents))));
+            if (!hasDirectDamage) return null;
+
+            bool typing = a.kind == ActionKind.Skill && a.skill.kind == SkillKind.Magic && !string.IsNullOrEmpty(a.skill.word);
             if (assist == QteAssist.Auto) return new AutoQte();
             var profile = QteConfig.For(tier, assist);
             float windowBonus = a.actor != null ? a.actor.unit.Derived.QteTimingBonusFraction : 0f;
-            return timing ? TimingQte.Random(profile, rng, windowBonus) : (Qte)TypingQte.For(a.skill, profile, rng);
+            return typing ? (Qte)TypingQte.For(a.skill, profile, rng) : TimingQte.Random(profile, rng, windowBonus);
         }
 
         // Enemy hits: reaction QTE at the attacker's tier. Self stances need none (null).

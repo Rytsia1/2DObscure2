@@ -69,10 +69,22 @@ namespace Obscure
                     if (Database.Passives.ContainsKey(sid)) skillLoadout.UnlockPassive(sid);
                 }
             }
-            if (d.activeSkillLoadout != null)
+            if (d.activeSkillLoadout != null && d.activeSkillLoadout.Length > 0)
             {
                 for (int i = 0; i < Math.Min(SkillLoadout.ActiveSlotCount, d.activeSkillLoadout.Length); i++)
                     skillLoadout.activeSlots[i] = d.activeSkillLoadout[i];
+            }
+            else if (d.skills != null && d.skills.Length > 0)
+            {
+                Array.Clear(skillLoadout.activeSlots, 0, SkillLoadout.ActiveSlotCount);
+                for (int i = 0; i < Math.Min(SkillLoadout.ActiveSlotCount, d.skills.Length); i++)
+                {
+                    if (!string.IsNullOrEmpty(d.skills[i]) && Database.Skills.ContainsKey(d.skills[i]))
+                    {
+                        skillLoadout.UnlockActive(d.skills[i]);
+                        skillLoadout.activeSlots[i] = d.skills[i];
+                    }
+                }
             }
             if (d.passiveSkillLoadout != null)
             {
@@ -319,6 +331,13 @@ namespace Obscure
         public bool HasActiveSkill(string skillId) =>
             !string.IsNullOrEmpty(skillId) &&
             ((skills != null && skills.Contains(skillId)) || skillLoadout.activeSlots.Contains(skillId));
+
+        public string[] GetCombatActiveSkillIds()
+        {
+            var equippedActives = skillLoadout != null ? skillLoadout.GetEquippedActives() : Array.Empty<string>();
+            if (equippedActives.Length > 0) return equippedActives;
+            return skills != null ? skills.Where(id => !string.IsNullOrEmpty(id) && Database.Skills.ContainsKey(id)).ToArray() : Array.Empty<string>();
+        }
 
         public string ExplainAbility(Ability a)
         {
@@ -1008,39 +1027,7 @@ namespace Obscure
             if (data.party != null)
             {
                 for (int i = 0; i < Math.Min(Party.Count, data.party.Length); i++)
-                {
-                    var sc = data.party[i];
-                    var u = Party[i];
-                    u.level = Math.Max(1, sc.level);
-                    u.selectedTalentIds.Clear();
-                    if (sc.selectedTalents != null)
-                    {
-                        foreach (var tid in sc.selectedTalents)
-                            if (!string.IsNullOrEmpty(tid) && !u.selectedTalentIds.Contains(tid))
-                                u.selectedTalentIds.Add(tid);
-                    }
-                    u.unspentAsiPoints = sc.unspentAsiPoints;
-                    u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
-
-                    if (sc.equippedInstances != null && sc.equippedInstances.Length > 0)
-                    {
-                        u.equipped.Clear();
-                        u.equippedInstances.Clear();
-                        foreach (var eqData in sc.equippedInstances)
-                        {
-                            var inst = EquipmentInstance.FromSaveData(eqData);
-                            if (inst != null && eqData.slot >= 0)
-                            {
-                                var slot = (EquipmentSlot)eqData.slot;
-                                u.TryEquip(slot, inst, out _);
-                            }
-                        }
-                    }
-
-                    u.RecalculateStats(fillResources: true);
-                    if (sc.hp > 0) u.hp = Math.Min(u.stats.maxHp, sc.hp);
-                    if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);
-                }
+                    RestorePartyMember(Party[i], data.party[i]);
             }
 
             if (data.currentShopStock != null && data.currentShopStock.Length > 0)
@@ -1056,6 +1043,64 @@ namespace Obscure
             {
                 CurrentShop = EquipmentShopManager.GenerateShop(Act, Rng);
             }
+        }
+
+        static void RestorePartyMember(Unit u, SavedCharacterData sc)
+        {
+            if (u == null || sc == null) return;
+            u.level = Math.Max(1, sc.level);
+            u.selectedTalentIds.Clear();
+            if (sc.selectedTalents != null)
+            {
+                foreach (var tid in sc.selectedTalents)
+                    if (!string.IsNullOrEmpty(tid) && !u.selectedTalentIds.Contains(tid))
+                        u.selectedTalentIds.Add(tid);
+            }
+            u.unspentAsiPoints = sc.unspentAsiPoints;
+            u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
+
+            u.skillLoadout.InitializeForClass(u.classDef, u.level);
+            if (sc.unlockedSkills != null)
+            {
+                foreach (var sid in sc.unlockedSkills)
+                {
+                    if (Database.Skills.ContainsKey(sid)) u.skillLoadout.UnlockActive(sid);
+                    if (Database.Passives.ContainsKey(sid)) u.skillLoadout.UnlockPassive(sid);
+                }
+            }
+            if (sc.activeSkillLoadout != null && sc.activeSkillLoadout.Length > 0)
+            {
+                for (int j = 0; j < Math.Min(SkillLoadout.ActiveSlotCount, sc.activeSkillLoadout.Length); j++)
+                    u.skillLoadout.activeSlots[j] = sc.activeSkillLoadout[j];
+            }
+            if (sc.passiveSkillLoadout != null && sc.passiveSkillLoadout.Length > 0)
+            {
+                for (int j = 0; j < Math.Min(SkillLoadout.PassiveSlotCount, sc.passiveSkillLoadout.Length); j++)
+                    u.skillLoadout.passiveSlots[j] = sc.passiveSkillLoadout[j];
+                u.passives.Clear();
+                foreach (var pid in u.skillLoadout.GetEquippedPassives())
+                    if (Database.Passives.TryGetValue(pid, out var p) && !u.passives.Contains(p))
+                        u.passives.Add(p);
+            }
+
+            if (sc.equippedInstances != null && sc.equippedInstances.Length > 0)
+            {
+                u.equipped.Clear();
+                u.equippedInstances.Clear();
+                foreach (var eqData in sc.equippedInstances)
+                {
+                    var inst = EquipmentInstance.FromSaveData(eqData);
+                    if (inst != null && eqData.slot >= 0)
+                    {
+                        var slot = (EquipmentSlot)eqData.slot;
+                        u.TryEquip(slot, inst, out _);
+                    }
+                }
+            }
+
+            u.RecalculateStats(fillResources: true);
+            if (sc.hp > 0) u.hp = Math.Min(u.stats.maxHp, sc.hp);
+            if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);
         }
 
         public void RestoreFromCampaignSave(CampaignSaveData data)
@@ -1100,39 +1145,7 @@ namespace Obscure
             if (data.party != null)
             {
                 for (int i = 0; i < Math.Min(Party.Count, data.party.Length); i++)
-                {
-                    var sc = data.party[i];
-                    var u = Party[i];
-                    u.level = Math.Max(1, sc.level);
-                    u.selectedTalentIds.Clear();
-                    if (sc.selectedTalents != null)
-                    {
-                        foreach (var tid in sc.selectedTalents)
-                            if (!string.IsNullOrEmpty(tid) && !u.selectedTalentIds.Contains(tid))
-                                u.selectedTalentIds.Add(tid);
-                    }
-                    u.unspentAsiPoints = sc.unspentAsiPoints;
-                    u.abilities.permanentBonuses = sc.permanentAbilityBonuses;
-
-                    if (sc.equippedInstances != null && sc.equippedInstances.Length > 0)
-                    {
-                        u.equipped.Clear();
-                        u.equippedInstances.Clear();
-                        foreach (var eqData in sc.equippedInstances)
-                        {
-                            var inst = EquipmentInstance.FromSaveData(eqData);
-                            if (inst != null && eqData.slot >= 0)
-                            {
-                                var slot = (EquipmentSlot)eqData.slot;
-                                u.TryEquip(slot, inst, out _);
-                            }
-                        }
-                    }
-
-                    u.RecalculateStats(fillResources: true);
-                    if (sc.hp > 0) u.hp = Math.Min(u.stats.maxHp, sc.hp);
-                    if (sc.mp > 0) u.mp = Math.Min(u.stats.maxMp, sc.mp);
-                }
+                    RestorePartyMember(Party[i], data.party[i]);
             }
 
             if (data.hubArmoryStock != null && data.hubArmoryStock.Length > 0)

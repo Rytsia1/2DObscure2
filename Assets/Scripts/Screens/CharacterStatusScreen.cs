@@ -177,7 +177,7 @@ namespace Obscure
             Ui.Badge(page, "E", x + 2, 13, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
 
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Mathf.Max(84, PixelFont.Measure($"{gold:#,##0} HUB GOLD", FontKind.DotGothic) + 16);
+            int gw = Ui.CurrencyTagWidth(gold, true);
             Ui.CurrencyTag(page, gold, true, RightEdge - gw, 9);
         }
 
@@ -243,10 +243,10 @@ namespace Obscure
         void BarRow(int x, int y, int w, string label, float ratio, Color fill, string value, string max)
         {
             Ui.Label(page, label, x, y + 1, Palette.Mist3, font: FontKind.Interface);
-            int vw = PixelFont.Measure(value + max);
+            int vw = PixelFont.Measure(value + max, FontKind.Interface);
             Ui.Image(page, PixelArt.GaugeBar(w - 20 - vw - 6, 7, Mathf.Clamp01(ratio), fill), x + 14, y, Ui.Widget);
             Ui.Label(page, max, x + w, y + 1, Palette.Mist3, Align.Right, font: FontKind.Interface);
-            Ui.Label(page, value, x + w - PixelFont.Measure(max), y + 1, Palette.Mist1, Align.Right, font: FontKind.Interface);
+            Ui.Label(page, value, x + w - PixelFont.Measure(max, FontKind.Interface), y + 1, Palette.Mist1, Align.Right, font: FontKind.Interface);
         }
 
         // -------------------------------------------------------------------- tabs
@@ -326,7 +326,7 @@ namespace Obscure
             foreach (var st in OverviewDerived)
             {
                 var def = Database.DerivedStatDefs[st];
-                Ui.Label(page, PixelFont.Fit((def.displayName ?? def.shortName).ToUpperInvariant(), colW - 30), x1, y + 5, Palette.Mist2, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Fit((def.displayName ?? def.shortName).ToUpperInvariant(), colW - 30, FontKind.Interface), x1, y + 5, Palette.Mist2, font: FontKind.Interface);
                 Ui.Label(page, u.Derived.FormatValue(st), x1 + colW, y + 5, Palette.Mist1, Align.Right, font: FontKind.Interface);
                 Ui.Rect(page, x1, y + 16, colW, 1, Palette.Ink3, Ui.Panels + 2);
                 y += 18;
@@ -349,12 +349,12 @@ namespace Obscure
                 PartyScreen.ElementChip(page, el, ex, ey);
                 string pct = v == 0 ? "0%" : $"{(v > 0 ? "+" : "-")}{Mathf.RoundToInt(Mathf.Abs(v) * 100)}%";
                 Ui.Label(page, pct, ex + 17, ey + 3, v > 0 ? Palette.Ok : v < 0 ? Palette.Err : Palette.Mist1, font: FontKind.Interface);
-                if (note != "") Ui.Label(page, note, ex + 20 + PixelFont.Measure(pct), ey + 3, Palette.Mist3, font: FontKind.Interface);
+                if (note != "") Ui.Label(page, note, ex + 20 + PixelFont.Measure(pct, FontKind.Interface), ey + 3, Palette.Mist3, font: FontKind.Interface);
             }
 
             // Status effects
             H2(x0, row2, "Status Effects");
-            Ui.Label(page, PixelFont.Wrap("NONE ACTIVE. BUFFS AND DEBUFFS SHOW HERE DURING A DUNGEON RUN.", colW), x0, row2 + 18, Palette.Mist3, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap("NONE ACTIVE. BUFFS AND DEBUFFS SHOW HERE DURING A DUNGEON RUN.", colW, FontKind.Interface), x0, row2 + 18, Palette.Mist3, font: FontKind.Interface);
 
             // Equipment: 4x2 slots
             H2(x1, row2, "Equipment");
@@ -368,7 +368,7 @@ namespace Obscure
             }
             var empty = EquipmentSlots.All.Where(s => !u.equipped.TryGetValue(s, out var e) || e == null).Select(EquipmentSlots.DisplayName).ToList();
             string cap = $"{filled} / 8 SLOTS" + (empty.Count > 0 ? $" · {empty[0].ToUpperInvariant()} EMPTY" : "");
-            Ui.Label(page, PixelFont.Fit(cap, colW), x1, row2 + 66, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Fit(cap, colW, FontKind.Interface), x1, row2 + 66, Palette.Mist2, font: FontKind.Interface);
 
             // Skills: active squares, passive diamonds
             H2(x2, row2, "Skills");
@@ -461,7 +461,7 @@ namespace Obscure
                 int rx = x + (i / 8) * (colW + 10), ry = y0 + (i % 8) * 19;
                 var row = Ui.Button(page, "", rx, ry, colW, () => ShowTip(GetStatTooltip(st)), 17, showCursor: false, style: ButtonStyle.Flat);
                 row.tooltip = GetStatTooltip(st);
-                Ui.Label(row.transform, PixelFont.Fit((def.displayName ?? def.shortName).ToUpperInvariant(), colW - 40), 4, 5, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(row.transform, PixelFont.Fit((def.displayName ?? def.shortName).ToUpperInvariant(), colW - 40, FontKind.Interface), 4, 5, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
                 Ui.Label(row.transform, u.Derived.FormatValue(st), colW - 4, 5, Palette.Mist1, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
                 Ui.Rect(page, rx, ry + 17, colW, 1, Palette.Ink3, Ui.Panels + 2);
                 menu.Add(row);
@@ -473,7 +473,7 @@ namespace Obscure
         {
             int x = MainX + 10;
             H2(x, PanelY + 10, "Status Effects");
-            Ui.Label(page, PixelFont.Wrap("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.", MainW - 20), x, PanelY + 28, Palette.Mist3, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.", MainW - 20, FontKind.Interface), x, PanelY + 28, Palette.Mist3, font: FontKind.Interface);
         }
 
         // Fixed formula pane for the Attributes / Combat tabs (.tip without the arrow).

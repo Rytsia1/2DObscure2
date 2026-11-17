@@ -34,11 +34,12 @@ namespace Obscure
             {
                 case TimingQte t:
                     info.Set($"PRESS [{key}] IN THE GOLD ZONE");
-                    BuildTrack(t.target / t.Sweep, t.profile.good / t.Sweep, t.profile.perfect / t.Sweep, 1);
+                    BuildTrack(t.target / t.Sweep, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
                     break;
                 case DefenseQte d:
                     float speed = Impact / d.profile.windup;
-                    BuildTrack(Impact, d.profile.good * speed, d.profile.perfect * speed, d.Hits);
+                    float defScale = Mathf.Clamp(1f + d.TimingBonusFraction, 0.85f, 1.25f);
+                    BuildTrack(Impact, d.profile.good * speed * defScale, d.profile.perfect * speed * defScale, d.Hits);
                     break;
                 case TypingQte ty:
                     BuildTyping(ty);
@@ -65,6 +66,11 @@ namespace Obscure
         void Update()
         {
             if (qte == null) return;
+            if (keyboard == null && Keyboard.current != null)
+            {
+                keyboard = Keyboard.current;
+                keyboard.onTextInput += OnText;
+            }
             if (!qte.Done && Time.frameCount != bornFrame)
             {
                 qte.Tick(Time.unscaledDeltaTime);

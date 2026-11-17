@@ -19,7 +19,7 @@ namespace Obscure
             // Title block
             ResultArt.Ornament(Root, 320, 17, 260, Palette.Gold3);
             ResultArt.Title(Root, r.title.ToUpperInvariant(), 320, 30, Palette.Gold1);
-            Ui.Label(Root, PixelFont.Fit(r.text.ToUpperInvariant(), 560), 320, 74, Palette.Mist2, Align.Center, font: FontKind.Interface);
+            Ui.Label(Root, PixelFont.Fit(r.text.ToUpperInvariant(), 560, FontKind.Interface), 320, 74, Palette.Mist2, Align.Center, font: FontKind.Interface);
 
             // Rewards panel
             const int lx = 40, py = 100, pw = 270, ph = 196;
@@ -52,10 +52,10 @@ namespace Obscure
                 b.tooltip = detail.ToUpperInvariant();
                 PrizeIcon(b.transform, o);
                 Ui.Label(b.transform, PixelFont.Fit(label, pw - 110, FontKind.DotGothic), 32, 3, Palette.Mist1, order: Ui.Widget + 1);
-                Ui.Label(b.transform, PixelFont.Fit(detail.ToUpperInvariant(), pw - 110), 32, 17, Palette.Mist3, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(b.transform, PixelFont.Fit(detail.ToUpperInvariant(), pw - 110, FontKind.Interface), 32, 17, Palette.Mist3, order: Ui.Widget + 1, font: FontKind.Interface);
                 bool keep = o.kind == RewardKind.Relic;
                 string tag = keep ? "KEPT EVEN IF THE RUN FAILS" : "ADDED TO BAG";
-                Ui.Tag(b.transform, PixelFont.Fit(tag, 70), pw - 16 - PixelFont.Measure(PixelFont.Fit(tag, 70)) - 14, 8, keep ? TagKind.Keep : TagKind.Cls, 11, Ui.Widget + 1);
+                Ui.Tag(b.transform, PixelFont.Fit(tag, 70), pw - 16 - PixelFont.Measure(PixelFont.Fit(tag, 70), FontKind.Interface) - 14, 8, keep ? TagKind.Keep : TagKind.Cls, 11, Ui.Widget + 1);
                 menu.Add(b);
             }
 
@@ -100,7 +100,6 @@ namespace Obscure
             if (choice >= 0) Sfx.Play(Sound.Success);
             if (Run.Won)
             {
-                Run.TransferRunGoldToHub();
                 PersistenceCommitHandler.CommitDungeonClear(Run);
                 SaveManager.AutoSave(out _);
                 Game.Go(Run.Act >= 8 ? GameState.Victory : GameState.DungeonClear);
@@ -179,7 +178,7 @@ namespace Obscure
             int x = px + pw;
             foreach (var (t, k) in new[] { ($"{Run?.Relics.Count ?? 0} RELICS STAY", TagKind.Keep), ("MODIFIERS END HERE", TagKind.Temp), ("PROGRESS COMMITTED", TagKind.Keep) })
             {
-                int w = PixelFont.Measure(t) + 8;
+                int w = PixelFont.Measure(t, FontKind.Interface) + 8;
                 x -= w;
                 Ui.Tag(Root, t, x, 340, k);
                 x -= 4;

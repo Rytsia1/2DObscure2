@@ -65,7 +65,7 @@ namespace Obscure
             if (dirty > 0)
             {
                 string t = $"{dirty} UNSAVED CHANGE{(dirty > 1 ? "S" : "")}";
-                int w = PixelFont.Measure(t) + 18;
+                int w = PixelFont.Measure(t, FontKind.Interface) + 18;
                 Ui.Image(page, PixelArt.Badge(w, 14, Color.clear, Palette.Gold3), 628 - w, 11, Ui.Widget);
                 Ui.Rect(page, 628 - w + 5, 16, 4, 4, Palette.Gold1, Ui.Widget + 1);
                 Ui.Label(page, t, 628 - w + 13, 15, Palette.Gold1, order: Ui.Widget + 1, font: FontKind.Interface);
@@ -120,7 +120,7 @@ namespace Obscure
 
             // Footer
             Ui.Label(page, "LEAVING WITH UNSAVED CHANGES ASKS: APPLY · DISCARD.", 12, 333, Palette.Mist2, font: FontKind.Interface);
-            menu.Add(Ui.Button(page, "Reset to Default", 628 - 64 - 6 - 64 - 6 - 104, 327, 104, ResetDefaults, 22, showCursor: false, style: ButtonStyle.Flat));
+            menu.Add(Ui.Button(page, "Reset to Default", 628 - 64 - 6 - 64 - 6 - 124, 327, 124, ResetDefaults, 22, showCursor: false));
             menu.Add(Ui.Button(page, "Revert", 628 - 64 - 6 - 64, 327, 64, () => { Restore(saved); Rebuild(); }, 22, interactable: dirty > 0, showCursor: false));
             menu.Add(Ui.Button(page, "Apply", 628 - 64, 327, 64, Apply, 22, interactable: dirty > 0, showCursor: false, style: ButtonStyle.Primary));
         }
@@ -152,7 +152,7 @@ namespace Obscure
             for (int i = 0; i < options.Length; i++)
             {
                 string t = options[i].ToUpperInvariant();
-                int w = PixelFont.Measure(t) + 12;
+                int w = PixelFont.Measure(t, FontKind.Interface) + 12;
                 bool on = i == value;
                 Ui.Image(b.transform, PixelArt.Badge(w, 12, on ? Palette.Gold2 : Palette.Ink1, Palette.Ink5), sx, 2, Ui.Widget + 1);
                 Ui.Label(b.transform, t, sx + 6, 4, on ? Palette.Hex(0x1D1404) : Palette.Mist2, order: Ui.Widget + 2, font: FontKind.Interface);

@@ -142,7 +142,7 @@ namespace Obscure
 
             // Step chips, right-aligned: done = ink, now = gold, next = dashed.
             var texts = PageNames.Select((n, i) => (i < (int)CurrentPage ? "+" : (i + 1).ToString()) + " " + n).ToArray();
-            var widths = texts.Select(t => PixelFont.Measure(t) + 10).ToArray();
+            var widths = texts.Select(t => PixelFont.Measure(t, FontKind.Interface) + 10).ToArray();
             int x = RightEdge - widths.Sum() - 2 * (widths.Length - 1);
             for (int i = 0; i < texts.Length; i++)
             {
@@ -185,7 +185,7 @@ namespace Obscure
             menu.Add(Ui.Button(page, next, RightEdge - nw, FooterY, nw, () => GoToPage((Page)((int)CurrentPage + 1)), 22, showCursor: false, style: ButtonStyle.Primary)).tooltip = "CONTINUE TO THE NEXT STEP";
             Ui.Button(page, "Confirm", RightEdge - nw - 72, FooterY, 64, null, 22, interactable: false, showCursor: false);
             const string lockText = "CONFIRM UNLOCKS ON REVIEW";
-            int lx = RightEdge - nw - 84 - PixelFont.Measure(lockText);
+            int lx = RightEdge - nw - 84 - PixelFont.Measure(lockText, FontKind.Interface);
             Ui.Image(page, LockGlyph, lx - 9, FooterY + 7, Ui.Text);
             Ui.Label(page, lockText, lx, FooterY + 8, Palette.Mist2, font: FontKind.Interface);
         }
@@ -212,7 +212,7 @@ namespace Obscure
                 fig.transform.localPosition = new Vector3(Left + (w - fw) / 2, -(Top + previewH - 10 - rows.Length * scale), 0);
             }
             if (topTag != null) Ui.Tag(page, topTag, Left + 6, Top + 6);
-            if (note != null) Ui.Label(page, PixelFont.Fit(note, w - 12), Left + 6, Top + 7, Palette.Mist3, font: FontKind.Interface);
+            if (note != null) Ui.Label(page, PixelFont.Fit(note, w - 12, FontKind.Interface), Left + 6, Top + 7, Palette.Mist3, font: FontKind.Interface);
 
             int y = Top + previewH + 9;
             Ui.Label(page, HeroName, Left + 8, y, Palette.Mist1);
@@ -235,9 +235,9 @@ namespace Obscure
             AbilityGrid(Left + 8, y, w - 16);
             y += 37;
             if (CurrentPage == Page.Race)
-                Ui.Label(page, PixelFont.Wrap("CAP 15 BEFORE BONUS · 17 AFTER · 20 BY PROGRESSION", w - 16), Left + 8, y, Palette.Mist2, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Wrap("CAP 15 BEFORE BONUS · 17 AFTER · 20 BY PROGRESSION", w - 16, FontKind.Interface), Left + 8, y, Palette.Mist2, font: FontKind.Interface);
             else if (CurrentPage == Page.Background)
-                Ui.Label(page, PixelFont.Wrap("BACKGROUND ADDS ONE PASSIVE PERK. IT NEVER CHANGES RACE, CLASS OR SKILLS.", w - 16), Left + 8, y, Palette.Mist2, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Wrap("BACKGROUND ADDS ONE PASSIVE PERK. IT NEVER CHANGES RACE, CLASS OR SKILLS.", w - 16, FontKind.Interface), Left + 8, y, Palette.Mist2, font: FontKind.Interface);
         }
 
         string HeroName => string.IsNullOrEmpty(Session.CharacterName) ? $"Hero {Builder.CurrentMemberIndex + 1}" : Session.CharacterName;
@@ -281,7 +281,7 @@ namespace Obscure
         int SectionTitle(int x, int y, string label, string name, string tag = null)
         {
             Ui.Label(page, label, x, y + 2, Palette.Gold2, font: FontKind.Interface);
-            int nx = x + PixelFont.Measure(label) + 6;
+            int nx = x + PixelFont.Measure(label, FontKind.Interface) + 6;
             if (name != null) { Ui.Label(page, name, nx, y, Palette.Gold1); nx += PixelFont.Measure(name, FontKind.DotGothic) + 6; }
             if (!string.IsNullOrEmpty(tag)) Ui.Tag(page, tag, nx, y);
             return y + 15;
@@ -319,7 +319,7 @@ namespace Obscure
                 var r = Database.Races[RaceIds[i]];
                 var c = Card(mx + 17, Top + 23 + i * 29, mw - 22, 27, r.name, r.id == Session.Race.id, () => SelectRaceById(r.id));
                 Ui.Label(c.transform, BonusText(r), mw - 28, 6, Palette.Gold2, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Label(c.transform, PixelFont.Fit(FirstClause(r.description).ToUpperInvariant(), mw - 34), 6, 17, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(c.transform, PixelFont.Fit(FirstClause(r.description).ToUpperInvariant(), mw - 34, FontKind.Interface), 6, 17, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
             }
 
             int rx = 305, rw = RightEdge - rx;
@@ -334,7 +334,7 @@ namespace Obscure
             foreach (var a in AbilityScores.AllAbilities.Where(a => race.abilityModifiers[a] != 0))
             {
                 string seg = $"+{race.abilityModifiers[a]} {a}";
-                int sw = PixelFont.Measure(seg) + 12;
+                int sw = PixelFont.Measure(seg, FontKind.Interface) + 12;
                 Ui.Image(page, PixelArt.Badge(sw, 14, Palette.Gold2, Palette.Ink5), sx, y + 1, Ui.Panels + 2);
                 Ui.Label(page, seg, sx + 6, y + 4, Palette.Hex(0x1D1404), order: Ui.Text, font: FontKind.Interface);
                 sx += sw - 1;
@@ -371,7 +371,7 @@ namespace Obscure
                 // Portrait swatch (.pt) in the class accent.
                 Ui.Image(card.transform, PixelArt.Box(18, 18, Color.Lerp(Palette.ForClass(c.id), Palette.Ink1, 0.6f), Palette.Ink5), 5, 5, Ui.Widget + 1);
                 Ui.Rect(card.transform, 9, 15, 10, 6, Palette.ForClass(c.id), Ui.Widget + 2);
-                Ui.Label(card.transform, PixelFont.Wrap((c.role ?? "").ToUpperInvariant(), gw - 10), 5, 28, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(card.transform, PixelFont.Wrap((c.role ?? "").ToUpperInvariant(), gw - 10, FontKind.Interface), 5, 28, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
             }
 
             int rw = RightEdge - rx;
@@ -398,7 +398,7 @@ namespace Obscure
             {
                 if (!Database.Skills.TryGetValue(id, out var sk)) continue;
                 string name = PixelFont.Fit(sk.name.ToUpperInvariant(), 70);
-                int w = PixelFont.Measure(name) + 22;
+                int w = PixelFont.Measure(name, FontKind.Interface) + 22;
                 if (sx + w > tx + tw) { sx = tx; y += 15; }
                 Ui.Image(page, PixelArt.Badge(w, 13, Palette.Ink3, Palette.Ink5), sx, y, Ui.Widget);
                 Ui.Image(page, PixelArt.Badge(9, 9, Palette.ForElement(sk.element), Palette.Ink0), sx + 2, y + 2, Ui.Widget + 1);
@@ -488,14 +488,14 @@ namespace Obscure
             {
                 var b = Database.Backgrounds[BackgroundIds[i]];
                 var c = Card(mx + 17 + (i % 2) * (gw + 4), Top + 23 + (i / 2) * 36, gw, 32, b.name, b.id == Session.Background.id, () => SelectBackgroundById(b.id));
-                Ui.Label(c.transform, PixelFont.Fit((b.narrativeIdentity ?? "").ToUpperInvariant(), gw - 10), 6, 19, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(c.transform, PixelFont.Fit((b.narrativeIdentity ?? "").ToUpperInvariant(), gw - 10, FontKind.Interface), 6, 19, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
             }
 
             int rw = RightEdge - rx;
             Ui.Panel(page, rx, Top, rw, ColH, null, Palette.Gold3);
             var bg = Session.Background;
             PanelHeader(rx, rw, PixelFont.Fit($"{bg.name} · {bg.perkName}", rw - 80, FontKind.DotGothic));
-            int dw = PixelFont.Measure("DRAFT VALUES") + 8;
+            int dw = PixelFont.Measure("DRAFT VALUES", FontKind.Interface) + 8;
             Ui.Image(page, PixelArt.DashedBadge(dw, 11, Color.clear, Palette.Mist3), rx + rw - dw - 8, Top + 7, Ui.Widget);
             Ui.Label(page, "DRAFT VALUES", rx + rw - dw - 4, Top + 9, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
 
@@ -514,7 +514,7 @@ namespace Obscure
                 Ui.Image(page, on ? PixelArt.Badge(tw, h, Palette.Hex(0x2B2210), Palette.Gold2) : PixelArt.DashedBadge(tw, h, Color.clear, Palette.Ink4), tx, y, Ui.Panels + 2);
                 Ui.Label(page, numerals[r - 1], tx + 5, y + 4, on ? Palette.Gold1 : Palette.Mist2, order: Ui.Text, font: FontKind.Interface);
                 Ui.Label(page, $"LV {rank?.requiredLevel ?? (r * 3 - 2)}", tx + 20, y + 4, Palette.Mist3, order: Ui.Text, font: FontKind.Interface);
-                Ui.Label(page, PixelFont.Fit((rank?.perkName ?? "").ToUpperInvariant(), tw - 56), tx + 50, y + 3, on ? Palette.Gold1 : Palette.Mist2, order: Ui.Text, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Fit((rank?.perkName ?? "").ToUpperInvariant(), tw - 56, FontKind.Interface), tx + 50, y + 3, on ? Palette.Gold1 : Palette.Mist2, order: Ui.Text, font: FontKind.Interface);
                 Ui.Label(page, fx, tx + 50, y + 12, Palette.Mist2, order: Ui.Text, font: FontKind.Interface);
                 y += h + 2;
             }
@@ -532,17 +532,17 @@ namespace Obscure
             PanelHeader(mx, mw, "Starter Passive", "FROM CLASS");
             var sp = Session.StarterPassive;
             var main = Card(mx + 18, Top + 24, cw, 64, sp?.name ?? "None", true, null);
-            Ui.Label(main.transform, PixelFont.Wrap((sp?.description ?? "").ToUpperInvariant(), cw - 12), 6, 20, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+            Ui.Label(main.transform, PixelFont.Wrap((sp?.description ?? "").ToUpperInvariant(), cw - 12, FontKind.Interface), 6, 20, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
             int y = Top + 96;
             Ui.Label(page, "ALSO ACTIVE AT LEVEL 1", mx + 18, y, Palette.Mist3, font: FontKind.Interface);
             y += 12;
             var feat = Session.Race?.racialFeat;
             var c2 = Card(mx + 18, y, cw, 44, "Racial Feat · " + (feat?.name ?? "None"), false, null);
-            Ui.Label(c2.transform, PixelFont.Wrap((feat?.description ?? "").ToUpperInvariant(), cw - 12), 6, 18, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+            Ui.Label(c2.transform, PixelFont.Wrap((feat?.description ?? "").ToUpperInvariant(), cw - 12, FontKind.Interface), 6, 18, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
             y += 48;
             var bgRank = Session.Background?.GetRank(1);
             var c3 = Card(mx + 18, y, cw, 44, "Perk · " + (bgRank?.perkName ?? Session.Background?.perkName ?? ""), false, null);
-            Ui.Label(c3.transform, PixelFont.Wrap((bgRank?.perkDescription ?? "").ToUpperInvariant(), cw - 12), 6, 18, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+            Ui.Label(c3.transform, PixelFont.Wrap((bgRank?.perkDescription ?? "").ToUpperInvariant(), cw - 12, FontKind.Interface), 6, 18, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
 
             int rw = RightEdge - rx;
             Ui.Panel(page, rx, Top, rw, ColH, null, Palette.Gold3);
@@ -566,7 +566,7 @@ namespace Obscure
                 var eq = Session.GetEquipped(s);
                 var row = Card(mx + 18, y, mw - 26, 28, EquipmentSlots.DisplayName(s), s == SelectedEquipmentSlot, () => SelectSlot(s));
                 row.onAdjust = d => { SelectedEquipmentSlot = s; CycleEquipmentItem(d); };
-                Ui.Label(row.transform, PixelFont.Fit(eq != null ? eq.name.ToUpperInvariant() : "EMPTY", mw - 40), 6, 17, eq != null ? Palette.Mist2 : Palette.Mist3, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(row.transform, PixelFont.Fit(eq != null ? eq.name.ToUpperInvariant() : "EMPTY", mw - 40, FontKind.Interface), 6, 17, eq != null ? Palette.Mist2 : Palette.Mist3, order: Ui.Widget + 1, font: FontKind.Interface);
                 y += 31;
             }
 
@@ -822,14 +822,14 @@ namespace Obscure
             Ui.Rect(t, 0, 0, Ui.Width, Ui.Height, Palette.Hex(0x05070F, 184), Ui.Overlay - 2);
             Ui.Image(t, PixelArt.Box(520, 260, Palette.Ink2, Palette.Gold3), 60, 50, Ui.Overlay - 1);
             Ui.Label(t, $"{bg.name} · {bg.perkName}", 72, 58, Palette.Gold1, order: Ui.Overlay);
-            Ui.Label(t, PixelFont.Fit((bg.narrativeIdentity ?? "").ToUpperInvariant(), 496), 72, 74, Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
+            Ui.Label(t, PixelFont.Fit((bg.narrativeIdentity ?? "").ToUpperInvariant(), 496, FontKind.Interface), 72, 74, Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
             string[] numerals = { "I", "II", "III", "IV", "V" };
             for (int r = 1; r <= 5; r++)
             {
                 var rDef = bg.GetRank(r == 1 ? 1 : r == 2 ? 4 : r == 3 ? 7 : r == 4 ? 10 : 13);
                 int y = 90 + (r - 1) * 36;
-                Ui.Label(t, PixelFont.Fit($"RANK {numerals[r - 1]} (LV {rDef?.requiredLevel ?? 1}) — {(rDef?.perkName ?? "").ToUpperInvariant()}", 496), 72, y, r == 1 ? Palette.Gold1 : Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
-                Ui.Label(t, PixelFont.Fit((rDef?.perkDescription ?? "").ToUpperInvariant(), 486), 82, y + 12, Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
+                Ui.Label(t, PixelFont.Fit($"RANK {numerals[r - 1]} (LV {rDef?.requiredLevel ?? 1}) — {(rDef?.perkName ?? "").ToUpperInvariant()}", 496, FontKind.Interface), 72, y, r == 1 ? Palette.Gold1 : Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
+                Ui.Label(t, PixelFont.Fit((rDef?.perkDescription ?? "").ToUpperInvariant(), 486, FontKind.Interface), 82, y + 12, Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
             }
             Ui.Rect(t, 62, 282, 516, 26, Palette.Ink1, Ui.Overlay);
             Ui.Rect(t, 62, 282, 516, 1, Palette.Ink4, Ui.Overlay);

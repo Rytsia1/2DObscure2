@@ -21,14 +21,14 @@ namespace Obscure
             // Breadcrumb chip: D<n> · dungeon · Node · Event
             string dungeon = Run?.Map?.name ?? "Dungeon";
             string crumb = $"D{Run?.Act ?? 1}";
-            int cw = PixelFont.Measure(crumb, FontKind.DotGothic) + PixelFont.Measure(dungeon, FontKind.DotGothic) + PixelFont.Measure($" · NODE {Run?.Floor ?? 1} · EVENT") + 26;
+            int cw = PixelFont.Measure(crumb, FontKind.DotGothic) + PixelFont.Measure(dungeon, FontKind.DotGothic) + PixelFont.Measure($" · NODE {Run?.Floor ?? 1} · EVENT", FontKind.Interface) + 26;
             Ui.Image(Root, PixelArt.Badge(cw, 18, Palette.Hex(0x070A14, 200), Palette.Ink4), 10, 9, Ui.Panels);
             Ui.Label(Root, crumb, 17, 13, Palette.Gold2, order: Ui.Text);
             int bx = 17 + PixelFont.Measure(crumb, FontKind.DotGothic) + 5;
             Ui.Label(Root, dungeon, bx, 13, Palette.Mist1, order: Ui.Text);
             Ui.Label(Root, $" · NODE {Run?.Floor ?? 1} · EVENT", bx + PixelFont.Measure(dungeon, FontKind.DotGothic) + 2, 15, Palette.Mist2, order: Ui.Text, font: FontKind.Interface);
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Mathf.Max(84, PixelFont.Measure($"{gold:#,##0} RUN GOLD", FontKind.DotGothic) + 16);
+            int gw = Ui.CurrencyTagWidth(gold, false);
             Ui.CurrencyTag(Root, gold, false, 630 - gw, 9);
 
             // Gold-framed event card
@@ -76,13 +76,13 @@ namespace Obscure
             Color ink = blocked != null ? Palette.Mist3 : Palette.Mist1;
             Ui.Label(b.transform, PixelFont.Fit(c.label, w - 120, FontKind.DotGothic), 22, 3, ink, order: Ui.Widget + 1);
             string sub = blocked != null ? blocked.ToUpperInvariant() : Consequences(c);
-            Ui.Label(b.transform, PixelFont.Fit(sub, w - 120), 22, 16, blocked != null ? Palette.Mist3 : Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+            Ui.Label(b.transform, PixelFont.Fit(sub, w - 120, FontKind.Interface), 22, 16, blocked != null ? Palette.Mist3 : Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
 
             // Right tag: cost (temp, ember dashed) or the requirement that blocks it (cond, dashed)
             string tag = blocked != null ? PixelFont.Fit(blocked.ToUpperInvariant(), 92) : c.goldCost > 0 ? $"-{c.goldCost} RUN GOLD" : null;
             if (tag != null)
             {
-                int tw = PixelFont.Measure(tag) + 8;
+                int tw = PixelFont.Measure(tag, FontKind.Interface) + 8;
                 Ui.Tag(b.transform, tag, w - tw - 6, 7, blocked != null ? TagKind.Cond : TagKind.Temp, 11, Ui.Widget + 1);
             }
             b.tooltip = sub;
@@ -139,7 +139,7 @@ namespace Obscure
             int x = CardX + IllW + 17, w = CardW - IllW - 32;
             Ui.Image(phase, PixelArt.Box(w, 120, Palette.Ink3, Palette.Gold3), x, 150, Ui.Panels + 5);
             Ui.Header(phase, "Outcome", x + 10, 158, w - 4, Ui.Text + 1);
-            Ui.Label(phase, PixelFont.Wrap(outcome.ToUpperInvariant(), w - 20), x + 10, 178, Palette.Mist1, order: Ui.Text + 1, font: FontKind.Interface);
+            Ui.Label(phase, PixelFont.Wrap(outcome.ToUpperInvariant(), w - 20, FontKind.Interface), x + 10, 178, Palette.Mist1, order: Ui.Text + 1, font: FontKind.Interface);
             m.Add(Ui.Button(phase, "Continue", x + w - 110, 238, 100, () => Game.Go(GameState.Map), 22, style: ButtonStyle.Primary));
         }
     }

@@ -289,5 +289,78 @@ namespace Obscure.Tests
             for (int i = 0; i < 40; i++) names.Add(EnemyAI.Choose(b, warden).attack.name);
             CollectionAssert.AreEquivalent(new[] { "Chain Lash", "Crushing Grip" }, names, "phase-1 moves only");
         }
+
+        [Test]
+        public void AllDirectDamageSkillsAcrossClassesTriggerOffensiveQte()
+        {
+            var rng = new Random(42);
+            var b = NewBattle(42, "skeleton");
+            var actor = b.Party[0];
+            var target = b.Enemies[0];
+
+            foreach (var skill in Database.Skills.Values)
+            {
+                bool isDirectDamage = skill.kind == SkillKind.Physical
+                    || (skill.kind == SkillKind.Magic && (skill.power > 0f || skill.HasDamageSystemComponents));
+                var qte = QteFactory.Offense(BattleAction.Skill(actor, skill, target), Tier.Normal, QteAssist.Standard, rng);
+                if (isDirectDamage)
+                {
+                    Assert.IsNotNull(qte, $"Direct-damage skill '{skill.id}' ({skill.kind}) must trigger a QTE");
+                    if (skill.kind == SkillKind.Magic)
+                        Assert.IsInstanceOf<TypingQte>(qte, $"Direct-damage Magic skill '{skill.id}' should trigger TypingQte");
+                    else
+                        Assert.IsInstanceOf<TimingQte>(qte, $"Physical skill '{skill.id}' should trigger TimingQte");
+                }
+                else
+                {
+                    Assert.IsNull(qte, $"Non-damaging skill '{skill.id}' ({skill.kind}) must not trigger Offensive QTE");
+                }
+            }
+        }
+
+        [Test]
+        public void CombatActiveSkillsReflectSkillLoadoutAndRelicQteHooksFire()
+        {
+            var map = MapGenerator.Generate(10, 1);
+            var partyDefs = Database.Party.Select(id => Database.Characters[id]).ToList();
+            var run = new RunState(map, partyDefs, 10);
+            run.TryAddRelic("R002", out _);
+            run.TryAddRelic("R019", out _);
+
+            // Equip a newly unlocked Wizard skill into slot 0 and verify GetCombatActiveSkillIds picks it up
+            var mageUnit = run.Party[2];
+            mageUnit.skillLoadout.UnlockActive("lightning_strike");
+            Assert.IsTrue(mageUnit.skillLoadout.TryEquipActive(0, "lightning_strike", out _));
+            CollectionAssert.Contains(mageUnit.GetCombatActiveSkillIds(), "lightning_strike");
+
+            var b = new Battle(run.Party, new[] { Database.Enemies["skeleton"] }, run.Items, new Random(10), run);
+            var mage = AdvanceTo(b, c => c.name == "Mage");
+            mage.unit.mp = 10;
+            int mpBefore = mage.unit.mp;
+
+            // 3 Perfect standard skill casts trigger R002 Soulglass Shard (+2% Max MP)
+            var firebolt = Database.Skills["firebolt"];
+            int cost = mage.GetEffectiveMpCost(firebolt, run);
+            for (int i = 0; i < 3; i++)
+            {
+                b.Perform(BattleAction.Skill(mage, firebolt, b.Enemies[0]), QteConfig.PerfectPower);
+                if (i < 2)
+                {
+                    mage = AdvanceTo(b, c => c.name == "Mage");
+                    mage.unit.mp = mpBefore;
+                }
+            }
+            Assert.Greater(mage.unit.mp, mpBefore - cost, "3rd Perfect standard Magic skill QTE must trigger R002 MP restore");
+
+            // Perfect Defensive QTE triggers R019 Black-Iron Rosary shield
+            var sk = AdvanceTo(b, c => c.IsEnemy);
+            var knight = b.Party[0];
+            int shieldBefore = knight.unit.shield;
+            b.Perform(BattleAction.Strike(sk, Move("skeleton", "Rusty Slash"), knight), 1f, new[] { QteResult.Perfect });
+            Assert.Greater(knight.unit.shield, shieldBefore, "Perfect Defensive QTE must trigger R019 shield");
+
+            // Non-Halfling must not have Second Chance retries
+            Assert.IsFalse(knight.CanUseSecondChanceRetry, "Human Knight must not trigger Halfling Second Chance");
+        }
     }
 }

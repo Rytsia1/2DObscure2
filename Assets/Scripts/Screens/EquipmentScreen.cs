@@ -106,7 +106,7 @@ namespace Obscure
             menu.onBack = () => Game.Go(returnState);
 
             // 1. Header: back, title, party portrait switcher, equipment bag per FELNA — UI System (Page 11)
-            var backBtn = Ui.Button(Root, "BACK", 12, 8, 46, () => Game.Go(returnState), 20, showCursor: false, font: FontKind.DotGothic);
+            var backBtn = Ui.Button(Root, "Back", 12, 9, 40, () => Game.Go(returnState), 18, showCursor: false);
             Ui.Label(Root, "Equipment", 66, 13, Palette.Gold2, Align.Left, 1, FontKind.DotGothic);
             var prevHeroBtn = Ui.Button(Root, "Q", 214, 9, 20, () => SwitchHero(-1), 20, showCursor: false);
             for (int i = 0; i < party.Count && i < portraitBoxes.Length; i++)
@@ -124,7 +124,7 @@ namespace Obscure
             // 2. Paper doll: all 8 slots around the hero
             Ui.Panel(Root, 12, 36, 166, 300);
             heroLabel = Ui.Header(Root, "", 26, 44, 154);
-            slotCountLabel = Ui.Label(Root, "", 172, 44, Palette.Mist2, Align.Right);
+            slotCountLabel = Ui.Label(Root, "", 172, 46, Palette.Mist2, Align.Right, font: FontKind.Interface);
             Ui.Image(Root, PixelArt.Disc(40, Color.white), 89, 150, Ui.Panels + 1).color = new Color(0.45f, 0.55f, 1f, 0.12f);
             Ui.Rect(Root, 69, 180, 40, 4, Palette.Ink4, Ui.Panels + 2);
             heroSprite = Ui.Image(Root, null, 0, 0, Ui.Widget);
@@ -136,7 +136,7 @@ namespace Obscure
             // 3. Gear list for the selected slot
             Ui.Panel(Root, 184, 36, 248, 300);
             listTitle = Ui.Header(Root, "", 198, 44, 236);
-            Ui.Label(Root, "SORT: RARITY", 426, 44, Palette.Mist3, Align.Right);
+            Ui.Label(Root, "SORT: RARITY", 426, 46, Palette.Mist3, Align.Right, font: FontKind.Interface);
             for (int i = 0; i < RowCount; i++) rowViews.Add(CreateRow(i));
             moreLabel = Ui.Label(Root, "", 198, 312, Palette.Mist3);
 
@@ -323,7 +323,7 @@ namespace Obscure
             bagBtn.label.Set($"BAG {inventory.EquipmentCount} / {InventoryRuntime.MaxEquipmentCapacity}");
 
             // Paper doll
-            heroLabel.Set(PixelFont.Fit($"{hero.name} - {hero.classDef?.name ?? hero.role}".ToUpperInvariant(), 110));
+            heroLabel.Set(PixelFont.Fit($"{hero.name} - {hero.classDef?.name ?? hero.role}".ToUpperInvariant(), 104));
             slotCountLabel.Set($"{CoreSlots.Count(s => Equipped(s).def != null)} / {CoreSlots.Length}");
             if (hero.sprite != null)
             {
@@ -489,7 +489,7 @@ namespace Obscure
         {
             if (def == null)
             {
-                name.Set(empty);
+                name.Set(PixelFont.Fit(empty, 84));
                 name.Color = Palette.Mist3;
                 chip.sprite = null;
                 letter.Set("");

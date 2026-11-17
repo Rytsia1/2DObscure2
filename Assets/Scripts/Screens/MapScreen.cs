@@ -44,9 +44,9 @@ namespace Obscure
                 Ui.Image(Root, pip, dxp + (i - 1) * 11, 19, Ui.Text);
             }
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Mathf.Max(84, PixelFont.Measure($"{gold:#,##0} RUN GOLD", FontKind.DotGothic) + 16);
+            int gw = Ui.CurrencyTagWidth(gold, false);
             Ui.CurrencyTag(Root, gold, false, 628 - gw, 11);
-            int tw = PixelFont.Measure("RUN PROGRESS") + 8;
+            int tw = PixelFont.Measure("RUN PROGRESS", FontKind.Interface) + 8;
             Ui.Tag(Root, "RUN PROGRESS", 628 - gw - 6 - tw, 14, TagKind.Temp, 13);
 
             // 2. Map panel
@@ -74,15 +74,16 @@ namespace Obscure
             int lx = MapX + 8;
             foreach (var (glyph, name, dashed) in new[] { ("VS", "COMBAT", false), ("?", "EVENT", false), ("SH", "SHOP", false), ("ZZ", "REST", false), ("TR", "TREASURE", false) })
             {
-                int bw = PixelFont.Measure(glyph) + 6;
+                int bw = PixelFont.Measure(glyph, FontKind.Interface) + 6;
                 Ui.Image(Root, dashed ? PixelArt.DashedBadge(bw, 11, Color.clear, Palette.Mist3) : PixelArt.Badge(bw, 11, Color.clear, Palette.Mist3), lx, ly + 6, Ui.Widget);
                 Ui.Label(Root, glyph, lx + 3, ly + 8, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
                 Ui.Label(Root, name, lx + bw + 3, ly + 8, Palette.Mist2, font: FontKind.Interface);
-                lx += bw + 6 + PixelFont.Measure(name) + 8;
+                lx += bw + 6 + PixelFont.Measure(name, FontKind.Interface) + 8;
             }
             Ui.Image(Root, PixelArt.Diamond(11, Palette.Ink4), lx, ly + 6, Ui.Widget);
             Ui.Label(Root, "FINAL", lx + 14, ly + 8, Palette.Mist2, font: FontKind.Interface);
-            Ui.Label(Root, "GOLD = CURRENT · WHITE = CHOOSABLE · DASHED = LOCKED", MapX + MapW - 8, ly + 8, Palette.Mist3, Align.Right, font: FontKind.Interface);
+            // Gold (current) and white (choosable) read from the nodes themselves; only "dashed" needs saying.
+            Ui.Label(Root, "· DASHED = LOCKED", lx + 14 + PixelFont.Measure("FINAL", FontKind.Interface) + 8, ly + 8, Palette.Mist3, font: FontKind.Interface);
 
             // 3. Side column: node info (gold), party, actions
             info = new GameObject("NodeInfo").transform;
@@ -161,7 +162,7 @@ namespace Obscure
             if (n != null)
             {
                 Ui.Label(info, "CURRENCY", x, y + 2, Palette.Mist2, font: FontKind.Interface);
-                if (n.type == NodeType.Shop) Ui.Tag(info, "RUN GOLD", x + w - PixelFont.Measure("RUN GOLD") - 8, y, TagKind.Temp);
+                if (n.type == NodeType.Shop) Ui.Tag(info, "RUN GOLD", x + w - PixelFont.Measure("RUN GOLD", FontKind.Interface) - 8, y, TagKind.Temp);
                 else Ui.Label(info, "—", x + w, y + 2, Palette.Mist3, Align.Right, font: FontKind.Interface);
                 Ui.Rect(info, x, y + 12, w, 1, Palette.Ink3, Ui.Panels + 2);
                 y += 15;
@@ -171,7 +172,7 @@ namespace Obscure
             }
             Ui.Image(info, PixelArt.Badge(w, 22, Palette.Ink0, Palette.Ink4), x, MapY + 104, Ui.Panels + 2);
             Ui.Label(info, "!", x + 5, MapY + 111, Palette.Gold2, font: FontKind.Interface);
-            Ui.Label(info, PixelFont.Wrap("ONE-WAY: OTHER PATHS CLOSE ONCE YOU MOVE.", w - 16), x + 12, MapY + 107, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(info, PixelFont.Wrap("ONE-WAY: OTHER PATHS CLOSE ONCE YOU MOVE.", w - 16, FontKind.Interface), x + 12, MapY + 107, Palette.Mist2, font: FontKind.Interface);
 
             if (travelBtn != null)
             {
@@ -273,7 +274,7 @@ namespace Obscure
             Ui.Rect(t, px + 2, fy, pw - 4, 1, Palette.Ink4, O - 4);
             Ui.Label(t, $"DUNGEON {Run?.Act ?? 1} OF 8 · NODE {Run?.Floor ?? 1}", px + 10, fy + 8, Palette.Mist2, order: O, font: FontKind.Interface);
             int gold = Run != null ? Run.Gold : 0;
-            Ui.Image(t, PixelArt.Coin(7, false), px + pw - 18 - PixelFont.Measure(gold.ToString()), fy + 8, O);
+            Ui.Image(t, PixelArt.Coin(7, false), px + pw - 18 - PixelFont.Measure(gold.ToString(), FontKind.Interface), fy + 8, O);
             Ui.Label(t, gold.ToString(), px + pw - 10, fy + 8, Palette.Ember1, Align.Right, order: O, font: FontKind.Interface);
             var assist = (Game?.Settings ?? GameSettings.Load()).Assist;
             if (assist != QteAssist.Standard)
@@ -281,7 +282,7 @@ namespace Obscure
                 int aw = Ui.Tag(t, "ASSIST", px + 10, fy + 20, TagKind.Temp, 11, O);
                 Ui.Label(t, $"{assist.ToString().ToUpperInvariant()} ACTIVE · NOTED ON RUN SUMMARY", px + 14 + aw, fy + 22, Palette.Mist2, order: O, font: FontKind.Interface);
             }
-            Ui.Label(t, PixelFont.Wrap("DUNGEON RUNS CAN'T BE SAVED OR RESUMED. PROGRESS IS COMMITTED ONLY BY DUNGEON CLEAR.", pw - 20), px + 10, fy + 36, Palette.Mist3, order: O, font: FontKind.Interface);
+            Ui.Label(t, PixelFont.Wrap("DUNGEON RUNS CAN'T BE SAVED OR RESUMED. PROGRESS IS COMMITTED ONLY BY DUNGEON CLEAR.", pw - 20, FontKind.Interface), px + 10, fy + 36, Palette.Mist3, order: O, font: FontKind.Interface);
 
             if (abandonOpen) BuildAbandon(t, O);
         }
@@ -295,9 +296,9 @@ namespace Obscure
             int act = Run?.Act ?? 1, gold = Run != null ? Run.Gold : 0;
             Ui.Label(t, $"DUNGEON {act} ENDS AND CAN'T BE RESUMED.", dx + 10, dy + 26, Palette.Mist1, order: O + 51, font: FontKind.Interface);
             int lw = Ui.Tag(t, "LOST", dx + 10, dy + 39, TagKind.Temp, 11, O + 51);
-            Ui.Label(t, PixelFont.Wrap($"RUN GOLD {gold}, AND THE EXP, SP, SKILLS AND ITEMS GAINED IN THIS DUNGEON.", dw - lw - 26), dx + 16 + lw, dy + 41, Palette.Mist2, order: O + 51, font: FontKind.Interface);
+            Ui.Label(t, PixelFont.Wrap($"RUN GOLD {gold}, AND THE EXP, SP, SKILLS AND ITEMS GAINED IN THIS DUNGEON.", dw - lw - 26, FontKind.Interface), dx + 16 + lw, dy + 41, Palette.Mist2, order: O + 51, font: FontKind.Interface);
             int kw = Ui.Tag(t, "KEPT", dx + 10, dy + 62, TagKind.Keep, 11, O + 51);
-            Ui.Label(t, PixelFont.Wrap(act > 1 ? $"EVERYTHING COMMITTED BY DUNGEONS 1-{act - 1}, HUB GOLD AND RELICS." : "HUB GOLD AND RELICS.", dw - kw - 26), dx + 16 + kw, dy + 64, Palette.Mist2, order: O + 51, font: FontKind.Interface);
+            Ui.Label(t, PixelFont.Wrap(act > 1 ? $"EVERYTHING COMMITTED BY DUNGEONS 1-{act - 1}, HUB GOLD AND RELICS." : "HUB GOLD AND RELICS.", dw - kw - 26, FontKind.Interface), dx + 16 + kw, dy + 64, Palette.Mist2, order: O + 51, font: FontKind.Interface);
             Ui.Rect(t, dx + 2, dy + dh - 30, dw - 4, 28, Palette.Ink1, O + 51);
             Ui.Rect(t, dx + 2, dy + dh - 30, dw - 4, 1, Palette.Ink4, O + 51);
 
@@ -308,7 +309,6 @@ namespace Obscure
             var leave = Ui.Button(t, "Return to Hub", dx + dw - 226, dy + dh - 25, 96, () =>
             {
                 Run?.AbandonExpedition();
-                SaveManager.AutoSave(out _);
                 Game.Go(GameState.Hub);
             }, 20, showCursor: false, style: ButtonStyle.Danger);
             var stay = Ui.Button(t, "Continue Expedition", dx + dw - 124, dy + dh - 25, 114, () => { abandonOpen = false; ClosePause(); }, 20, showCursor: false, style: ButtonStyle.Primary);

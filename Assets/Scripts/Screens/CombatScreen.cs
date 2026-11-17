@@ -165,7 +165,7 @@ namespace Obscure
 
             h.name = Ui.Label(transform, c.name.ToUpperInvariant(), 12, cy + 4, Palette.WarmIvory, font: FontKind.Serif);
             string roleStr = c.unit.role != null ? c.unit.role.ToUpperInvariant() : "HERO";
-            h.role = Ui.Label(transform, roleStr, 12, cy + 15, Palette.AntiqueGoldDim);
+            h.role = Ui.Label(transform, roleStr, 12, cy + 16, Palette.AntiqueGoldDim, font: FontKind.Interface);
 
             // HP readout & Emerald GaugeBar
             Ui.Label(transform, "HP", 90, cy + 4, Palette.Emerald);
@@ -386,18 +386,8 @@ namespace Obscure
                     yield return RunQte(qte, Telegraph(act), act);
                     if (qte.Cancelled) break;
                     var defender = act.target;
-                    if (defender != null && qte.Result == QteResult.Miss && defender.CanTriggerLuckyRetry(qte.Result, () => (float)qteRng.NextDouble()))
-                    {
-                        defender.RecordLuckyRetry();
-                        Hint("LUCKY ACTIVATED! RETRYING DEFENSE...");
-                        yield return new WaitForSeconds(0.4f);
-                        var retryDefQte = QteFactory.Defense(act, Assist);
-                        if (retryDefQte != null)
-                        {
-                            yield return RunQte(retryDefQte, "LUCKY RETRY! " + Telegraph(act), act);
-                            if (!retryDefQte.Cancelled) qte = retryDefQte;
-                        }
-                    }
+                    yield return TryRetryQte(defender, qte, () => QteFactory.Defense(act, Assist), Telegraph(act), act, retried => qte = retried);
+                    if (qte.Cancelled) break;
                     yield return Resolve(act, 1f, qte is DefenseQte d ? d.Results : ((AutoQte)qte).Results);
                 }
                 else
@@ -412,18 +402,8 @@ namespace Obscure
                         c.ResetQteLuckyFlag();
                         yield return RunQte(qte, OffenseHeading(chosen), null);
                         if (qte.Cancelled) break;
-                        if (qte.Result == QteResult.Miss && c.CanTriggerLuckyRetry(qte.Result, () => (float)qteRng.NextDouble()))
-                        {
-                            c.RecordLuckyRetry();
-                            Hint("LUCKY ACTIVATED! RETRYING QTE...");
-                            yield return new WaitForSeconds(0.4f);
-                            var retryQte = QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng);
-                            if (retryQte != null)
-                            {
-                                yield return RunQte(retryQte, "LUCKY RETRY! " + OffenseHeading(chosen), null);
-                                if (!retryQte.Cancelled) qte = retryQte;
-                            }
-                        }
+                        yield return TryRetryQte(c, qte, () => QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng), OffenseHeading(chosen), null, retried => qte = retried);
+                        if (qte.Cancelled) break;
                         power = Battle.QtePower(chosen, qte.Result);
                     }
                     yield return Resolve(chosen, power);
@@ -433,12 +413,36 @@ namespace Obscure
             ShowOutcome();
         }
 
+        IEnumerator TryRetryQte(Combatant owner, Qte qte, Func<Qte> makeRetry, string heading, BattleAction enemyAction, Action<Qte> onRetried)
+        {
+            if (owner == null || qte == null || qte.Cancelled || qte.Result != QteResult.Miss) yield break;
+
+            string retryTag = null;
+            if (owner.CanTriggerLuckyRetry(qte.Result, () => (float)qteRng.NextDouble()))
+            {
+                owner.RecordLuckyRetry();
+                retryTag = "LUCKY ACTIVATED! RETRYING QTE...";
+            }
+            else if (owner.ConsumeSecondChanceRetry())
+            {
+                retryTag = "SECOND CHANCE! RETRYING QTE...";
+            }
+
+            if (retryTag == null) yield break;
+            Hint(retryTag);
+            yield return new WaitForSeconds(0.4f);
+            var retryQte = makeRetry();
+            if (retryQte == null) yield break;
+            yield return RunQte(retryQte, "RETRY! " + heading, enemyAction);
+            onRetried?.Invoke(retryQte);
+        }
+
         IEnumerator Resolve(BattleAction action, float power = 1f, IReadOnlyList<QteResult> defense = null)
         {
             ClearPhase();
             Hint("");
             HideDossier();
-            foreach (var h in Battle.Perform(action, power, defense)) Feedback(h);
+            foreach (var h in Battle.Perform(action, power, defense)) Feedback(h, action);
             Refresh();
             if (pendingPhaseTransitionBoss != null)
             {
@@ -543,6 +547,7 @@ namespace Obscure
         {
             ClearPhase();
             HideDossier();
+            if (dossierPanel != null) dossierPanel.gameObject.SetActive(false);
             if (enemyAction != null)
                 foreach (var t in enemyAction.attack != null && enemyAction.attack.allTargets ? Battle.Party.Where(p => p.Alive) : new[] { enemyAction.target })
                 {
@@ -564,11 +569,12 @@ namespace Obscure
 
         void OnDestroy() => activeQte?.Cancel();
 
-        void Feedback(Hit hit)
+        void Feedback(Hit hit, BattleAction action)
         {
             var h = huds[hit.target];
             int cx = h.pos.x + h.size.x / 2;
             bool immune = hit.effect == Effectiveness.Immune;
+            PlayHitFx(hit, action, h, cx);
             var popup = Ui.Label(transform, hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 6,
                 hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : Palette.CrimsonBright, Align.Center, order: Ui.Widget + 10);
             popup.gameObject.AddComponent<Popup>();
@@ -578,6 +584,36 @@ namespace Obscure
                 Ui.Label(transform, hit.effect == Effectiveness.Weak ? "* WEAK! *" : "RESIST", cx, h.pos.y - 16,
                     hit.effect == Effectiveness.Weak ? Palette.AntiqueGoldBright : Palette.MutedGray, Align.Center, order: Ui.Widget + 10).gameObject.AddComponent<Popup>();
             if (!hit.heal && hit.amount > 0) StartCoroutine(Flash(h, hit.target));
+        }
+
+        // Pixel VFX over the target (sheets in Resources/Fx). Effects face right, so blows aimed at the party are mirrored.
+        void PlayHitFx(Hit hit, BattleAction action, Hud h, int cx)
+        {
+            int cy = h.pos.y + h.size.y / 2, feet = h.pos.y + h.size.y;
+            bool flip = !hit.target.IsEnemy;
+            void Play(string name) => Fx.Play(transform, name, cx, cy, feet, flip);
+
+            if (hit.blocked) Play("parry");
+            else if (hit.heal) Play("heal");
+            else if (hit.amount > 0)
+            {
+                var element = action?.skill?.element ?? action?.attack?.element ?? Element.Physical;
+                Play(hit.critical ? "crit" : element switch
+                {
+                    Element.Fire => "fire",
+                    Element.Ice => "ice",
+                    Element.Lightning => "lightning",
+                    Element.Arcane => "arcane",
+                    Element.Holy => "holy",
+                    Element.Dark => "dark",
+                    Element.Earth => "earth",
+                    Element.Wind => "wind",
+                    Element.Water => "water",
+                    _ => "hit",
+                });
+            }
+            if (hit.brokeTarget) Play("break");
+            if (hit.killed) Play("death");
         }
 
         IEnumerator Flash(Hud h, Combatant c)
@@ -591,6 +627,7 @@ namespace Obscure
         {
             if (phase != null) Destroy(phase.gameObject);
             phase = Child("Phase");
+            if (dossierPanel != null) dossierPanel.gameObject.SetActive(true);
             HideDossier();
         }
 
@@ -632,17 +669,20 @@ namespace Obscure
 
         void ShowSkills(Combatant c)
         {
-            var skills = c.unit.skills.Select(id => Database.Skills[id]).ToList();
+            var skills = c.unit.GetCombatActiveSkillIds().Select(id => Database.Skills[id]).ToList();
             var m = NewMenu();
             foreach (var s in skills)
             {
                 int cd = c.Cooldown(s.id);
+                int effCost = c.GetEffectiveMpCost(s, Battle.run);
+                bool hasShield = !s.requiresShield || (c.unit != null && c.unit.HasEquippedShield());
+                bool hasWeapon = s.requiredWeaponType == WeaponType.None || (c.unit != null && c.unit.HasEquippedWeaponType(s.requiredWeaponType));
                 string element = s.kind == SkillKind.Magic || s.kind == SkillKind.Heal ? s.element.ToString().ToUpperInvariant() + " " : "";
-                string costText = cd > 0 ? $"CD {cd}" : $"{s.mpCost} MP";
+                string costText = cd > 0 ? $"CD {cd}" : $"{effCost} MP";
                 string typeText = $"{element}{s.kind.ToString().ToUpperInvariant()}";
                 string targetText = $"TARGET: {s.target.ToString().ToUpperInvariant()}";
                 Option(m, $"{s.name.ToUpperInvariant()} {costText}", () => UseSkill(c, s),
-                    cd == 0 && c.unit.mp >= s.mpCost, $"{s.description.ToUpperInvariant()}",
+                    cd == 0 && c.unit.mp >= effCost && hasShield && hasWeapon, $"{s.description.ToUpperInvariant()}",
                     $"COST: {costText}  TYPE: {typeText}", targetText);
             }
             Option(m, "BACK", () => ShowActions(c));

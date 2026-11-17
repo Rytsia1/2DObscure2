@@ -399,6 +399,19 @@ namespace Obscure
                             }
                         }
                     }
+                    QteResult mappedQte = power > 1.05f
+                        ? QteResult.Perfect
+                        : (power < 0.95f ? QteResult.Poor : QteResult.Good);
+                    bool skillDealsDirectDamage = s.HasDamageSystemComponents
+                        || s.kind == SkillKind.Physical
+                        || (s.kind == SkillKind.Magic && s.power > 0f);
+                    if (skillDealsDirectDamage)
+                    {
+                        actor.ApplyMartialArtistCombo(mappedQte, s.isFinisher);
+                        if (actor.IsPlayer)
+                            run?.RelicManager?.OnQteResolved(actor, true, mappedQte, this);
+                    }
+
                     foreach (var t in Targets(actor, s.target, a.target))
                     {
                         if (s.appliesNullBreak && s.nullBreakTarget.IsValid)
@@ -409,14 +422,6 @@ namespace Obscure
 
                         if (s.HasDamageSystemComponents)
                         {
-                            QteResult mappedQte = power > 1.05f
-                                ? QteResult.Perfect
-                                : (power < 0.95f ? QteResult.Poor : QteResult.Good);
-                            actor.ApplyMartialArtistCombo(mappedQte, s.isFinisher);
-                            if (actor.IsPlayer)
-                            {
-                                run?.RelicManager?.OnQteResolved(actor, true, mappedQte, this);
-                            }
                             var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel);
                             foreach (var hitRes in dmgResult.hits)
                             {
@@ -617,6 +622,11 @@ namespace Obscure
             if (t.stunTurns > 0 || t.StatusController.HasStatus(StatusId.Stun) || t.StatusController.HasStatus(StatusId.Sleep) || t.StatusController.HasStatus(StatusId.MindControl))
             {
                 reaction = QteResult.Poor;
+            }
+
+            if (reaction.HasValue && t.IsPlayer)
+            {
+                run?.RelicManager?.OnQteResolved(t, false, reaction.Value, this);
             }
 
             // Heavy attack check (Bab 12)

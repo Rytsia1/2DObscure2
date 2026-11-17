@@ -87,7 +87,7 @@ namespace Obscure
         // Hub Gold (.cur.hub) on the right; returns its left x.
         protected int GoldTag()
         {
-            int w = Mathf.Max(84, PixelFont.Measure($"{Gold:#,##0} HUB GOLD", FontKind.DotGothic) + 16);
+            int w = Ui.CurrencyTagWidth(Gold, true);
             Ui.CurrencyTag(page, Gold, true, RightEdge - w, 9);
             return RightEdge - w;
         }
@@ -149,7 +149,7 @@ namespace Obscure
         // Toast (.toast.ok/.bad/.gold): icon square + one line of text.
         protected void Toast(int x, int y, int w, string text, bool bad, string icon = "!")
         {
-            string t = PixelFont.Wrap(text.ToUpperInvariant(), w - 26);
+            string t = PixelFont.Wrap(text.ToUpperInvariant(), w - 26, FontKind.Interface);
             int h = Mathf.Max(18, 8 + (t.Count(c => c == '\n') + 1) * PixelFont.LineHeight);
             Color border = bad ? Palette.Hex(0xB5483E) : Palette.Gold3, ic = bad ? Palette.Err : Palette.Gold2;
             Ui.Image(page, PixelArt.Box(w, h, Palette.Ink2, border), x, y, Ui.Panels + 3);
@@ -178,7 +178,7 @@ namespace Obscure
         {
             Color c = EquipmentRarities.GetColor(r);
             string name = r.ToString().ToUpperInvariant();
-            int w = PixelFont.Measure(name) + 16;
+            int w = PixelFont.Measure(name, FontKind.Interface) + 16;
             Ui.Image(page, r >= EquipmentRarity.Legendary ? PixelArt.DoubleBorderBox(w, 11, Palette.Ink0, c) : PixelArt.Badge(w, 11, Palette.Ink0, c), x, y, Ui.Widget);
             Ui.Image(page, PixelArt.Badge(7, 7, c, c), x + 2, y + 2, Ui.Widget + 1);
             Ui.Label(page, Palette.RarityBadge(r), x + 3, y + 2, Palette.Ink0, order: Ui.Widget + 2, font: FontKind.Interface);
@@ -254,8 +254,8 @@ namespace Obscure
         {
             int x = Header("Shop");
             x += Ui.Tag(page, "HUB SHOP · CONSUMABLES · PAYS IN HUB GOLD", x, 13, TagKind.Keep, 13) + 6;
-            const string armory = "Equipment is at the Armory ›";
-            menu.Add(Ui.Button(page, armory, x, 9, PixelFont.Measure(armory, FontKind.DotGothic) + 14, () => Game?.Go(GameState.Armory), 18, showCursor: false, style: ButtonStyle.Flat));
+            const string armory = "Armory ›";
+            menu.Add(Ui.Button(page, armory, x, 9, PixelFont.Measure(armory, FontKind.DotGothic) + 14, () => Game?.Go(GameState.Armory), 18, showCursor: false));
             BagCount(GoldTag());
 
             var rows = Rows();
@@ -284,7 +284,7 @@ namespace Obscure
                 var icon = PixelArt.ItemIcon(ConsumableKind(r.def), ConsumableTint(r.def));
                 Ui.Image(t, icon, 4 + (20 - (int)icon.rect.width) / 2, 3 + (20 - (int)icon.rect.height) / 2, Ui.Widget + 2);
                 Ui.Label(t, PixelFont.Fit(r.name, 170, FontKind.DotGothic), 30, 2, rc, order: Ui.Widget + 2);
-                Ui.Label(t, PixelFont.Fit(r.sub.ToUpperInvariant(), 180), 30, 16, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
+                Ui.Label(t, PixelFont.Fit(r.sub.ToUpperInvariant(), 180, FontKind.Interface), 30, 16, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
                 Ui.Label(t, sellTab ? $"OWN {r.owned}" : (r.def?.category ?? "CONSUMABLE").ToUpperInvariant(), 226, 10, Palette.Mist2, order: Ui.Widget + 2, font: FontKind.Interface);
                 Ui.Label(t, Money(r.price), lw - 34, afford ? 7 : 3, afford ? Palette.Gold1 : Palette.Err, Align.Right, order: Ui.Widget + 2);
                 if (!afford) Ui.Label(t, $"NEED {Money(r.price - Gold)} MORE", lw - 34, 16, Palette.Err, Align.Right, order: Ui.Widget + 2, font: FontKind.Interface);
@@ -424,7 +424,7 @@ namespace Obscure
             int x = Header("Armory");
             x += Ui.Tag(page, "EQUIPMENT · PAYS IN HUB GOLD", x, 13, TagKind.Keep, 13) + 12;
             Ui.Label(page, "SHOPPING FOR", x, 15, Palette.Mist2, font: FontKind.Interface);
-            x += PixelFont.Measure("SHOPPING FOR") + 6;
+            x += PixelFont.Measure("SHOPPING FOR", FontKind.Interface) + 6;
             Ui.Badge(page, "Q", x, 13, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
             x += 15;
             for (int i = 0; i < party.Count; i++)
@@ -449,7 +449,7 @@ namespace Obscure
             {
                 int f = i;
                 bool on = filter == i;
-                int w = PixelFont.Measure(FilterNames[i].ToUpperInvariant()) + 10;
+                int w = PixelFont.Measure(FilterNames[i].ToUpperInvariant(), FontKind.Interface) + 10;
                 var chip = Ui.Button(page, "", fx, BodyY + 6, w, () => { filter = f; selected = 0; Rebuild(); }, 14, showCursor: false);
                 var box = chip.GetComponentInChildren<SpriteRenderer>();
                 var lbl = Ui.Label(chip.transform, FilterNames[i].ToUpperInvariant(), 5, 4, on ? Palette.Gold1 : Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
@@ -477,7 +477,7 @@ namespace Obscure
                 Ui.Label(t, PixelFont.Fit(def.name, 150, FontKind.DotGothic), 32, 3, usable ? rc : Color.Lerp(rc, Palette.Mist3, 0.5f), order: Ui.Widget + 2);
                 Ui.Label(t, $"{s.item.rarity} · EQUIP LV {s.item.level}".ToUpperInvariant(), 32, 17, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
                 string use = s.isSold ? "SOLD OUT" : usable ? $"✓ USABLE BY {hero.name}".ToUpperInvariant() : PixelFont.Fit(why.ToUpperInvariant(), 120);
-                Ui.Label(t, PixelFont.Fit(use, 124), 216, 10, s.isSold ? Palette.Mist3 : usable ? Ok : No, order: Ui.Widget + 2, font: FontKind.Interface);
+                Ui.Label(t, PixelFont.Fit(use, 124, FontKind.Interface), 216, 10, s.isSold ? Palette.Mist3 : usable ? Ok : No, order: Ui.Widget + 2, font: FontKind.Interface);
                 Ui.Label(t, s.isSold ? "-" : Money(s.cost), lw - 34, 8, usable && Gold >= s.cost ? Palette.Gold1 : Palette.Mist3, Align.Right, order: Ui.Widget + 2);
                 y += 30;
             }
@@ -516,7 +516,7 @@ namespace Obscure
                 y = StatRow(x, y, w, PixelFont.Fit(a.GetDescription().ToUpperInvariant(), w), "");
             y += 4;
             string why = EquipmentValidator.Validate(def, def.slot, hero.classDef, hero.race, hero.level, hero.FinalScores, hero.id);
-            Ui.Label(page, PixelFont.Wrap(why == null ? $"✓ {hero.name} CAN USE THIS ({hero.classDef?.name})".ToUpperInvariant() : why.ToUpperInvariant(), w), x, y, why == null ? Ok : No, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap(why == null ? $"✓ {hero.name} CAN USE THIS ({hero.classDef?.name})".ToUpperInvariant() : why.ToUpperInvariant(), w, FontKind.Interface), x, y, why == null ? Ok : No, font: FontKind.Interface);
             y += 22;
             var stat = def.slot == EquipmentSlot.MainHand || def.slot == EquipmentSlot.SecondHand
                 ? new[] { DerivedStatId.PhysicalPower, DerivedStatId.RangedPower, DerivedStatId.MagicPower }.OrderByDescending(st => hero.Derived.Get(st)).First()
@@ -524,7 +524,7 @@ namespace Obscure
             int delta = why == null ? EquipmentManager.CalculateStatDelta(hero, def.slot, item, stat) : 0;
             hero.equipped.TryGetValue(def.slot, out var cur);
             if (why == null)
-                Ui.Label(page, PixelFont.Fit($"VS {(cur != null ? cur.name : "EMPTY SLOT")}: {Database.DerivedStatDefs[stat].shortName} {(delta > 0 ? "+" : "")}{delta}".ToUpperInvariant(), w), x, y, delta > 0 ? Up : delta < 0 ? No : Palette.Mist3, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Fit($"VS {(cur != null ? cur.name : "EMPTY SLOT")}: {Database.DerivedStatDefs[stat].shortName} {(delta > 0 ? "+" : "")}{delta}".ToUpperInvariant(), w, FontKind.Interface), x, y, delta > 0 ? Up : delta < 0 ? No : Palette.Mist3, font: FontKind.Interface);
 
             Feedback(x, BodyBottom - 76, w);
             Ui.Rect(page, dx + 2, BodyY + BodyBottom - BodyY - 46, dw - 4, 1, Palette.Ink4, Ui.Panels + 2);
@@ -582,7 +582,7 @@ namespace Obscure
             for (int i = 0; i < Filters.Length; i++)
             {
                 int f = i;
-                int w = PixelFont.Measure(Filters[i].ToUpperInvariant()) + 12;
+                int w = PixelFont.Measure(Filters[i].ToUpperInvariant(), FontKind.Interface) + 12;
                 bool on = filter == i;
                 var seg = Ui.Button(page, "", sx, BodyY + 24, w, () => { filter = f; selected = 0; confirming = false; Rebuild(); }, 14, showCursor: false);
                 var box = seg.GetComponentInChildren<SpriteRenderer>();
@@ -601,11 +601,11 @@ namespace Obscure
                 var t = row.transform;
                 Ui.ItemSlot(t, 3, 2, 20, e.Definition, e.Definition.slot, false, Ui.Widget + 1);
                 Ui.Label(t, PixelFont.Fit(Name(e), lw - 72, FontKind.DotGothic), 27, 1, EquipmentRarities.GetColor(e.rarity), order: Ui.Widget + 2);
-                Ui.Label(t, PixelFont.Fit(Owner(e), lw - 72), 27, 15, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
+                Ui.Label(t, PixelFont.Fit(Owner(e), lw - 72, FontKind.Interface), 27, 15, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
                 Ui.Label(t, $"+{e.upgradeLevel}", lw - 28, 9, Palette.Mist2, Align.Right, order: Ui.Widget + 2, font: FontKind.Interface);
                 y += 27;
             }
-            if (gear.Count == 0) Ui.Label(page, PixelFont.Wrap("NO EQUIPMENT TO UPGRADE.", lw - 20), Left + 10, BodyY + 60, Palette.Mist3, font: FontKind.Interface);
+            if (gear.Count == 0) Ui.Label(page, PixelFont.Wrap("NO EQUIPMENT TO UPGRADE.", lw - 20, FontKind.Interface), Left + 10, BodyY + 60, Palette.Mist3, font: FontKind.Interface);
 
             var sel = gear.Count > 0 ? gear[selected] : null;
             BuildAnvil(sel);
@@ -659,7 +659,7 @@ namespace Obscure
             h = Mathf.Min(h, BodyBottom - 8 - y);
             Ui.Image(page, PixelArt.DashedBadge(w, h, Color.clear, Palette.Ink5), x, y, Ui.Panels + 2);
             Ui.Label(page, "NOT CHANGED BY UPGRADES", x + 6, y + 6, Palette.Mist3, font: FontKind.Interface);
-            Ui.Tag(page, "UNCHANGED", x + w - PixelFont.Measure("UNCHANGED") - 14, y + 4);
+            Ui.Tag(page, "UNCHANGED", x + w - PixelFont.Measure("UNCHANGED", FontKind.Interface) - 14, y + 4);
             Ui.Label(page, body, x + 6, y + 19, Palette.Mist2, font: FontKind.Interface);
             if (!canUp) Ui.Label(page, maxReason.ToUpperInvariant(), x, BodyBottom - 14, Palette.Mist3, font: FontKind.Interface);
         }
@@ -685,7 +685,7 @@ namespace Obscure
             Ui.Image(page, PixelArt.Box(w, 76, Palette.Ink2, Palette.Gold3), x, by, Ui.Panels + 2);
             Ui.Label(page, canUp ? $"Upgrade to +{e.upgradeLevel + 1}?" : "Fully upgraded", x + 6, by + 6, Palette.Gold1);
             string text = canUp ? $"SPENDS {Money(cost)} HUB GOLD. HUB GOLD AFTER: {Money(Gold - cost)}" : "THIS ITEM IS AT ITS MAXIMUM UPGRADE LEVEL.";
-            Ui.Label(page, PixelFont.Wrap(text, w - 12), x + 6, by + 22, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap(text, w - 12, FontKind.Interface), x + 6, by + 22, Palette.Mist2, font: FontKind.Interface);
             int bw = (w - 16) / 2;
             menu.Add(Ui.Button(page, "Cancel", x + 6, by + 52, bw, () => { selected = 0; feedback = null; Rebuild(); }, 18, showCursor: false));
             menu.Add(Ui.Button(page, "Upgrade", x + 10 + bw, by + 52, bw, () => Upgrade(e), 18, interactable: canUp && afford, showCursor: false, style: ButtonStyle.Primary));
@@ -739,7 +739,7 @@ namespace Obscure
                 int tagX = nx + PixelFont.Measure(PixelFont.Fit(u.name, 90, FontKind.DotGothic), FontKind.DotGothic) + 6;
                 if (!u.Alive)
                 {
-                    int w = PixelFont.Measure("DEAD") + 8;
+                    int w = PixelFont.Measure("DEAD", FontKind.Interface) + 8;
                     Ui.Image(page, PixelArt.Badge(w, 11, Palette.Hex(0x3A1418), Palette.Err), tagX, y + 9, Ui.Widget);
                     Ui.Label(page, "DEAD", tagX + 4, y + 11, Palette.Hex(0xFFD2CC), order: Ui.Widget + 1, font: FontKind.Interface);
                 }
@@ -762,7 +762,7 @@ namespace Obscure
                 });
                 y += 62;
             }
-            Ui.Label(page, PixelFont.Wrap("RECOVERY: FULL HP AND MP, AND CLEARS DEBUFFS AND NEGATIVE STATUSES. LIVING CHARACTERS ONLY.", lw - 20), Left + 10, y + 2, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap("RECOVERY: FULL HP AND MP, AND CLEARS DEBUFFS AND NEGATIVE STATUSES. LIVING CHARACTERS ONLY.", lw - 20, FontKind.Interface), Left + 10, y + 2, Palette.Mist2, font: FontKind.Interface);
 
             BuildBill(party);
         }
@@ -875,7 +875,7 @@ namespace Obscure
                 Ui.Relic(t, 4, 4, 19, r, Ui.Widget + 1);
                 Color rc = Ui.RelicColor(r);
                 Ui.Label(t, PixelFont.Fit(r.name, 170, FontKind.DotGothic), 30, 2, owned ? Color.Lerp(rc, Palette.Ink2, 0.5f) : rc, order: Ui.Widget + 2);
-                Ui.Label(t, PixelFont.Fit((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant(), 190), 30, 16, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
+                Ui.Label(t, PixelFont.Fit((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant(), 190, FontKind.Interface), 30, 16, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
                 Ui.Label(t, $"{r.proposedRarity} · {r.category}".ToUpperInvariant(), 226, 10, Palette.Mist2, order: Ui.Widget + 2, font: FontKind.Interface);
                 string price = owned ? "OWNED" : Money(r.buyPrice);
                 Ui.Label(t, price, lw - 34, owned || !afford ? 3 : 8, owned ? Palette.Mist3 : afford ? Palette.Gold1 : Palette.Err, Align.Right, order: Ui.Widget + 2);
@@ -899,7 +899,7 @@ namespace Obscure
             int cx = nx + PixelFont.Measure(PixelFont.Fit(r.name, 140, FontKind.DotGothic), FontKind.DotGothic) + 6;
             cx += Ui.Tag(page, r.proposedRarity.ToString(), cx, y + 10, TagKind.Cls) + 3;
             Ui.Tag(page, r.category.ToString(), cx, y + 10);
-            Ui.Label(page, PixelFont.Wrap((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant(), 190), nx, y + 26, Palette.Mist1, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant(), 190, FontKind.Interface), nx, y + 26, Palette.Mist1, font: FontKind.Interface);
             Ui.Label(page, "PASSIVE · WHOLE PARTY · PERMANENT ONCE BOUGHT", nx, y + h - 16, Palette.Mist2, font: FontKind.Interface);
 
             int rx = Left + lw - 128, rw = 118;
@@ -938,7 +938,7 @@ namespace Obscure
                 }
                 y += 31;
             }
-            Ui.Label(page, PixelFont.Wrap("RELICS CAN ONLY BE SOLD HERE, AT ANY TIME. SELLING FREES ONE SLOT. NO DUPLICATES: A RELIC YOU OWN IS GREYED OUT IN STOCK.", w), x, y + 2, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap("RELICS CAN ONLY BE SOLD HERE, AT ANY TIME. SELLING FREES ONE SLOT. NO DUPLICATES: A RELIC YOU OWN IS GREYED OUT IN STOCK.", w, FontKind.Interface), x, y + 2, Palette.Mist2, font: FontKind.Interface);
             y += 44;
 
             var sel = stock.Count > 0 ? stock[selected] : null;

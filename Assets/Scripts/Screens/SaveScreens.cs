@@ -1,9 +1,58 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Obscure
 {
+    // Shared Save / Load chrome, matching the hub service boards (Back · gold title · tag · note, ink rule at y 33).
+    static class SaveSlotUi
+    {
+        public static Selectable Header(Transform root, string title, string tag, string note, Action back)
+        {
+            Backdrop.Create(root, false, 0, Palette.Ink1, Palette.Ink1);
+            var backBtn = Ui.Button(root, "Back", 12, 9, 40, back, 18, showCursor: false);
+            Ui.Label(root, title, 62, 13, Palette.Gold2);
+            int x = 62 + PixelFont.Measure(title) + 10;
+            x += Ui.Tag(root, tag, x, 13, TagKind.Keep, 13) + 8;
+            Ui.Label(root, PixelFont.Fit(note, 628 - x, FontKind.Interface), x, 16, Palette.Mist2, font: FontKind.Interface);
+            Ui.Rect(root, 12, 33, 616, 1, Palette.Ink4);
+            return backBtn;
+        }
+
+        // Selectable slot card. Text sits above the card's own box (Widget layer), so it is never hidden by it.
+        public static GameObject SlotCard(Transform root, SaveSlotId slot, int x, int y, bool selected, string emptyText, Action select, out Selectable button)
+        {
+            const int w = 290, h = 56, o = Ui.Widget + 2;
+            var go = new GameObject($"SlotCard_{slot}");
+            go.transform.SetParent(root, false);
+            var t = go.transform;
+
+            var btn = Ui.Button(t, "", x, y, w, select, h, showCursor: false, style: ButtonStyle.Card);
+            btn.selected = selected;
+            btn.visual(false);
+            button = btn;
+
+            var meta = SaveManager.GetSlotMetadata(slot);
+            bool auto = slot == SaveSlotId.AutoSave;
+            Ui.Label(t, SaveSlotMetadata.FormatSlotName(slot), x + 10, y + 7, selected ? Palette.Gold1 : Palette.Mist1, order: o);
+            if (auto) Ui.Tag(t, "SYSTEM", x + 12 + PixelFont.Measure(SaveSlotMetadata.FormatSlotName(slot)), y + 7, TagKind.Cls, 11, o);
+
+            if (!meta.isOccupied)
+            {
+                Ui.Label(t, "EMPTY", x + w - 10, y + 9, Palette.Mist3, Align.Right, order: o, font: FontKind.Interface);
+                Ui.Label(t, emptyText, x + 10, y + 30, Palette.Mist3, order: o, font: FontKind.Interface);
+                return go;
+            }
+            string place = PixelFont.Fit($"ACT {meta.committedAct} · {meta.committedDungeonName}".ToUpperInvariant(), 130, FontKind.Interface);
+            Ui.Label(t, place, x + w - 10, y + 9, Palette.Ok, Align.Right, order: o, font: FontKind.Interface);
+            Ui.Label(t, PixelFont.Fit(meta.partySummary.ToUpperInvariant(), w - 20, FontKind.Interface), x + 10, y + 26, Palette.Mist1, order: o, font: FontKind.Interface);
+            string details = $"{meta.lastSavedAtIso} · {meta.hubGold:#,##0} HUB GOLD · {meta.GetFormattedPlaytime()}";
+            Ui.Label(t, PixelFont.Fit(details.ToUpperInvariant(), w - 20, FontKind.Interface), x + 10, y + 39, Palette.Mist3, order: o, font: FontKind.Interface);
+            return go;
+        }
+    }
+
     // Reusable confirmation modal for Overwrite, Delete, Load, and Abandon operations
     public class ConfirmationModal
     {
@@ -63,18 +112,18 @@ namespace Obscure
     {
         SaveSlotId selectedSlot = SaveSlotId.Slot1;
         readonly GameObject[] slotObjects = new GameObject[5];
+        readonly Selectable[] slotButtons = new Selectable[5];
+        readonly List<Selectable> actionButtons = new List<Selectable>();
+        Menu menu;
+        Selectable headerBackBtn;
         Label feedbackLabel;
         Transform actionArea;
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
-
-            Ui.Button(Root, "< BACK", 16, 10, 56, () => Game.Go(GameState.Hub), 20, style: ButtonStyle.Slab, showCursor: false);
-            Ui.Label(Root, "SAVE GAME", 80, 12, Palette.AntiqueGoldBright, Align.Left, 2, FontKind.DotGothic);
-            Ui.Badge(Root, "HUB ONLY", 210, 12, 70, 18, Palette.Hex(0x131826), Palette.Gold3, Palette.Gold2);
-            Ui.Label(Root, "Saves progress committed by your last Dungeon Clear", 290, 15, Palette.Mist2, font: FontKind.DotGothic);
-            Ui.Divider(Root, 16, 36, 608, Palette.DarkBorder, Palette.AntiqueGoldBright);
+            menu = Root.gameObject.AddComponent<Menu>();
+            menu.onBack = () => Game.Go(GameState.Hub);
+            headerBackBtn = SaveSlotUi.Header(Root, "Save Game", "HUB ONLY", "SAVES PROGRESS COMMITTED BY YOUR LAST DUNGEON CLEAR.", () => Game.Go(GameState.Hub));
 
             // Left column (x: 20): AutoSave + Slot 1 + Slot 2
             RenderSlotCard(SaveSlotId.AutoSave, 20, 46);
@@ -104,45 +153,12 @@ namespace Obscure
                 else UnityEngine.Object.DestroyImmediate(slotObjects[idx]);
             }
 
-            var cardGo = new GameObject($"SlotCard_{slot}");
-            cardGo.transform.SetParent(Root, false);
-            slotObjects[idx] = cardGo;
-
-            bool isSelected = selectedSlot == slot;
-            var meta = SaveManager.GetSlotMetadata(slot);
-
-            Color borderColor = isSelected ? Palette.AntiqueGoldBright : Palette.DarkBorder;
-            Color fillColor = slot == SaveSlotId.AutoSave ? Palette.Hex(0x131826) : Palette.DeepCharcoal;
-
-            Ui.Panel(cardGo.transform, x, y, 290, 56, fillColor, borderColor);
-
-            // Clickable button covering the card
-            var btn = Ui.Button(cardGo.transform, "", x, y, 290, () =>
+            slotObjects[idx] = SaveSlotUi.SlotCard(Root, slot, x, y, selectedSlot == slot, "NO SAVED CAMPAIGN IN THIS SLOT.", () =>
             {
                 selectedSlot = slot;
                 RefreshCards();
                 RefreshActionArea();
-            }, 56, showCursor: false);
-            var menu = Root.gameObject.GetComponent<Menu>() ?? Root.gameObject.AddComponent<Menu>();
-            menu.Add(btn);
-
-            string slotName = SaveSlotMetadata.FormatSlotName(slot);
-            if (slot == SaveSlotId.AutoSave) slotName += " [SYSTEM]";
-            Ui.Label(cardGo.transform, slotName, x + 10, y + 8, isSelected ? Palette.Gold1 : Palette.AntiqueGold, Align.Left, 1, FontKind.Serif);
-
-            if (!meta.isOccupied)
-            {
-                Ui.Label(cardGo.transform, "[EMPTY]", x + 280, y + 8, Palette.Mist3, Align.Right);
-                Ui.Label(cardGo.transform, "No saved campaign recorded in this slot.", x + 10, y + 26, Palette.Mist2);
-            }
-            else
-            {
-                string badge = $"ACT {meta.committedAct}: {meta.committedDungeonName}";
-                Ui.Label(cardGo.transform, PixelFont.Fit(badge, 140), x + 280, y + 8, Palette.Emerald, Align.Right);
-                Ui.Label(cardGo.transform, PixelFont.Fit(meta.partySummary, 270), x + 10, y + 24, Palette.WarmIvory);
-                string details = $"{meta.lastSavedAtIso} | {meta.hubGold}G | TIME: {meta.GetFormattedPlaytime()}";
-                Ui.Label(cardGo.transform, details, x + 10, y + 38, Palette.Mist2);
-            }
+            }, out slotButtons[idx]);
         }
 
         void RefreshCards()
@@ -164,6 +180,7 @@ namespace Obscure
 
             actionArea = new GameObject("SaveActionArea").transform;
             actionArea.SetParent(Root, false);
+            actionButtons.Clear();
 
             var meta = SaveManager.GetSlotMetadata(selectedSlot);
             int ax = 340, ay = 178;
@@ -171,15 +188,13 @@ namespace Obscure
             Ui.Label(actionArea, $"SELECTED: {SaveSlotMetadata.FormatSlotName(selectedSlot)}", ax, ay, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
             Ui.Divider(actionArea, ax, ay + 18, 270, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
-            var menu = actionArea.gameObject.AddComponent<Menu>();
-
             if (selectedSlot == SaveSlotId.AutoSave)
             {
                 string info = "The Auto Save slot is managed automatically by the Sanctuary Hub.\n\nManual saves cannot overwrite this slot.";
                 Ui.Label(actionArea, PixelFont.Wrap(info, 270), ax, ay + 26, Palette.Mist2);
 
                 var backBtn = Ui.Button(actionArea, "BACK TO HUB", ax + 50, ay + 78, 170, () => Game.Go(GameState.Hub), 22, style: ButtonStyle.Slab);
-                menu.Add(backBtn);
+                actionButtons.Add(backBtn);
             }
             else
             {
@@ -190,8 +205,8 @@ namespace Obscure
 
                     var saveBtn = Ui.Button(actionArea, "SAVE GAME", ax + 10, ay + 78, 120, OnSaveClicked, 22, style: ButtonStyle.Primary);
                     var backBtn = Ui.Button(actionArea, "BACK", ax + 140, ay + 78, 120, () => Game.Go(GameState.Hub), 22, style: ButtonStyle.Slab);
-                    menu.Add(saveBtn);
-                    menu.Add(backBtn);
+                    actionButtons.Add(saveBtn);
+                    actionButtons.Add(backBtn);
                 }
                 else
                 {
@@ -201,11 +216,22 @@ namespace Obscure
                     var overwriteBtn = Ui.Button(actionArea, "OVERWRITE", ax + 5, ay + 62, 125, OnOverwriteClicked, 22, style: ButtonStyle.Primary);
                     var deleteBtn = Ui.Button(actionArea, "DELETE", ax + 140, ay + 62, 125, OnDeleteClicked, 22, style: ButtonStyle.Slab);
                     var backBtn = Ui.Button(actionArea, "BACK TO HUB", ax + 70, ay + 90, 130, () => Game.Go(GameState.Hub), 20, style: ButtonStyle.Slab);
-                    menu.Add(overwriteBtn);
-                    menu.Add(deleteBtn);
-                    menu.Add(backBtn);
+                    actionButtons.Add(overwriteBtn);
+                    actionButtons.Add(deleteBtn);
+                    actionButtons.Add(backBtn);
                 }
             }
+
+            RebuildMenu();
+        }
+
+        void RebuildMenu()
+        {
+            menu.items.Clear();
+            foreach (var b in slotButtons) if (b != null) menu.Add(b);
+            foreach (var b in actionButtons) if (b != null) menu.Add(b);
+            if (headerBackBtn != null) menu.Add(headerBackBtn);
+            if (actionButtons.Count > 0) menu.Focus(slotButtons.Count(b => b != null), false, true);
         }
 
         void OnSaveClicked()
@@ -269,6 +295,10 @@ namespace Obscure
         readonly GameState returnState;
         SaveSlotId selectedSlot = SaveSlotId.AutoSave;
         readonly GameObject[] slotObjects = new GameObject[5];
+        readonly Selectable[] slotButtons = new Selectable[5];
+        readonly List<Selectable> actionButtons = new List<Selectable>();
+        Menu menu;
+        Selectable headerBackBtn;
         Label feedbackLabel;
         Transform actionArea;
 
@@ -279,13 +309,9 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 24, Palette.DeepCharcoal, Palette.Hex(0x1B2133), Palette.Gold2);
-
-            Ui.Button(Root, "< BACK", 16, 10, 56, () => Game.Go(returnState), 20, style: ButtonStyle.Slab, showCursor: false);
-            Ui.Label(Root, "LOAD GAME", 80, 12, Palette.AntiqueGoldBright, Align.Left, 2, FontKind.DotGothic);
-            Ui.Badge(Root, "RESTORES CAMPAIGN", 210, 12, 116, 18, Palette.Hex(0x131826), Palette.Gold3, Palette.Gold2);
-            Ui.Label(Root, "Restores your campaign and returns to the Sanctuary Hub", 336, 15, Palette.Mist2, font: FontKind.DotGothic);
-            Ui.Divider(Root, 16, 36, 608, Palette.DarkBorder, Palette.AntiqueGoldBright);
+            menu = Root.gameObject.AddComponent<Menu>();
+            menu.onBack = () => Game.Go(returnState);
+            headerBackBtn = SaveSlotUi.Header(Root, "Load Game", "RESTORES CAMPAIGN", "RETURNS YOU TO THE SANCTUARY HUB.", () => Game.Go(returnState));
 
             // Left column: AutoSave + Slot 1 + Slot 2
             RenderSlotCard(SaveSlotId.AutoSave, 20, 46);
@@ -315,44 +341,12 @@ namespace Obscure
                 else UnityEngine.Object.DestroyImmediate(slotObjects[idx]);
             }
 
-            var cardGo = new GameObject($"LoadSlotCard_{slot}");
-            cardGo.transform.SetParent(Root, false);
-            slotObjects[idx] = cardGo;
-
-            bool isSelected = selectedSlot == slot;
-            var meta = SaveManager.GetSlotMetadata(slot);
-
-            Color borderColor = isSelected ? Palette.AntiqueGoldBright : Palette.DarkBorder;
-            Color fillColor = slot == SaveSlotId.AutoSave ? Palette.Hex(0x131826) : Palette.DeepCharcoal;
-
-            Ui.Panel(cardGo.transform, x, y, 290, 56, fillColor, borderColor);
-
-            var btn = Ui.Button(cardGo.transform, "", x, y, 290, () =>
+            slotObjects[idx] = SaveSlotUi.SlotCard(Root, slot, x, y, selectedSlot == slot, "EMPTY SLOT — NOTHING TO LOAD.", () =>
             {
                 selectedSlot = slot;
                 RefreshCards();
                 RefreshActionArea();
-            }, 56, showCursor: false);
-            var menu = Root.gameObject.GetComponent<Menu>() ?? Root.gameObject.AddComponent<Menu>();
-            menu.Add(btn);
-
-            string slotName = SaveSlotMetadata.FormatSlotName(slot);
-            if (slot == SaveSlotId.AutoSave) slotName += " [SYSTEM]";
-            Ui.Label(cardGo.transform, slotName, x + 10, y + 8, isSelected ? Palette.Gold1 : Palette.AntiqueGold, Align.Left, 1, FontKind.Serif);
-
-            if (!meta.isOccupied)
-            {
-                Ui.Label(cardGo.transform, "[EMPTY]", x + 280, y + 8, Palette.Mist3, Align.Right);
-                Ui.Label(cardGo.transform, "Empty slot — cannot be loaded.", x + 10, y + 26, Palette.Mist3);
-            }
-            else
-            {
-                string badge = $"ACT {meta.committedAct}: {meta.committedDungeonName}";
-                Ui.Label(cardGo.transform, PixelFont.Fit(badge, 140), x + 280, y + 8, Palette.Emerald, Align.Right);
-                Ui.Label(cardGo.transform, PixelFont.Fit(meta.partySummary, 270), x + 10, y + 24, Palette.WarmIvory);
-                string details = $"{meta.lastSavedAtIso} | {meta.hubGold}G | TIME: {meta.GetFormattedPlaytime()}";
-                Ui.Label(cardGo.transform, details, x + 10, y + 38, Palette.Mist2);
-            }
+            }, out slotButtons[idx]);
         }
 
         void RefreshCards()
@@ -374,6 +368,7 @@ namespace Obscure
 
             actionArea = new GameObject("LoadActionArea").transform;
             actionArea.SetParent(Root, false);
+            actionButtons.Clear();
 
             var meta = SaveManager.GetSlotMetadata(selectedSlot);
             int ax = 340, ay = 178;
@@ -381,15 +376,13 @@ namespace Obscure
             Ui.Label(actionArea, $"SELECTED: {SaveSlotMetadata.FormatSlotName(selectedSlot)}", ax, ay, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
             Ui.Divider(actionArea, ax, ay + 18, 270, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
-            var menu = actionArea.gameObject.AddComponent<Menu>();
-
             if (!meta.isOccupied)
             {
                 string info = "This slot is empty and cannot be loaded.\nSelect an occupied slot.";
                 Ui.Label(actionArea, PixelFont.Wrap(info, 270), ax, ay + 26, Palette.Mist3);
 
                 var backBtn = Ui.Button(actionArea, "BACK", ax + 70, ay + 78, 130, () => Game.Go(returnState), 22, style: ButtonStyle.Slab);
-                menu.Add(backBtn);
+                actionButtons.Add(backBtn);
             }
             else
             {
@@ -398,9 +391,20 @@ namespace Obscure
 
                 var loadBtn = Ui.Button(actionArea, "LOAD CAMPAIGN", ax + 10, ay + 78, 120, OnLoadClicked, 22, style: ButtonStyle.Primary);
                 var backBtn = Ui.Button(actionArea, "BACK", ax + 140, ay + 78, 120, () => Game.Go(returnState), 22, style: ButtonStyle.Slab);
-                menu.Add(loadBtn);
-                menu.Add(backBtn);
+                actionButtons.Add(loadBtn);
+                actionButtons.Add(backBtn);
             }
+
+            RebuildMenu();
+        }
+
+        void RebuildMenu()
+        {
+            menu.items.Clear();
+            foreach (var b in slotButtons) if (b != null) menu.Add(b);
+            foreach (var b in actionButtons) if (b != null) menu.Add(b);
+            if (headerBackBtn != null) menu.Add(headerBackBtn);
+            if (actionButtons.Count > 0) menu.Focus(slotButtons.Count(b => b != null), false, true);
         }
 
         void OnLoadClicked()

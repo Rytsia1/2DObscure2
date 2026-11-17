@@ -160,7 +160,7 @@ namespace Obscure
             Ui.Image(page, PixelArt.Badge(bw, 20, Palette.Hex(0x1D1608), Palette.Gold3), RightEdge - bw, 8, Ui.Widget);
             Ui.Label(page, "SKILL POINTS", RightEdge - bw + 6, 15, Palette.Gold2, order: Ui.Widget + 1, font: FontKind.Interface);
             Ui.Label(page, sp.ToString(), RightEdge - 6, 12, Palette.Gold1, Align.Right, order: Ui.Widget + 1);
-            menu.Add(Ui.Button(page, "Talents ›", RightEdge - bw - 70, 9, 64, () => Game?.Go(GameState.Talents), 18, showCursor: false, style: ButtonStyle.Flat));
+            menu.Add(Ui.Button(page, "Talents ›", RightEdge - bw - 76, 9, 70, () => Game?.Go(GameState.Talents), 18, showCursor: false));
         }
 
         // ------------------------------------------------------------------ tree
@@ -171,10 +171,10 @@ namespace Obscure
             Ui.Panel(page, Left, BodyY, TreeW, BodyBottom - BodyY);
             Ui.Header(page, $"{hero.classDef?.name ?? "Class"} skill tree", Left + 8, BodyY + 6, TreeW - 4);
             // Legend: square = Active, diamond = Passive
-            int lx = Left + TreeW - 8 - PixelFont.Measure("PASSIVE");
+            int lx = Left + TreeW - 8 - PixelFont.Measure("PASSIVE", FontKind.Interface);
             Ui.Label(page, "PASSIVE", lx, BodyY + 8, Palette.Mist2, font: FontKind.Interface);
             Ui.Image(page, PixelArt.Diamond(7, Palette.Mist2, false), lx - 10, BodyY + 8, Ui.Widget);
-            lx -= 14 + PixelFont.Measure("ACTIVE") + 6;
+            lx -= 14 + PixelFont.Measure("ACTIVE", FontKind.Interface) + 6;
             Ui.Label(page, "ACTIVE", lx, BodyY + 8, Palette.Mist2, font: FontKind.Interface);
             Ui.Image(page, PixelArt.Badge(6, 6, Color.clear, Palette.Mist2), lx - 9, BodyY + 9, Ui.Widget);
 
@@ -380,7 +380,7 @@ namespace Obscure
             }
 
             if (!string.IsNullOrEmpty(feedback))
-                Ui.Label(page, PixelFont.Wrap(feedback.ToUpperInvariant(), w), x, BodyBottom - 56, feedbackBad ? Palette.Err : Palette.Ok, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Wrap(feedback.ToUpperInvariant(), w, FontKind.Interface), x, BodyBottom - 56, feedbackBad ? Palette.Err : Palette.Ok, font: FontKind.Interface);
 
             // Footer: SP cost, SP after, Learn / Upgrade
             Ui.Rect(page, DetailX + 2, BodyBottom - 34, dw - 4, 1, Palette.Ink4, Ui.Panels + 2);
@@ -391,7 +391,7 @@ namespace Obscure
             Ui.Label(page, cost > 0 ? $"{sp} › {sp - cost} LEFT" : "MAX RANK", x + 34, BodyBottom - 23, Palette.Mist2, font: FontKind.Interface);
             string label = !learned ? "Learn" : rank < maxRank ? "Upgrade" : "Maxed";
             menu.Add(Ui.Button(page, label, x + w - 64, BodyBottom - 28, 64, !learned ? (Action)Learn : Upgrade, 20, interactable: canAct, showCursor: false, style: ButtonStyle.Primary));
-            menu.Add(Ui.Button(page, confirmRespecActive ? "Confirm?" : "Respec SP", x, BodyBottom - 102, 70, Respec, 16, showCursor: false, style: ButtonStyle.Flat));
+            menu.Add(Ui.Button(page, confirmRespecActive ? "Confirm?" : "Respec SP", x, BodyBottom - 102, 76, Respec, 18, showCursor: false, style: confirmRespecActive ? ButtonStyle.Danger : ButtonStyle.Slab));
         }
 
         int Row(int x, int y, int w, string label, string value)
@@ -404,7 +404,7 @@ namespace Obscure
 
         void Check(int x, ref int y, bool ok, string text)
         {
-            Ui.Label(page, PixelFont.Fit($"{(ok ? "✓" : "X")} {text}".ToUpperInvariant(), 170), x, y, ok ? Palette.Ok : Palette.Err, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Fit($"{(ok ? "✓" : "X")} {text}".ToUpperInvariant(), 170, FontKind.Interface), x, y, ok ? Palette.Ok : Palette.Err, font: FontKind.Interface);
             y += 11;
         }
 

@@ -44,7 +44,7 @@ namespace Obscure
         public bool FeyStepBonusPending;
         public int IronResolveCooldown;
         public bool IronResolveActive;
-        public int SecondChanceRetriesRemaining = 2;
+        public int SecondChanceRetriesRemaining = 0;
         public bool UsedDraconicOverdrive;
         public int DraconicOverdriveTurns;
         public bool OverdriveExhaustPending;
@@ -398,7 +398,7 @@ namespace Obscure
         }
 
         // Halfling Racial Feat — Second Chance
-        public bool CanUseSecondChanceRetry => Alive && SecondChanceRetriesRemaining > 0;
+        public bool CanUseSecondChanceRetry => Alive && SecondChanceRetriesRemaining > 0 && (unit?.race?.racialFeat?.canRetryFailedQte ?? false);
 
         public bool ConsumeSecondChanceRetry()
         {

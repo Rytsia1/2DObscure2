@@ -10,6 +10,11 @@ namespace Obscure.Tests
     [TestFixture]
     public class DifficultySystemTests
     {
+        string savedSettingsJson;
+        string savedRunJson;
+        float savedAudioVolume;
+        UnityEngine.InputSystem.Key savedQteKey;
+
         [OneTimeSetUp]
         public void Setup()
         {
@@ -19,6 +24,29 @@ namespace Obscure.Tests
             _ = Database.Classes;
             _ = Database.Races;
             _ = Database.Backgrounds;
+        }
+
+        [SetUp]
+        public void BeforeEach()
+        {
+            savedSettingsJson = PlayerPrefs.HasKey(GameSettings.PrefKey) ? PlayerPrefs.GetString(GameSettings.PrefKey, null) : null;
+            savedRunJson = PlayerPrefs.HasKey(GameSave.PrefKey) ? PlayerPrefs.GetString(GameSave.PrefKey, null) : null;
+            savedAudioVolume = AudioListener.volume;
+            savedQteKey = Controls.QteKey;
+        }
+
+        [TearDown]
+        public void AfterEach()
+        {
+            if (savedSettingsJson == null) PlayerPrefs.DeleteKey(GameSettings.PrefKey);
+            else PlayerPrefs.SetString(GameSettings.PrefKey, savedSettingsJson);
+
+            if (savedRunJson == null) PlayerPrefs.DeleteKey(GameSave.PrefKey);
+            else PlayerPrefs.SetString(GameSave.PrefKey, savedRunJson);
+
+            PlayerPrefs.Save();
+            AudioListener.volume = savedAudioVolume;
+            Controls.QteKey = savedQteKey;
         }
 
         static RunState CreateTestRun(int seed = 42, int act = 1)

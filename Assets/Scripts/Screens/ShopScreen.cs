@@ -15,6 +15,8 @@ namespace Obscure
         ShopTab currentTab = ShopTab.BuyConsumables;
         DungeonShopData shopData;
         Transform contentRoot;
+        Menu menu;
+        Selectable consTabBtn, equipTabBtn, sellTabBtn, leaveBtn;
         Label feedbackLabel;
         Label goldBadgeLabel;
         readonly Label[] partyHpRows = new Label[4];
@@ -38,13 +40,11 @@ namespace Obscure
             Ui.Panel(Root, 20, 52, 380, 250, Palette.DeepCharcoal, Palette.DarkBorder);
 
             // Tab Buttons
-            var tabMenu = Root.gameObject.AddComponent<Menu>();
-            var consTabBtn = Ui.Button(Root, "SUPPLIES", 24, 56, 110, () => SwitchTab(ShopTab.BuyConsumables), 20, style: currentTab == ShopTab.BuyConsumables ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            var equipTabBtn = Ui.Button(Root, "EQUIPMENT", 140, 56, 120, () => SwitchTab(ShopTab.BuyEquipment), 20, style: currentTab == ShopTab.BuyEquipment ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            var sellTabBtn = Ui.Button(Root, "SELL GEAR", 266, 56, 120, () => SwitchTab(ShopTab.Sell), 20, style: currentTab == ShopTab.Sell ? ButtonStyle.Primary : ButtonStyle.Slab, font: FontKind.DotGothic);
-            tabMenu.Add(consTabBtn);
-            tabMenu.Add(equipTabBtn);
-            tabMenu.Add(sellTabBtn);
+            menu = Root.gameObject.AddComponent<Menu>();
+            menu.onBack = OnLeaveShop;
+            consTabBtn = Ui.Button(Root, "SUPPLIES", 24, 56, 110, () => SwitchTab(ShopTab.BuyConsumables), 20, style: ButtonStyle.Slab, font: FontKind.DotGothic);
+            equipTabBtn = Ui.Button(Root, "EQUIPMENT", 140, 56, 120, () => SwitchTab(ShopTab.BuyEquipment), 20, style: ButtonStyle.Slab, font: FontKind.DotGothic);
+            sellTabBtn = Ui.Button(Root, "SELL GEAR", 266, 56, 120, () => SwitchTab(ShopTab.Sell), 20, style: ButtonStyle.Slab, font: FontKind.DotGothic);
 
             Ui.Divider(Root, 24, 80, 372, Palette.DarkBorder, Palette.AntiqueGoldDim);
 
@@ -66,8 +66,7 @@ namespace Obscure
 
             // Bottom bar: feedback and leave button
             feedbackLabel = Ui.Label(Root, "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.", 24, 314, Palette.WarmIvory, Align.Left, font: FontKind.DotGothic);
-            var leaveBtn = Ui.Button(Root, "LEAVE CARAVAN", 480, 310, 140, OnLeaveShop, 24, style: ButtonStyle.Primary, font: FontKind.DotGothic);
-            tabMenu.Add(leaveBtn);
+            leaveBtn = Ui.Button(Root, "LEAVE CARAVAN", 480, 310, 140, OnLeaveShop, 24, style: ButtonStyle.Primary, font: FontKind.DotGothic);
 
             RefreshContent();
         }
@@ -80,7 +79,11 @@ namespace Obscure
 
         void RefreshContent()
         {
-            if (contentRoot != null) UnityEngine.Object.Destroy(contentRoot.gameObject);
+            if (contentRoot != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(contentRoot.gameObject);
+                else UnityEngine.Object.DestroyImmediate(contentRoot.gameObject);
+            }
             contentRoot = new GameObject("ShopContent").transform;
             contentRoot.SetParent(Root, false);
 
@@ -95,7 +98,10 @@ namespace Obscure
                 if (partyHpGauges[i] != null) partyHpGauges[i].sprite = PixelArt.GaugeBar(190, 6, u.Alive ? Palette.Emerald : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp));
             }
 
-            var menu = contentRoot.gameObject.AddComponent<Menu>();
+            menu.items.Clear();
+            menu.Add(consTabBtn);
+            menu.Add(equipTabBtn);
+            menu.Add(sellTabBtn);
 
             if (currentTab == ShopTab.BuyConsumables)
             {
@@ -157,6 +163,9 @@ namespace Obscure
                     }
                 }
             }
+
+            menu.Add(leaveBtn);
+            menu.Focus(0, false, true);
         }
 
         void BuyConsumable(ConsumableShopEntry c)

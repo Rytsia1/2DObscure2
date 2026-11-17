@@ -290,27 +290,27 @@ namespace Obscure
             return InterfaceGlyphs.TryGetValue(upperChar, out var g) ? g : InterfaceGlyphs['?'];
         }
 
-        public static int Measure(string line, FontKind font = FontKind.Interface)
+        public static int Measure(string line, FontKind font = FontKind.DotGothic)
         {
             int w = 0;
             foreach (var c in line) w += Glyph(c, font)[0].Length + 1;
             return Mathf.Max(0, w - 1);
         }
 
-        public static string Fit(string text, int maxWidth, FontKind font = FontKind.Interface)
+        public static string Fit(string text, int maxWidth, FontKind font = FontKind.DotGothic)
         {
             if (Measure(text, font) <= maxWidth) return text;
             while (text.Length > 1 && Measure(text + ".", font) > maxWidth) text = text.Substring(0, text.Length - 1);
             return text.TrimEnd() + ".";
         }
 
-        public static string FitName(string name, int maxWidth, FontKind font = FontKind.Interface)
+        public static string FitName(string name, int maxWidth, FontKind font = FontKind.DotGothic)
         {
             if (Measure(name, font) > maxWidth && name.Contains(' ')) name = name.Substring(0, name.IndexOf(' '));
             return Fit(name, maxWidth, font);
         }
 
-        public static string Wrap(string text, int maxWidth, FontKind font = FontKind.Interface)
+        public static string Wrap(string text, int maxWidth, FontKind font = FontKind.DotGothic)
         {
             if (text.Contains('\n'))
                 return string.Join("\n", System.Array.ConvertAll(text.Split('\n'), p => Wrap(p, maxWidth, font)));

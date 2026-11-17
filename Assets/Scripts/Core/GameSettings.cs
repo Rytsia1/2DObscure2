@@ -7,7 +7,7 @@ namespace Obscure
     [Serializable]
     public class GameSettings
     {
-        const string PrefKey = "obscure.settings";
+        public const string PrefKey = "obscure.settings";
 
         public int volume = 8; // 0..10, master (music and sound effects)
         public int musicVolume = 8; // 0..10, music only

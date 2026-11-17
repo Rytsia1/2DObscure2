@@ -124,7 +124,7 @@ namespace Obscure
             Ui.Rect(p.transform, 8, 4, 6, 7, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 2);
             Ui.Rect(p.transform, 4, 15, 14, 5, c, Ui.Widget + 2);
             string code = (hero.classDef?.name ?? "").Substring(0, Math.Min(3, (hero.classDef?.name ?? "").Length)).ToUpperInvariant();
-            Ui.Image(p.transform, PixelArt.Badge(PixelFont.Measure(code) + 3, 8, Palette.Ink0, Palette.Ink0), 1, 13, Ui.Widget + 3);
+            Ui.Image(p.transform, PixelArt.Badge(PixelFont.Measure(code, FontKind.Interface) + 3, 8, Palette.Ink0, Palette.Ink0), 1, 13, Ui.Widget + 3);
             Ui.Label(p.transform, code, 2, 14, c, order: Ui.Widget + 4, font: FontKind.Interface);
             menu.Add(p);
 
@@ -152,7 +152,7 @@ namespace Obscure
 
             // Scroll of Emptiness count opens the respec dialog (J3)
             string scroll = $"SCROLL OF EMPTINESS X{Scrolls}";
-            int sw = PixelFont.Measure(scroll) + 12;
+            int sw = PixelFont.Measure(scroll, FontKind.Interface) + 12;
             var sb = Ui.Button(page, "", RightEdge - sw, 11, sw, () => { respecOpen = true; respecTarget = heroIndex; Rebuild(); }, 16, showCursor: false);
             var sbox = sb.GetComponentInChildren<SpriteRenderer>();
             Ui.Label(sb.transform, scroll, 6, 5, Palette.Mist1, order: Ui.Widget + 1, font: FontKind.Interface);
@@ -165,7 +165,7 @@ namespace Obscure
         {
             if (string.IsNullOrEmpty(name)) return "";
             string s = name.ToUpperInvariant();
-            return PixelFont.Measure(s) <= 46 ? s : PixelFont.Fit(s.Split(' ')[0], 46);
+            return PixelFont.Measure(s, FontKind.Interface) <= 46 ? s : PixelFont.Fit(s.Split(' ')[0], 46, FontKind.Interface);
         }
 
         void Switch(int d)
@@ -190,7 +190,7 @@ namespace Obscure
             {
                 int f = i;
                 bool on = filter == i;
-                int w = PixelFont.Measure(segs[i]) + 12;
+                int w = PixelFont.Measure(segs[i], FontKind.Interface) + 12;
                 var seg = Ui.Button(page, "", sx, BodyY + 6, w, () => { filter = f; Rebuild(); }, 14, showCursor: false);
                 var box = seg.GetComponentInChildren<SpriteRenderer>();
                 Ui.Label(seg.transform, segs[i], 6, 4, on ? Palette.Hex(0x1D1404) : Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
@@ -223,11 +223,11 @@ namespace Obscure
                 Ui.Label(card.transform, PixelFont.Fit(t.name, cw - 58, FontKind.DotGothic), 6, 2, ink, order: Ui.Widget + 1);
                 bool isShared = t.category == TalentCategory.Shared;
                 string cat = isShared ? "SHARED" : ClassName(hero).ToUpperInvariant();
-                int tw = PixelFont.Measure(cat) + 8;
+                int tw = PixelFont.Measure(cat, FontKind.Interface) + 8;
                 Ui.Image(card.transform, PixelArt.Badge(tw, 10, Palette.Ink0, isShared ? SharedBorder : ClassBorder), cw - tw - 4, 3, Ui.Widget + 1);
                 Ui.Label(card.transform, cat, cw - tw, 5, isShared ? Palette.Mist1 : ClassInk, order: Ui.Widget + 2, font: FontKind.Interface);
                 string fx = (owned ? "OWNED · " : "") + (t.description ?? "");
-                Ui.Label(card.transform, PixelFont.Fit(fx.ToUpperInvariant(), cw - 12), 6, 15, Palette.Mist3, order: Ui.Widget + 1, font: FontKind.Interface);
+                Ui.Label(card.transform, PixelFont.Fit(fx.ToUpperInvariant(), cw - 12, FontKind.Interface), 6, 15, Palette.Mist3, order: Ui.Widget + 1, font: FontKind.Interface);
                 menu.Add(card);
             }
         }
@@ -255,7 +255,7 @@ namespace Obscure
 
             bool isShared = t.category == TalentCategory.Shared;
             string cat = isShared ? "SHARED" : ClassName(hero).ToUpperInvariant();
-            int cw = PixelFont.Measure(cat) + 8;
+            int cw = PixelFont.Measure(cat, FontKind.Interface) + 8;
             Ui.Header(page, PixelFont.Fit(t.name, dw - cw - 30, FontKind.DotGothic), DetailX + 8, BodyY + 6, dw - 4);
             Ui.Image(page, PixelArt.Badge(cw, 11, Palette.Ink0, isShared ? SharedBorder : ClassBorder), DetailX + dw - cw - 8, BodyY + 7, Ui.Widget);
             Ui.Label(page, cat, DetailX + dw - cw - 4, BodyY + 9, isShared ? Palette.Mist1 : ClassInk, order: Ui.Widget + 1, font: FontKind.Interface);
@@ -283,16 +283,16 @@ namespace Obscure
                 }
                 else value = $"{t.name} ?";
                 Ui.Label(page, $"LV {lv}", x, y + 2, current ? Palette.Gold2 : Palette.Mist2, font: FontKind.Interface);
-                Ui.Label(page, PixelFont.Fit(value.ToUpperInvariant(), w - 34), x + w, y + 2, current ? Palette.Gold1 : Palette.Mist1, Align.Right, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Fit(value.ToUpperInvariant(), w - 34, FontKind.Interface), x + w, y + 2, current ? Palette.Gold1 : Palette.Mist1, Align.Right, font: FontKind.Interface);
                 Ui.Rect(page, x, y + 12, w, 1, current ? Palette.Gold3 : Palette.Ink3, Ui.Panels + 2);
                 y += 15;
             }
 
             if (!string.IsNullOrEmpty(feedback))
-                Ui.Label(page, PixelFont.Wrap(feedback.ToUpperInvariant(), w), x, BodyBottom - 76, feedbackBad ? Palette.Err : Palette.Ok, font: FontKind.Interface);
+                Ui.Label(page, PixelFont.Wrap(feedback.ToUpperInvariant(), w, FontKind.Interface), x, BodyBottom - 76, feedbackBad ? Palette.Err : Palette.Ok, font: FontKind.Interface);
 
             Ui.Rect(page, DetailX + 2, BodyBottom - 52, dw - 4, 1, Palette.Ink4, Ui.Panels + 2);
-            Ui.Label(page, PixelFont.Wrap($"PICK FREELY FROM SHARED OR {ClassName(hero)} — NO QUOTA. OWNED TALENTS CAN'T BE TAKEN TWICE.".ToUpperInvariant(), w), x, BodyBottom - 46, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap($"PICK FREELY FROM SHARED OR {ClassName(hero)} — NO QUOTA. OWNED TALENTS CAN'T BE TAKEN TWICE.".ToUpperInvariant(), w, FontKind.Interface), x, BodyBottom - 46, Palette.Mist2, font: FontKind.Interface);
             bool can = hero.AvailableTalentSelections > 0 && TalentSystem.ValidateSelection(hero, t.id, out _);
             string label = hero.HasTalent(t.id) ? "Already owned" : hero.AvailableTalentSelections <= 0 ? "No pick available" : $"Take {t.name}";
             menu.Add(Ui.Button(page, PixelFont.Fit(label, w - 12, FontKind.DotGothic), x, BodyBottom - 27, w, () => Take(t), 20, interactable: can, showCursor: false, style: ButtonStyle.Primary));
@@ -329,7 +329,7 @@ namespace Obscure
                 Ui.Image(card.transform, PixelArt.Box(20, 20, Color.Lerp(c, Palette.Ink1, 0.7f), Palette.Ink5), 23, 4, Ui.Widget + 1);
                 Ui.Rect(card.transform, 30, 8, 6, 6, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 2);
                 Ui.Rect(card.transform, 27, 17, 12, 4, c, Ui.Widget + 2);
-                Ui.Label(card.transform, PixelFont.Fit(u.name, 60), 33, 27, Palette.Mist1, Align.Center, order: Ui.Widget + 2, font: FontKind.Interface);
+                Ui.Label(card.transform, PixelFont.Fit(u.name, 60, FontKind.Interface), 33, 27, Palette.Mist1, Align.Center, order: Ui.Widget + 2, font: FontKind.Interface);
                 Ui.Label(card.transform, $"{u.selectedTalentIds.Count} TALENTS", 33, 36, Palette.Mist3, Align.Center, order: Ui.Widget + 2, font: FontKind.Interface);
                 Lift(card);
                 dm.Add(card);
@@ -340,7 +340,7 @@ namespace Obscure
             for (int i = 0; i < target.selectedTalentIds.Count; i++)
             {
                 string s = $"LV {TalentSystem.MilestoneLevels[Math.Min(i, 4)]} · {TalentSystem.GetTalent(target.selectedTalentIds[i])?.name}".ToUpperInvariant();
-                int tw = PixelFont.Measure(s) + 8;
+                int tw = PixelFont.Measure(s, FontKind.Interface) + 8;
                 if (tx + tw > x + w - 10) { tx = x + 10; ty += 14; }
                 Ui.Image(page, PixelArt.Badge(tw, 11, Palette.Ink3, Palette.Ink5), tx, ty, Ui.Overlay - 2);
                 Ui.Label(page, s, tx + 4, ty + 2, Palette.Mist2, order: Ui.Overlay, font: FontKind.Interface);
@@ -349,7 +349,7 @@ namespace Obscure
             }
             if (target.selectedTalentIds.Count == 0) Ui.Label(page, "NO TALENTS CHOSEN YET.", x + 10, ty + 2, Palette.Mist3, order: Ui.Overlay, font: FontKind.Interface);
             string note = $"{target.name} PICKS {target.EarnedTalentSlots} TALENTS AGAIN RIGHT AWAY, ONE FOR EACH MILESTONE REACHED. THE SCROLL IS USED UP.";
-            Ui.Label(page, PixelFont.Wrap(note.ToUpperInvariant(), w - 20), x + 10, ty + 18, Palette.Mist1, order: Ui.Overlay, font: FontKind.Interface);
+            Ui.Label(page, PixelFont.Wrap(note.ToUpperInvariant(), w - 20, FontKind.Interface), x + 10, ty + 18, Palette.Mist1, order: Ui.Overlay, font: FontKind.Interface);
             if (Scrolls == 0) Ui.Label(page, "YOU HAVE NO SCROLL OF EMPTINESS.", x + 10, y + h - 46, Palette.Err, order: Ui.Overlay, font: FontKind.Interface);
 
             Ui.Rect(page, x + 2, y + h - 32, w - 4, 30, Palette.Ink1, Ui.Overlay - 2);

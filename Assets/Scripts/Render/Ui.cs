@@ -148,24 +148,31 @@ namespace Obscure
             var go = new GameObject("Currency:" + (isHubGold ? "Hub" : "Run"));
             go.transform.SetParent(parent, false);
             go.transform.localPosition = new Vector3(x, -y, 0);
-            string lbl = isHubGold ? $"{amount:#,##0} HUB GOLD" : $"{amount:#,##0} RUN GOLD";
+            string lbl = CurrencyText(amount, isHubGold);
             Color bg = isHubGold ? Palette.Hex(0x221A08) : Palette.Hex(0x241008);
             Color border = isHubGold ? Palette.Gold2 : Palette.Ember2;
             Color textCol = isHubGold ? Palette.Gold1 : Palette.Ember1;
-            int w = Mathf.Max(84, PixelFont.Measure(lbl, FontKind.DotGothic) + 16);
+            int w = CurrencyTagWidth(amount, isHubGold);
             Image(go.transform, PixelArt.Badge(w, 18, bg, border), 0, 0, order);
             Image(go.transform, PixelArt.Coin(7, isHubGold), 6, 5, order + 1);
             Label(go.transform, lbl, 16, 3, textCol, Align.Left, order: order + 1, font: FontKind.DotGothic);
             return go;
         }
 
+        static string CurrencyText(int amount, bool isHubGold) => $"{amount:#,##0} " + (isHubGold ? "HUB GOLD" : "RUN GOLD");
+
+        // 16px coin gutter + text + 6px right padding.
+        public static int CurrencyTagWidth(int amount, bool isHubGold) =>
+            Mathf.Max(84, PixelFont.Measure(CurrencyText(amount, isHubGold), FontKind.DotGothic) + 22);
+
         // Key prompt (.hint): keycaps then the action. Returns the x where the next hint can start.
         public static int KeyHint(Transform parent, int x, int y, string action, params string[] keys)
         {
             foreach (var k in keys)
             {
-                int w = Mathf.Max(11, PixelFont.Measure(k, FontKind.DotGothic) + 6);
-                Badge(parent, k, x, y, w, 11, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.DotGothic);
+                // Keycaps use the compact 5x7 face: DotGothic's 10px glyphs don't fit an 11px cap.
+                int w = Mathf.Max(11, PixelFont.Measure(k, FontKind.Interface) + 6);
+                Badge(parent, k, x, y, w, 11, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
                 x += w + 2;
             }
             Label(parent, action, x + 2, y + 2, Palette.Mist2, font: FontKind.DotGothic);
@@ -422,21 +429,24 @@ namespace Obscure
         public Action onBack;
         public Action<Selectable> onFocus;
         int index, bornFrame;
+        Menu previousMenu;
 
         void Awake()
         {
             bornFrame = Time.frameCount;
+            if (ActiveMenu != null && ActiveMenu != this) previousMenu = ActiveMenu;
             ActiveMenu = this;
         }
 
         void OnEnable()
         {
+            if (ActiveMenu != null && ActiveMenu != this) previousMenu = ActiveMenu;
             ActiveMenu = this;
         }
 
         void OnDestroy()
         {
-            if (ActiveMenu == this) ActiveMenu = null;
+            if (ActiveMenu == this) ActiveMenu = previousMenu != null ? previousMenu : null;
         }
 
         public Selectable Current => index >= 0 && index < items.Count ? items[index] : null;

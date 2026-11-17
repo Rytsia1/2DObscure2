@@ -86,7 +86,7 @@ namespace Obscure
             toast = new GameObject("Toast");
             toast.transform.SetParent(Root, false);
             const string toastText = "EQUIPMENT BAG NEARLY FULL — NEW DROPS CAN'T BE PICKED UP AT 100.";
-            int tw = PixelFont.Measure(toastText) + 30;
+            int tw = PixelFont.Measure(toastText, FontKind.Interface) + 30;
             Ui.Image(toast.transform, PixelArt.Box(tw, 18, Palette.Ink2, Palette.Gold3), 12, 33, Ui.Panels);
             Ui.Image(toast.transform, PixelArt.Badge(14, 14, Palette.Gold2, Palette.Gold2), 14, 35, Ui.Widget);
             Ui.Label(toast.transform, "!", 21, 39, Palette.Ink0, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
@@ -424,7 +424,7 @@ namespace Obscure
             if (rarity.HasValue && currentCategory != InventoryCategory.KeyItems)
             {
                 string r = rarity.Value.ToString().ToUpperInvariant();
-                int w = PixelFont.Measure(r) + 16;
+                int w = PixelFont.Measure(r, FontKind.Interface) + 16;
                 var chip = rarity.Value >= EquipmentRarity.Legendary ? PixelArt.DoubleBorderBox(w, 11, Palette.Ink0, rc) : PixelArt.Badge(w, 11, Palette.Ink0, rc);
                 Ui.Image(detailSlot, chip, DetailX + 50, 89, Ui.Widget);
                 Ui.Image(detailSlot, PixelArt.Badge(7, 7, rc, rc), DetailX + 52, 91, Ui.Widget + 1);

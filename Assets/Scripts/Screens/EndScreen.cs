@@ -107,7 +107,7 @@ namespace Obscure
             Ui.Label(Root, $"Gained in Dungeon {act}", tx, y + 7, Palette.Ember1);
             Ui.Label(Root, "NOT COMMITTED", lx + w - 8, y + 9, Palette.Ember2, Align.Right, font: FontKind.Interface);
             for (int x = lx + 4; x < lx + w - 4; x += 4) Ui.Rect(Root, x, y + 24, 2, 1, Palette.Ember3, Ui.Panels + 1);
-            int gw = Mathf.Max(84, PixelFont.Measure($"{s.goldEarned:#,##0} RUN GOLD", FontKind.DotGothic) + 16);
+            int gw = Ui.CurrencyTagWidth(s.goldEarned, false);
             Ui.CurrencyTag(Root, s.goldEarned, false, lx + 10, y + 34);
             Ui.Rect(Root, lx + 12, y + 42, gw - 4, 2, Palette.Ember1, Ui.Widget + 2); // struck through
             Ui.Label(Root, $"RUN GOLD HELD IN DUNGEON {act}.", lx + gw + 16, y + 39, Palette.Mist2, font: FontKind.Interface);
@@ -131,17 +131,17 @@ namespace Obscure
                 Ui.Image(Root, pip, kx + 10 + (i - 1) * 12, y + 34, Ui.Text);
             }
             Ui.Label(Root, $"{act - 1} / 8 cleared", kx + 112, y + 33, Palette.Gold1);
-            Ui.Label(Root, PixelFont.Wrap($"DUNGEON PROGRESS STAYS. DUNGEON {act} IS YOUR NEXT DUNGEON AGAIN.", w - 20), kx + 10, y + 50, Palette.Mist2, font: FontKind.Interface);
+            Ui.Label(Root, PixelFont.Wrap($"DUNGEON PROGRESS STAYS. DUNGEON {act} IS YOUR NEXT DUNGEON AGAIN.", w - 20, FontKind.Interface), kx + 10, y + 50, Palette.Mist2, font: FontKind.Interface);
             int hub = PersistenceCommitHandler.ActiveCommittedSnapshot?.hubGold ?? (Run != null ? Run.Gold : 0);
             Ui.CurrencyTag(Root, hub, true, kx + 10, y + 76);
-            int rx = kx + 10 + Mathf.Max(84, PixelFont.Measure($"{hub:#,##0} HUB GOLD", FontKind.DotGothic) + 16) + 8;
+            int rx = kx + 10 + Ui.CurrencyTagWidth(hub, true) + 8;
             foreach (var id in (Run?.Relics ?? new System.Collections.Generic.List<string>()).Take(5))
             {
                 if (!Database.Relics.TryGetValue(id, out var r)) continue;
                 Ui.Relic(Root, rx, y + 75, 18, r);
                 rx += 21;
             }
-            Ui.Label(Root, PixelFont.Wrap("LEVELS, SKILLS, EQUIPMENT AND ITEMS FROM EARLIER CLEARS, PLUS OWNED RELICS.", w - 20), kx + 10, y + 102, Palette.Mist1, font: FontKind.Interface);
+            Ui.Label(Root, PixelFont.Wrap("LEVELS, SKILLS, EQUIPMENT AND ITEMS FROM EARLIER CLEARS, PLUS OWNED RELICS.", w - 20, FontKind.Interface), kx + 10, y + 102, Palette.Mist1, font: FontKind.Interface);
 
             var menu = Root.gameObject.AddComponent<Menu>();
             menu.Add(Ui.Button(Root, "Return to Main Menu", 320 - 80, 300, 160, () => Game.EndRun(), 24, style: ButtonStyle.Primary));
