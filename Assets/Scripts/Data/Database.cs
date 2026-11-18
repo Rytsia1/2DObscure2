@@ -5656,7 +5656,7 @@ namespace Obscure
                     new EventChoice { label = "Move on", outcome = "You pass the obelisk in silence." },
                 },
             },
-        }, e => e.id);
+        }.Concat(BuildDungeon1Events()).ToArray(), e => e.id);
 
 
 

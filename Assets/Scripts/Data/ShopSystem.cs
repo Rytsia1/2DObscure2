@@ -90,13 +90,15 @@ namespace Obscure
                 return false;
             }
 
-            if (run.Gold < entry.cost)
+            int effectiveCost = run.GetDungeonShopDiscountedPrice(entry.cost);
+            if (run.Gold < effectiveCost)
             {
-                error = $"Not enough Gold. Requires {entry.cost} Gold, but only have {run.Gold} Gold.";
+                error = $"Not enough Gold. Requires {effectiveCost} Gold, but only have {run.Gold} Gold.";
                 return false;
             }
 
-            run.Gold -= entry.cost;
+            run.Gold -= effectiveCost;
+            run.TryConsumeDragonbornShopDiscount();
             if (!entry.isUnlimitedStock)
                 entry.stockCount--;
 
@@ -111,7 +113,7 @@ namespace Obscure
 
         public bool TryBuyEquipment(RunState run, string shopItemId, out EquipmentInstance bought, out string error)
         {
-            return EquipmentShopManager.TryBuyEquipment(run, equipmentShop, shopItemId, out bought, out error);
+            return EquipmentShopManager.TryBuyEquipment(run, equipmentShop, shopItemId, out bought, out error, allowDragonbornDiscount: true);
         }
 
         public bool TrySellEquipment(RunState run, string instanceId, out int goldGained, out string error)

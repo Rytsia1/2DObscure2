@@ -25,6 +25,8 @@ namespace Obscure
         UiLabel arrowLbl;
         UitkMenu.Item travelItem;
         VisualElement travelInst;
+        UitkMenu.Item sneakItem;
+        VisualElement sneakBtn;
         NodeDef focused;
 
         VisualElement pauseOverlay;
@@ -141,6 +143,25 @@ namespace Obscure
                     innerBtn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
                 };
                 travelItem.visual(false);
+            }
+
+            if (Run != null && Run.HasRace("halfling"))
+            {
+                sneakBtn = FigmaUi.CreateButton("Sneak (Halfling)", "button-slab", 180);
+                sneakBtn.style.position = Position.Absolute;
+                sneakBtn.style.left = 740;
+                sneakBtn.style.top = 602;
+                (UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot).Add(sneakBtn);
+                sneakItem = menu.Add(sneakBtn, "Sneak", () =>
+                {
+                    if (focused != null && Run != null && Run.CanSneakNode(focused))
+                    {
+                        Sfx.Play(Sound.MapStep);
+                        Run.SneakNode(focused);
+                        Game.Go(GameState.Map);
+                    }
+                }, interactable: false, tooltip: "HALFLING SMALL AND NIMBLE: BYPASS ONE NORMAL COMBAT NODE PER DUNGEON");
+                FigmaUi.ApplyDefaultFocusVisual(sneakItem, sneakBtn);
             }
 
             menu.onFocus = item =>
@@ -372,6 +393,13 @@ namespace Obscure
             }
             if (travelItem != null)
                 travelItem.interactable = n != null;
+            if (sneakItem != null && sneakBtn != null)
+            {
+                bool canSneak = Run != null && Run.CanSneakNode(n);
+                sneakItem.interactable = canSneak;
+                sneakBtn.style.display = canSneak ? DisplayStyle.Flex : DisplayStyle.None;
+                sneakItem.visual?.Invoke(false);
+            }
 
             if (view != null && arrowLbl != null)
             {

@@ -659,12 +659,78 @@ namespace Obscure
         public int RunGold => Gold;
         public DungeonShopData CurrentDungeonShop { get; set; }
 
+        public struct EventChoiceStatus
+        {
+            public bool isVisible;
+            public bool isBlocked;
+            public string blockedReason;
+            public bool usesAdaptabilityBorrow;
+            public bool isImprovise;
+            public float effectScale;
+        }
+
         public RunStatus Status { get; private set; } = RunStatus.Active;
         public NodeDef Current { get; private set; }
         public RewardOffer PendingReward { get; private set; }
         public EventDef CurrentEvent { get; private set; }
         public string EventRelic { get; private set; } // the relic this event offers, rolled on entry
+        public string EventEquipment { get; private set; } // equipment rolled on event entry
         public readonly Dictionary<int, RewardOption> EventModifiers = new Dictionary<int, RewardOption>();
+        public readonly Dictionary<int, RewardOption> EventCurseModifiers = new Dictionary<int, RewardOption>();
+        public readonly Dictionary<int, RewardOption> EventRiskFailModifiers = new Dictionary<int, RewardOption>();
+        public readonly Dictionary<int, bool> EventChoiceRiskFailed = new Dictionary<int, bool>();
+
+        // Once-per-dungeon Racial Utility quotas (GDD Bab 6 §5 & §10.1; reset on next dungeon)
+        public int HumanAdaptabilityUsesRemaining { get; private set; } = 1;
+        public int HalflingSneakUsesRemaining { get; private set; } = 1;
+        public int DragonbornShopDiscountUsesRemaining { get; private set; } = 1;
+        public int ElfWeaknessRevealUsesRemaining { get; private set; } = 1;
+
+        public void ResetDungeonUtilityCharges()
+        {
+            HumanAdaptabilityUsesRemaining = 1;
+            HalflingSneakUsesRemaining = 1;
+            DragonbornShopDiscountUsesRemaining = 1;
+            ElfWeaknessRevealUsesRemaining = 1;
+        }
+
+        public bool HasRace(string raceId) =>
+            !string.IsNullOrEmpty(raceId) &&
+            Party != null &&
+            Party.Any(u => string.Equals(u.race?.id, raceId, StringComparison.OrdinalIgnoreCase));
+
+        public bool HasHalflingHazardReduction => HasRace("halfling");
+        public bool RevealsRelicEffects => HasRace("dragonborn");
+        public bool RevealsCurses => HasRace("liichtian");
+        public bool RevealsSupernaturalSource(EventDef e) =>
+            HasRace("liichtian") && e != null && (e.HasTag(EventTags.Supernatural) || e.HasTag(EventTags.Corruption));
+        public bool RevealsLiquidOutcomes(EventDef e) =>
+            HasRace("merfolk") && e != null && e.HasTag(EventTags.Liquid);
+
+        public bool CanSneakNode(NodeDef n) =>
+            n != null && n.type == NodeType.Battle && CanEnter(n) && HasRace("halfling") && HalflingSneakUsesRemaining > 0;
+
+        public void SneakNode(NodeDef n)
+        {
+            if (!CanSneakNode(n))
+                throw new InvalidOperationException("Cannot sneak past this node.");
+            HalflingSneakUsesRemaining = Math.Max(0, HalflingSneakUsesRemaining - 1);
+            Current = n;
+            Complete();
+        }
+
+        public bool CanUseDragonbornShopDiscount =>
+            HasRace("dragonborn") && DragonbornShopDiscountUsesRemaining > 0;
+
+        public int GetDungeonShopDiscountedPrice(int baseCost) =>
+            CanUseDragonbornShopDiscount ? Math.Max(1, (int)Math.Round(baseCost * 0.85f)) : baseCost;
+
+        public bool TryConsumeDragonbornShopDiscount()
+        {
+            if (!CanUseDragonbornShopDiscount) return false;
+            DragonbornShopDiscountUsesRemaining = Math.Max(0, DragonbornShopDiscountUsesRemaining - 1);
+            return true;
+        }
 
         public RunState(MapDef map, IEnumerable<CharacterDef> party, int seed)
         {
@@ -721,7 +787,11 @@ namespace Obscure
             {
                 CurrentEvent = Database.Events[n.eventId];
                 EventRelic = RewardGenerator.RandomRelicId(NodeRng(n, 1), Relics);
+                EventEquipment = RollEventEquipmentId(NodeRng(n, 2), Act);
                 EventModifiers.Clear();
+                EventCurseModifiers.Clear();
+                EventRiskFailModifiers.Clear();
+                EventChoiceRiskFailed.Clear();
                 if (CurrentEvent.choices != null)
                 {
                     for (int i = 0; i < CurrentEvent.choices.Length; i++)
@@ -738,6 +808,21 @@ namespace Obscure
                         {
                             var rolled = RewardGenerator.GenerateModifierChoices(NodeRng(n, 10 + i), count: 1, categoryFilter: ch.modifierCategoryFilter);
                             if (rolled.Count > 0) EventModifiers[i] = rolled[0];
+                        }
+
+                        if (!string.IsNullOrEmpty(ch.curseModifierId) && Database.DungeonModifiers.TryGetValue(ch.curseModifierId, out var cmd))
+                        {
+                            var celem = cmd.isElementSpecific ? ElementTypes.All[NodeRng(n, 20 + i).Next(ElementTypes.All.Length)] : ElementType.None;
+                            EventCurseModifiers[i] = new RewardOption { kind = RewardKind.Modifier, id = ch.curseModifierId, element = celem };
+                        }
+                        if (!string.IsNullOrEmpty(ch.riskFailModifierId) && Database.DungeonModifiers.TryGetValue(ch.riskFailModifierId, out var fmd))
+                        {
+                            var felem = fmd.isElementSpecific ? ElementTypes.All[NodeRng(n, 25 + i).Next(ElementTypes.All.Length)] : ElementType.None;
+                            EventRiskFailModifiers[i] = new RewardOption { kind = RewardKind.Modifier, id = ch.riskFailModifierId, element = felem };
+                        }
+                        if (ch.riskChancePercent > 0)
+                        {
+                            EventChoiceRiskFailed[i] = NodeRng(n, 30 + i).Next(100) < ch.riskChancePercent;
                         }
                     }
                 }
@@ -832,6 +917,7 @@ namespace Obscure
             PendingReward = null;
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
+            ResetDungeonUtilityCharges();
             PersistenceCommitHandler.RollbackUncommitted(this);
             Status = RunStatus.Active;
         }
@@ -1003,31 +1089,259 @@ namespace Obscure
 
         // ---- events ----
 
+        static string RollEventEquipmentId(Random rng, int act)
+        {
+            int maxLvl = Math.Max(2, act * 2);
+            var pool = Database.Equipment.Values
+                .Where(eq => !string.IsNullOrEmpty(eq.id) && eq.equipmentLevel <= maxLvl && eq.rarity <= EquipmentRarity.Rare)
+                .ToList();
+            if (pool.Count == 0)
+                pool = Database.Equipment.Values.Where(eq => !string.IsNullOrEmpty(eq.id)).ToList();
+            return pool.Count == 0 ? null : pool[rng.Next(pool.Count)].id;
+        }
+
+        static string RaceDisplayName(string raceId)
+        {
+            if (string.IsNullOrEmpty(raceId)) return "Race";
+            return Database.Races.TryGetValue(raceId, out var r) ? r.name : raceId;
+        }
+
+        bool HasConsumableForEvent(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId)) return false;
+            return (Inventory != null && Inventory.GetConsumableCount(itemId) > 0) || Items.Contains(itemId);
+        }
+
+        void ConsumeEventItem(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId)) return;
+            Inventory?.RemoveConsumable(itemId, 1);
+            Items.Remove(itemId);
+        }
+
+        public EventChoiceStatus GetEventChoiceStatus(int index)
+        {
+            if (CurrentEvent?.choices == null || index < 0 || index >= CurrentEvent.choices.Length)
+            {
+                return new EventChoiceStatus { isVisible = false, isBlocked = true, blockedReason = "Invalid choice", effectScale = 1f };
+            }
+            return EvaluateEventChoice(CurrentEvent, CurrentEvent.choices[index]);
+        }
+
+        EventChoiceStatus EvaluateEventChoice(EventDef ev, EventChoice c)
+        {
+            var status = new EventChoiceStatus { isVisible = true, effectScale = 1f };
+            if (c == null)
+            {
+                status.isVisible = false;
+                status.isBlocked = true;
+                status.blockedReason = "Invalid choice";
+                return status;
+            }
+
+            if (c.isImprovise)
+            {
+                status.isImprovise = true;
+                bool hasOtherRacial = ev != null && ev.HasAnyRacialChoice();
+                bool hasHuman = HasRace("human");
+                status.isVisible = hasHuman && !hasOtherRacial;
+                if (!hasHuman)
+                {
+                    status.isBlocked = true;
+                    status.blockedReason = "Requires Human (Adaptability)";
+                    return status;
+                }
+                if (hasOtherRacial)
+                {
+                    status.isBlocked = true;
+                    status.blockedReason = "Improvise unavailable on racial events";
+                    return status;
+                }
+            }
+            else if (!string.IsNullOrEmpty(c.requiredRace))
+            {
+                if (!HasRace(c.requiredRace))
+                {
+                    if (HasRace("human") && HumanAdaptabilityUsesRemaining > 0)
+                    {
+                        status.usesAdaptabilityBorrow = true;
+                        status.effectScale = 0.75f;
+                    }
+                    else
+                    {
+                        status.isBlocked = true;
+                        status.blockedReason = $"Requires {RaceDisplayName(c.requiredRace)}";
+                        return status;
+                    }
+                }
+            }
+
+            if (c.goldCost > Gold)
+            {
+                status.isBlocked = true;
+                status.blockedReason = $"Need {c.goldCost} gold";
+                return status;
+            }
+
+            if (!string.IsNullOrEmpty(c.requiredItem) && !HasConsumableForEvent(c.requiredItem))
+            {
+                string itemName = Database.Items.TryGetValue(c.requiredItem, out var itm) ? itm.name : c.requiredItem;
+                status.isBlocked = true;
+                status.blockedReason = $"Need {itemName}";
+                return status;
+            }
+
+            if (!string.IsNullOrEmpty(c.requiredMaterialId))
+            {
+                int reqAmt = Math.Max(1, c.requiredMaterialAmount);
+                int ownedAmt = Inventory != null ? Inventory.GetMaterialCount(c.requiredMaterialId) : 0;
+                if (ownedAmt < reqAmt)
+                {
+                    string matName = Database.Materials.TryGetValue(c.requiredMaterialId, out var mat) ? mat.name : c.requiredMaterialId;
+                    status.isBlocked = true;
+                    status.blockedReason = $"Need {reqAmt}x {matName}";
+                    return status;
+                }
+            }
+
+            if (c.relic && RelicManager.IsFull)
+            {
+                status.isBlocked = true;
+                status.blockedReason = "Relic capacity full (5/5)";
+                return status;
+            }
+
+            if (c.relic && EventRelic == null)
+            {
+                status.isBlocked = true;
+                status.blockedReason = "Nothing left to gain";
+                return status;
+            }
+
+            if ((c.randomEquipment || !string.IsNullOrEmpty(c.equipmentId)) && Inventory != null && Inventory.IsEquipmentFull)
+            {
+                status.isBlocked = true;
+                status.blockedReason = "Equipment inventory full";
+                return status;
+            }
+
+            return status;
+        }
+
         // Null when the choice can be taken, otherwise why not.
-        public string EventBlocked(EventChoice c) =>
-            c.goldCost > Gold ? $"Need {c.goldCost} gold" : (c.relic && RelicManager.IsFull ? "Relic capacity full (5/5)" : (c.relic && EventRelic == null ? "Nothing left to gain" : null));
+        public string EventBlocked(EventChoice c) => EvaluateEventChoice(CurrentEvent, c).blockedReason;
 
         public string ChooseEvent(int index)
         {
             var e = CurrentEvent;
             if (e == null || !Pending(NodeType.Event)) throw new InvalidOperationException("No event pending");
+            if (e.choices == null || index < 0 || index >= e.choices.Length)
+                throw new ArgumentOutOfRangeException(nameof(index));
             var c = e.choices[index];
-            var blocked = EventBlocked(c);
-            if (blocked != null) throw new InvalidOperationException(blocked);
+            var status = EvaluateEventChoice(e, c);
+            if (status.isBlocked) throw new InvalidOperationException(status.blockedReason);
 
             CurrentEvent = null;
+            if (status.usesAdaptabilityBorrow)
+                HumanAdaptabilityUsesRemaining = Math.Max(0, HumanAdaptabilityUsesRemaining - 1);
+
+            float scale = status.effectScale;
+            int ScalePositive(int val) => val <= 0 ? 0 : (scale >= 0.999f ? val : Math.Max(1, (int)Math.Round(val * scale)));
+
             Gold -= c.goldCost;
-            AddGold(c.gold);
+            if (!string.IsNullOrEmpty(c.requiredItem))
+                ConsumeEventItem(c.requiredItem);
+            if (!string.IsNullOrEmpty(c.requiredMaterialId))
+                Inventory?.RemoveMaterial(c.requiredMaterialId, Math.Max(1, c.requiredMaterialAmount));
+
+            bool riskFailed = EventChoiceRiskFailed.TryGetValue(index, out var rf) && rf;
+            bool grantSuccessRewards = !riskFailed || c.riskGrantsRewardOnFail;
+
+            var notes = new List<string>();
+            if (status.usesAdaptabilityBorrow)
+                notes.Add("[Human Adaptability: 75% effect]");
+
+            int goldGain = grantSuccessRewards ? ScalePositive(c.gold) : 0;
+            if (goldGain > 0) AddGold(goldGain);
+
+            int healPct = grantSuccessRewards ? ScalePositive(c.healPercent) : 0;
+            int mpPct = grantSuccessRewards ? ScalePositive(c.mpRestorePercent) : 0;
+            int directHurtPct = c.hurtPercent + (riskFailed ? c.riskFailHurtPercent : 0);
+            int rawHazardPct = c.hazardDamagePercent + (riskFailed ? c.riskFailHazardDamagePercent : 0);
+
+            string trapNegatedNote = null;
+            if (rawHazardPct > 0 && c.isTrapChoice && RelicManager != null && RelicManager.TryNegateMinorChestTrap(out var negatedMsg))
+            {
+                rawHazardPct = 0;
+                trapNegatedNote = negatedMsg;
+            }
+
+            float hazardFactor = (rawHazardPct > 0 && HasHalflingHazardReduction) ? 0.5f : 1f;
+            if (rawHazardPct > 0 && HasHalflingHazardReduction)
+                notes.Add("[Halfling Small and Nimble: -50% hazard damage]");
+            if (trapNegatedNote != null)
+                notes.Add(trapNegatedNote);
+
             foreach (var u in Party.Where(u => u.Alive))
             {
-                if (c.healPercent > 0) u.Heal(u.stats.maxHp * c.healPercent / 100);
-                if (c.hurtPercent > 0) u.hp = Math.Max(1, u.hp - u.stats.maxHp * c.hurtPercent / 100);
+                if (healPct > 0) u.Heal(u.stats.maxHp * healPct / 100);
+                if (mpPct > 0) u.RestoreMp(Math.Max(1, u.stats.maxMp * mpPct / 100));
+                if (directHurtPct > 0) u.hp = Math.Max(1, u.hp - u.stats.maxHp * directHurtPct / 100);
+                if (rawHazardPct > 0)
+                {
+                    int dmg = Math.Max(1, (int)Math.Round(u.stats.maxHp * (rawHazardPct / 100f) * hazardFactor));
+                    u.hp = Math.Max(1, u.hp - dmg);
+                }
             }
-            if (c.item != null) Items.Add(c.item);
-            if (c.relic) AddRelic(EventRelic);
-            if (c.battleBuff != null) BattleBuffs.Add(c.battleBuff);
-            string modOutcomeNote = null;
-            if (EventModifiers.TryGetValue(index, out var evMod) && !string.IsNullOrEmpty(evMod.id))
+
+            if (grantSuccessRewards && !string.IsNullOrEmpty(c.item))
+            {
+                Items.Add(c.item);
+                Inventory?.AddConsumable(c.item, 1);
+                if (Database.Items.TryGetValue(c.item, out var itemDef))
+                    notes.Add($"Gained {itemDef.name}.");
+            }
+
+            if (grantSuccessRewards && !string.IsNullOrEmpty(c.materialId))
+            {
+                int matAmt = ScalePositive(Math.Max(1, c.materialAmount));
+                if (e.HasTag(EventTags.Mineral) && HasRace("dwarf"))
+                {
+                    matAmt += 1;
+                    notes.Add("[Dwarf Stonecraft: +1 upgrade material]");
+                }
+                Inventory?.AddMaterial(c.materialId, matAmt);
+                string matName = Database.Materials.TryGetValue(c.materialId, out var matDef) ? matDef.name : c.materialId;
+                notes.Add($"Gained {matAmt}x {matName}.");
+            }
+
+            if (grantSuccessRewards && (c.randomEquipment || !string.IsNullOrEmpty(c.equipmentId)))
+            {
+                string eqId = !string.IsNullOrEmpty(c.equipmentId) ? c.equipmentId : EventEquipment;
+                if (!string.IsNullOrEmpty(eqId) && Database.Equipment.TryGetValue(eqId, out var eqDef))
+                {
+                    var inst = EquipmentLootGenerator.CreateInstance(eqDef, eqDef.rarity, eqDef.equipmentLevel, Rng);
+                    if (Inventory == null || Inventory.TryAddEquipment(inst, out _))
+                        notes.Add($"Gained {eqDef.name}.");
+                }
+            }
+
+            string relicNote = null;
+            if (grantSuccessRewards && c.relic && !string.IsNullOrEmpty(EventRelic))
+            {
+                AddRelic(EventRelic);
+                relicNote = $"Gained {Database.Relics[EventRelic].name}.";
+            }
+
+            if (grantSuccessRewards && c.battleBuff != null)
+            {
+                var buff = scale < 0.999f
+                    ? new StatusApply { id = c.battleBuff.id, turns = c.battleBuff.turns, magnitude = c.battleBuff.magnitude * scale }
+                    : c.battleBuff;
+                BattleBuffs.Add(buff);
+            }
+
+            if (grantSuccessRewards && EventModifiers.TryGetValue(index, out var evMod) && !string.IsNullOrEmpty(evMod.id))
             {
                 ModifierManager.AddModifier(evMod.id, this, evMod.element, Rng);
                 if (Database.DungeonModifiers.TryGetValue(evMod.id, out var mdef))
@@ -1035,12 +1349,33 @@ namespace Obscure
                     string modName = mdef.isElementSpecific && evMod.element.IsValidElement()
                         ? $"{mdef.displayName} ({evMod.element})"
                         : mdef.displayName;
-                    modOutcomeNote = $" Gained Modifier: {modName}.";
+                    notes.Add($"Gained Modifier: {modName}.");
                 }
             }
+
+            if (EventCurseModifiers.TryGetValue(index, out var curseMod) && !string.IsNullOrEmpty(curseMod.id))
+            {
+                ModifierManager.AddModifier(curseMod.id, this, curseMod.element, Rng);
+                if (Database.DungeonModifiers.TryGetValue(curseMod.id, out var cdef))
+                    notes.Add($"Afflicted: {cdef.displayName}.");
+            }
+
+            if (riskFailed && EventRiskFailModifiers.TryGetValue(index, out var failMod) && !string.IsNullOrEmpty(failMod.id))
+            {
+                ModifierManager.AddModifier(failMod.id, this, failMod.element, Rng);
+                if (Database.DungeonModifiers.TryGetValue(failMod.id, out var fdef))
+                    notes.Add($"Afflicted: {fdef.displayName}.");
+            }
+
+            if (grantSuccessRewards && !string.IsNullOrEmpty(c.bonusInfoText))
+                notes.Add(c.bonusInfoText);
+
             Complete();
-            string outcomeText = c.relic ? $"{c.outcome} Gained {Database.Relics[EventRelic].name}." : c.outcome;
-            return modOutcomeNote != null ? outcomeText + modOutcomeNote : outcomeText;
+            string baseOutcome = riskFailed && !string.IsNullOrEmpty(c.riskFailOutcome) ? c.riskFailOutcome : c.outcome;
+            string outcomeText = relicNote != null ? $"{baseOutcome} {relicNote}" : baseOutcome;
+            if (notes.Count > 0)
+                outcomeText = $"{outcomeText} {string.Join(" ", notes)}";
+            return outcomeText;
         }
 
         // ---- node completion ----
@@ -1256,6 +1591,7 @@ namespace Obscure
             PendingReward = null;
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
+            ResetDungeonUtilityCharges();
             CurrentDungeonShop = DungeonShopData.Generate(nextMap.act, Rng);
             CurrentShop = CurrentDungeonShop.equipmentShop;
             // GDD Bab 14 §2: Relics are permanent player progression and remain owned upon dungeon clear
@@ -1283,6 +1619,7 @@ namespace Obscure
             Cleared.Clear();
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
+            ResetDungeonUtilityCharges();
 
             Inventory.equipment.Clear();
             Inventory.consumables.Clear();

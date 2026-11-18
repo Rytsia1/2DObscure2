@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -10,6 +11,7 @@ namespace Obscure
     public class EventScreen : GameScreen
     {
         VisualElement choiceHost;
+        ScrollView choiceScroll;
         UitkMenu menu;
         EventDef currentEvent;
 
@@ -31,6 +33,14 @@ namespace Obscure
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
             if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} RUN GOLD");
 
+            var eyebrow = UiRoot.Q<UiLabel>(className: "event-vars-2");
+            if (eyebrow != null)
+            {
+                eyebrow.text = currentEvent.category != EventCategory.General
+                    ? $"{FormatCategory(currentEvent.category)} · {currentEvent.rarity.ToString().ToUpperInvariant()}"
+                    : "EVENT";
+            }
+
             var title = UiRoot.Q<UiLabel>(className: "whispering-shrine-vars");
             if (title != null) title.text = currentEvent.title;
 
@@ -45,26 +55,139 @@ namespace Obscure
             }
 
             var screen = UiRoot.Q<VisualElement>(className: "_18-event-whispering-shrine") ?? UiRoot;
+            BuildTagAndInsightArea(screen);
+
             choiceHost = new VisualElement { name = "EventChoiceHost" };
             choiceHost.style.position = Position.Absolute;
             choiceHost.style.left = 544;
-            choiceHost.style.top = 370;
-            choiceHost.style.width = 620;
-            choiceHost.style.height = 280;
+            choiceHost.style.top = 342;
+            choiceHost.style.width = 622;
+            choiceHost.style.height = 310;
             choiceHost.style.flexDirection = FlexDirection.Column;
+
+            choiceScroll = FigmaUi.CreateVerticalScrollView();
+            choiceScroll.style.flexGrow = 1;
+            choiceHost.Add(choiceScroll);
             screen.Add(choiceHost);
 
             ShowChoices();
+        }
+
+        void BuildTagAndInsightArea(VisualElement screen)
+        {
+            var metaHost = new VisualElement { name = "EventMetaHost" };
+            metaHost.style.position = Position.Absolute;
+            metaHost.style.left = 544;
+            metaHost.style.top = 236;
+            metaHost.style.width = 622;
+            metaHost.style.flexDirection = FlexDirection.Column;
+
+            if (currentEvent.tags != null && currentEvent.tags.Length > 0)
+            {
+                var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 6 } };
+                foreach (var rawTag in currentEvent.tags)
+                {
+                    var chip = new UiLabel(rawTag.Replace("_", " ").ToUpperInvariant());
+                    chip.style.fontSize = 11;
+                    chip.style.color = Palette.Mist2;
+                    chip.style.backgroundColor = Palette.Ink2;
+                    chip.style.paddingLeft = 7;
+                    chip.style.paddingRight = 7;
+                    chip.style.paddingTop = 2;
+                    chip.style.paddingBottom = 2;
+                    chip.style.marginRight = 6;
+                    chip.style.marginBottom = 4;
+                    chip.style.borderTopWidth = 1;
+                    chip.style.borderBottomWidth = 1;
+                    chip.style.borderLeftWidth = 1;
+                    chip.style.borderRightWidth = 1;
+                    chip.style.borderTopColor = Palette.Ink5;
+                    chip.style.borderBottomColor = Palette.Ink5;
+                    chip.style.borderLeftColor = Palette.Ink5;
+                    chip.style.borderRightColor = Palette.Ink5;
+                    tagRow.Add(chip);
+                }
+                metaHost.Add(tagRow);
+            }
+
+            var insights = GatherInsights();
+            if (insights.Count > 0)
+            {
+                var box = new VisualElement();
+                box.style.paddingLeft = 10;
+                box.style.paddingRight = 10;
+                box.style.paddingTop = 6;
+                box.style.paddingBottom = 6;
+                box.style.backgroundColor = Palette.Ink2;
+                box.style.borderLeftWidth = 3;
+                box.style.borderLeftColor = Palette.Gold2;
+                foreach (var line in insights)
+                {
+                    var lbl = new UiLabel(line);
+                    lbl.style.fontSize = 12;
+                    lbl.style.color = Palette.Gold1;
+                    lbl.style.whiteSpace = WhiteSpace.Normal;
+                    lbl.style.marginBottom = 2;
+                    box.Add(lbl);
+                }
+                metaHost.Add(box);
+            }
+
+            screen.Add(metaHost);
+        }
+
+        List<string> GatherInsights()
+        {
+            var list = new List<string>();
+            if (Run == null) return list;
+
+            if (Run.RevealsSupernaturalSource(currentEvent) && !string.IsNullOrEmpty(currentEvent.supernaturalSourceClue))
+                list.Add($"[LUMINESCENT INSIGHT] {currentEvent.supernaturalSourceClue.ToUpperInvariant()}");
+
+            if (Run.RevealsLiquidOutcomes(currentEvent))
+                list.Add("[OCEAN'S GIFT] ALL LIQUID OUTCOMES ARE REVEALED BELOW.");
+
+            if (Run.HasHalflingHazardReduction && currentEvent.HasTag(EventTags.Hazard))
+                list.Add("[SMALL AND NIMBLE] HALFLING REDUCES PARTY HAZARD DAMAGE BY 50%.");
+
+            if (Run.RevealsRelicEffects && (currentEvent.HasTag(EventTags.Relic) || currentEvent.HasTag(EventTags.Dragon)))
+                list.Add("[DRACONIC PRESENCE] RELIC REWARD DETAILS ARE REVEALED.");
+
+            if (Run.HasRace("human"))
+            {
+                if (!currentEvent.HasAnyRacialChoice())
+                    list.Add("[ADAPTABILITY] NO RACIAL OPTION PRESENT: IMPROVISE AVAILABLE.");
+                else if (Run.HumanAdaptabilityUsesRemaining > 0)
+                    list.Add("[ADAPTABILITY] 1 BORROW USE LEFT THIS DUNGEON (75% EFFECT).");
+            }
+
+            if (Run.RelicManager != null && currentEvent.tags != null)
+            {
+                var seen = new HashSet<string>();
+                foreach (var tag in currentEvent.tags)
+                {
+                    var clue = Run.RelicManager.GetAdditionalEventClue(tag);
+                    if (!string.IsNullOrEmpty(clue) && seen.Add(clue))
+                        list.Add(clue.ToUpperInvariant());
+                }
+                if (Run.RelicManager.HasRelic("R005") && !string.IsNullOrEmpty(currentEvent.hiddenClue)
+                    && (currentEvent.HasTag(EventTags.Hidden) || currentEvent.HasTag(EventTags.Trap)))
+                {
+                    list.Add($"[WARDEN'S BROKEN KEY] {currentEvent.hiddenClue.ToUpperInvariant()}");
+                }
+            }
+
+            return list;
         }
 
         void ResetMenu()
         {
             if (menu != null)
             {
-                if (Application.isPlaying) Object.Destroy(menu);
-                else Object.DestroyImmediate(menu);
+                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
+                else UnityEngine.Object.DestroyImmediate(menu);
             }
-            choiceHost.Clear();
+            choiceScroll.Clear();
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
         }
@@ -72,23 +195,30 @@ namespace Obscure
         void ShowChoices()
         {
             ResetMenu();
+            int displayNumber = 1;
             for (int i = 0; i < currentEvent.choices.Length; i++)
             {
                 int index = i;
                 var c = currentEvent.choices[i];
-                var blocked = Run != null ? Run.EventBlocked(c) : null;
-                AddChoiceCard(i + 1, c, index, blocked, () => Choose(index));
+                var status = Run != null
+                    ? Run.GetEventChoiceStatus(index)
+                    : new RunState.EventChoiceStatus { isVisible = !c.isImprovise, effectScale = 1f };
+
+                if (!status.isVisible) continue;
+                AddChoiceCard(displayNumber++, c, index, status, () => Choose(index));
             }
         }
 
-        void AddChoiceCard(int number, EventChoice c, int choiceIndex, string blocked, System.Action choose)
+        void AddChoiceCard(int number, EventChoice c, int choiceIndex, RunState.EventChoiceStatus status, Action choose)
         {
-            bool enabled = blocked == null;
+            bool enabled = !status.isBlocked;
             var card = new VisualElement();
-            card.style.height = 58;
+            card.style.minHeight = 56;
             card.style.marginBottom = 8;
             card.style.paddingLeft = 14;
             card.style.paddingRight = 14;
+            card.style.paddingTop = 6;
+            card.style.paddingBottom = 6;
             card.style.flexDirection = FlexDirection.Row;
             card.style.alignItems = UnityEngine.UIElements.Align.Center;
             card.style.borderTopWidth = 2;
@@ -108,20 +238,20 @@ namespace Obscure
             textCol.style.justifyContent = Justify.Center;
 
             var titleLbl = new UiLabel(c.label);
-            titleLbl.style.fontSize = 20;
+            titleLbl.style.fontSize = 18;
             titleLbl.style.color = enabled ? Palette.Mist1 : Palette.Mist3;
+            titleLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(titleLbl);
 
-            string sub = enabled ? Consequences(c, choiceIndex) : blocked.ToUpperInvariant();
+            string sub = enabled ? Consequences(c, choiceIndex, status) : status.blockedReason.ToUpperInvariant();
             var subLbl = new UiLabel(sub);
-            subLbl.style.fontSize = 13;
+            subLbl.style.fontSize = 12;
             subLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
+            subLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(subLbl);
             card.Add(textCol);
 
-            bool hasDrawbackMod = Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evModOpt)
-                && Database.DungeonModifiers.TryGetValue(evModOpt.id, out var evModDef) && (evModDef.HasDrawback || evModDef.IsDebuff);
-            string tagText = !enabled ? blocked.ToUpperInvariant() : c.goldCost > 0 ? $"-{c.goldCost} RUN GOLD" : hasDrawbackMod ? "CURSED" : null;
+            string tagText = DetermineCardTag(c, choiceIndex, status);
             if (tagText != null)
             {
                 var tag = FigmaUi.InstantiateTemplate(enabled ? "Tag-Temp" : "Tag-Cond");
@@ -132,7 +262,7 @@ namespace Obscure
                 }
             }
 
-            choiceHost.Add(card);
+            choiceScroll.Add(card);
             var item = menu.Add(card, c.label, choose, interactable: enabled, tooltip: sub);
             item.visual = on =>
             {
@@ -147,26 +277,137 @@ namespace Obscure
             item.visual(false);
         }
 
-        string Consequences(EventChoice c, int choiceIndex)
+        string DetermineCardTag(EventChoice c, int choiceIndex, RunState.EventChoiceStatus status)
         {
+            if (status.isBlocked) return status.blockedReason.ToUpperInvariant();
+            if (status.usesAdaptabilityBorrow) return "ADAPTABILITY 75%";
+            if (c.isImprovise) return "HUMAN · IMPROVISE";
+            if (!string.IsNullOrEmpty(c.requiredRace)) return c.requiredRace.ToUpperInvariant();
+            if (c.goldCost > 0) return $"-{c.goldCost} RUN GOLD";
+            if (!string.IsNullOrEmpty(c.requiredItem) && Database.Items.TryGetValue(c.requiredItem, out var reqItm))
+                return $"USE {reqItm.name.ToUpperInvariant()}";
+
+            bool revealCurse = Run == null || Run.RevealsCurses || (Run.RelicManager != null && Run.RelicManager.HasRelic("R018"));
+            bool hasDrawbackMod = Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evModOpt)
+                && Database.DungeonModifiers.TryGetValue(evModOpt.id, out var evModDef) && (evModDef.HasDrawback || evModDef.IsDebuff);
+            bool hasKnownCurse = (!c.hasHiddenCurse || revealCurse)
+                && (hasDrawbackMod || (Run != null && Run.EventCurseModifiers.ContainsKey(choiceIndex)));
+
+            if (hasKnownCurse) return "CURSED";
+            if (c.riskChancePercent > 0 && !(c.hasHiddenOutcome && Run != null && Run.RevealsLiquidOutcomes(currentEvent)))
+                return "RISK";
+            return null;
+        }
+
+        string Consequences(EventChoice c, int choiceIndex, RunState.EventChoiceStatus status)
+        {
+            float scale = status.effectScale;
+            int ScaleVal(int v) => v <= 0 ? 0 : (scale >= 0.999f ? v : Math.Max(1, (int)Math.Round(v * scale)));
+
+            bool revealsLiquid = Run != null && Run.RevealsLiquidOutcomes(currentEvent);
+            bool riskFailed = Run != null && Run.EventChoiceRiskFailed.TryGetValue(choiceIndex, out var rf) && rf;
+
+            if (c.hasHiddenOutcome && !revealsLiquid)
+            {
+                return "OUTCOME UNKNOWN (UNCERTAIN LIQUID)";
+            }
+
+            if (c.hasHiddenOutcome && revealsLiquid)
+            {
+                if (riskFailed)
+                {
+                    var fParts = new List<string> { "TAINTED" };
+                    if (c.riskFailHurtPercent > 0) fParts.Add($"LOSE {c.riskFailHurtPercent}% MAX HP");
+                    if (Run.EventRiskFailModifiers.TryGetValue(choiceIndex, out var failMod) && Database.DungeonModifiers.TryGetValue(failMod.id, out var fmd))
+                        fParts.Add(fmd.displayName.ToUpperInvariant());
+                    return string.Join(", ", fParts);
+                }
+                else
+                {
+                    var sParts = new List<string> { "PURE SPRING" };
+                    if (c.healPercent > 0) sParts.Add($"HEAL {ScaleVal(c.healPercent)}% HP");
+                    if (c.mpRestorePercent > 0) sParts.Add($"+{ScaleVal(c.mpRestorePercent)}% MP");
+                    return string.Join(", ", sParts);
+                }
+            }
+
             var parts = new List<string>();
             if (c.goldCost > 0) parts.Add($"-{c.goldCost} GOLD");
-            if (c.gold > 0) parts.Add($"+{c.gold} GOLD");
-            if (c.healPercent > 0) parts.Add($"HEAL {c.healPercent}% HP");
+            if (!string.IsNullOrEmpty(c.requiredItem))
+            {
+                string itemName = Database.Items.TryGetValue(c.requiredItem, out var itm) ? itm.name : c.requiredItem;
+                parts.Add($"USE {itemName.ToUpperInvariant()}");
+            }
+            if (!string.IsNullOrEmpty(c.requiredMaterialId))
+            {
+                string matName = Database.Materials.TryGetValue(c.requiredMaterialId, out var mat) ? mat.name : c.requiredMaterialId;
+                parts.Add($"-{Math.Max(1, c.requiredMaterialAmount)} {matName.ToUpperInvariant()}");
+            }
+
+            int goldGain = ScaleVal(c.gold);
+            if (goldGain > 0) parts.Add($"+{goldGain} GOLD");
+
+            int healPct = ScaleVal(c.healPercent);
+            if (healPct > 0) parts.Add($"HEAL {healPct}% HP");
+
+            int mpPct = ScaleVal(c.mpRestorePercent);
+            if (mpPct > 0) parts.Add($"+{mpPct}% MP");
+
             if (c.hurtPercent > 0) parts.Add($"LOSE {c.hurtPercent}% MAX HP");
-            if (c.item != null) parts.Add("+" + Database.Items[c.item].name.ToUpperInvariant());
-            if (c.relic && Run?.EventRelic != null) parts.Add("+" + Database.Relics[Run.EventRelic].name.ToUpperInvariant());
+
+            if (c.hazardDamagePercent > 0)
+            {
+                int shownDmg = (Run != null && Run.HasHalflingHazardReduction)
+                    ? Math.Max(1, (int)Math.Round(c.hazardDamagePercent * 0.5f))
+                    : c.hazardDamagePercent;
+                parts.Add($"HAZARD {shownDmg}% HP" + (Run != null && Run.HasHalflingHazardReduction ? " (HALFLING -50%)" : ""));
+            }
+
+            if (c.item != null && Database.Items.TryGetValue(c.item, out var gainItm))
+                parts.Add("+" + gainItm.name.ToUpperInvariant());
+
+            if (!string.IsNullOrEmpty(c.materialId))
+            {
+                int matAmt = ScaleVal(Math.Max(1, c.materialAmount));
+                if (currentEvent.HasTag(EventTags.Mineral) && Run != null && Run.HasRace("dwarf"))
+                    matAmt += 1;
+                string matName = Database.Materials.TryGetValue(c.materialId, out var matDef) ? matDef.name : c.materialId;
+                parts.Add($"+{matAmt} {matName.ToUpperInvariant()}");
+            }
+
+            if (c.randomEquipment || !string.IsNullOrEmpty(c.equipmentId))
+            {
+                string eqId = !string.IsNullOrEmpty(c.equipmentId) ? c.equipmentId : Run?.EventEquipment;
+                string eqName = !string.IsNullOrEmpty(eqId) && Database.Equipment.TryGetValue(eqId, out var eqDef) ? eqDef.name : "EQUIPMENT";
+                parts.Add("+" + eqName.ToUpperInvariant());
+            }
+
+            if (c.relic && Run?.EventRelic != null)
+            {
+                bool revealRelic = Run.RevealsRelicEffects || currentEvent.dungeonAct == 0;
+                parts.Add(revealRelic ? "+" + Database.Relics[Run.EventRelic].name.ToUpperInvariant() : "+MYSTERY RELIC");
+            }
+
             if (c.battleBuff != null) parts.Add("NEXT BATTLE: " + StatusInfo.Name(c.battleBuff.id).ToUpperInvariant());
+
             if (Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evMod))
             {
                 var (mLabel, mDetail) = RewardGenerator.Describe(evMod, Run.ModifierManager);
                 parts.Add($"+{mLabel.ToUpperInvariant()} ({mDetail.ToUpperInvariant()})");
             }
-            if (c.relic && Run?.RelicManager != null)
+
+            bool revealCurse = Run == null || Run.RevealsCurses;
+            if ((!c.hasHiddenCurse || revealCurse) && Run != null && Run.EventCurseModifiers.TryGetValue(choiceIndex, out var cMod)
+                && Database.DungeonModifiers.TryGetValue(cMod.id, out var cmd))
             {
-                var clue = Run.RelicManager.GetAdditionalEventClue("relic");
-                if (clue != null) parts.Add(clue.ToUpperInvariant());
+                parts.Add($"CURSE: {cmd.displayName.ToUpperInvariant()}");
             }
+
+            if (c.riskChancePercent > 0)
+            {
+                parts.Add($"{c.riskChancePercent}% RISK");
+            }
+
             return parts.Count == 0 ? "NOTHING HAPPENS" : string.Join(", ", parts);
         }
 
@@ -209,9 +450,18 @@ namespace Obscure
             var contBtn = FigmaUi.CreateButton("Continue", "button-primary", 180);
             btnRow.Add(contBtn);
             box.Add(btnRow);
-            choiceHost.Add(box);
+            choiceScroll.Add(box);
 
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(contBtn, "Continue", () => Game.Go(GameState.Map)), contBtn);
         }
+
+        static string FormatCategory(EventCategory cat) => cat switch
+        {
+            EventCategory.NpcEncounter => "NPC ENCOUNTER",
+            EventCategory.TrapAndHazard => "TRAP & HAZARD",
+            EventCategory.PuzzleAndExploration => "PUZZLE & EXPLORATION",
+            EventCategory.CursedAndRisk => "CURSED & RISK",
+            _ => cat.ToString().ToUpperInvariant(),
+        };
     }
 }

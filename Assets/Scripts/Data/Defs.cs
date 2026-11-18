@@ -344,6 +344,47 @@ namespace Obscure
         public List<RewardOption> modifierChoices = new List<RewardOption>();
     }
 
+    public enum EventCategory
+    {
+        General,
+        Shrine,
+        NpcEncounter,
+        Treasure,
+        TrapAndHazard,
+        Supernatural,
+        PuzzleAndExploration,
+        Survival,
+        CursedAndRisk
+    }
+
+    public enum EventRarity
+    {
+        Common,
+        Uncommon,
+        Rare
+    }
+
+    public static class EventTags
+    {
+        public const string Sacred = "sacred";
+        public const string Supernatural = "supernatural";
+        public const string Relic = "relic";
+        public const string CursedReward = "cursed_reward";
+        public const string Npc = "npc";
+        public const string Shop = "shop";
+        public const string Hidden = "hidden";
+        public const string Trap = "trap";
+        public const string Hazard = "hazard";
+        public const string AncientMechanism = "ancient_mechanism";
+        public const string Destructible = "destructible";
+        public const string Narrow = "narrow";
+        public const string Corruption = "corruption";
+        public const string Liquid = "liquid";
+        public const string Dragon = "dragon";
+        public const string Mineral = "mineral";
+        public const string Aquatic = "aquatic";
+    }
+
     public class EventChoice
     {
         public string label, outcome;
@@ -358,12 +399,52 @@ namespace Obscure
         public ElementType modifierElement = ElementType.None;
         public bool randomModifier; // grants a modifier rolled on entering the event
         public ModifierCategory? modifierCategoryFilter;
+
+        // Dungeon Event Pool & Racial Utility extensions
+        public string requiredRace; // "human", "elf", "dwarf", "halfling", "dragonborn", "liichtian", "merfolk"
+        public bool isImprovise;    // Human Adaptability option for events with no racial choices
+        public string requiredItem; // consumable id consumed on selection
+        public string requiredMaterialId;
+        public int requiredMaterialAmount;
+        public int mpRestorePercent;    // of max MP, living members
+        public int hazardDamagePercent; // party HP damage reduced 50% by Halfling Small and Nimble
+        public bool isTrapChoice;       // eligible for R014 Pallbearer's Gloves minor chest trap negation
+        public string materialId;
+        public int materialAmount;
+        public string equipmentId;
+        public bool randomEquipment;
+        public string curseModifierId;
+        public bool hasHiddenCurse;
+        public bool hasHiddenOutcome;
+        public int riskChancePercent;
+        public int riskFailHurtPercent;
+        public int riskFailHazardDamagePercent;
+        public string riskFailModifierId;
+        public string riskFailOutcome;
+        public bool riskGrantsRewardOnFail;
+        public string bonusInfoText;
+
+        public bool IsRacialOption => !string.IsNullOrEmpty(requiredRace) && !isImprovise;
     }
 
     public class EventDef
     {
         public string id, title, text;
+        public EventCategory category = EventCategory.General;
+        public EventRarity rarity = EventRarity.Uncommon;
+        public int dungeonAct = 0; // 0 = shared/legacy, 1+ = exclusive to that dungeon act
+        public string[] tags = Array.Empty<string>();
+        public string supernaturalSourceClue;
+        public string hiddenClue;
         public EventChoice[] choices;
+
+        public bool HasTag(string tag) =>
+            !string.IsNullOrEmpty(tag) &&
+            tags != null &&
+            tags.Any(t => string.Equals(t, tag, StringComparison.OrdinalIgnoreCase));
+
+        public bool HasAnyRacialChoice() =>
+            choices != null && choices.Any(c => c != null && c.IsRacialOption);
     }
 
     public class NodeDef

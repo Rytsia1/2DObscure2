@@ -1425,7 +1425,8 @@ namespace Obscure
             ShopInventory shop,
             string shopItemId,
             out EquipmentInstance boughtItem,
-            out string error)
+            out string error,
+            bool allowDragonbornDiscount = false)
         {
             boughtItem = null;
             if (run == null) { error = "RunState is null."; return false; }
@@ -1444,9 +1445,10 @@ namespace Obscure
                 return false;
             }
 
-            if (run.Gold < shopItem.cost)
+            int effectiveCost = allowDragonbornDiscount ? run.GetDungeonShopDiscountedPrice(shopItem.cost) : shopItem.cost;
+            if (run.Gold < effectiveCost)
             {
-                error = $"Not enough gold. Requires {shopItem.cost} Gold, but party only has {run.Gold} Gold.";
+                error = $"Not enough gold. Requires {effectiveCost} Gold, but party only has {run.Gold} Gold.";
                 return false;
             }
 
@@ -1456,7 +1458,9 @@ namespace Obscure
                 return false;
             }
 
-            run.Gold -= shopItem.cost;
+            run.Gold -= effectiveCost;
+            if (allowDragonbornDiscount)
+                run.TryConsumeDragonbornShopDiscount();
             shopItem.isSold = true;
             boughtItem = shopItem.item;
 

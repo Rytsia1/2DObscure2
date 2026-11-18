@@ -44,7 +44,12 @@ namespace Obscure
             }
             for (int f = 0; f < Floors - 1; f++) Connect(floors[f], floors[f + 1], rng);
 
-            var events = Database.Events.Keys.OrderBy(_ => rng.Next()).ToList();
+            var eventPool = act == 1
+                ? Database.Events.Values.Where(e => e.dungeonAct == 1).ToList()
+                : Database.Events.Values.Where(e => e.dungeonAct == 0 || e.dungeonAct == act).ToList();
+            if (eventPool.Count == 0)
+                eventPool = Database.Events.Values.ToList();
+            var events = eventPool.OrderBy(_ => rng.Next()).ToList();
             int nextEvent = 0;
             for (int f = 0; f < Floors; f++)
                 foreach (var n in floors[f])
@@ -52,7 +57,7 @@ namespace Obscure
                     var parents = f == 0 ? new List<NodeDef>() : floors[f - 1].Where(p => p.next.Contains(n.id)).ToList();
                     n.type = PickType(f, parents, rng);
                     if (n.IsCombat) n.encounter = PickEncounter(n, rng);
-                    if (n.type == NodeType.Event) n.eventId = events[nextEvent++ % events.Count]; // spread events before repeating
+                    if (n.type == NodeType.Event) n.eventId = events[nextEvent++ % events.Count].id; // spread events before repeating
                 }
             string dungeonName = (act >= 1 && act <= DungeonNames.Length) ? DungeonNames[act - 1] : $"Dungeon {act}";
             return new MapDef { name = dungeonName, act = act, nodes = floors.SelectMany(x => x).ToArray() };

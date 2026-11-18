@@ -173,6 +173,8 @@ namespace Obscure
                     var item = c;
                     bool soldOut = !item.isUnlimitedStock && item.stockCount <= 0;
                     int own = Run?.Inventory?.GetConsumableCount(item.itemId) ?? 0;
+                    int effectivePrice = Run != null ? Run.GetDungeonShopDiscountedPrice(item.cost) : item.cost;
+                    bool hasDiscount = effectivePrice < item.cost;
                     list.Add(new Entry
                     {
                         title = item.name,
@@ -180,13 +182,13 @@ namespace Obscure
                         sub = item.description.ToUpperInvariant(),
                         desc = item.description.ToUpperInvariant(),
                         stock = item.isUnlimitedStock ? "UNLIMITED" : $"× {item.stockCount}",
-                        priceText = soldOut ? "SOLD" : item.cost.ToString(),
-                        btnText = soldOut ? "Sold Out" : $"Buy · {item.cost} Run Gold",
+                        priceText = soldOut ? "SOLD" : hasDiscount ? $"{effectivePrice} (-15%)" : effectivePrice.ToString(),
+                        btnText = soldOut ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Run Gold",
                         tagText = item.isReviveItem ? "REVIVE ITEM" : "CONSUMABLE",
                         owned = own,
-                        price = item.cost,
+                        price = effectivePrice,
                         dim = soldOut,
-                        canAct = !soldOut && (Run?.Gold ?? 0) >= item.cost,
+                        canAct = !soldOut && (Run?.Gold ?? 0) >= effectivePrice,
                         action = () => BuyConsumable(item),
                     });
                 }
@@ -197,6 +199,8 @@ namespace Obscure
                 {
                     var item = eq;
                     string name = item.item?.Definition?.name ?? "Equipment";
+                    int effectivePrice = Run != null ? Run.GetDungeonShopDiscountedPrice(item.cost) : item.cost;
+                    bool hasDiscount = effectivePrice < item.cost;
                     list.Add(new Entry
                     {
                         title = name,
@@ -204,13 +208,13 @@ namespace Obscure
                         sub = item.item?.Definition != null ? EquipmentSlots.DisplayName(item.item.Definition.slot).ToUpperInvariant() : "GEAR",
                         desc = item.item?.Definition?.description?.ToUpperInvariant() ?? "",
                         stock = item.isSold ? "SOLD OUT" : "× 1",
-                        priceText = item.isSold ? "—" : item.cost.ToString(),
-                        btnText = item.isSold ? "Sold Out" : $"Buy · {item.cost} Run Gold",
+                        priceText = item.isSold ? "—" : hasDiscount ? $"{effectivePrice} (-15%)" : effectivePrice.ToString(),
+                        btnText = item.isSold ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Run Gold",
                         tagText = "EQUIPMENT",
                         owned = 0,
-                        price = item.cost,
+                        price = effectivePrice,
                         dim = item.isSold,
-                        canAct = !item.isSold && (Run?.Gold ?? 0) >= item.cost,
+                        canAct = !item.isSold && (Run?.Gold ?? 0) >= effectivePrice,
                         action = () => BuyEquipment(item),
                     });
                 }
