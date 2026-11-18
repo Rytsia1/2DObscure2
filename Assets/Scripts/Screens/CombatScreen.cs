@@ -175,6 +175,8 @@ namespace Obscure
             var eSlots = EnemySlots(battle.Enemies.Count);
             for (int i = 0; i < battle.Enemies.Count; i++) AddEnemyCombatant(battle.Enemies[i], eSlots[i]);
 
+            ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
+
             // Command menu column inside right console panel
             HideBakedCommandMenu();
             menuHost = new VisualElement { name = "CombatCommandMenu" };

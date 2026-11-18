@@ -59,6 +59,8 @@ namespace Obscure
                 FigmaUi.AnchorRight(runGold, 24f);
             }
 
+            ModifierHudHelper.BuildStrip(UiRoot, Run, 440f, 16f, 490f, UiRoot);
+
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onBack = OpenPause;

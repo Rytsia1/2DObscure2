@@ -386,6 +386,8 @@ namespace Obscure
         public static void CommitDungeonClear(RunState run)
         {
             if (run == null) return;
+            // GDD Bab 15 §3.1: All temporary dungeon modifiers end at dungeon clear.
+            run.ModifierManager?.ClearAll();
             // 1. Convert Run Gold to Hub Gold 1:1
             run.TransferRunGoldToHub();
 

@@ -10,8 +10,13 @@ namespace Obscure
     // Presents RunState.PendingReward — migrated to Figma 21---Combat-Victory---Rewards.uxml (1280x720 UI Toolkit).
     public class RewardScreen : GameScreen
     {
+        int selectedModifierIdx = -1;
+        ElementType selectedAttunementElement = ElementType.Fire;
+
         protected override void Build()
         {
+            selectedModifierIdx = -1;
+            selectedAttunementElement = ElementType.Fire;
             var r = Run?.PendingReward ?? new RewardOffer { title = "VICTORY", text = "SPOILS OF WAR", choices = new List<RewardOption>() };
             MountFigma("21---Combat-Victory---Rewards");
 
@@ -25,19 +30,36 @@ namespace Obscure
             if (subLbl != null) subLbl.text = (r.text ?? "SPOILS OF WAR").ToUpperInvariant();
 
             var goldDeltaLbl = UiRoot.Q<UiLabel>(className: "_24-run-gold-vars");
-            if (goldDeltaLbl != null) goldDeltaLbl.text = $"◆ +{r.gold} RUN GOLD";
+            if (goldDeltaLbl != null)
+            {
+                string extra = r.bonusGoldFromModifier > 0 ? $" (+{r.bonusGoldFromModifier} FORTUNE)" : "";
+                goldDeltaLbl.text = $"◆ +{r.gold} RUN GOLD{extra}";
+            }
 
             var goldTotalLbl = UiRoot.Q<UiLabel>(className: "run-gold-120-144-vars");
             if (goldTotalLbl != null)
-                goldTotalLbl.text = Run != null ? $"RUN GOLD {Run.Gold - r.gold} › {Run.Gold}" : $"RUN GOLD +{r.gold}";
+            {
+                string bonusItemNote = !string.IsNullOrEmpty(r.bonusItemId) && Database.Items.TryGetValue(r.bonusItemId, out var bi)
+                    ? $" · +{bi.name.ToUpperInvariant()}"
+                    : "";
+                goldTotalLbl.text = (Run != null ? $"RUN GOLD {Run.Gold} › {Run.Gold + r.gold}" : $"RUN GOLD +{r.gold}") + bonusItemNote;
+            }
 
             var prizeHdr = UiRoot.Q<UiLabel>(className: "choose-one-prize-vars");
             if (prizeHdr != null) prizeHdr.text = r.choices.Count > 0 ? "CHOOSE ONE PRIZE" : "NO PRIZE THIS TIME";
 
+            bool isBossReward = Run?.Current?.type == NodeType.Boss;
             var tipLbl = UiRoot.Q<UiLabel>(className: "or-take-only-the-gold-and-continue-vars");
-            if (tipLbl != null) tipLbl.text = "";
+            if (tipLbl != null)
+            {
+                tipLbl.text = isBossReward
+                    ? "BOSS CLEARED: ALL DUNGEON MODIFIERS END HERE · RELICS ARE KEPT"
+                    : "";
+                if (isBossReward) tipLbl.style.color = Palette.Ember1;
+            }
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            bool hasModifierOffers = r.modifierChoices != null && r.modifierChoices.Count > 0;
 
             // Prize cards in 21---Combat-Victory---Rewards.uxml
             string[] cardClasses = { "prize-draught-2-vars", "prize-tideglass-wand-vars", "prize-iron-scrap-3-vars" };
@@ -50,10 +72,11 @@ namespace Obscure
                     card.style.display = DisplayStyle.None;
                     continue;
                 }
+                if (hasModifierOffers) card.style.height = 148;
 
                 int choiceIdx = i;
                 var o = r.choices[i];
-                var (label, detail) = RewardGenerator.Describe(o);
+                var (label, detail) = RewardGenerator.Describe(o, Run?.ModifierManager);
                 if (o.kind == RewardKind.Upgrade)
                 {
                     var u = party.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id) ?? party[0];
@@ -65,7 +88,7 @@ namespace Obscure
 
                 var topGroup = new VisualElement { style = { flexDirection = FlexDirection.Column } };
                 var slot = FigmaUi.InstantiateTemplate("Item-Slot-Filled");
-                if (slot != null)
+                if (slot != null && !hasModifierOffers)
                 {
                     var prizeIcon = o.kind == RewardKind.Item ? IconArt.Item(o.id) : o.kind == RewardKind.Equipment ? IconArt.Gear(o.id) : null;
                     FigmaUi.SetInstanceText(slot, "text-0", prizeIcon != null ? "" : PrizeSymbol(o));
@@ -75,14 +98,14 @@ namespace Obscure
                 }
 
                 var nameEl = new UiLabel(label);
-                nameEl.style.fontSize = 16;
+                nameEl.style.fontSize = hasModifierOffers ? 14 : 16;
                 nameEl.style.color = Palette.Mist1;
                 nameEl.style.whiteSpace = WhiteSpace.Normal;
                 nameEl.style.marginBottom = 4;
                 topGroup.Add(nameEl);
 
                 var detEl = new UiLabel(detail.ToUpperInvariant());
-                detEl.style.fontSize = 12;
+                detEl.style.fontSize = hasModifierOffers ? 11 : 12;
                 detEl.style.color = Palette.Mist2;
                 detEl.style.whiteSpace = WhiteSpace.Normal;
                 topGroup.Add(detEl);
@@ -107,6 +130,11 @@ namespace Obscure
                     card.style.borderRightColor = border;
                 };
                 item.visual(false);
+            }
+
+            if (hasModifierOffers)
+            {
+                BuildModifierOfferStrip(r, menu, tipLbl);
             }
 
             // Party panel
@@ -169,8 +197,124 @@ namespace Obscure
 
             menu.onFocus = s =>
             {
-                if (tipLbl != null) tipLbl.text = s?.tooltip ?? "";
+                if (tipLbl != null)
+                {
+                    if (isBossReward)
+                        tipLbl.text = "BOSS CLEARED: ALL DUNGEON MODIFIERS END HERE · RELICS ARE KEPT";
+                    else
+                        tipLbl.text = s?.tooltip ?? "";
+                }
             };
+        }
+
+        void BuildModifierOfferStrip(RewardOffer r, UitkMenu menu, UiLabel tipLbl)
+        {
+            var screen = UiRoot.Q<VisualElement>(className: "_21-combat-victory-rewards") ?? UiRoot;
+            if (tipLbl != null)
+            {
+                tipLbl.style.top = 564;
+                tipLbl.style.fontSize = 11;
+            }
+            var hdr = new UiLabel("BONUS MODIFIER (OPTIONAL · CLICK TO SELECT)")
+            {
+                style =
+                {
+                    position = Position.Absolute, left = 96, top = 494,
+                    fontSize = 11, color = Palette.Gold2, letterSpacing = 0.4f
+                }
+            };
+            screen.Add(hdr);
+
+            var row = new VisualElement
+            {
+                name = "ModifierOfferRow",
+                style =
+                {
+                    position = Position.Absolute, left = 96, top = 512, width = 508, height = 48,
+                    flexDirection = FlexDirection.Row, justifyContent = Justify.FlexStart
+                }
+            };
+            screen.Add(row);
+
+            var pillItems = new List<(UitkMenu.Item item, VisualElement box, int idx, UiLabel titleLbl, RewardOption opt)>();
+
+            void RefreshPills(UitkMenu.Item focusedItem = null)
+            {
+                foreach (var p in pillItems)
+                {
+                    bool sel = selectedModifierIdx == p.idx;
+                    bool isFocused = focusedItem == p.item || menu.Current == p.item;
+                    bool isMax = Run?.ModifierManager != null && Run.ModifierManager.IsAtCap(p.opt.id, p.opt.id == "MOD-024" ? selectedAttunementElement : p.opt.element);
+                    var (mLbl, _) = RewardGenerator.Describe(new RewardOption
+                    {
+                        kind = RewardKind.Modifier,
+                        id = p.opt.id,
+                        element = p.opt.id == "MOD-024" ? selectedAttunementElement : p.opt.element
+                    }, Run?.ModifierManager);
+                    p.titleLbl.text = (sel ? "✓ " : "") + mLbl.ToUpperInvariant();
+                    p.box.style.backgroundColor = sel ? Palette.Hex(0x1E3328) : (isMax ? Palette.Ink1 : Palette.Ink2);
+                    var b = sel ? Palette.Ok : (isFocused ? Palette.Gold2 : Palette.Ink5);
+                    p.box.style.borderTopColor = b; p.box.style.borderBottomColor = b;
+                    p.box.style.borderLeftColor = b; p.box.style.borderRightColor = b;
+                }
+            }
+
+            for (int i = 0; i < r.modifierChoices.Count && i < 3; i++)
+            {
+                int mIdx = i;
+                var mOpt = r.modifierChoices[i];
+                if (mOpt.id == "MOD-024" && mOpt.element.IsValidElement())
+                    selectedAttunementElement = mOpt.element;
+
+                var box = new VisualElement();
+                box.style.width = 164;
+                box.style.height = 46;
+                box.style.marginRight = i < 2 ? 8 : 0;
+                box.style.paddingLeft = 6;
+                box.style.paddingRight = 6;
+                box.style.paddingTop = 4;
+                box.style.paddingBottom = 4;
+                box.style.borderTopWidth = 2; box.style.borderBottomWidth = 2;
+                box.style.borderLeftWidth = 2; box.style.borderRightWidth = 2;
+                box.style.justifyContent = Justify.Center;
+
+                var (mLabel, mDetail) = RewardGenerator.Describe(mOpt, Run?.ModifierManager);
+                var mTitle = new UiLabel(mLabel.ToUpperInvariant())
+                {
+                    style = { fontSize = 11, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                };
+                box.Add(mTitle);
+                row.Add(box);
+
+                string tip = mOpt.id == "MOD-024"
+                    ? mDetail.ToUpperInvariant() + " (CLICK AGAIN WHILE SELECTED TO CYCLE ELEMENT)"
+                    : mDetail.ToUpperInvariant();
+                var mItem = menu.Add(box, mLabel, () =>
+                {
+                    if (selectedModifierIdx == mIdx)
+                    {
+                        if (mOpt.id == "MOD-024")
+                        {
+                            int curIdx = Array.IndexOf(ElementTypes.All, selectedAttunementElement);
+                            selectedAttunementElement = ElementTypes.All[(curIdx + 1) % ElementTypes.All.Length];
+                        }
+                        else
+                        {
+                            selectedModifierIdx = -1;
+                        }
+                    }
+                    else
+                    {
+                        selectedModifierIdx = mIdx;
+                    }
+                    RefreshPills();
+                    if (tipLbl != null) tipLbl.text = selectedModifierIdx == mIdx ? $"SELECTED: {mLabel.ToUpperInvariant()}" : "";
+                }, tooltip: tip);
+
+                pillItems.Add((mItem, box, mIdx, mTitle, mOpt));
+                mItem.visual = on => RefreshPills(on ? mItem : null);
+            }
+            RefreshPills();
         }
 
         static string PrizeSymbol(RewardOption o) => o.kind switch
@@ -179,13 +323,14 @@ namespace Obscure
             RewardKind.Item => "P",
             RewardKind.Equipment => "E",
             RewardKind.Upgrade => "U",
+            RewardKind.Modifier => "M",
             _ => "+",
         };
 
-        static void Claim(int choice)
+        void Claim(int choice)
         {
             int gainedGold = Run != null && Run.PendingReward != null ? Run.PendingReward.gold : 0;
-            Run.ClaimReward(choice);
+            Run.ClaimReward(choice, selectedModifierIdx, selectedAttunementElement);
             if (choice >= 0) Sfx.Play(Sound.Success);
             else if (gainedGold > 0) Sfx.Play(Sound.Coin);
             if (Run.Won)

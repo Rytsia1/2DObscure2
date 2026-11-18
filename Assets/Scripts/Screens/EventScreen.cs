@@ -77,11 +77,11 @@ namespace Obscure
                 int index = i;
                 var c = currentEvent.choices[i];
                 var blocked = Run != null ? Run.EventBlocked(c) : null;
-                AddChoiceCard(i + 1, c, blocked, () => Choose(index));
+                AddChoiceCard(i + 1, c, index, blocked, () => Choose(index));
             }
         }
 
-        void AddChoiceCard(int number, EventChoice c, string blocked, System.Action choose)
+        void AddChoiceCard(int number, EventChoice c, int choiceIndex, string blocked, System.Action choose)
         {
             bool enabled = blocked == null;
             var card = new VisualElement();
@@ -112,14 +112,16 @@ namespace Obscure
             titleLbl.style.color = enabled ? Palette.Mist1 : Palette.Mist3;
             textCol.Add(titleLbl);
 
-            string sub = enabled ? Consequences(c) : blocked.ToUpperInvariant();
+            string sub = enabled ? Consequences(c, choiceIndex) : blocked.ToUpperInvariant();
             var subLbl = new UiLabel(sub);
             subLbl.style.fontSize = 13;
             subLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
             textCol.Add(subLbl);
             card.Add(textCol);
 
-            string tagText = !enabled ? blocked.ToUpperInvariant() : c.goldCost > 0 ? $"-{c.goldCost} RUN GOLD" : null;
+            bool hasDrawbackMod = Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evModOpt)
+                && Database.DungeonModifiers.TryGetValue(evModOpt.id, out var evModDef) && (evModDef.HasDrawback || evModDef.IsDebuff);
+            string tagText = !enabled ? blocked.ToUpperInvariant() : c.goldCost > 0 ? $"-{c.goldCost} RUN GOLD" : hasDrawbackMod ? "CURSED" : null;
             if (tagText != null)
             {
                 var tag = FigmaUi.InstantiateTemplate(enabled ? "Tag-Temp" : "Tag-Cond");
@@ -145,7 +147,7 @@ namespace Obscure
             item.visual(false);
         }
 
-        string Consequences(EventChoice c)
+        string Consequences(EventChoice c, int choiceIndex)
         {
             var parts = new List<string>();
             if (c.goldCost > 0) parts.Add($"-{c.goldCost} GOLD");
@@ -155,6 +157,11 @@ namespace Obscure
             if (c.item != null) parts.Add("+" + Database.Items[c.item].name.ToUpperInvariant());
             if (c.relic && Run?.EventRelic != null) parts.Add("+" + Database.Relics[Run.EventRelic].name.ToUpperInvariant());
             if (c.battleBuff != null) parts.Add("NEXT BATTLE: " + StatusInfo.Name(c.battleBuff.id).ToUpperInvariant());
+            if (Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evMod))
+            {
+                var (mLabel, mDetail) = RewardGenerator.Describe(evMod, Run.ModifierManager);
+                parts.Add($"+{mLabel.ToUpperInvariant()} ({mDetail.ToUpperInvariant()})");
+            }
             if (c.relic && Run?.RelicManager != null)
             {
                 var clue = Run.RelicManager.GetAdditionalEventClue("relic");

@@ -15,6 +15,7 @@ namespace Obscure
         public readonly int slot;          // formation index, also the turn-order tiebreaker
         public readonly string name, tag;  // log name ("Skeleton B"), turn-bar tag ("SKB")
         public EnemyDef enemy;             // null for party members; the current phase's def for bosses
+        public RunState run;               // active run context for modifier/relic queries
 
         public bool guarding;   // halves incoming damage until this combatant's next turn starts
         public int stunTurns;   // turns to skip; the skip consumes the turn
@@ -240,8 +241,9 @@ namespace Obscure
                 float bgSpeedBonus = wayfarerSpeedBuffTurns > 0 ? 0.10f : 0f;
                 float legacyPenalty = (StatusController != null && StatusController.ActiveInstances.Count > 0) ? 0f : (Mag(StatusId.Slow) + Mag(StatusId.Freeze));
                 float statusMult = StatusController != null ? StatusController.GetSpeedMultiplier() : 1f;
+                float modPenalty = (IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetSpeedPenalty() : 0f;
                 float totalBonus = bgSpeedBonus + Math.Max(0f, statusMult - 1f);
-                float totalPenalty = legacyPenalty + Math.Max(0f, 1f - statusMult);
+                float totalPenalty = legacyPenalty + Math.Max(0f, 1f - statusMult) + modPenalty;
                 float speedMod = Math.Clamp(1f + totalBonus - totalPenalty, 0.50f, 1.50f);
                 return Math.Max(1, (int)Math.Floor(unit.stats.spd * speedMod));
             }
@@ -294,17 +296,31 @@ namespace Obscure
             IReadOnlyList<DamageComponent> components,
             int hitCount = 1,
             QteResult qteResult = QteResult.Good,
-            Func<float> criticalRollProvider = null)
+            Func<float> criticalRollProvider = null,
+            RunState runOverride = null)
         {
+            var r = runOverride ?? run;
             var scores = unit != null ? unit.FinalScores : AbilityScores.Uniform(10);
+            var attackerMods = DamageModifiers != null ? DamageModifiers.Clone() : new DamageModifierSet();
+            var targetMods = target?.DamageModifiers != null ? target.DamageModifiers.Clone() : new DamageModifierSet();
+
+            float physPen = (unit != null && unit.HasTalent("piercer")) ? TalentSystem.PiercerPenetration : 0f;
+            if (IsPlayer && r?.ModifierManager != null)
+            {
+                physPen = Math.Clamp(physPen + r.ModifierManager.GetPhysicalPenetrationBonus(this), 0f, DungeonModifierManager.MaxPhysicalPenetration);
+                r.ModifierManager.PopulateDamageModifiers(this, target, attackerMods, targetMods);
+            }
+
+            float targetDef = target != null ? (float)Math.Max(0.0, target.Def * (1f - physPen)) : 0f;
+
             return new DamageContext
             {
                 attackerStr = scores.str,
                 attackerInt = scores.intel,
-                attackerModifiers = DamageModifiers ?? new DamageModifierSet(),
+                attackerModifiers = attackerMods,
                 criticalHitConfig = GetCriticalHitConfig(target),
-                targetPhysicalDefense = target != null ? (unit != null && unit.HasTalent("piercer") ? (float)Math.Max(0.0, target.Def * (1f - TalentSystem.PiercerPenetration)) : target.Def) : 0f,
-                targetModifiers = target?.DamageModifiers ?? new DamageModifierSet(),
+                targetPhysicalDefense = targetDef,
+                targetModifiers = targetMods,
                 targetEnemyAffinity = target?.AffinityProfile ?? new EnemyAffinityProfile(),
                 targetNullBreak = target?.NullBreak,
                 targetElementalResistance = target?.ElementalResistances ?? new ElementalResistanceProfile(),
@@ -345,9 +361,16 @@ namespace Obscure
             }
 
             // Relic modifiers (R025 Arcanum Unbound: +20% MP, R026 The Empty Chalice: -30% MP)
-            if (run?.RelicManager != null)
+            var r = run ?? this.run;
+            if (r?.RelicManager != null)
             {
-                run.RelicManager.ModifyMpCost(this, skill, ref cost);
+                r.RelicManager.ModifyMpCost(this, skill, ref cost);
+            }
+
+            // Dungeon Modifier MP cost effects (MOD-008 Mana Well -5%/stack, MOD-021 Leaking Mana +1 MP/stack)
+            if (IsPlayer && r?.ModifierManager != null)
+            {
+                r.ModifierManager.ModifyMpCost(this, skill, ref cost);
             }
 
             // Cursed Equipment: EQ075 Fists of the Hollow Saint: +1 MP cost

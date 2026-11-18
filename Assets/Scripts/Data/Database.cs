@@ -5628,23 +5628,34 @@ namespace Obscure
             },
 
             new EventDef
-
             {
-
                 id = "fallen", title = "Fallen Adventurer", text = "A skeleton in rotted leathers still clutches its pack.",
-
                 choices = new[]
-
                 {
-
                     new EventChoice { label = "Take the coin purse", gold = 25, outcome = "25 gold. They won't need it." },
-
                     new EventChoice { label = "Take the vial", item = "ether", outcome = "An Ether, still sealed." },
-
                 },
-
             },
-
+            new EventDef
+            {
+                id = "cursed_shrine", title = "Cursed Shrine", text = "Black flame flickers over an obsidian basin, promising sharp strength at a steep toll.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Embrace Blood Price", modifierId = "MOD-016", outcome = "Your veins burn with fierce potency." },
+                    new EventChoice { label = "Embrace Glass Resolve", modifierId = "MOD-017", outcome = "Your edge sharpens as your guard thins." },
+                    new EventChoice { label = "Step back", outcome = "You leave the cursed flame untouched." },
+                },
+            },
+            new EventDef
+            {
+                id = "astral_obelisk", title = "Astral Obelisk", text = "A carved monolith resonates with lingering dungeon magic.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Draw Offense Blessing", randomModifier = true, modifierCategoryFilter = ModifierCategory.Offense, outcome = "A focused cadence settles over your party." },
+                    new EventChoice { label = "Draw Recovery Blessing", randomModifier = true, modifierCategoryFilter = ModifierCategory.Recovery, outcome = "Calm energy flows through your party." },
+                    new EventChoice { label = "Move on", outcome = "You pass the obelisk in silence." },
+                },
+            },
         }, e => e.id);
 
 

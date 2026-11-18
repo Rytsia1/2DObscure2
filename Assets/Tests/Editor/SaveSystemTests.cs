@@ -778,6 +778,28 @@ namespace Obscure.Tests
             CollectionAssert.Contains(disp.fallbackFontAssetTable, sym);
             CollectionAssert.Contains(goth.fallbackFontAssetTable, ui);
             CollectionAssert.Contains(goth.fallbackFontAssetTable, sym);
+
+            Assert.IsNotNull(disp.sourceFontFile, "FelnaDisplayFont missing sourceFontFile");
+            Assert.IsNotNull(goth.sourceFontFile, "FelnaGothicFont missing sourceFontFile");
+            Assert.IsTrue(disp.TryAddCharacters("FELNA VICTORY DEFEAT", out _), "Display font must rasterize title glyphs");
+            Assert.IsTrue(goth.TryAddCharacters("CONTINUE NEW GAME SETTINGS", out _), "Gothic font must rasterize menu glyphs");
+
+            var uss = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.StyleSheet>("Assets/UI/felna-runtime.uss");
+            Assert.IsNotNull(uss, "felna-runtime.uss missing");
+            var ussSo = new UnityEditor.SerializedObject(uss);
+            var strings = ussSo.FindProperty("strings");
+            for (int i = 0; i < strings.arraySize; i++)
+            {
+                string val = strings.GetArrayElementAtIndex(i).stringValue;
+                Assert.IsFalse(val.Contains("project://database/"), "felna-runtime.uss has unresolved asset url: " + val);
+            }
+            var assetsProp = ussSo.FindProperty("assets");
+            var refs = new System.Collections.Generic.HashSet<UnityEngine.Object>();
+            for (int i = 0; i < assetsProp.arraySize; i++)
+                refs.Add(assetsProp.GetArrayElementAtIndex(i).objectReferenceValue);
+            CollectionAssert.Contains(refs, ui, "felna-runtime.uss must resolve FelnaUIFont");
+            CollectionAssert.Contains(refs, disp, "felna-runtime.uss must resolve FelnaDisplayFont");
+            CollectionAssert.Contains(refs, goth, "felna-runtime.uss must resolve FelnaGothicFont");
         }
     }
 }

@@ -648,6 +648,7 @@ namespace Obscure
         public readonly HashSet<string> Cleared = new HashSet<string>();
         public readonly InventoryRuntime Inventory = new InventoryRuntime();
         public readonly RelicManager RelicManager = new RelicManager();
+        public readonly DungeonModifierManager ModifierManager = new DungeonModifierManager();
         public readonly Random Rng; // combat randomness
         public readonly RunStats Stats = new RunStats();
         public readonly List<StatusApply> BattleBuffs = new List<StatusApply>();
@@ -663,6 +664,7 @@ namespace Obscure
         public RewardOffer PendingReward { get; private set; }
         public EventDef CurrentEvent { get; private set; }
         public string EventRelic { get; private set; } // the relic this event offers, rolled on entry
+        public readonly Dictionary<int, RewardOption> EventModifiers = new Dictionary<int, RewardOption>();
 
         public RunState(MapDef map, IEnumerable<CharacterDef> party, int seed)
         {
@@ -704,7 +706,12 @@ namespace Obscure
             if (!CanEnter(n)) throw new InvalidOperationException($"Node {n.id} is not reachable");
             Current = n;
             if (n.type == NodeType.Boss) Stats.bossReached = true;
-            if (n.type == NodeType.Treasure) PendingReward = RewardGenerator.ForTreasure(NodeRng(n), Relics);
+            if (n.type == NodeType.Treasure)
+            {
+                PendingReward = RewardGenerator.ForTreasure(NodeRng(n), Relics);
+                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(n, 3), count: 3);
+                PendingReward.bonusItemId = ModifierManager.TryRollScavengerBonusConsumable(NodeRng(n, 4));
+            }
             if (n.type == NodeType.Shop)
             {
                 CurrentDungeonShop = DungeonShopData.Generate(Map?.act ?? 1, NodeRng(n));
@@ -714,6 +721,26 @@ namespace Obscure
             {
                 CurrentEvent = Database.Events[n.eventId];
                 EventRelic = RewardGenerator.RandomRelicId(NodeRng(n, 1), Relics);
+                EventModifiers.Clear();
+                if (CurrentEvent.choices != null)
+                {
+                    for (int i = 0; i < CurrentEvent.choices.Length; i++)
+                    {
+                        var ch = CurrentEvent.choices[i];
+                        if (!string.IsNullOrEmpty(ch.modifierId))
+                        {
+                            var elem = ch.modifierElement;
+                            if (!elem.IsValidElement() && Database.DungeonModifiers.TryGetValue(ch.modifierId, out var md) && md.isElementSpecific)
+                                elem = ElementTypes.All[NodeRng(n, 10 + i).Next(ElementTypes.All.Length)];
+                            EventModifiers[i] = new RewardOption { kind = RewardKind.Modifier, id = ch.modifierId, element = elem };
+                        }
+                        else if (ch.randomModifier)
+                        {
+                            var rolled = RewardGenerator.GenerateModifierChoices(NodeRng(n, 10 + i), count: 1, categoryFilter: ch.modifierCategoryFilter);
+                            if (rolled.Count > 0) EventModifiers[i] = rolled[0];
+                        }
+                    }
+                }
             }
         }
 
@@ -760,7 +787,22 @@ namespace Obscure
             // For Boss victory, fallen heroes remain dead and must be revived at Temple in Hub (GDD Section 6.3)
             float heal = Relics.Sum(id => Database.Relics[id].victoryHeal);
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));
+
+            int fortuneBonus = ModifierManager.ConsumeBattleVictoryBonusGold();
             PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics);
+            if (fortuneBonus > 0)
+            {
+                PendingReward.bonusGoldFromModifier = fortuneBonus;
+                PendingReward.gold += fortuneBonus;
+            }
+            if (enc.tier != Tier.Boss)
+            {
+                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(Current, 3), count: 3);
+            }
+            PendingReward.bonusItemId = ModifierManager.TryRollScavengerBonusConsumable(NodeRng(Current, 4));
+
+            // Decrement battle-duration modifiers after victory and expire completed stacks (Bab 15 §3.1, §4.1)
+            ModifierManager.OnBattleWon(this);
         }
 
         public void LoseCombat()
@@ -773,6 +815,7 @@ namespace Obscure
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
+            ModifierManager.ClearAll();
             // GDD Bab 14 §2: Relics are permanent player progression and remain owned on run failure
             HubEconomy.HandleRunFailure(this);
             GameSave.SaveRunState(this);
@@ -788,6 +831,7 @@ namespace Obscure
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
+            ModifierManager.ClearAll();
             PersistenceCommitHandler.RollbackUncommitted(this);
             Status = RunStatus.Active;
         }
@@ -803,13 +847,24 @@ namespace Obscure
         // ---- rewards ----
 
         // choice: index into PendingReward.choices, or -1 to take only the gold. Applied exactly once.
-        public void ClaimReward(int choice)
+        public void ClaimReward(int choice, int modifierChoice = -1, ElementType? attunementElement = null)
         {
             var r = PendingReward ?? throw new InvalidOperationException("No reward pending");
             if (choice < -1 || choice >= r.choices.Count) throw new ArgumentOutOfRangeException(nameof(choice));
+            if (modifierChoice < -1 || modifierChoice >= r.modifierChoices.Count) throw new ArgumentOutOfRangeException(nameof(modifierChoice));
             PendingReward = null;
             AddGold(r.gold);
+            if (!string.IsNullOrEmpty(r.bonusItemId))
+                Grant(new RewardOption { kind = RewardKind.Item, id = r.bonusItemId });
             if (choice >= 0) Grant(r.choices[choice]);
+            if (modifierChoice >= 0)
+            {
+                var modOpt = r.modifierChoices[modifierChoice];
+                var elem = attunementElement.HasValue && attunementElement.Value.IsValidElement()
+                    ? attunementElement.Value
+                    : modOpt.element;
+                Grant(new RewardOption { kind = RewardKind.Modifier, id = modOpt.id, element = elem });
+            }
             Complete();
         }
 
@@ -839,6 +894,7 @@ namespace Obscure
                     break;
                 case RewardKind.Relic: AddRelic(o.id); break;
                 case RewardKind.Upgrade: Upgrade(o.id); break;
+                case RewardKind.Modifier: ModifierManager.AddModifier(o.id, this, o.element, Rng); break;
                 default: AddGold(o.amount); break;
             }
         }
@@ -847,6 +903,7 @@ namespace Obscure
         {
             if (amount > 0)
             {
+                ModifierManager.ModifyGoldReward(ref amount);
                 RelicManager.ModifyGoldReward(ref amount);
                 Stats.goldEarned += amount;
             }
@@ -936,6 +993,14 @@ namespace Obscure
             Complete();
         }
 
+        public void RestApplyModifier(string modifierId)
+        {
+            if (!Pending(NodeType.Rest)) throw new InvalidOperationException("Not at an unused rest site");
+            if (!Database.DungeonModifiers.ContainsKey(modifierId)) throw new ArgumentException(modifierId);
+            ModifierManager.AddModifier(modifierId, this, rng: Rng);
+            Complete();
+        }
+
         // ---- events ----
 
         // Null when the choice can be taken, otherwise why not.
@@ -961,8 +1026,21 @@ namespace Obscure
             if (c.item != null) Items.Add(c.item);
             if (c.relic) AddRelic(EventRelic);
             if (c.battleBuff != null) BattleBuffs.Add(c.battleBuff);
+            string modOutcomeNote = null;
+            if (EventModifiers.TryGetValue(index, out var evMod) && !string.IsNullOrEmpty(evMod.id))
+            {
+                ModifierManager.AddModifier(evMod.id, this, evMod.element, Rng);
+                if (Database.DungeonModifiers.TryGetValue(evMod.id, out var mdef))
+                {
+                    string modName = mdef.isElementSpecific && evMod.element.IsValidElement()
+                        ? $"{mdef.displayName} ({evMod.element})"
+                        : mdef.displayName;
+                    modOutcomeNote = $" Gained Modifier: {modName}.";
+                }
+            }
             Complete();
-            return c.relic ? $"{c.outcome} Gained {Database.Relics[EventRelic].name}." : c.outcome;
+            string outcomeText = c.relic ? $"{c.outcome} Gained {Database.Relics[EventRelic].name}." : c.outcome;
+            return modOutcomeNote != null ? outcomeText + modOutcomeNote : outcomeText;
         }
 
         // ---- node completion ----
@@ -975,6 +1053,8 @@ namespace Obscure
             {
                 Status = RunStatus.Victory;
                 EndedUtc = DateTime.UtcNow;
+                // GDD Bab 15 §3.1: All dungeon modifiers expire upon dungeon clear (after boss reward screen).
+                ModifierManager.ClearAll();
             }
         }
 
@@ -1009,6 +1089,7 @@ namespace Obscure
                 foreach (var cid in data.clearedNodeIds)
                     if (!string.IsNullOrEmpty(cid)) Cleared.Add(cid);
             }
+            ModifierManager.RestoreFromSave(data.dungeonModifiers);
             if (!string.IsNullOrEmpty(data.currentNodeId) && Map.nodes.Any(n => n.id == data.currentNodeId))
                 Current = Map.Get(data.currentNodeId);
 
@@ -1111,6 +1192,7 @@ namespace Obscure
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
+            ModifierManager.ClearAll();
 
             Relics.Clear();
             RelicManager.ClearAll();
@@ -1173,6 +1255,7 @@ namespace Obscure
             EndedUtc = null;
             PendingReward = null;
             BattleBuffs.Clear();
+            ModifierManager.ClearAll();
             CurrentDungeonShop = DungeonShopData.Generate(nextMap.act, Rng);
             CurrentShop = CurrentDungeonShop.equipmentShop;
             // GDD Bab 14 §2: Relics are permanent player progression and remain owned upon dungeon clear
@@ -1199,6 +1282,7 @@ namespace Obscure
             RelicManager.ClearAll();
             Cleared.Clear();
             BattleBuffs.Clear();
+            ModifierManager.ClearAll();
 
             Inventory.equipment.Clear();
             Inventory.consumables.Clear();

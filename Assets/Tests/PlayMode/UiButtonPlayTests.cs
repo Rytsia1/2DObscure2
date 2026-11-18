@@ -229,7 +229,7 @@ namespace Obscure.Tests
             // Click slider track directly and drag without rebuilding mid-click
             int beforeVol = Game.I.Settings.volume;
             var volRow = UitkMenu.ActiveMenu.items.First(i => i.text == "Master volume").element;
-            var track = volRow.Query<VisualElement>().ToList().FirstOrDefault(v => Mathf.Approximately(v.resolvedStyle.width, 280f));
+            var track = volRow.Query<VisualElement>().ToList().FirstOrDefault(v => Mathf.Abs(v.resolvedStyle.width - 280f) < 2f);
             Assert.IsNotNull(track, "Slider track not found on Audio Settings");
             var twb = track.worldBound;
             Vector2 nearLeft = PanelToScreen(track, new Vector2(twb.xMin + 28f, twb.center.y));
@@ -498,6 +498,37 @@ namespace Obscure.Tests
             for (float t = 0; t < 10f && cb.Log.Count == logBefore; t += Time.unscaledDeltaTime)
                 yield return null;
             Assert.Greater(cb.Log.Count, logBefore, "Clicking ATTACK + Enemy target must execute attack");
+        }
+
+        [UnityTest]
+        public IEnumerator MainMenu_ResolvesDisplayGothicAndUiFontAssets()
+        {
+            yield return Begin();
+            var doc = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None)
+                .FirstOrDefault(d => d.rootVisualElement != null && d.rootVisualElement.Q<UiLabel>(className: "felna-vars") != null);
+            Assert.IsNotNull(doc, "MainMenu UIDocument must be mounted.");
+
+            var title = doc.rootVisualElement.Q<UiLabel>(className: "felna-vars");
+            var subtitle = doc.rootVisualElement.Q<UiLabel>(className: "the-world-s-between-eight-layers-down-vars");
+            var newGameBtn = doc.rootVisualElement.Q<Button>(className: "button-flat-2");
+
+            Assert.IsNotNull(title, "MainMenu title label must exist");
+            Assert.IsNotNull(subtitle, "MainMenu subtitle label must exist");
+            Assert.IsNotNull(newGameBtn, "MainMenu NEW GAME button must exist");
+
+            var titleFont = title.resolvedStyle.unityFontDefinition.fontAsset;
+            var gothicFont = newGameBtn.resolvedStyle.unityFontDefinition.fontAsset;
+            var uiFont = subtitle.resolvedStyle.unityFontDefinition.fontAsset;
+
+            Assert.IsNotNull(titleFont, "MainMenu title fontAsset resolved null (MissingAssetReference)");
+            Assert.IsNotNull(gothicFont, "MainMenu button fontAsset resolved null (MissingAssetReference)");
+            Assert.IsNotNull(uiFont, "MainMenu subtitle fontAsset resolved null");
+
+            Assert.AreEqual("FelnaDisplayFont", titleFont.name);
+            Assert.AreEqual("FelnaGothicFont", gothicFont.name);
+            Assert.AreEqual("FelnaUIFont", uiFont.name);
+            Assert.Greater(titleFont.characterTable.Count, 0, "FelnaDisplayFont must populate dynamic glyphs on MainMenu");
+            Assert.Greater(gothicFont.characterTable.Count, 0, "FelnaGothicFont must populate dynamic glyphs on MainMenu");
         }
     }
 }

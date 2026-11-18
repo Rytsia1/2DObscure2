@@ -56,8 +56,9 @@ namespace Obscure
                         break;
                     case DefenseQte d:
                         float speed = Impact / d.profile.windup;
-                        float defScale = Mathf.Clamp(1f + d.TimingBonusFraction, 0.85f, 1.25f);
-                        BuildTrack(Impact, d.profile.good * speed * defScale, d.profile.perfect * speed * defScale, d.Hits);
+                        float goodScaled = QteConfig.ScaleGood(d.profile, d.TimingBonusFraction);
+                        float perfScaled = QteConfig.ScalePerfect(d.profile, d.TimingBonusFraction);
+                        BuildTrack(Impact, goodScaled * speed, perfScaled * speed, d.Hits);
                         break;
                     case TypingQte ty:
                         BuildTyping(ty);

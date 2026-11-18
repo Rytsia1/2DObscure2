@@ -77,15 +77,70 @@ namespace Obscure
 
         static int Roll((int min, int max) range, Random rng) => rng.Next(range.min, range.max + 1);
 
+        // Rolls distinct Dungeon Modifier offers (Buffs, plus rare Cursed Buff+Drawback) deterministically.
+        // Already owned modifiers remain in the pool per Bab 15 §2 & §3.2 so they can be stacked or re-acquired.
+        public static List<RewardOption> GenerateModifierChoices(Random rng, int count = 3, bool includeCursed = false, ModifierCategory? categoryFilter = null)
+        {
+            var rand = rng ?? new Random();
+            var pool = Database.DungeonModifiers.Values
+                .Where(m => m.polarity != ModifierPolarity.Debuff)
+                .Where(m => includeCursed || m.polarity == ModifierPolarity.Buff)
+                .Where(m => !categoryFilter.HasValue || m.category == categoryFilter.Value)
+                .ToList();
+
+            var result = new List<RewardOption>();
+            var usedIds = new HashSet<string>();
+            for (int i = 0; i < count && pool.Count > 0; i++)
+            {
+                var remaining = pool.Where(m => !usedIds.Contains(m.modifierId)).ToList();
+                if (remaining.Count == 0) break;
+
+                // Weight slightly by rarity: Common 3, Uncommon 2, Rare 1
+                int totalWeight = remaining.Sum(m => m.rarity == ModifierRarity.Common ? 3 : m.rarity == ModifierRarity.Uncommon ? 2 : 1);
+                int roll = rand.Next(totalWeight);
+                DungeonModifierDef picked = remaining[0];
+                int acc = 0;
+                foreach (var m in remaining)
+                {
+                    acc += m.rarity == ModifierRarity.Common ? 3 : m.rarity == ModifierRarity.Uncommon ? 2 : 1;
+                    if (roll < acc) { picked = m; break; }
+                }
+
+                usedIds.Add(picked.modifierId);
+                ElementType elem = ElementType.None;
+                if (picked.isElementSpecific)
+                    elem = ElementTypes.All[rand.Next(ElementTypes.All.Length)];
+
+                result.Add(new RewardOption { kind = RewardKind.Modifier, id = picked.modifierId, element = elem });
+            }
+            return result;
+        }
+
         // Player-facing text for an option (shared by the reward, event and summary screens).
-        public static (string label, string detail) Describe(RewardOption o) => o.kind switch
+        public static (string label, string detail) Describe(RewardOption o) => Describe(o, null);
+
+        public static (string label, string detail) Describe(RewardOption o, DungeonModifierManager modMgr) => o.kind switch
         {
             RewardKind.Item => Database.Items.TryGetValue(o.id, out var itm) ? (itm.name, itm.description) : (o.id, ""),
             RewardKind.Equipment => Database.Equipment.TryGetValue(o.id, out var eq) ? ($"{eq.name} ({EquipmentSlots.DisplayName(eq.slot)})", eq.description) : (o.id, ""),
             RewardKind.Relic => ("Relic: " + Database.Relics[o.id].name, Database.Relics[o.id].description),
             RewardKind.Upgrade => ($"{Database.Characters[o.id].name}: {Database.Upgrades[o.id].name}",
                 Database.Characters[o.id].stats.Preview(Database.Upgrades[o.id].bonus)),
+            RewardKind.Modifier => DescribeModifier(o, modMgr),
             _ => ($"{o.amount} Gold", $"Take {o.amount} extra gold."),
         };
+
+        static (string label, string detail) DescribeModifier(RewardOption o, DungeonModifierManager modMgr)
+        {
+            if (!Database.DungeonModifiers.TryGetValue(o.id, out var def))
+                return (o.id, "");
+            string label = modMgr != null
+                ? modMgr.FormatOfferHeading(o.id, o.element)
+                : (def.isElementSpecific && o.element.IsValidElement() ? $"{def.displayName} ({o.element})" : def.displayName);
+            string detail = def.HasDrawback && !string.IsNullOrEmpty(def.drawbackDescription)
+                ? $"{def.description} Drawback: {def.drawbackDescription}"
+                : def.description;
+            return (label, detail);
+        }
     }
 }

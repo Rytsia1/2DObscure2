@@ -76,22 +76,37 @@ namespace Obscure
         public static QteProfile For(Tier tier, QteAssist assist) =>
             assist == QteAssist.Relaxed ? Profiles[tier].Scaled(RelaxedWindow, RelaxedTime) : Profiles[tier];
 
+        public const float MinPerfectHalfWidth = 0.033f; // 66 ms minimum W_P (Bab 12 §1.2, §3.4 & Bab 15 §4.2)
+
+        public static float ScalePerfect(QteProfile p, float timingBonusFraction = 0f)
+        {
+            float scale = Math.Clamp(1f + timingBonusFraction, 0.50f, 1.25f);
+            return Math.Max(MinPerfectHalfWidth, p.perfect * scale);
+        }
+
+        public static float ScaleGood(QteProfile p, float timingBonusFraction = 0f)
+        {
+            float scale = Math.Clamp(1f + timingBonusFraction, 0.50f, 1.25f);
+            return p.good * scale;
+        }
+
         // error = pressTime - idealTime, in seconds.
         public static QteResult Judge(float error, QteProfile p, float timingBonusFraction = 0f)
         {
-            float scale = Math.Clamp(1f + timingBonusFraction, 0.85f, 1.25f);
             float e = Math.Abs(error);
-            return e <= p.perfect * scale ? QteResult.Perfect : e <= p.good * scale ? QteResult.Good : QteResult.Miss;
+            return e <= ScalePerfect(p, timingBonusFraction) ? QteResult.Perfect
+                : e <= ScaleGood(p, timingBonusFraction) ? QteResult.Good
+                : QteResult.Miss;
         }
 
         // Evaluates into the 4 PRD categories (Perfect, Success, PartialSuccess, Failure).
         public static QteOutcomeCategory JudgeCategory(float error, QteProfile p, float timingBonusFraction = 0f)
         {
-            float scale = Math.Clamp(1f + timingBonusFraction, 0.85f, 1.25f);
             float e = Math.Abs(error);
-            if (e <= p.perfect * scale) return QteOutcomeCategory.Perfect;
-            if (e <= p.good * scale) return QteOutcomeCategory.Success;
-            if (e <= p.good * scale * PartialWindowMultiplier) return QteOutcomeCategory.PartialSuccess;
+            float good = ScaleGood(p, timingBonusFraction);
+            if (e <= ScalePerfect(p, timingBonusFraction)) return QteOutcomeCategory.Perfect;
+            if (e <= good) return QteOutcomeCategory.Success;
+            if (e <= good * PartialWindowMultiplier) return QteOutcomeCategory.PartialSuccess;
             return QteOutcomeCategory.Failure;
         }
 

@@ -1834,6 +1834,7 @@ namespace Obscure
         public string[] items = Array.Empty<string>();
         public string[] relics = Array.Empty<string>();
         public RelicInstanceSaveData[] relicInstances = Array.Empty<RelicInstanceSaveData>();
+        public DungeonModifierSaveData[] dungeonModifiers = Array.Empty<DungeonModifierSaveData>();
         public SavedCharacterData[] party = Array.Empty<SavedCharacterData>();
 
         // Inventory & Equipment persistence (GDD Section 10 & 16)
@@ -1938,6 +1939,7 @@ namespace Obscure
                 items = run.Items.ToArray(),
                 relics = run.Relics.ToArray(),
                 relicInstances = run.RelicManager != null ? run.RelicManager.ToSaveData() : Array.Empty<RelicInstanceSaveData>(),
+                dungeonModifiers = (!isDefeated && run.ModifierManager != null) ? run.ModifierManager.ToSaveData() : Array.Empty<DungeonModifierSaveData>(),
                 party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
                 inventoryEquipment = invData.equipment ?? Array.Empty<EquipmentInstanceSaveData>(),
                 inventoryConsumables = invData.consumables ?? Array.Empty<ConsumableStackSaveData>(),

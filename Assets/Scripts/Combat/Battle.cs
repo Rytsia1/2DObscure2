@@ -35,7 +35,7 @@ namespace Obscure
         public Battle(IEnumerable<Unit> party, IEnumerable<EnemyDef> enemies, List<string> items, Random rng, RunState run = null)
         {
             this.run = run;
-            Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant())).ToList();
+            Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant()) { run = run }).ToList();
             var defs = enemies.ToList();
             int dungeonNum = Dungeon = run != null ? (run.Map != null ? run.Map.act : run.Act) : 1;
             Enemies = defs.Select((d, i) =>
@@ -360,7 +360,8 @@ namespace Obscure
                         foreach (var t in targets.Where(c => c.Alive))
                         {
                             // Elemental moves scale from MATK vs MDEF, physical from ATK vs DEF (Bab 10 §7.7).
-                            int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng);
+                            float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
+                            int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng, physPen);
                             var hit = Deal(actor, t, raw, element, reaction, null, heavy);
                             hits.Add(hit);
                             if (move != null && move.drain > 0f && actor.Alive)
@@ -423,7 +424,7 @@ namespace Obscure
 
                         if (s.HasDamageSystemComponents)
                         {
-                            var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel);
+                            var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel, run);
                             foreach (var hitRes in dmgResult.hits)
                             {
                                 if (!t.Alive && hitRes.hitIndex > 0) break;
@@ -473,7 +474,8 @@ namespace Obscure
                                 switch (s.kind)
                                 {
                                     case SkillKind.Physical:
-                                        int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng) : Rules.Physical(actor, t, skillPwr, Rng);
+                                        float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
+                                        int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng, physPen) : Rules.Physical(actor, t, skillPwr, Rng, physPen);
                                         hits.Add(Deal(actor, t, pDmg, s.element, null, s));
                                         break;
                                     case SkillKind.Magic:
@@ -634,18 +636,10 @@ namespace Obscure
             // Heavy attack check (Bab 12)
             bool isHeavy = heavy || skill != null && (skill.HasTag("Heavy") || (attacker?.enemy?.attacks != null && attacker.enemy.attacks.Any(a => a.name == skill.name && a.isHeavy)));
 
-            if (reaction == QteResult.Perfect)
+            if (reaction == QteResult.Perfect && !isHeavy)
             {
-                if (isHeavy)
-                {
-                    amount = Math.Max(1, (int)Math.Round(amount * 0.5f));
-                    Say($"{t.name} parries the Heavy attack for 50% damage reduction!");
-                }
-                else
-                {
-                    Say($"{t.name} perfectly parries!");
-                    return new Hit { target = t, amount = 0, blocked = true };
-                }
+                Say($"{t.name} perfectly parries!");
+                return new Hit { target = t, amount = 0, blocked = true };
             }
             var effect = t.Affinities.Against(element);
             if (effect == Effectiveness.Immune)
@@ -655,11 +649,6 @@ namespace Obscure
             }
             amount = Math.Max(1, (int)Math.Round(amount * Affinities.Multiplier(effect)));
             string note = effect == Effectiveness.Weak ? " - weakness!" : effect == Effectiveness.Resist ? " - resisted" : "";
-            if (reaction == QteResult.Good)
-            {
-                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.GoodDefense));
-                note += " (blocked)";
-            }
 
             // Elf Fey Step: first attack next turn gets +20% damage (Bab 6)
             if (attacker != null && attacker.FeyStepBonusPending)
@@ -738,6 +727,40 @@ namespace Obscure
                 {
                     amount = Math.Max(1, (int)Math.Round(amount * relicDmgMult));
                 }
+            }
+
+            // Dungeon Modifier System: ModifyDamageDealt (MOD-001, MOD-002, MOD-016, MOD-017, MOD-022, MOD-024)
+            if (attacker != null && attacker.IsPlayer && run?.ModifierManager != null && t != null)
+            {
+                float modDmgMult = 1f;
+                run.ModifierManager.ModifyDamageDealt(attacker, t, element, ref modDmgMult, this);
+                if (Math.Abs(modDmgMult - 1f) > 0.001f)
+                {
+                    amount = Math.Max(1, (int)Math.Round(amount * modDmgMult));
+                }
+            }
+
+            // Dungeon Modifier System: ModifyDamageReceived BEFORE Defensive QTE (Bab 12 §5.1 & Bab 15 §5)
+            if (t != null && t.IsPlayer && run?.ModifierManager != null)
+            {
+                float modRecvMult = 1f;
+                run.ModifierManager.ModifyDamageReceived(t, element, ref modRecvMult, this);
+                if (Math.Abs(modRecvMult - 1f) > 0.001f)
+                {
+                    amount = Math.Max(1, (int)Math.Round(amount * modRecvMult));
+                }
+            }
+
+            // Defensive QTE mitigation applied after damage modifiers (Bab 12 §5.1)
+            if (reaction == QteResult.Perfect && isHeavy)
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.HeavyPerfectDefense));
+                Say($"{t.name} parries the Heavy attack for 50% damage reduction!");
+            }
+            else if (reaction == QteResult.Good)
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.GoodDefense));
+                note += " (blocked)";
             }
 
             var hit = Damage(t, amount, note);
@@ -925,6 +948,14 @@ namespace Obscure
                 if (bgRank != null && bgRank.healingReceivedBonus > 0f)
                 {
                     amount = (int)Math.Round(amount * (1f + bgRank.healingReceivedBonus));
+                }
+            }
+            if (t != null && t.IsPlayer && run?.ModifierManager != null && amount > 0)
+            {
+                float modHealMult = run.ModifierManager.GetHealingReceivedMultiplier(t);
+                if (Math.Abs(modHealMult - 1f) > 0.001f)
+                {
+                    amount = modHealMult <= 0f ? 0 : Math.Max(1, (int)Math.Round(amount * modHealMult));
                 }
             }
             int before = t.unit.hp;

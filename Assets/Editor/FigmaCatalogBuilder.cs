@@ -39,6 +39,10 @@ namespace Obscure.Editor
             EnsureFontAsset(DisplayTtfPath, DisplayAssetPath, fontAsset, symbolAsset);
             EnsureFontAsset(GothicTtfPath, GothicAssetPath, fontAsset, symbolAsset);
             var textSettings = EnsureTextSettings(fontAsset, symbolAsset);
+            // USS/TSS bake font url() refs at import time; reimport both so refs to just-created font assets resolve.
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(RuntimeUssPath, ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset(ThemePath, ImportAssetOptions.ForceUpdate);
 
             var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(ThemePath);
             if (theme == null)
@@ -197,8 +201,34 @@ namespace Obscure.Editor
             var ps = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
             var dispFa = AssetDatabase.LoadAssetAtPath<FontAsset>(DisplayAssetPath);
             var gothFa = AssetDatabase.LoadAssetAtPath<FontAsset>(GothicAssetPath);
-            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || ps.themeStyleSheet == null)
+            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || ps.themeStyleSheet == null || HasUnresolvedRuntimeStylesheetRefs(dispFa, gothFa))
                 BuildAll();
+        }
+
+        static bool HasUnresolvedRuntimeStylesheetRefs(FontAsset dispFa, FontAsset gothFa)
+        {
+            var uss = AssetDatabase.LoadAssetAtPath<StyleSheet>(RuntimeUssPath);
+            if (uss == null) return true;
+            var so = new SerializedObject(uss);
+            var strings = so.FindProperty("strings");
+            if (strings != null)
+            {
+                for (int i = 0; i < strings.arraySize; i++)
+                {
+                    if (strings.GetArrayElementAtIndex(i).stringValue.Contains("project://database/"))
+                        return true;
+                }
+            }
+            var assets = so.FindProperty("assets");
+            if (assets == null) return true;
+            bool hasDisp = false, hasGoth = false;
+            for (int i = 0; i < assets.arraySize; i++)
+            {
+                var obj = assets.GetArrayElementAtIndex(i).objectReferenceValue;
+                if (obj == dispFa) hasDisp = true;
+                if (obj == gothFa) hasGoth = true;
+            }
+            return !hasDisp || !hasGoth;
         }
 
         static void EnsureFolder(string assetPath)

@@ -323,13 +323,14 @@ namespace Obscure
         public StatModifier[] modifiers = Array.Empty<StatModifier>();
     }
 
-    public enum RewardKind { Item, Relic, Upgrade, Gold, Equipment }
+    public enum RewardKind { Item, Relic, Upgrade, Gold, Equipment, Modifier }
 
     public class RewardOption
     {
         public RewardKind kind;
-        public string id;   // item / relic / character id
+        public string id;   // item / relic / character / modifier id
         public int amount;  // gold
+        public ElementType element = ElementType.None; // for element-specific modifiers (MOD-014, MOD-024)
     }
 
     // Gold is always granted; the player picks at most one of the choices.
@@ -337,7 +338,10 @@ namespace Obscure
     {
         public string title, text;
         public int gold;
+        public int bonusGoldFromModifier;
+        public string bonusItemId; // rolled by Scavenger's Eye (MOD-010)
         public List<RewardOption> choices = new List<RewardOption>();
+        public List<RewardOption> modifierChoices = new List<RewardOption>();
     }
 
     public class EventChoice
@@ -350,6 +354,10 @@ namespace Obscure
         public string item;
         public bool relic;          // grants the relic rolled for this event
         public StatusApply battleBuff; // applied to the party at the start of the next battle
+        public string modifierId;   // grants a specific dungeon modifier
+        public ElementType modifierElement = ElementType.None;
+        public bool randomModifier; // grants a modifier rolled on entering the event
+        public ModifierCategory? modifierCategoryFilter;
     }
 
     public class EventDef

@@ -42,8 +42,8 @@ namespace Obscure
         public readonly QteProfile profile;
         public readonly float target;   // ideal press time, seconds
         public float Sweep => profile.sweep;
-        public float EffectivePerfect => profile.perfect * Math.Clamp(1f + TimingBonusFraction, 0.85f, 1.25f);
-        public float EffectiveGood => profile.good * Math.Clamp(1f + TimingBonusFraction, 0.85f, 1.25f);
+        public float EffectivePerfect => QteConfig.ScalePerfect(profile, TimingBonusFraction);
+        public float EffectiveGood => QteConfig.ScaleGood(profile, TimingBonusFraction);
 
         public TimingQte(QteProfile profile, float zoneFraction, float timingBonusFraction = 0f)
         {
@@ -187,9 +187,9 @@ namespace Obscure
         {
             base.Tick(dt);
             if (Done) return;
-            float windowScale = Math.Clamp(1f + TimingBonusFraction, 0.85f, 1.25f);
+            float effectiveGood = QteConfig.ScaleGood(profile, TimingBonusFraction);
             for (int i = 0; i < results.Length; i++)
-                if (results[i] == null && T > impacts[i] + profile.good * windowScale)
+                if (results[i] == null && T > impacts[i] + effectiveGood)
                 {
                     results[i] = QteResult.Miss;
                     categories[i] = QteOutcomeCategory.Failure;
@@ -222,7 +222,7 @@ namespace Obscure
     {
         // GDD Bab 12: Only Basic Attack and skills with direct damage use Offensive QTE.
         // Heals, buffs, debuffs without direct damage do NOT use QTE.
-        public static Qte Offense(BattleAction a, Tier tier, QteAssist assist, Random rng)
+        public static Qte Offense(BattleAction a, Tier tier, QteAssist assist, Random rng, RunState run = null)
         {
             bool hasDirectDamage = a.kind == ActionKind.Attack
                 || (a.kind == ActionKind.Skill && a.skill != null && (a.skill.kind == SkillKind.Physical || (a.skill.kind == SkillKind.Magic && (a.skill.power > 0f || a.skill.HasDamageSystemComponents))));
@@ -231,13 +231,18 @@ namespace Obscure
             bool typing = a.kind == ActionKind.Skill && a.skill.kind == SkillKind.Magic && !string.IsNullOrEmpty(a.skill.word);
             if (assist == QteAssist.Auto) return new AutoQte();
             var profile = QteConfig.For(tier, assist);
-            float windowBonus = a.actor != null ? a.actor.unit.Derived.QteTimingBonusFraction : 0f;
+            var r = run ?? a.actor?.run;
+            float charBonus = a.actor != null ? a.actor.unit.Derived.QteTimingBonusFraction : 0f;
+            float modDelta = (a.actor != null && a.actor.IsPlayer && r?.ModifierManager != null)
+                ? r.ModifierManager.GetOffensiveQteWindowDelta()
+                : 0f;
+            float windowBonus = Math.Clamp(charBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             return typing ? (Qte)TypingQte.For(a.skill, profile, rng) : TimingQte.Random(profile, rng, windowBonus);
         }
 
         // Enemy hits: reaction QTE at the attacker's tier. Self stances need none (null).
-        // GDD Bab 12 §8.2: No attributes scale QTE. Window bonuses come from equipment/talents/passives, clamped to +25%.
-        public static Qte Defense(BattleAction a, QteAssist assist)
+        // GDD Bab 12 §8.2: No attributes scale QTE. Window bonuses come from equipment/talents/passives/modifiers, clamped to +25%.
+        public static Qte Defense(BattleAction a, QteAssist assist, RunState run = null)
         {
             var move = a.attack;
             // Stances, charge turns and status-only actions have no direct damage, so no Defensive QTE (Bab 11 §2.3).
@@ -248,13 +253,14 @@ namespace Obscure
             var evasion = a.target?.Get(StatusId.Evasion);
             if (evasion != null) profile = profile.Scaled(evasion.magnitude, 1f);
 
-            float statTimingBonus = 0f;
-            if (a.target != null)
-            {
-                statTimingBonus += a.target.unit.Derived.QteTimingBonusFraction;
-            }
+            var r = run ?? a.target?.run;
+            float statTimingBonus = a.target != null ? a.target.unit.Derived.QteTimingBonusFraction : 0f;
+            float modDelta = (a.target != null && a.target.IsPlayer && r?.ModifierManager != null)
+                ? r.ModifierManager.GetDefensiveQteWindowDelta()
+                : 0f;
+            float totalTimingBonus = Math.Clamp(statTimingBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             var heavy = move == null ? null : Enumerable.Range(0, hits).Select(move.HeavyAt).ToArray();
-            return new DefenseQte(profile, hits, move?.delay ?? 0f, statTimingBonus, move?.intervals, heavy);
+            return new DefenseQte(profile, hits, move?.delay ?? 0f, totalTimingBonus, move?.intervals, heavy);
         }
     }
 

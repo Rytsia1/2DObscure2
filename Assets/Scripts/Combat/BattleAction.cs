@@ -38,18 +38,24 @@ namespace Obscure
         public const float GuardMultiplier = 0.5f;
 
         // Physical damage uses PhysicalPower (WeaponPower + STRModifier * WeaponScaling) against PhysicalDefense.
-        public static int Physical(Combatant a, Combatant t, float power, Random rng)
+        public static int Physical(Combatant a, Combatant t, float power, Random rng, float defensePenetrationFraction = 0f)
         {
             float raw = a.Atk * power * Variance(rng);
-            float afterDef = StatCalculator.MitigateByDefense(raw, t.Def, a.ArmorPen);
+            float totalPen = (a?.unit != null && a.unit.HasTalent("piercer")) ? TalentSystem.PiercerPenetration : 0f;
+            totalPen = Math.Clamp(totalPen + defensePenetrationFraction, 0f, DungeonModifierManager.MaxPhysicalPenetration);
+            int effectiveDef = Math.Max(0, (int)Math.Round(t.Def * (1f - totalPen)));
+            float afterDef = StatCalculator.MitigateByDefense(raw, effectiveDef, a.ArmorPen);
             return Mitigate(t, afterDef);
         }
 
         // Ranged physical damage uses RangedPower (RangedWeaponPower + DEXModifier * RangedScaling) against PhysicalDefense.
-        public static int Ranged(Combatant a, Combatant t, float power, Random rng)
+        public static int Ranged(Combatant a, Combatant t, float power, Random rng, float defensePenetrationFraction = 0f)
         {
             float raw = a.RangedAtk * power * Variance(rng);
-            float afterDef = StatCalculator.MitigateByDefense(raw, t.Def, a.ArmorPen);
+            float totalPen = (a?.unit != null && a.unit.HasTalent("piercer")) ? TalentSystem.PiercerPenetration : 0f;
+            totalPen = Math.Clamp(totalPen + defensePenetrationFraction, 0f, DungeonModifierManager.MaxPhysicalPenetration);
+            int effectiveDef = Math.Max(0, (int)Math.Round(t.Def * (1f - totalPen)));
+            float afterDef = StatCalculator.MitigateByDefense(raw, effectiveDef, a.ArmorPen);
             return Mitigate(t, afterDef);
         }
 
@@ -75,7 +81,8 @@ namespace Obscure
             SkillDef skill,
             QteResult qteResult = QteResult.Good,
             Random rng = null,
-            int? levelOverride = null)
+            int? levelOverride = null,
+            RunState run = null)
         {
             if (attacker == null) throw new ArgumentNullException(nameof(attacker));
             if (target == null) throw new ArgumentNullException(nameof(target));
@@ -85,7 +92,7 @@ namespace Obscure
             int hitCount = skill.GetDamageHitCount(levelOverride);
             Func<float> rollProvider = null;
             if (rng != null) rollProvider = () => (float)rng.NextDouble();
-            var context = attacker.CreateDamageContext(target, components, hitCount, qteResult, rollProvider);
+            var context = attacker.CreateDamageContext(target, components, hitCount, qteResult, rollProvider, run);
             context.isFinisher = skill.isFinisher;
             return DamageCalculator.Calculate(context);
         }

@@ -169,7 +169,27 @@ namespace Obscure
             int total = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
             Option($"RECOVER +{total} HP", $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES", Recover);
             Option("IMPROVE A HERO", "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE", ShowImprove);
+            Option("CAMP BOON (MODIFIER)", "PREPARE A TEMPORARY DUNGEON MODIFIER FOR THE LAYER", ShowCampModifiers);
             Option("DEVELOP SKILLS", "VIEW HERO SKILL TREES AND ALLOCATE SKILL POINTS", () => Game?.Go(GameState.Skills));
+        }
+
+        void ShowCampModifiers()
+        {
+            NewMenu();
+            menu.onBack = ShowMain;
+            string[] campIds = { "MOD-011", "MOD-012", "MOD-007" };
+            foreach (var mid in campIds)
+            {
+                if (!Database.DungeonModifiers.TryGetValue(mid, out var def)) continue;
+                string id = mid;
+                string title = Run?.ModifierManager != null ? Run.ModifierManager.FormatOfferHeading(id) : def.displayName;
+                Option(title.ToUpperInvariant(), def.description.ToUpperInvariant(), () =>
+                {
+                    Run.RestApplyModifier(id);
+                    Done($"CAMP BOON GRANTED: {def.displayName.ToUpperInvariant()}.");
+                });
+            }
+            Option("BACK", "RETURN TO CAMP ACTIONS", ShowMain);
         }
 
         void ShowImprove()
