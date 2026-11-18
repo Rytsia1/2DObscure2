@@ -52,6 +52,10 @@ namespace Obscure
             public UiLabel nameLbl, roleLbl, hpLbl, mpLbl, statusLbl, shieldLbl, weakLbl, intentLbl;
             public int phase = 1;
             public bool flashing;
+            public Texture2D[] idle; // remodeled idle loop, null for row-art units
+            public float idleOffset;
+            public int idleFrame;
+            public string artKey;    // enemy id the idle frames belong to; a boss phase swaps the def and the art with it
         }
 
         class ActiveFx
@@ -278,6 +282,8 @@ namespace Obscure
                 pos = pos,
                 size = new Vector2(w, h),
                 spriteEl = fig,
+                idle = UnitArt.Idle(spr),
+                idleOffset = idx * 0.25f, // stagger so the party doesn't breathe in unison
                 targetArrow = arrow,
                 vitalsCard = card,
                 nameLbl = idx < 4 ? card?.Q<UiLabel>(className: nameClasses[idx]) : null,
@@ -296,8 +302,12 @@ namespace Obscure
         void AddEnemyCombatant(Combatant c, Vector2 pos)
         {
             var spr = c.unit.sprite;
-            float w = c.enemy.tier == Tier.Boss ? 120f : 96f;
-            float h = c.enemy.tier == Tier.Boss ? 128f : 104f;
+            bool boss = c.enemy.tier == Tier.Boss;
+            float w = boss ? 192f : 96f;  // boss art 48x60, enemies 24x26: both exact 4x
+            float h = boss ? 240f : 104f;
+            // Slots were laid out for a 120px boss box: keep the slot's horizontal centre and lift the box
+            // so its name, bars and status labels still fit inside the 398px stage.
+            if (boss) pos = new Vector2(pos.x + (120f - w) / 2f, Mathf.Min(pos.y, 60f));
 
             var card = new VisualElement
             {
@@ -308,7 +318,10 @@ namespace Obscure
             card.Add(intentLbl);
 
             var fig = new VisualElement { style = { width = w, height = h } };
-            if (spr != null && spr.Length > 0)
+            var idle = UnitArt.Enemy(c.enemy?.id, spr);
+            if (idle != null)
+                FigmaUi.SetBackgroundContain(fig, idle[0]);
+            else if (spr != null && spr.Length > 0)
                 FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(spr, "cbt_e_" + (c.enemy?.id ?? c.name)));
             card.Add(fig);
 
@@ -345,6 +358,9 @@ namespace Obscure
                 size = new Vector2(w, h),
                 enemyCard = card,
                 spriteEl = fig,
+                idle = idle,
+                artKey = c.enemy?.id,
+                idleOffset = (huds.Count % 4) * 0.25f,
                 targetArrow = arrow,
                 nameLbl = nameLbl,
                 shieldLbl = shieldLbl,
@@ -474,6 +490,24 @@ namespace Obscure
                 float bob = Mathf.Sin(Time.time * 6f) * 3f;
                 activeMarker.style.left = ah.pos.x + ah.size.x / 2f - 12f;
                 activeMarker.style.top = ah.pos.y - 24f + bob;
+            }
+
+            // Idle loops (fallen units hold their frame). A boss phase swaps the combatant's enemy def: reload its art.
+            foreach (var kv in huds)
+            {
+                var c = kv.Key;
+                var h = kv.Value;
+                if (c.IsEnemy && c.enemy?.id != h.artKey)
+                {
+                    h.artKey = c.enemy?.id;
+                    h.idle = UnitArt.Enemy(h.artKey, c.unit.sprite);
+                    h.idleFrame = -1;
+                }
+                if (h.idle == null || h.spriteEl == null || !c.Alive) continue;
+                int f = UnitArt.FrameAt(Time.time + h.idleOffset);
+                if (f == h.idleFrame) continue;
+                h.idleFrame = f;
+                h.spriteEl.style.backgroundImage = new StyleBackground(h.idle[f]);
             }
 
             // Advance UITK sprite-sheet VFX

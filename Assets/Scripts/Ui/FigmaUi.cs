@@ -268,6 +268,8 @@ namespace Obscure
         public static Texture2D GetSpriteTexture(string[] rows, string cacheKey)
         {
             if (rows == null || rows.Length == 0) return null;
+            var idle = UnitArt.Idle(rows);
+            if (idle != null) return idle[0];
             if (!string.IsNullOrEmpty(cacheKey) && spriteTextureCache.TryGetValue(cacheKey, out var cachedTex) && cachedTex != null)
                 return cachedTex;
 
