@@ -1,47 +1,108 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Rest site: Recover (heal part of missing HP/MP) or Improve one hero. One choice per site.
-    // Conforming to 640x360 Reference Resolution, Octopath Traveler II Aesthetics, Serif Display Headers.
+    // Rest site — migrated to Figma 19---Rest---Campfire-Sanctuary.uxml (1280x720 UI Toolkit).
     public class RestScreen : GameScreen
     {
-        Transform phase;
-        Label hint;
-        readonly Label[] hpRows = new Label[4];
-        readonly SpriteRenderer[] hpGauges = new SpriteRenderer[4];
+        UitkMenu menu;
+        VisualElement actionHost;
+        UiLabel feedbackLbl;
+        readonly List<VisualElement> hpGauges = new List<VisualElement>();
+        readonly List<VisualElement> mpGauges = new List<VisualElement>();
+        readonly List<UiLabel> hpPctLabels = new List<UiLabel>();
+        readonly List<UiLabel> mpPctLabels = new List<UiLabel>();
+        readonly List<UiLabel> nameLabels = new List<UiLabel>();
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 32, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.SpecCrimson);
+            MountFigma("19---Rest---Campfire-Sanctuary");
 
-            Ui.Label(Root, "CAMPFIRE SANCTUARY", 320, 18, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
-            Ui.Divider(Root, 160, 42, 320, Palette.DarkBorder, Palette.AntiqueGoldBright);
-            Ui.Image(Root, PixelArt.FromRows(Art.IconRest), 305, 52, Ui.World).transform.localScale = new Vector3(3, 3, 1);
+            // Left panel hero vitals bindings
+            string[] spriteClasses = { "sprite-knight", "sprite-rogue", "sprite-mage", "sprite-healer" };
+            string[] nameClasses = { "knight-vars-5", "rogue-vars-4", "mage-vars-4", "healer-vars-5" };
+            string[] hpValClasses = { "_55-vars-2", "_30-vars-2", "_80-vars-2", "_65-vars" };
+            string[] mpValClasses = { "_70-vars", "_50-vars", "_20-vars-2", "_90-vars" };
 
-            // Left panel (270x190): Party Vitality
-            Ui.Panel(Root, 28, 108, 274, 192, Palette.DeepCharcoal, Palette.DarkBorder);
-            Ui.Label(Root, "PARTY CONDITION", 38, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.DotGothic);
-            Ui.Divider(Root, 38, 126, 254, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            var allHpGauges = UiRoot.Query<VisualElement>(className: "gauge-hp").ToList();
+            var lowHpGauge = UiRoot.Q<VisualElement>(className: "gauge-hp-low");
+            // Ordered top-to-bottom: knight (hp[0]), rogue (lowHpGauge), mage (hp[1]), healer (hp[2])
+            VisualElement[] hpOrder =
+            {
+                allHpGauges.Count > 0 ? allHpGauges[0] : null,
+                lowHpGauge ?? (allHpGauges.Count > 3 ? allHpGauges[3] : null),
+                allHpGauges.Count > 1 ? allHpGauges[1] : null,
+                allHpGauges.Count > 2 ? allHpGauges[2] : null,
+            };
+            var mpOrder = UiRoot.Query<VisualElement>(className: "gauge-mp").ToList();
 
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < hpRows.Length && i < party.Count; i++)
+            for (int i = 0; i < 4; i++)
             {
+                var fig = UiRoot.Q<VisualElement>(className: spriteClasses[i]);
+                var nameLbl = UiRoot.Q<UiLabel>(className: nameClasses[i]);
+                var hpVal = UiRoot.Q<UiLabel>(className: hpValClasses[i]);
+                var mpVal = UiRoot.Q<UiLabel>(className: mpValClasses[i]);
+                var hpG = i < hpOrder.Length ? hpOrder[i] : null;
+                var mpG = i < mpOrder.Count ? mpOrder[i] : null;
+
+                if (i >= party.Count)
+                {
+                    if (fig != null && fig.parent != null) fig.parent.style.display = DisplayStyle.None;
+                    if (nameLbl != null) nameLbl.style.display = DisplayStyle.None;
+                    if (hpG != null) hpG.style.display = DisplayStyle.None;
+                    if (mpG != null) mpG.style.display = DisplayStyle.None;
+                    if (hpVal != null) hpVal.style.display = DisplayStyle.None;
+                    if (mpVal != null) mpVal.style.display = DisplayStyle.None;
+                    continue;
+                }
+
                 var u = party[i];
-                int y = 136 + i * 38;
-                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 130, FontKind.DotGothic), 40, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.DotGothic);
-                hpRows[i] = Ui.Label(Root, "", 290, y, Palette.WarmIvory, Align.Right);
-                hpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(250, 7, Palette.Emerald, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 40, y + 16, Ui.Widget);
+                if (fig != null && u.sprite != null && u.sprite.Length > 0)
+                {
+                    fig.style.width = 64;
+                    fig.style.height = 80;
+                    FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "rest_" + (u.classDef?.id ?? u.name)));
+                }
+                if (nameLbl != null) nameLabels.Add(nameLbl);
+                if (hpG != null) hpGauges.Add(hpG);
+                if (mpG != null) mpGauges.Add(mpG);
+                if (hpVal != null) hpPctLabels.Add(hpVal);
+                if (mpVal != null) mpPctLabels.Add(mpVal);
             }
 
-            // Right panel (274x192): Actions & Options
-            Ui.Panel(Root, 338, 108, 274, 192, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Label(Root, "CAMP ACTIONS", 348, 114, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.Serif);
-            Ui.Divider(Root, 348, 126, 254, Palette.DarkBorder, Palette.AntiqueGoldDim);
+            // Hide baked static action rows inside right panel
+            foreach (var cls in new[] { "list-row__i-6", "list-row-2__i-18", "list-row-2__i-19", "list-row-2__i-20" })
+            {
+                var r = UiRoot.Q<VisualElement>(className: cls);
+                if (r != null) r.style.display = DisplayStyle.None;
+            }
 
-            hint = Ui.Label(Root, "", 320, 318, Palette.WarmIvory, Align.Center);
+            var screen = UiRoot.Q<VisualElement>(className: "_19-rest-campfire-sanctuary") ?? UiRoot;
+            actionHost = new VisualElement { name = "CampActionHost" };
+            actionHost.style.position = Position.Absolute;
+            actionHost.style.left = 676;
+            actionHost.style.top = 286;
+            actionHost.style.width = 528;
+            actionHost.style.height = 330;
+            actionHost.style.flexDirection = FlexDirection.Column;
+            screen.Add(actionHost);
+
+            feedbackLbl = new UiLabel { name = "CampFeedback" };
+            feedbackLbl.style.position = Position.Absolute;
+            feedbackLbl.style.left = 660;
+            feedbackLbl.style.top = 656;
+            feedbackLbl.style.width = 560;
+            feedbackLbl.style.fontSize = 14;
+            feedbackLbl.style.color = Palette.Gold1;
+            feedbackLbl.style.whiteSpace = WhiteSpace.Normal;
+            screen.Add(feedbackLbl);
+
             ShowParty();
             ShowMain();
         }
@@ -49,61 +110,94 @@ namespace Obscure
         void ShowParty()
         {
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < hpRows.Length && i < party.Count; i++)
+            for (int i = 0; i < party.Count && i < nameLabels.Count; i++)
             {
                 var u = party[i];
-                if (hpRows[i] != null) hpRows[i].Set($"HP {u.hp}/{u.stats.maxHp}");
-                if (hpGauges[i] != null) hpGauges[i].sprite = PixelArt.GaugeBar(250, 7, Palette.Emerald, (float)u.hp / Mathf.Max(1, u.stats.maxHp));
+                nameLabels[i].text = u.name;
+                nameLabels[i].style.color = u.Alive ? Palette.Mist1 : Palette.HpLow;
+                float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
+                float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
+                if (i < hpGauges.Count) FigmaUi.SetGaugeFill(hpGauges[i], hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
+                if (i < mpGauges.Count) FigmaUi.SetGaugeFill(mpGauges[i], mpRatio, Palette.Mp);
+                if (i < hpPctLabels.Count) hpPctLabels[i].text = $"{Mathf.RoundToInt(hpRatio * 100)}%";
+                if (i < mpPctLabels.Count) mpPctLabels[i].text = $"{Mathf.RoundToInt(mpRatio * 100)}%";
             }
         }
 
-        Menu NewMenu()
+        void NewMenu()
         {
-            if (phase != null) UnityEngine.Object.Destroy(phase.gameObject);
-            phase = new GameObject("Phase").transform;
-            phase.SetParent(Root, false);
-            var m = phase.gameObject.AddComponent<Menu>();
-            m.onFocus = s => hint.Set(s.tooltip ?? "");
-            return m;
+            if (menu != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
+                else UnityEngine.Object.DestroyImmediate(menu);
+            }
+            actionHost.Clear();
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
         }
 
-        void Option(Menu m, string text, Action onClick, string tooltip)
+        void Option(string title, string sub, Action onClick)
         {
-            var b = Ui.Button(phase, text, 348, 136 + m.items.Count * 36, 254, onClick, 24);
-            b.tooltip = tooltip;
-            m.Add(b);
+            var row = FigmaUi.InstantiateTemplate("List-Row");
+            if (row == null) return;
+            row.style.width = Length.Percent(100);
+            row.style.marginBottom = 8;
+            FigmaUi.SetInstanceText(row, "text-0", title);
+            FigmaUi.SetInstanceText(row, "text-1", sub ?? "");
+            FigmaUi.SetInstanceText(row, "text-2", "");
+            actionHost.Add(row);
+
+            var inner = row.Q<VisualElement>(className: "list-row-2") ?? row;
+            if (inner.childCount > 0) inner[0].style.display = DisplayStyle.None;
+            var item = menu.Add(row, title, onClick, tooltip: sub ?? "");
+            item.visual = on =>
+            {
+                inner.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Palette.Ink2;
+                var border = on ? Palette.Gold2 : Palette.Ink5;
+                inner.style.borderTopColor = border;
+                inner.style.borderBottomColor = border;
+                inner.style.borderLeftColor = border;
+                inner.style.borderRightColor = border;
+            };
+            item.visual(false);
         }
 
         void ShowMain()
         {
-            var m = NewMenu();
+            NewMenu();
+            feedbackLbl.text = "";
             int total = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
-            Option(m, $"RECOVER +{total} HP", Recover, $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES");
-            Option(m, "IMPROVE A HERO", ShowImprove, "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE");
-            Option(m, "DEVELOP SKILLS", () => Game?.Go(GameState.Skills), "VIEW HERO SKILL TREES AND ALLOCATE SKILL POINTS");
+            Option($"RECOVER +{total} HP", $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES", Recover);
+            Option("IMPROVE A HERO", "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE", ShowImprove);
+            Option("DEVELOP SKILLS", "VIEW HERO SKILL TREES AND ALLOCATE SKILL POINTS", () => Game?.Go(GameState.Skills));
         }
 
         void ShowImprove()
         {
-            var m = NewMenu();
+            NewMenu();
+            menu.onBack = ShowMain;
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             foreach (var u in party)
             {
-                var up = RunState.GetUpgradeFor(u);
-                Option(m, u.name.ToUpperInvariant(), () => Confirm(u), $"{up.name.ToUpperInvariant()}: {u.stats.Preview(up.bonus)}");
+                var unit = u;
+                var up = RunState.GetUpgradeFor(unit);
+                Option(unit.name.ToUpperInvariant(), $"{up.name.ToUpperInvariant()}: {unit.stats.Preview(up.bonus)}", () => Confirm(unit));
             }
-            Option(m, "BACK", ShowMain, "");
-            m.onBack = ShowMain;
+            Option("BACK", "RETURN TO CAMP ACTIONS", ShowMain);
         }
 
         void Confirm(Unit u)
         {
             var up = RunState.GetUpgradeFor(u);
             string preview = $"{up.name.ToUpperInvariant()}: {u.stats.Preview(up.bonus)}";
-            var m = NewMenu();
-            Option(m, $"CONFIRM {u.name.ToUpperInvariant()}", () => { Run.RestImprove(u.id); Done($"{u.name.ToUpperInvariant()} LEARNS {up.name.ToUpperInvariant()}."); }, preview);
-            Option(m, "BACK", ShowImprove, preview);
-            m.onBack = ShowImprove;
+            NewMenu();
+            menu.onBack = ShowImprove;
+            Option($"CONFIRM {u.name.ToUpperInvariant()}", preview, () =>
+            {
+                Run.RestImprove(u.id);
+                Done($"{u.name.ToUpperInvariant()} LEARNS {up.name.ToUpperInvariant()}.");
+            });
+            Option("BACK", preview, ShowImprove);
         }
 
         void Recover()
@@ -116,8 +210,9 @@ namespace Obscure
         {
             Sfx.Play(Sound.Success);
             ShowParty();
-            var m = NewMenu();
-            Option(m, "CONTINUE EXPEDITION", () => Game.Go(GameState.Map), text);
+            NewMenu();
+            feedbackLbl.text = text;
+            Option("CONTINUE EXPEDITION", "LEAVE THE CAMP. YOU CAN ONLY TAKE ONE CAMP ACTION.", () => Game.Go(GameState.Map));
         }
     }
 }

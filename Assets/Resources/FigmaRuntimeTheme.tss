@@ -1,0 +1,42 @@
+@import url("../Figma/FELNA---UI-UX-Design/tokens.uss");
+@import url("../UI/felna-runtime.uss");
+
+.unity-ui-document__root {
+    width: 100%;
+    height: 100%;
+    flex-grow: 1;
+}
+
+VisualElement {
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+}
+
+Button {
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    padding-top: 0px;
+    padding-right: 0px;
+    padding-bottom: 0px;
+    padding-left: 0px;
+    border-width: 0px;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--text-primary);
+    -unity-text-align: middle-center;
+}
+
+Label {
+    margin-top: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    padding-top: 0px;
+    padding-right: 0px;
+    padding-bottom: 0px;
+    padding-left: 0px;
+    color: var(--text-primary);
+}

@@ -2,20 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Character Status — Starlit Reliquary "E · Character Status" board at 640x360:
-    // header (Back · title · Q portraits E · Hub Gold), gold identity column, tab strip,
-    // Overview grid (Attributes · Derived · Resistances / Status effects · Equipment · Skills).
-    // Attributes and Combat tabs list every row with its formula breakdown.
+    // Character Status — migrated to Figma 13---Character-Status.uxml (1280x720 UI Toolkit).
     public class CharacterStatusScreen : GameScreen
     {
         readonly List<Unit> units;
         readonly GameState returnState;
         int currentIndex;
 
-        public Unit CurrentUnit => units[Math.Clamp(currentIndex, 0, units.Count - 1)];
+        public Unit CurrentUnit => units[Math.Clamp(currentIndex, 0, Math.Max(0, units.Count - 1))];
         public Label HeaderLabel { get; private set; }
         public Label IdentityLabel { get; private set; }
         public Label TooltipLabel { get; private set; }
@@ -40,18 +39,13 @@ namespace Obscure
         static readonly string[] TabNames = { "Overview", "Attributes", "Combat", "Status Effects", "Equipment", "Skills" };
         public Tab CurrentTab { get; private set; } = Tab.Overview;
 
-        const int Left = 12, RightEdge = 628, BodyY = 33, BodyH = 318, IdW = 135, MainX = Left + IdW + 7, MainW = RightEdge - MainX;
-        const int TabH = 20, PanelY = BodyY + TabH - 1;
-
-        Menu menu;
-        Transform page;
+        UitkMenu menu;
+        VisualElement tabHost;
+        VisualElement mainHost;
+        VisualElement tooltipStrip;
+        UiLabel tooltipText;
+        UiLabel detailLabel;
         int focusIndex;
-
-        // Floating tooltip (.tip) for focused Overview attribute rows; fixed detail pane on the list tabs.
-        readonly HashSet<Selectable> attributeRows = new HashSet<Selectable>();
-        SpriteRenderer tipBox;
-        Label tipText, detail;
-        int detailWidth;
 
         public CharacterStatusScreen() : this(null, null) { }
 
@@ -72,15 +66,81 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
-            menu = Root.gameObject.AddComponent<Menu>();
+            MountFigma("13---Character-Status");
+            StripStaticContent();
+
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
             menu.onBack = () => Game?.Go(returnState);
             menu.onFocus = OnFocus;
+
             Refresh();
+        }
+
+        void StripStaticContent()
+        {
+            var screen = UiRoot.Q<VisualElement>(className: "_13-character-status");
+            if (screen == null) return;
+
+            // Hide TabView and baked static right-panel elements so dynamic tab content replaces them cleanly.
+            var tv = UiRoot.Q<TabView>();
+            if (tv != null) tv.style.display = DisplayStyle.None;
+
+            var mainPanel = UiRoot.Q<VisualElement>(className: "panel-default__i-23");
+            int panelIdx = mainPanel != null ? screen.IndexOf(mainPanel) : -1;
+            if (panelIdx >= 0)
+            {
+                for (int i = panelIdx + 1; i < screen.childCount; i++)
+                    screen[i].style.display = DisplayStyle.None;
+            }
+
+            tabHost = new VisualElement { name = "StatusTabBar" };
+            tabHost.style.position = Position.Absolute;
+            tabHost.style.left = 310;
+            tabHost.style.top = 68;
+            tabHost.style.height = 38;
+            tabHost.style.flexDirection = FlexDirection.Row;
+            screen.Add(tabHost);
+
+            mainHost = new VisualElement { name = "StatusMainContent" };
+            mainHost.style.position = Position.Absolute;
+            mainHost.style.left = 326;
+            mainHost.style.top = 118;
+            mainHost.style.width = 914;
+            mainHost.style.height = 568;
+            screen.Add(mainHost);
+
+            tooltipStrip = new VisualElement { name = "StatusTooltipStrip" };
+            tooltipStrip.style.position = Position.Absolute;
+            tooltipStrip.style.left = 326;
+            tooltipStrip.style.bottom = 26;
+            tooltipStrip.style.width = 914;
+            tooltipStrip.style.paddingLeft = 10;
+            tooltipStrip.style.paddingRight = 10;
+            tooltipStrip.style.paddingTop = 6;
+            tooltipStrip.style.paddingBottom = 6;
+            tooltipStrip.style.backgroundColor = Palette.Ink2;
+            tooltipStrip.style.borderTopWidth = 1;
+            tooltipStrip.style.borderBottomWidth = 1;
+            tooltipStrip.style.borderLeftWidth = 1;
+            tooltipStrip.style.borderRightWidth = 1;
+            tooltipStrip.style.borderTopColor = Palette.Gold3;
+            tooltipStrip.style.borderBottomColor = Palette.Gold3;
+            tooltipStrip.style.borderLeftColor = Palette.Gold3;
+            tooltipStrip.style.borderRightColor = Palette.Gold3;
+            tooltipStrip.style.display = DisplayStyle.None;
+
+            tooltipText = new UiLabel { name = "TooltipStripText" };
+            tooltipText.style.fontSize = 13;
+            tooltipText.style.color = Palette.Mist1;
+            tooltipText.style.whiteSpace = WhiteSpace.Normal;
+            tooltipStrip.Add(tooltipText);
+            screen.Add(tooltipStrip);
         }
 
         public void SwitchHero(int delta)
         {
+            if (units.Count == 0) return;
             currentIndex = (currentIndex + delta + units.Count) % units.Count;
             Refresh();
         }
@@ -101,39 +161,42 @@ namespace Obscure
                 $"{EquipmentSlots.ShortName(slot)}:{(u.equipped.TryGetValue(slot, out var eq) && eq != null ? eq.name : "Empty")}"));
         }
 
+        Transform hiddenBindings;
+
         public void Refresh()
         {
             if (Root == null) return;
             var u = CurrentUnit;
             u.RecalculateStats();
 
-            if (page != null)
+            if (hiddenBindings != null)
             {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(page.gameObject);
-                else UnityEngine.Object.DestroyImmediate(page.gameObject);
+                if (Application.isPlaying) UnityEngine.Object.Destroy(hiddenBindings.gameObject);
+                else UnityEngine.Object.DestroyImmediate(hiddenBindings.gameObject);
             }
-            page = new GameObject("Status").transform;
-            page.SetParent(Root, false);
+
             menu.items.Clear();
-            attributeRows.Clear();
             PrimaryStatLabels.Clear();
             DerivedStatLabels.Clear();
-            detail = null;
+            detailLabel = null;
+            tabHost.Clear();
+            mainHost.Clear();
+            if (tooltipStrip != null) tooltipStrip.style.display = DisplayStyle.None;
 
-            // Binding labels (tests + summaries), kept off-screen.
-            var hidden = new GameObject("Bindings").transform;
-            hidden.SetParent(page, false);
-            hidden.gameObject.SetActive(false);
-            HeaderLabel = Ui.Label(hidden, PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 84), 0, 0, Palette.Mist1);
-            IdentityLabel = Ui.Label(hidden, PixelFont.Fit($"{u.race?.name ?? "Human"} {u.classDef?.name ?? u.role}".ToUpperInvariant(), 125), 0, 0, Palette.Mist1);
-            TooltipLabel = Ui.Label(hidden, "", 0, 0, Palette.Mist1);
-            foreach (var a in AbilityScores.AllAbilities) PrimaryStatLabels[a] = Ui.Label(hidden, StatLine(u, a), 0, 0, Palette.Mist1);
-            foreach (var st in DisplayedDerivedStats) DerivedStatLabels[st] = Ui.Label(hidden, $"{Database.DerivedStatDefs[st].shortName,-4} : {u.Derived.FormatValue(st)}", 0, 0, Palette.Mist1);
+            // Hidden off-screen Obscure.Label bindings kept intact for CharacterStatsTests contract.
+            hiddenBindings = new GameObject("Bindings").transform;
+            hiddenBindings.SetParent(Root, false);
+            hiddenBindings.gameObject.SetActive(false);
+            HeaderLabel = Ui.Label(hiddenBindings, PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 84), 0, 0, Palette.Mist1);
+            IdentityLabel = Ui.Label(hiddenBindings, PixelFont.Fit($"{u.race?.name ?? "Human"} {u.classDef?.name ?? u.role}".ToUpperInvariant(), 125), 0, 0, Palette.Mist1);
+            TooltipLabel = Ui.Label(hiddenBindings, "", 0, 0, Palette.Mist1);
+            foreach (var a in AbilityScores.AllAbilities) PrimaryStatLabels[a] = Ui.Label(hiddenBindings, StatLine(u, a), 0, 0, Palette.Mist1);
+            foreach (var st in DisplayedDerivedStats) DerivedStatLabels[st] = Ui.Label(hiddenBindings, $"{Database.DerivedStatDefs[st].shortName,-4} : {u.Derived.FormatValue(st)}", 0, 0, Palette.Mist1);
 
-            BuildHeader();
-            BuildIdentity(u);
-            BuildTabs();
-            Ui.Panel(page, MainX, PanelY, MainW, BodyY + BodyH - PanelY);
+            BindHeader();
+            BindIdentity(u);
+            BindTabs();
+
             switch (CurrentTab)
             {
                 case Tab.Attributes: BuildAttributeList(u); break;
@@ -142,199 +205,203 @@ namespace Obscure
                 default: BuildOverview(u); break;
             }
 
-            tipBox = Ui.Image(page, null, 0, 0, Ui.Overlay - 2);
-            tipText = Ui.Label(page, "", 0, 0, Palette.Mist2, order: Ui.Overlay - 1, font: FontKind.Interface);
-            tipBox.gameObject.SetActive(false);
-            tipText.gameObject.SetActive(false);
-
-            if (menu.items.Count > 0) menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
+            if (menu.items.Count > 0)
+                menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
         }
 
-        // ------------------------------------------------------------------ header
-
-        void BuildHeader()
+        void BindHeader()
         {
-            menu.Add(Ui.Button(page, "Back", Left, 9, 40, () => Game?.Go(returnState), 18, showCursor: false)).tooltip = "RETURN TO PREVIOUS SCREEN";
-            Ui.Label(page, "Status", Left + 50, 13, Palette.Gold2);
+            var backBtn = FigmaUi.FindButton(UiRoot, "Back");
+            if (backBtn != null)
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState), tooltip: "RETURN TO PREVIOUS SCREEN"), backBtn);
 
-            // Party switcher: Q · portraits · E
-            int x = Left + 50 + PixelFont.Measure("Status", FontKind.DotGothic) + 24;
-            Ui.Badge(page, "Q", x, 13, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
-            x += 16;
-            for (int i = 0; i < units.Count; i++)
+            string[] frameClasses = { "frame-vars-13", "frame-vars-14", "frame-vars-15", "frame-vars-16" };
+            for (int i = 0; i < frameClasses.Length; i++)
             {
+                var frame = UiRoot.Q<VisualElement>(className: frameClasses[i]);
+                if (frame == null) continue;
+                if (i >= units.Count)
+                {
+                    frame.style.display = DisplayStyle.None;
+                    continue;
+                }
+                frame.style.display = DisplayStyle.Flex;
                 int idx = i;
-                bool on = i == currentIndex;
-                var p = Ui.Button(page, "", x, 9, 18, () => { if (currentIndex != idx) { currentIndex = idx; Refresh(); } }, 18, showCursor: false, style: ButtonStyle.Card);
-                p.selected = on;
-                p.visual(false);
-                p.onAdjust = SwitchHero;
-                p.tooltip = "LEFT/RIGHT OR CLICK: INSPECT ANOTHER PARTY MEMBER";
-                Portrait(p.transform, units[i], 18, on);
-                menu.Add(p);
-                x += 22;
+                var unit = units[i];
+                bool selected = i == currentIndex;
+                if (frame.childCount > 0 && unit.sprite != null && unit.sprite.Length > 0)
+                    FigmaUi.SetBackgroundContain(frame[0], FigmaUi.GetSpriteTexture(unit.sprite, "st_hdr_" + (unit.classDef?.id ?? unit.name)));
+
+                var pItem = menu.Add(frame, unit.name ?? $"Hero {i + 1}", () =>
+                {
+                    if (currentIndex != idx) { currentIndex = idx; Refresh(); }
+                }, selected: selected, onAdjust: SwitchHero, tooltip: "LEFT/RIGHT OR CLICK: INSPECT ANOTHER PARTY MEMBER");
+                pItem.visual = on =>
+                {
+                    var border = on ? Palette.Gold1 : selected ? Palette.Gold2 : Palette.Ink5;
+                    frame.style.borderTopColor = border;
+                    frame.style.borderBottomColor = border;
+                    frame.style.borderLeftColor = border;
+                    frame.style.borderRightColor = border;
+                    frame.style.backgroundColor = on ? Palette.Ink3 : Palette.Ink2;
+                };
+                pItem.visual(false);
             }
-            Ui.Badge(page, "E", x + 2, 13, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
 
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Ui.CurrencyTagWidth(gold, true);
-            Ui.CurrencyTag(page, gold, true, RightEdge - gw, 9);
+            var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
+            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold} HUB GOLD");
         }
 
-        // Portrait chip (.pt): class-tinted well with a head-and-shoulders silhouette.
-        static void Portrait(Transform t, Unit u, int size, bool on)
+        void BindIdentity(Unit u)
         {
-            Color c = Palette.ForClass(u.classDef?.id);
-            Ui.Image(t, PixelArt.Box(size, size, Color.Lerp(c, Palette.Ink1, 0.7f), on ? Palette.Gold2 : Palette.Ink5), 0, 0, Ui.Widget + 1);
-            Ui.Rect(t, size / 2 - 3, 4, 6, 6, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 2);
-            Ui.Rect(t, 3, size - 6, size - 6, 4, c, Ui.Widget + 2);
-        }
+            var fig = UiRoot.Q<VisualElement>(className: "sprite-knight");
+            if (fig != null && u.sprite != null && u.sprite.Length > 0)
+                FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "st_id_" + (u.classDef?.id ?? u.name)));
 
-        // ---------------------------------------------------------------- identity
-
-        void BuildIdentity(Unit u)
-        {
-            Ui.Panel(page, Left, BodyY, IdW, BodyH, null, Palette.Gold3);
-            const int wellH = 115;
-            Ui.Image(page, PixelArt.Gradient(IdW - 4, wellH, Palette.Hex(0x16204A), Palette.Ink1), Left + 2, BodyY + 2, Ui.Panels + 1);
-            Ui.Rect(page, Left + 2, BodyY + 2 + wellH, IdW - 4, 1, Palette.Ink4, Ui.Panels + 2);
-            if (u.sprite != null && u.sprite.Length > 0)
+            var nameLbl = UiRoot.Q<UiLabel>(className: "knight-vars-4");
+            if (nameLbl != null)
             {
-                int scale = Mathf.Max(1, (wellH - 18) / u.sprite.Length);
-                var fig = Ui.Image(page, PixelArt.FromRows(u.sprite), 0, 0, Ui.Widget);
-                fig.transform.localScale = new Vector3(scale, scale, 1);
-                fig.transform.localPosition = new Vector3(Left + (IdW - u.sprite[0].Length * scale) / 2, -(BodyY + wellH - 5 - u.sprite.Length * scale), 0);
+                nameLbl.text = u.name ?? "Hero";
+                nameLbl.style.maxWidth = 180;
+                nameLbl.style.overflow = Overflow.Hidden;
             }
 
-            int x = Left + 7, w = IdW - 14, y = BodyY + wellH + 9;
-            Ui.Label(page, PixelFont.Fit(u.name ?? "Hero", w - 36, FontKind.DotGothic), x, y, Palette.Mist1);
-            Ui.Label(page, $"LV {u.level}", x + w, y + 1, Palette.Gold2, Align.Right);
-            y += 15;
-            int tx = x;
-            foreach (var tag in new[] { u.race?.name ?? "Human", u.classDef?.name ?? u.role, u.background?.name }.Where(s => !string.IsNullOrEmpty(s)))
-            {
-                string t = PixelFont.Fit(tag.ToUpperInvariant(), x + w - tx - 8);
-                if (t.Length < 2) break;
-                tx += Ui.Tag(page, t, tx, y) + 3;
-            }
-            y += 17;
-            float hp = (float)u.hp / Mathf.Max(1, u.stats.maxHp);
-            BarRow(x, y, w, "HP", hp, hp < 0.25f ? Palette.HpLow : Palette.Hp, $"{u.hp}", $"/{u.stats.maxHp}");
-            BarRow(x, y + 12, w, "MP", (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp, $"{u.mp}", $"/{u.stats.maxMp}");
-            y += 30;
+            var lvLbl = UiRoot.Q<UiLabel>(className: "lv-1-vars-6");
+            if (lvLbl != null) lvLbl.text = $"LV {u.level}";
 
-            var bg = u.background;
-            if (bg != null)
+            if (nameLbl != null && nameLbl.parent != null)
             {
-                var rank = bg.GetRank(u.level);
-                string[] numerals = { "I", "II", "III", "IV", "V" };
-                int r = Mathf.Clamp(BackgroundRankResolver.GetRankForLevel(u.level), 1, 5);
-                string desc = PixelFont.Wrap((rank?.perkDescription ?? "").ToUpperInvariant(), w - 8);
-                int h = 28 + (desc.Count(c => c == '\n') + 1) * PixelFont.LineHeight;
-                h = Mathf.Min(h, BodyY + BodyH - 6 - y);
-                Ui.Image(page, PixelArt.Badge(w, h, Palette.Ink0, Palette.Ink3), x, y, Ui.Panels + 2);
-                Ui.Label(page, $"BACKGROUND PERK · RANK {numerals[r - 1]}", x + 4, y + 4, Palette.Mist3, font: FontKind.Interface);
-                Ui.Label(page, PixelFont.Fit(rank?.perkName ?? bg.perkName, w - 8, FontKind.DotGothic), x + 4, y + 13, Palette.Gold1);
-                Ui.Label(page, desc, x + 4, y + 26, Palette.Mist2, font: FontKind.Interface);
+                int idx = nameLbl.parent.IndexOf(nameLbl);
+                // Tag container follows lv-1-vars-6 in UXML
+                if (idx + 2 < nameLbl.parent.childCount)
+                {
+                    var tagRow = nameLbl.parent[idx + 2];
+                    tagRow.Clear();
+                    tagRow.style.flexWrap = Wrap.NoWrap;
+                    tagRow.style.maxWidth = 240;
+                    foreach (var tText in new[] { u.race?.name ?? "Human", u.classDef?.name ?? u.role }.Where(s => !string.IsNullOrEmpty(s)))
+                    {
+                        var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
+                        if (tag != null)
+                        {
+                            FigmaUi.SetInstanceText(tag, "text-0", tText.ToUpperInvariant());
+                            tag.style.marginRight = 4;
+                            tagRow.Add(tag);
+                        }
+                    }
+                }
+            }
+
+            float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
+            float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
+            FigmaUi.SetGaugeFill(UiRoot.Q<VisualElement>(className: "gauge-hp"), hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
+            FigmaUi.SetGaugeFill(UiRoot.Q<VisualElement>(className: "gauge-mp"), mpRatio, Palette.Mp);
+
+            var hpLbl = UiRoot.Q<UiLabel>(className: "_125-125-vars");
+            if (hpLbl != null) hpLbl.text = $"{u.hp}/{u.stats.maxHp}";
+            var mpLbl = UiRoot.Q<UiLabel>(className: "_20-20-vars");
+            if (mpLbl != null) mpLbl.text = $"{u.mp}/{u.stats.maxMp}";
+
+            var perkBox = UiRoot.Q<VisualElement>(className: "frame-vars-17");
+            if (perkBox != null)
+            {
+                var bg = u.background;
+                if (bg == null)
+                {
+                    perkBox.style.display = DisplayStyle.None;
+                }
+                else
+                {
+                    perkBox.style.display = DisplayStyle.Flex;
+                    var rank = bg.GetRank(u.level);
+                    string[] numerals = { "I", "II", "III", "IV", "V" };
+                    int r = Mathf.Clamp(BackgroundRankResolver.GetRankForLevel(u.level), 1, 5);
+                    var rLbl = UiRoot.Q<UiLabel>(className: "background-perk-rank-i-vars");
+                    if (rLbl != null) rLbl.text = $"BACKGROUND PERK · RANK {numerals[r - 1]}";
+                    var pLbl = UiRoot.Q<UiLabel>(className: "watchful-guard-vars");
+                    if (pLbl != null) pLbl.text = rank?.perkName ?? bg.perkName;
+                    var dLbl = UiRoot.Q<UiLabel>(className: "physical-damage-taken-is-reduced-by-3-vars");
+                    if (dLbl != null) dLbl.text = (rank?.perkDescription ?? "").ToUpperInvariant();
+                }
             }
         }
 
-        // Bar row (.br): label · segmented bar · value with muted max.
-        void BarRow(int x, int y, int w, string label, float ratio, Color fill, string value, string max)
+        void BindTabs()
         {
-            Ui.Label(page, label, x, y + 1, Palette.Mist3, font: FontKind.Interface);
-            int vw = PixelFont.Measure(value + max, FontKind.Interface);
-            Ui.Image(page, PixelArt.GaugeBar(w - 20 - vw - 6, 7, Mathf.Clamp01(ratio), fill), x + 14, y, Ui.Widget);
-            Ui.Label(page, max, x + w, y + 1, Palette.Mist3, Align.Right, font: FontKind.Interface);
-            Ui.Label(page, value, x + w - PixelFont.Measure(max, FontKind.Interface), y + 1, Palette.Mist1, Align.Right, font: FontKind.Interface);
-        }
-
-        // -------------------------------------------------------------------- tabs
-
-        void BuildTabs()
-        {
-            int x = MainX;
             for (int i = 0; i < TabNames.Length; i++)
             {
                 var tab = (Tab)i;
-                bool on = tab == CurrentTab;
-                int w = PixelFont.Measure(TabNames[i], FontKind.DotGothic) + 16;
+                bool active = tab == CurrentTab;
                 Action go = tab == Tab.Equipment ? () => Game?.Go(GameState.Equipment)
                     : tab == Tab.Skills ? () => Game?.Go(GameState.Skills)
                     : (Action)(() => ShowTab(tab));
-                var b = Ui.Button(page, TabNames[i], x, BodyY, w, go, TabH, showCursor: false);
-                var box = b.GetComponentInChildren<SpriteRenderer>();
-                b.visual = focus =>
+
+                var btn = FigmaUi.CreateButton(TabNames[i], "button-slab", null);
+                btn.style.height = 38;
+                btn.style.paddingLeft = 14;
+                btn.style.paddingRight = 14;
+                btn.style.marginRight = 4;
+                btn.style.fontSize = 18;
+                btn.style.borderBottomWidth = active ? 0 : 2;
+                btn.style.borderTopWidth = active ? 3 : 2;
+                tabHost.Add(btn);
+
+                var item = menu.Add(btn, TabNames[i], go, selected: active, tooltip: $"{TabNames[i].ToUpperInvariant()} TAB");
+                item.visual = on =>
                 {
-                    box.sprite = TabBox(w, TabH, on, focus);
-                    b.label.Color = on || focus ? Palette.Gold1 : Palette.Mist2;
+                    btn.style.backgroundColor = on || active ? Palette.Ink3 : Palette.Ink2;
+                    btn.style.borderTopColor = on ? Palette.Gold1 : active ? Palette.Gold2 : Palette.Ink4;
+                    var side = on ? Palette.Gold1 : active ? Palette.Gold3 : Palette.Ink4;
+                    btn.style.borderLeftColor = side;
+                    btn.style.borderRightColor = side;
+                    btn.style.borderBottomColor = active ? Palette.Ink3 : side;
+                    btn.style.color = on || active ? Palette.Gold1 : Palette.Mist2;
                 };
-                b.visual(false);
-                b.tooltip = $"{TabNames[i].ToUpperInvariant()} TAB";
-                menu.Add(b);
-                x += w + 2;
+                item.visual(false);
             }
         }
-
-        // Tab (.tab): ink slab open at the bottom; the active tab is raised with a gold top stripe.
-        static Sprite TabBox(int w, int h, bool on, bool focus)
-        {
-            var fill = on || focus ? Palette.Ink3 : Palette.Ink2;
-            var border = on ? Palette.Gold3 : focus ? Palette.Mist3 : Palette.Ink4;
-            var px = new Color32[w * h];
-            for (int y = 0; y < h; y++)
-            {
-                int py = h - 1 - y;
-                for (int x = 0; x < w; x++)
-                {
-                    bool edge = x == 0 || x == w - 1 || py == 0;
-                    px[y * w + x] = edge ? border : on && py <= 2 ? Palette.Gold2 : fill;
-                }
-            }
-            return PixelArt.SpriteFrom(px, w, h, PixelArt.TopLeft, "tab");
-        }
-
-        // ---------------------------------------------------------------- overview
 
         void BuildOverview(Unit u)
         {
-            int pad = 8, gap = 8, colW = (MainW - 2 * pad - 2 * gap) / 3;
-            int x0 = MainX + pad, y0 = PanelY + 8, row2 = PanelY + 160;
+            var topRow = new VisualElement { style = { flexDirection = FlexDirection.Row, height = 285, marginBottom = 16 } };
+            var botRow = new VisualElement { style = { flexDirection = FlexDirection.Row, height = 225 } };
+            mainHost.Add(topRow);
+            mainHost.Add(botRow);
 
-            // Attributes (focusable rows; the tooltip floats over the column)
-            H2(x0, y0, "Attributes");
-            int y = y0 + 16;
+            // Col 1 Top: Attributes
+            var attrCol = ColumnBox(280, 28);
+            attrCol.Add(SectionTitle("Attributes"));
             foreach (var a in AbilityScores.AllAbilities)
             {
                 var ab = a;
-                var row = Ui.Button(page, "", x0, y, colW, () => ShowTip(u.ExplainAbility(ab)), 16, showCursor: false, style: ButtonStyle.Flat);
-                row.tooltip = u.ExplainAbility(ab);
-                Ui.Label(row.transform, $"{a} · {AbilityName(a)}", 3, 5, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
                 int score = u.Score(ab), bonus = score - u.BaseScores[ab];
-                if (bonus != 0) Ui.Label(row.transform, $"{(bonus > 0 ? "+" : "")}{bonus}", colW - 20, 5, Palette.Mist3, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Label(row.transform, score.ToString(), colW - 3, 5, Palette.Mist1, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Rect(page, x0, y + 16, colW, 1, Palette.Ink3, Ui.Panels + 2);
-                attributeRows.Add(row);
-                menu.Add(row);
-                y += 18;
+                string tip = u.ExplainAbility(ab);
+                var row = StatRow(
+                    $"{a} · {AbilityName(a)}",
+                    bonus != 0 ? $"{(bonus > 0 ? "+" : "")}{bonus}" : null,
+                    score.ToString(),
+                    () => ShowTip(tip));
+                attrCol.Add(row);
+                var it = menu.Add(row, $"{a} {score}", () => ShowTip(tip), tooltip: tip);
+                it.visual = on => row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
             }
+            topRow.Add(attrCol);
 
-            // Derived combat stats
-            int x1 = x0 + colW + gap;
-            H2(x1, y0, "Derived Stats");
-            y = y0 + 16;
+            // Col 2 Top: Derived Stats
+            var derCol = ColumnBox(280, 28);
+            derCol.Add(SectionTitle("Derived Stats"));
             foreach (var st in OverviewDerived)
             {
                 var def = Database.DerivedStatDefs[st];
-                Ui.Label(page, PixelFont.Fit((def.displayName ?? def.shortName).ToUpperInvariant(), colW - 30, FontKind.Interface), x1, y + 5, Palette.Mist2, font: FontKind.Interface);
-                Ui.Label(page, u.Derived.FormatValue(st), x1 + colW, y + 5, Palette.Mist1, Align.Right, font: FontKind.Interface);
-                Ui.Rect(page, x1, y + 16, colW, 1, Palette.Ink3, Ui.Panels + 2);
-                y += 18;
+                derCol.Add(StatRow((def.displayName ?? def.shortName).ToUpperInvariant(), null, u.Derived.FormatValue(st), null));
             }
+            topRow.Add(derCol);
 
-            // Resistances: 2-column grid of element chips
-            int x2 = x1 + colW + gap;
-            H2(x2, y0, "Resistances");
+            // Col 3 Top: Resistances
+            var resCol = ColumnBox(298, 0);
+            resCol.Add(SectionTitle("Resistances"));
+            var resGrid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
             var entries = new List<(Element el, float v, string note)> { (Element.Physical, 0f, ""), (Element.Arcane, 0f, "FIXED") };
             foreach (ElementType et in Enum.GetValues(typeof(ElementType)))
             {
@@ -342,66 +409,239 @@ namespace Obscure
                 float v = u.elementalResistances.GetFinalResistance(et);
                 entries.Add((ToElement(et), v, v > 0 ? "RESIST" : v < 0 ? "WEAK" : ""));
             }
-            for (int i = 0; i < entries.Count; i++)
+            foreach (var (el, v, note) in entries)
             {
-                var (el, v, note) = entries[i];
-                int ex = x2 + (i % 2) * (colW / 2), ey = y0 + 16 + (i / 2) * 15;
-                PartyScreen.ElementChip(page, el, ex, ey);
+                var cell = new VisualElement { style = { width = 148, height = 32, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+                string code = Palette.ElementCode(el);
+                var chip = FigmaUi.InstantiateTemplate($"Element-Chip-{code}");
+                if (chip != null)
+                {
+                    FigmaUi.SetInstanceText(chip, "text-0", code);
+                    chip.style.marginRight = 8;
+                    cell.Add(chip);
+                }
                 string pct = v == 0 ? "0%" : $"{(v > 0 ? "+" : "-")}{Mathf.RoundToInt(Mathf.Abs(v) * 100)}%";
-                Ui.Label(page, pct, ex + 17, ey + 3, v > 0 ? Palette.Ok : v < 0 ? Palette.Err : Palette.Mist1, font: FontKind.Interface);
-                if (note != "") Ui.Label(page, note, ex + 20 + PixelFont.Measure(pct, FontKind.Interface), ey + 3, Palette.Mist3, font: FontKind.Interface);
+                var pctLbl = new UiLabel(note != "" ? $"{pct} {note}" : pct);
+                pctLbl.style.fontSize = 13;
+                pctLbl.style.color = v > 0 ? Palette.Ok : v < 0 ? Palette.Err : Palette.Mist1;
+                cell.Add(pctLbl);
+                resGrid.Add(cell);
             }
+            resCol.Add(resGrid);
+            topRow.Add(resCol);
 
-            // Status effects
-            H2(x0, row2, "Status Effects");
-            Ui.Label(page, PixelFont.Wrap("NONE ACTIVE. BUFFS AND DEBUFFS SHOW HERE DURING A DUNGEON RUN.", colW, FontKind.Interface), x0, row2 + 18, Palette.Mist3, font: FontKind.Interface);
+            // Col 1 Bottom: Status Effects
+            var stCol = ColumnBox(280, 28);
+            stCol.Add(SectionTitle("Status Effects"));
+            var stTxt = new UiLabel("NONE ACTIVE. BUFFS AND DEBUFFS SHOW HERE DURING A DUNGEON RUN.");
+            stTxt.style.fontSize = 13;
+            stTxt.style.color = Palette.Mist3;
+            stTxt.style.whiteSpace = WhiteSpace.Normal;
+            stCol.Add(stTxt);
+            botRow.Add(stCol);
 
-            // Equipment: 4x2 slots
-            H2(x1, row2, "Equipment");
+            // Col 2 Bottom: Equipment
+            var eqCol = ColumnBox(280, 28);
+            eqCol.Add(SectionTitle("Equipment"));
+            var eqGrid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 220, marginBottom = 10 } };
             int filled = 0;
             for (int i = 0; i < EquipmentSlots.All.Length; i++)
             {
                 var slot = EquipmentSlots.All[i];
                 u.equipped.TryGetValue(slot, out var eq);
                 if (eq != null) filled++;
-                Ui.ItemSlot(page, x1 + (i % 4) * 23, row2 + 17 + (i / 4) * 23, 20, eq, slot);
+                var tile = FigmaUi.InstantiateTemplate(eq != null ? "Item-Slot-Filled" : "Item-Slot-Empty");
+                if (tile != null)
+                {
+                    FigmaUi.SetInstanceText(tile, "text-0", eq != null ? InitialsFromName(eq.name) : "");
+                    tile.style.width = 44;
+                    tile.style.height = 44;
+                    tile.style.marginRight = 8;
+                    tile.style.marginBottom = 8;
+                    eqGrid.Add(tile);
+                }
             }
+            eqCol.Add(eqGrid);
             var empty = EquipmentSlots.All.Where(s => !u.equipped.TryGetValue(s, out var e) || e == null).Select(EquipmentSlots.DisplayName).ToList();
-            string cap = $"{filled} / 8 SLOTS" + (empty.Count > 0 ? $" · {empty[0].ToUpperInvariant()} EMPTY" : "");
-            Ui.Label(page, PixelFont.Fit(cap, colW, FontKind.Interface), x1, row2 + 66, Palette.Mist2, font: FontKind.Interface);
+            string cap = $"{filled} / 8 SLOTS EQUIPPED" + (empty.Count > 0 ? $" · {empty[0].ToUpperInvariant()} EMPTY" : "");
+            var eqCap = new UiLabel(cap) { style = { fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } };
+            eqCol.Add(eqCap);
+            botRow.Add(eqCol);
 
-            // Skills: active squares, passive diamonds
-            H2(x2, row2, "Skills");
-            Ui.Label(page, "ACTIVE", x2, row2 + 23, Palette.Mist3, font: FontKind.Interface);
+            // Col 3 Bottom: Skills
+            var skCol = ColumnBox(298, 0);
+            skCol.Add(SectionTitle("Skills"));
+
+            var actRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 14 } };
+            actRow.Add(new UiLabel("ACTIVE") { style = { fontSize = 13, color = Palette.Mist3, width = 76 } });
             for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
             {
                 string id = u.skillLoadout.ActiveSlots[i];
-                int sx = x2 + 36 + i * 23, sy = row2 + 17;
-                if (!string.IsNullOrEmpty(id))
+                var tag = FigmaUi.InstantiateTemplate("Tag-Gold");
+                if (tag != null)
                 {
-                    Ui.Image(page, PixelArt.Box(19, 19, Palette.Hex(0x2B2210), Palette.Gold2), sx, sy, Ui.Widget);
-                    Ui.Label(page, Initials(id), sx + 10, sy + 6, Palette.Gold1, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
+                    FigmaUi.SetInstanceText(tag, "text-0", string.IsNullOrEmpty(id) ? "--" : Initials(id));
+                    tag.style.marginRight = 6;
+                    if (string.IsNullOrEmpty(id)) tag.style.opacity = 0.45f;
+                    actRow.Add(tag);
                 }
-                else Ui.Image(page, PixelArt.DashedBadge(19, 19, Palette.Ink3, Palette.Ink5), sx, sy, Ui.Widget);
             }
-            Ui.Label(page, "PASSIVE", x2, row2 + 47, Palette.Mist3, font: FontKind.Interface);
-            for (int i = 0; i < SkillLoadout.PassiveSlotCount; i++)
+            skCol.Add(actRow);
+
+            var pasRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            pasRow.Add(new UiLabel("PASSIVE") { style = { fontSize = 13, color = Palette.Mist3, width = 76 } });
+            string pIcons = string.Join(" ", Enumerable.Range(0, SkillLoadout.PassiveSlotCount).Select(i =>
             {
                 string id = u.skillLoadout.PassiveSlots[i];
-                int sx = x2 + 38 + i * 21, sy = row2 + 41;
-                bool has = !string.IsNullOrEmpty(id);
-                Ui.Image(page, PixelArt.Diamond(17, has ? Palette.Hex(0x2B2210) : Palette.Ink3), sx, sy, Ui.Widget);
-                Ui.Image(page, PixelArt.Diamond(17, has ? Palette.Gold2 : Palette.Ink5, false), sx, sy, Ui.Widget + 1);
-                if (has) Ui.Label(page, Initials(id), sx + 9, sy + 5, Palette.Gold1, Align.Center, order: Ui.Widget + 2, font: FontKind.Interface);
+                return string.IsNullOrEmpty(id) ? "◇" : $"◆{Initials(id)}";
+            }));
+            pasRow.Add(new UiLabel(pIcons) { style = { fontSize = 18, color = Palette.Gold2 } });
+            skCol.Add(pasRow);
+            botRow.Add(skCol);
+        }
+
+        void BuildAttributeList(Unit u)
+        {
+            var split = new VisualElement { style = { flexDirection = FlexDirection.Row, height = 520 } };
+            var left = ColumnBox(420, 24);
+            left.Add(SectionTitle("Attributes"));
+            foreach (var a in AbilityScores.AllAbilities)
+            {
+                var ab = a;
+                string tip = u.ExplainAbility(ab);
+                var row = StatRow($"{a} · {AbilityName(a)}", null, $"{u.Score(ab)}   {AbilityScores.FormatMod(u.Mod(ab))}", () => ShowTip(tip), 34);
+                left.Add(row);
+                var it = menu.Add(row, a.ToString(), () => ShowTip(tip), tooltip: tip);
+                it.visual = on => row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
+            }
+            split.Add(left);
+            split.Add(DetailPane(460, 480));
+            mainHost.Add(split);
+        }
+
+        void BuildCombatList(Unit u)
+        {
+            mainHost.Add(SectionTitle("Derived Combat Stats"));
+            var grid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, justifyContent = Justify.SpaceBetween, marginBottom = 14 } };
+            foreach (var st in DisplayedDerivedStats)
+            {
+                var stat = st;
+                var def = Database.DerivedStatDefs[st];
+                string tip = GetStatTooltip(stat);
+                var row = StatRow((def.displayName ?? def.shortName).ToUpperInvariant(), null, u.Derived.FormatValue(st), () => ShowTip(tip), 30);
+                row.style.width = 440;
+                grid.Add(row);
+                var it = menu.Add(row, def.shortName, () => ShowTip(tip), tooltip: tip);
+                it.visual = on => row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
+            }
+            mainHost.Add(grid);
+            mainHost.Add(DetailPane(914, 140));
+        }
+
+        void BuildStatusList()
+        {
+            mainHost.Add(SectionTitle("Status Effects"));
+            var lbl = new UiLabel("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.");
+            lbl.style.fontSize = 14;
+            lbl.style.color = Palette.Mist3;
+            lbl.style.whiteSpace = WhiteSpace.Normal;
+            mainHost.Add(lbl);
+        }
+
+        VisualElement DetailPane(int width, int height)
+        {
+            var box = new VisualElement();
+            box.style.width = width;
+            box.style.height = height;
+            box.style.paddingLeft = 14;
+            box.style.paddingRight = 14;
+            box.style.paddingTop = 12;
+            box.style.paddingBottom = 12;
+            box.style.backgroundColor = Palette.Ink2;
+            box.style.borderTopWidth = 2;
+            box.style.borderBottomWidth = 2;
+            box.style.borderLeftWidth = 2;
+            box.style.borderRightWidth = 2;
+            box.style.borderTopColor = Palette.Mist3;
+            box.style.borderBottomColor = Palette.Mist3;
+            box.style.borderLeftColor = Palette.Mist3;
+            box.style.borderRightColor = Palette.Mist3;
+
+            detailLabel = new UiLabel("");
+            detailLabel.style.fontSize = 14;
+            detailLabel.style.color = Palette.Mist2;
+            detailLabel.style.whiteSpace = WhiteSpace.Normal;
+            box.Add(detailLabel);
+            return box;
+        }
+
+        static VisualElement ColumnBox(int width, int marginRight)
+        {
+            return new VisualElement
+            {
+                style = { width = width, marginRight = marginRight, flexDirection = FlexDirection.Column }
+            };
+        }
+
+        static UiLabel SectionTitle(string text)
+        {
+            return new UiLabel(text)
+            {
+                style = { fontSize = 22, color = Palette.Gold2, marginBottom = 10 }
+            };
+        }
+
+        static VisualElement StatRow(string leftText, string midText, string rightText, Action onClick, int height = 30)
+        {
+            var row = new VisualElement();
+            row.style.height = height;
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = UnityEngine.UIElements.Align.Center;
+            row.style.paddingLeft = 4;
+            row.style.paddingRight = 4;
+            row.style.borderBottomWidth = 2;
+            row.style.borderBottomColor = Palette.Ink3;
+
+            var l = new UiLabel(leftText) { style = { flexGrow = 1, fontSize = 14, color = Palette.Mist2 } };
+            row.Add(l);
+            if (!string.IsNullOrEmpty(midText))
+                row.Add(new UiLabel(midText) { style = { fontSize = 13, color = Palette.Mist3, marginRight = 10 } });
+            row.Add(new UiLabel(rightText) { style = { fontSize = 14, color = Palette.Mist1 } });
+
+            if (onClick != null)
+                row.RegisterCallback<PointerDownEvent>(_ => onClick());
+            return row;
+        }
+
+        void ShowTip(string text)
+        {
+            TooltipLabel?.Set(PixelFont.Wrap(text ?? "", 448));
+            if (detailLabel != null)
+                detailLabel.text = (text ?? "").ToUpperInvariant();
+            if (tooltipStrip != null && CurrentTab == Tab.Overview)
+            {
+                bool has = !string.IsNullOrEmpty(text);
+                tooltipStrip.style.display = has ? DisplayStyle.Flex : DisplayStyle.None;
+                if (tooltipText != null) tooltipText.text = (text ?? "").ToUpperInvariant();
             }
         }
 
-        void H2(int x, int y, string text) => Ui.Label(page, text, x, y, Palette.Gold2);
+        void OnFocus(UitkMenu.Item item)
+        {
+            if (item == null) return;
+            focusIndex = menu.items.IndexOf(item);
+            ShowTip(item.tooltip);
+        }
 
         static string Initials(string skillId)
         {
             string name = Database.Skills.TryGetValue(skillId, out var s) ? s.name
                 : Database.Passives.TryGetValue(skillId, out var p) ? p.name : skillId;
+            return InitialsFromName(name);
+        }
+
+        static string InitialsFromName(string name)
+        {
             var words = (name ?? "?").Split(new[] { ' ', '-' }, StringSplitOptions.RemoveEmptyEntries);
             if (words.Length == 0) return "?";
             return (words.Length >= 2 ? $"{words[0][0]}{words[1][0]}" : words[0].Substring(0, Math.Min(2, words[0].Length))).ToUpperInvariant();
@@ -425,94 +665,6 @@ namespace Obscure
             int score = u.Score(a), bonus = score - u.BaseScores[a];
             string bonusTag = bonus != 0 ? $"({(bonus > 0 ? "+" : "")}{bonus})" : "";
             return $"{a} {score,2}  {AbilityScores.FormatMod(u.Mod(a)),2}  {bonusTag}";
-        }
-
-        // ------------------------------------------------------- detail tab lists
-
-        // Attributes tab: every ability with score and modifier; focus shows its source breakdown.
-        void BuildAttributeList(Unit u)
-        {
-            int x = MainX + 10, w = MainW / 2 - 16, y = PanelY + 10;
-            H2(x, y, "Attributes");
-            y += 16;
-            foreach (var a in AbilityScores.AllAbilities)
-            {
-                var ab = a;
-                var row = Ui.Button(page, "", x, y, w, () => ShowTip(u.ExplainAbility(ab)), 20, showCursor: false, style: ButtonStyle.Flat);
-                row.tooltip = u.ExplainAbility(ab);
-                Ui.Label(row.transform, $"{a} · {AbilityName(a)}", 4, 7, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Label(row.transform, $"{u.Score(ab)}   {AbilityScores.FormatMod(u.Mod(ab))}", w - 4, 7, Palette.Mist1, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Rect(page, x, y + 20, w, 1, Palette.Ink3, Ui.Panels + 2);
-                menu.Add(row);
-                y += 23;
-            }
-            DetailPane(x + w + 16, PanelY + 10, MainW - w - 46);
-        }
-
-        // Combat tab: all 16 derived stats; focus shows the formula breakdown.
-        void BuildCombatList(Unit u)
-        {
-            int x = MainX + 10, colW = (MainW - 30) / 2, y0 = PanelY + 26;
-            H2(x, PanelY + 10, "Derived Combat Stats");
-            for (int i = 0; i < DisplayedDerivedStats.Length; i++)
-            {
-                var st = DisplayedDerivedStats[i];
-                var def = Database.DerivedStatDefs[st];
-                int rx = x + (i / 8) * (colW + 10), ry = y0 + (i % 8) * 19;
-                var row = Ui.Button(page, "", rx, ry, colW, () => ShowTip(GetStatTooltip(st)), 17, showCursor: false, style: ButtonStyle.Flat);
-                row.tooltip = GetStatTooltip(st);
-                Ui.Label(row.transform, PixelFont.Fit((def.displayName ?? def.shortName).ToUpperInvariant(), colW - 40, FontKind.Interface), 4, 5, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Label(row.transform, u.Derived.FormatValue(st), colW - 4, 5, Palette.Mist1, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Rect(page, rx, ry + 17, colW, 1, Palette.Ink3, Ui.Panels + 2);
-                menu.Add(row);
-            }
-            DetailPane(x, y0 + 8 * 19 + 8, MainW - 20);
-        }
-
-        void BuildStatusList()
-        {
-            int x = MainX + 10;
-            H2(x, PanelY + 10, "Status Effects");
-            Ui.Label(page, PixelFont.Wrap("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.", MainW - 20, FontKind.Interface), x, PanelY + 28, Palette.Mist3, font: FontKind.Interface);
-        }
-
-        // Fixed formula pane for the Attributes / Combat tabs (.tip without the arrow).
-        void DetailPane(int x, int y, int w)
-        {
-            int h = BodyY + BodyH - y - 8;
-            Ui.Image(page, PixelArt.Box(w, h, Palette.Ink2, Palette.Mist3), x, y, Ui.Panels + 2);
-            detail = Ui.Label(page, "", x + 8, y + 8, Palette.Mist2, order: Ui.Text, font: FontKind.Interface);
-            detailWidth = w - 16;
-        }
-
-        // ------------------------------------------------------------- behaviour
-
-        void ShowTip(string text)
-        {
-            TooltipLabel?.Set(PixelFont.Wrap(text ?? "", 448));
-            detail?.Set(PixelFont.Wrap((text ?? "").ToUpperInvariant(), detailWidth));
-        }
-
-        void OnFocus(Selectable s)
-        {
-            if (s == null) return;
-            focusIndex = menu.items.IndexOf(s);
-            ShowTip(s.tooltip);
-            if (tipBox == null) return;
-
-            // Overview attribute rows float a tooltip (.tip) just below the focused row.
-            bool show = attributeRows.Contains(s);
-            tipBox.gameObject.SetActive(show);
-            tipText.gameObject.SetActive(show);
-            if (!show) return;
-            string text = PixelFont.Wrap((s.tooltip ?? "").ToUpperInvariant(), 170);
-            int h = 10 + (text.Count(c => c == '\n') + 1) * PixelFont.LineHeight;
-            var p = s.transform.localPosition;
-            int x = (int)p.x + 20, y = (int)-p.y + 19;
-            tipBox.sprite = PixelArt.Box(180, h, Palette.Ink2, Palette.Mist3);
-            tipBox.transform.localPosition = new Vector3(x, -y, 0);
-            tipText.Init(tipText.GetComponent<SpriteRenderer>(), x + 6, y + 5, Align.Left, 1, FontKind.Interface);
-            tipText.Set(text);
         }
     }
 }

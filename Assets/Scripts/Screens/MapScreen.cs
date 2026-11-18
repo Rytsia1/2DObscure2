@@ -1,192 +1,552 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Dungeon Map — Starlit Reliquary "K · Dungeon Map" board at 640x360:
-    // run header (Dungeon n of 8 · name · 8 dungeon diamonds · Run progress tag · Run Gold), node map on bricks
-    // (cleared ✓ / current gold / choosable white / locked dashed / final diamond) with legend strip,
-    // side column (focused node info, party vitals, Party + Travel). Esc offers to abandon the expedition.
+    // Dungeon Map — migrated to Figma 12---Dungeon-Map.uxml (1280x720 UI Toolkit)
+    // with procedural Painter2D edges + interactive Map-Node templates and Pause / Abandon modals.
     public class MapScreen : GameScreen
     {
-        const int MapX = 12, MapY = 38, MapW = 451, MapH = 278;
-        const int StartX = 32, X0 = 72, CY = 162, DY = 46, Node = 26;
-        const int SideX = 470, SideW = 158;
+        const float CanvasW = 894f, CanvasH = 502f;
+        const float StartX = 40f, X0 = 124f, XEnd = 828f, CenterY = 250f, StepY = 92f;
 
         MapDef currentMap;
-        readonly Dictionary<Selectable, NodeDef> nodeOf = new Dictionary<Selectable, NodeDef>();
-        Transform info;
-        SpriteRenderer arrow;
-        Selectable travelBtn;
+        readonly Dictionary<UitkMenu.Item, NodeDef> nodeOf = new Dictionary<UitkMenu.Item, NodeDef>();
+        readonly Dictionary<NodeDef, VisualElement> nodeElOf = new Dictionary<NodeDef, VisualElement>();
+        readonly List<(Vector2 a, Vector2 b, LinkState state)> edges = new List<(Vector2, Vector2, LinkState)>();
+
+        UitkMenu menu;
+        VisualElement mapCanvas;
+        VisualElement edgeLayer;
+        UiLabel arrowLbl;
+        UitkMenu.Item travelItem;
+        VisualElement travelInst;
         NodeDef focused;
+
+        VisualElement pauseOverlay;
+
+        enum LinkState { Locked, Open, Done }
 
         protected override void Build()
         {
             var map = currentMap = Run?.Map ?? MapGenerator.Generate(1);
-            Backdrop.Create(Root, false, 0, Palette.Hex(0x141A30), Palette.Hex(0x0B1022));
-            Bricks();
+            MountFigma("12---Dungeon-Map");
+            StripStaticNodesAndPreview();
 
             var available = Run != null ? Run.Available.ToList() : map.nodes.Where(n => n.floor == 0).ToList();
-            var ahead = Ahead(available);
             var current = Run?.Current;
             var cleared = Run?.Cleared ?? new HashSet<string>();
 
-            // 1. Run header
-            Ui.Label(Root, $"DUNGEON {map.act} OF 8", 14, 9, Palette.Mist3, font: FontKind.Interface);
-            Ui.Label(Root, map.name, 14, 18, Palette.Gold2);
-            int dxp = 14 + PixelFont.Measure(map.name, FontKind.DotGothic) + 14;
-            for (int i = 1; i <= 8; i++)
-            {
-                var pip = i < map.act ? PixelArt.Diamond(9, Palette.Mist3)
-                    : i == map.act ? PixelArt.Diamond(9, Palette.Gold2)
-                    : PixelArt.Diamond(9, Palette.Ink5, false);
-                Ui.Image(Root, pip, dxp + (i - 1) * 11, 19, Ui.Text);
-            }
+            // Header
+            var actLbl = UiRoot.Q<UiLabel>(className: "dungeon-1-of-8-vars");
+            if (actLbl != null) actLbl.text = $"DUNGEON {map.act} OF 8";
+
+            var titleLbl = UiRoot.Q<UiLabel>(className: "the-sunken-crypt-vars");
+            if (titleLbl != null) titleLbl.text = map.name;
+
+            var pipLbl = UiRoot.Q<UiLabel>(className: "node-vars-5");
+            if (pipLbl != null) pipLbl.text = string.Concat(Enumerable.Range(1, 8).Select(i => i <= map.act ? "◆" : "◇"));
+
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Ui.CurrencyTagWidth(gold, false);
-            Ui.CurrencyTag(Root, gold, false, 628 - gw, 11);
-            int tw = PixelFont.Measure("RUN PROGRESS", FontKind.Interface) + 8;
-            Ui.Tag(Root, "RUN PROGRESS", 628 - gw - 6 - tw, 14, TagKind.Temp, 13);
+            var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
+            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} RUN GOLD");
 
-            // 2. Map panel
-            Ui.Panel(Root, MapX, MapY, MapW, MapH, Palette.Hex(0x070A14, 224));
-            int dx = (MapW - (X0 - MapX) - 34) / Mathf.Max(1, map.Floors - 1);
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            menu.onBack = OpenPause;
 
-            // Entrance diamond + links
-            Ui.Image(Root, PixelArt.Diamond(13, current == null ? Palette.Gold2 : Palette.Mist3), StartX - 6, CY - 6, Ui.World + 1);
+            // Build procedural edges & nodes
+            float dx = (XEnd - X0) / Mathf.Max(1, map.Floors - 1);
+            edges.Clear();
+
+            var ent = new Vector2(StartX, CenterY);
+            SpawnEntrance(ent, current == null);
             foreach (var n in map.nodes.Where(n => n.floor == 0))
-                Link(new Vector2Int(StartX, CY), Center(n, dx), current == null ? LinkState.Open : cleared.Contains(n.id) ? LinkState.Done : LinkState.Locked);
+            {
+                var state = current == null ? LinkState.Open : cleared.Contains(n.id) ? LinkState.Done : LinkState.Locked;
+                edges.Add((ent, Center(n, dx), state));
+            }
             foreach (var n in map.nodes)
+            {
                 foreach (var id in n.next)
                 {
                     var m = map.Get(id);
                     var state = cleared.Contains(n.id) && cleared.Contains(m.id) ? LinkState.Done
                         : n == current && available.Contains(m) ? LinkState.Open
                         : LinkState.Locked;
-                    Link(Center(n, dx), Center(m, dx), state);
+                    edges.Add((Center(n, dx), Center(m, dx), state));
                 }
-
-            // Legend strip
-            int ly = MapY + MapH - 24;
-            Ui.Rect(Root, MapX + 2, ly, MapW - 4, 1, Palette.Ink4, Ui.Panels + 1);
-            Ui.Rect(Root, MapX + 2, ly + 1, MapW - 4, 21, Palette.Ink1, Ui.Panels + 1);
-            int lx = MapX + 8;
-            foreach (var (glyph, name, dashed) in new[] { ("VS", "COMBAT", false), ("?", "EVENT", false), ("SH", "SHOP", false), ("ZZ", "REST", false), ("TR", "TREASURE", false) })
-            {
-                int bw = PixelFont.Measure(glyph, FontKind.Interface) + 6;
-                Ui.Image(Root, dashed ? PixelArt.DashedBadge(bw, 11, Color.clear, Palette.Mist3) : PixelArt.Badge(bw, 11, Color.clear, Palette.Mist3), lx, ly + 6, Ui.Widget);
-                Ui.Label(Root, glyph, lx + 3, ly + 8, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
-                Ui.Label(Root, name, lx + bw + 3, ly + 8, Palette.Mist2, font: FontKind.Interface);
-                lx += bw + 6 + PixelFont.Measure(name, FontKind.Interface) + 8;
             }
-            Ui.Image(Root, PixelArt.Diamond(11, Palette.Ink4), lx, ly + 6, Ui.Widget);
-            Ui.Label(Root, "FINAL", lx + 14, ly + 8, Palette.Mist2, font: FontKind.Interface);
-            // Gold (current) and white (choosable) read from the nodes themselves; only "dashed" needs saying.
-            Ui.Label(Root, "· DASHED = LOCKED", lx + 14 + PixelFont.Measure("FINAL", FontKind.Interface) + 8, ly + 8, Palette.Mist3, font: FontKind.Interface);
+            edgeLayer.MarkDirtyRepaint();
 
-            // 3. Side column: node info (gold), party, actions
-            info = new GameObject("NodeInfo").transform;
-            info.SetParent(Root, false);
-            Ui.Panel(Root, SideX, MapY, SideW, 132, Palette.Ink2, Palette.Gold3);
-
-            var menu = Root.gameObject.AddComponent<Menu>();
-            menu.onBack = OnAbandonClicked;
-            arrow = Ui.Image(Root, PixelArt.FromRows(new[] { "GGGGGGG", ".GGGGG.", "..GGG..", "...G..." }), 0, 0, Ui.Overlay - 1, Palette.Mist1);
-            arrow.gameObject.SetActive(false);
-
+            nodeOf.Clear();
+            nodeElOf.Clear();
             foreach (var n in map.nodes)
             {
-                var view = NodeView(n, available.Contains(n), dx);
-                nodeOf[view] = n;
-                if (available.Contains(n)) menu.Add(view);
+                bool avail = available.Contains(n);
+                var el = SpawnNode(n, avail, dx, cleared.Contains(n.id), n == current);
+                nodeElOf[n] = el;
+                if (avail)
+                {
+                    var nd = n;
+                    var item = menu.Add(el, TypeName(nd.type), () => Enter(nd));
+                    var nodeEl = el;
+                    item.visual = on =>
+                    {
+                        var col = on ? Palette.Gold1 : Palette.Mist1;
+                        nodeEl.style.borderTopColor = col;
+                        nodeEl.style.borderBottomColor = col;
+                        nodeEl.style.borderLeftColor = col;
+                        nodeEl.style.borderRightColor = col;
+                        nodeEl.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Palette.Ink3;
+                    };
+                    item.visual(false);
+                    nodeOf[item] = nd;
+                }
             }
 
-            // Party panel
-            int py = MapY + 140;
-            Ui.Panel(Root, SideX, py, SideW, 114);
-            Ui.Header(Root, "Party", SideX + 8, py + 6, SideW - 4);
-            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < party.Count && i < 4; i++)
+            // Right party list
+            BindPartyMini();
+
+            // Footer buttons
+            var partyBtn = FigmaUi.FindButton(UiRoot, "Party");
+            if (partyBtn != null)
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(partyBtn, "Party", () => Game.Go(GameState.Party), tooltip: "PARTY, STATUS AND EQUIPMENT"), partyBtn);
+
+            travelInst = UiRoot.Q<VisualElement>(className: "button-primary-2");
+            var primaryBtns = UiRoot.Query<Button>(className: "button-primary-2").ToList();
+            // In 12---Dungeon-Map.uxml the primary button instance holds an inner clickable visual
+            var travelHost = UiRoot.Q<VisualElement>(className: "button-primary-focus") ?? FindPrimaryInstance();
+            if (travelHost != null)
             {
-                var u = party[i];
-                int y = py + 24 + i * 22;
-                Color c = Palette.ForClass(u.classDef?.id);
-                Ui.Image(Root, PixelArt.Box(16, 16, Color.Lerp(c, Palette.Ink1, 0.7f), Palette.Ink5), SideX + 7, y, Ui.Widget);
-                Ui.Rect(Root, SideX + 13, y + 3, 4, 4, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 1);
-                Ui.Rect(Root, SideX + 10, y + 10, 10, 3, c, Ui.Widget + 1);
-                Ui.Label(Root, PixelFont.Fit(u.name, 48, FontKind.DotGothic), SideX + 28, y + 2, u.Alive ? Palette.Mist1 : Palette.HpLow);
-                float hp = (float)u.hp / Mathf.Max(1, u.stats.maxHp);
-                Ui.Image(Root, PixelArt.GaugeBar(SideW - 88, 4, Mathf.Clamp01(hp), hp < 0.25f ? Palette.HpLow : Palette.Hp), SideX + 80, y + 3, Ui.Widget);
-                Ui.Image(Root, PixelArt.GaugeBar(SideW - 88, 4, (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp), SideX + 80, y + 9, Ui.Widget);
+                travelInst = travelHost;
+                travelItem = menu.Add(travelHost, "Travel", () => { if (focused != null) Enter(focused); });
+                travelItem.visual = on =>
+                {
+                    FigmaUi.SetInstanceText(travelHost, "text-0", on ? "▸" : "");
+                    var innerBtn = travelHost.Q<VisualElement>(className: "button-primary-2") ?? travelHost;
+                    innerBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
+                    innerBtn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
+                    innerBtn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
+                    innerBtn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
+                };
+                travelItem.visual(false);
             }
 
-            // Actions
-            var partyBtn = Ui.Button(Root, "Party", SideX, 324, 50, () => Game.Go(GameState.Party), 22, showCursor: false);
-            partyBtn.tooltip = "PARTY, STATUS AND EQUIPMENT";
-            menu.Add(partyBtn);
-            travelBtn = Ui.Button(Root, "Travel", SideX + 56, 324, SideW - 56, () => { if (focused != null) Enter(focused); }, 22, showCursor: false, style: ButtonStyle.Primary);
-            menu.Add(travelBtn);
+            menu.onFocus = item =>
+            {
+                if (item != null && nodeOf.TryGetValue(item, out var nd))
+                    ShowNode(nd, nodeElOf[nd]);
+            };
 
-            int hx = Ui.KeyHint(Root, MapX, 328, "CHOOSE PATH", "UP", "DN");
-            hx = Ui.KeyHint(Root, hx, 328, "TRAVEL", "ENTER");
-            Ui.KeyHint(Root, hx, 328, "PAUSE", "ESC");
-
-            menu.onFocus = s => { if (nodeOf.TryGetValue(s, out var nd)) ShowNode(nd, s); };
-            if (available.Count > 0) ShowNode(available[0], nodeOf.First(kv => kv.Value == available[0]).Key);
+            if (available.Count > 0) ShowNode(available[0], nodeElOf[available[0]]);
             else ShowNode(null, null);
         }
 
-        // Brick wall texture behind the map (.bricks)
-        void Bricks()
+        VisualElement FindPrimaryInstance()
         {
-            var col = Palette.Hex(0x0B1022);
-            for (int y = 15; y < Ui.Height; y += 16) Ui.Rect(Root, 0, y, Ui.Width, 1, col, Ui.Back + 1);
-            for (int y = 0; y < Ui.Height; y += 16)
-                for (int x = (y / 16) % 2 * 16; x < Ui.Width; x += 32) Ui.Rect(Root, x, y, 1, 15, col, Ui.Back + 1);
+            foreach (var l in UiRoot.Query<UiLabel>().ToList())
+                if (l.text == "Travel to Combat") return l.parent;
+            return null;
         }
 
-        void ShowNode(NodeDef n, Selectable view)
+        void StripStaticNodesAndPreview()
+        {
+            var screen = UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot;
+            var mapPanel = UiRoot.Q<VisualElement>(className: "map-field-vars");
+
+            // Hide baked edge image wrapper and baked static nodes inside Figma UXML
+            foreach (var cls in new[] { "map-node", "map-node-2", "map-node-3", "sprite-iconboss", "node-vars-6" })
+            {
+                foreach (var el in UiRoot.Query<VisualElement>(className: cls).ToList())
+                    el.style.display = DisplayStyle.None;
+            }
+
+            // Hide sibling baked PNG wrappers / entrance / boss diamond SVGs between map-field-vars (idx+1) and rectangle-vars-90
+            if (mapPanel != null)
+            {
+                int startIdx = screen.IndexOf(mapPanel) + 1;
+                var sep = UiRoot.Q<VisualElement>(className: "rectangle-vars-90");
+                int endIdx = sep != null ? screen.IndexOf(sep) : startIdx;
+                for (int i = startIdx; i < endIdx; i++)
+                    screen[i].style.display = DisplayStyle.None;
+            }
+
+            mapCanvas = new VisualElement { name = "DynamicMapCanvas" };
+            mapCanvas.style.position = Position.Absolute;
+            mapCanvas.style.left = 28;
+            mapCanvas.style.top = 80;
+            mapCanvas.style.width = CanvasW;
+            mapCanvas.style.height = CanvasH;
+            mapCanvas.style.overflow = Overflow.Hidden;
+
+            edgeLayer = new VisualElement { name = "MapEdges" };
+            edgeLayer.style.position = Position.Absolute;
+            edgeLayer.style.left = 0;
+            edgeLayer.style.top = 0;
+            edgeLayer.style.width = CanvasW;
+            edgeLayer.style.height = CanvasH;
+            edgeLayer.generateVisualContent += DrawEdges;
+            mapCanvas.Add(edgeLayer);
+
+            arrowLbl = new UiLabel("▾");
+            arrowLbl.style.position = Position.Absolute;
+            arrowLbl.style.fontSize = 20;
+            arrowLbl.style.color = Palette.Mist1;
+            arrowLbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            arrowLbl.style.width = 24;
+            arrowLbl.style.display = DisplayStyle.None;
+            mapCanvas.Add(arrowLbl);
+
+            // Insert mapCanvas right above map-field-vars so side panels and legend stay on top cleanly
+            if (mapPanel != null)
+                screen.Insert(screen.IndexOf(mapPanel) + 1, mapCanvas);
+            else
+                screen.Add(mapCanvas);
+        }
+
+        void DrawEdges(MeshGenerationContext ctx)
+        {
+            var p = ctx.painter2D;
+            p.lineWidth = 2.5f;
+            foreach (var (a, b, state) in edges)
+            {
+                float len = Vector2.Distance(a, b);
+                if (len < 30f) continue;
+                p.strokeColor = state == LinkState.Done ? Palette.Mist3 : state == LinkState.Open ? Palette.Mist1 : Palette.Ink5;
+
+                if (state == LinkState.Done)
+                {
+                    var p0 = Vector2.Lerp(a, b, 18f / len);
+                    var p1 = Vector2.Lerp(a, b, (len - 18f) / len);
+                    p.BeginPath();
+                    p.MoveTo(p0);
+                    p.LineTo(p1);
+                    p.Stroke();
+                }
+                else
+                {
+                    for (float d = 18f; d < len - 22f; d += 12f)
+                    {
+                        float d2 = Mathf.Min(d + 6f, len - 18f);
+                        p.BeginPath();
+                        p.MoveTo(Vector2.Lerp(a, b, d / len));
+                        p.LineTo(Vector2.Lerp(a, b, d2 / len));
+                        p.Stroke();
+                    }
+                }
+            }
+        }
+
+        void SpawnEntrance(Vector2 c, bool isStart)
+        {
+            var dia = new UiLabel("◆");
+            dia.style.position = Position.Absolute;
+            dia.style.left = c.x - 12;
+            dia.style.top = c.y - 14;
+            dia.style.width = 24;
+            dia.style.height = 24;
+            dia.style.fontSize = 24;
+            dia.style.unityTextAlign = TextAnchor.MiddleCenter;
+            dia.style.color = isStart ? Palette.Gold2 : Palette.Mist3;
+            mapCanvas.Add(dia);
+        }
+
+        VisualElement SpawnNode(NodeDef n, bool available, float dx, bool cleared, bool current)
+        {
+            bool boss = n.type == NodeType.Boss;
+            float size = boss ? 62f : 50f;
+            var c = Center(n, dx);
+
+            string templateKey = current ? "Map-Node-Current" : available ? "Map-Node-Choosable" : "Map-Node-Locked";
+            var el = FigmaUi.InstantiateTemplate(templateKey) ?? new VisualElement();
+            el.style.position = Position.Absolute;
+            el.style.left = c.x - size / 2f;
+            el.style.top = c.y - size / 2f;
+            el.style.width = size;
+            el.style.height = size;
+            el.style.justifyContent = Justify.Center;
+            el.style.alignItems = UnityEngine.UIElements.Align.Center;
+
+            FigmaUi.SetInstanceText(el, "text-0", Glyph(n.type));
+            var txtLbl = el.Q<UiLabel>("text-0");
+            if (txtLbl != null)
+            {
+                txtLbl.style.color = current ? Palette.Gold1 : available ? Palette.Mist1 : cleared ? Palette.Mist3 : Palette.Ink5;
+                if (boss) txtLbl.style.fontSize = 20;
+            }
+
+            if (boss)
+            {
+                el.style.backgroundColor = available ? Palette.Ink3 : current ? Palette.Hex(0x2B2210) : Palette.Ink2;
+                el.style.borderTopWidth = 2;
+                el.style.borderBottomWidth = 2;
+                el.style.borderLeftWidth = 2;
+                el.style.borderRightWidth = 2;
+                var col = available ? Palette.Gold1 : Palette.Ink5;
+                el.style.borderTopColor = col;
+                el.style.borderBottomColor = col;
+                el.style.borderLeftColor = col;
+                el.style.borderRightColor = col;
+            }
+            else if (cleared)
+            {
+                el.style.borderTopColor = Palette.Mist3;
+                el.style.borderBottomColor = Palette.Mist3;
+                el.style.borderLeftColor = Palette.Mist3;
+                el.style.borderRightColor = Palette.Mist3;
+                var chk = new UiLabel("✓");
+                chk.style.position = Position.Absolute;
+                chk.style.right = -6;
+                chk.style.top = -6;
+                chk.style.width = 18;
+                chk.style.height = 18;
+                chk.style.fontSize = 12;
+                chk.style.unityTextAlign = TextAnchor.MiddleCenter;
+                chk.style.backgroundColor = Palette.Mist3;
+                chk.style.color = Palette.Ink0;
+                el.Add(chk);
+            }
+
+            if (current)
+            {
+                var you = new UiLabel("YOU");
+                you.style.position = Position.Absolute;
+                you.style.top = -18;
+                you.style.paddingLeft = 5;
+                you.style.paddingRight = 5;
+                you.style.fontSize = 10;
+                you.style.backgroundColor = Palette.Gold2;
+                you.style.color = Palette.Ink0;
+                el.Add(you);
+            }
+
+            mapCanvas.Add(el);
+            return el;
+        }
+
+        Vector2 Center(NodeDef n, float dx)
+        {
+            int count = currentMap.nodes.Count(m => m.floor == n.floor);
+            return new Vector2(X0 + n.floor * dx, CenterY + (n.lane - (count - 1) / 2f) * StepY);
+        }
+
+        void ShowNode(NodeDef n, VisualElement view)
         {
             focused = n;
-            foreach (Transform c in info.Cast<Transform>().ToList())
-            {
-                if (Application.isPlaying) Object.Destroy(c.gameObject);
-                else Object.DestroyImmediate(c.gameObject);
-            }
-            int x = SideX + 8, w = SideW - 16, y = MapY + 24;
-            Ui.Header(info, n == null ? "Select a path" : $"{TypeName(n.type)} node", SideX + 8, MapY + 6, SideW - 4);
-            string desc = PixelFont.Wrap(n == null ? "NO PATH IS OPEN." : Describe(n), w);
-            Ui.Label(info, desc, x, y, Palette.Mist1, font: FontKind.Interface);
-            y += (desc.Count(c => c == '\n') + 1) * PixelFont.LineHeight + 4;
-            if (n != null)
-            {
-                Ui.Label(info, "CURRENCY", x, y + 2, Palette.Mist2, font: FontKind.Interface);
-                if (n.type == NodeType.Shop) Ui.Tag(info, "RUN GOLD", x + w - PixelFont.Measure("RUN GOLD", FontKind.Interface) - 8, y, TagKind.Temp);
-                else Ui.Label(info, "—", x + w, y + 2, Palette.Mist3, Align.Right, font: FontKind.Interface);
-                Ui.Rect(info, x, y + 12, w, 1, Palette.Ink3, Ui.Panels + 2);
-                y += 15;
-                Ui.Label(info, "RISK", x, y + 2, Palette.Mist2, font: FontKind.Interface);
-                Ui.Label(info, Risk(n.type), x + w, y + 2, n.type == NodeType.Boss || n.type == NodeType.Elite ? Palette.Err : Palette.Mist1, Align.Right, font: FontKind.Interface);
-                Ui.Rect(info, x, y + 12, w, 1, Palette.Ink3, Ui.Panels + 2);
-            }
-            Ui.Image(info, PixelArt.Badge(w, 22, Palette.Ink0, Palette.Ink4), x, MapY + 104, Ui.Panels + 2);
-            Ui.Label(info, "!", x + 5, MapY + 111, Palette.Gold2, font: FontKind.Interface);
-            Ui.Label(info, PixelFont.Wrap("ONE-WAY: OTHER PATHS CLOSE ONCE YOU MOVE.", w - 16, FontKind.Interface), x + 12, MapY + 107, Palette.Mist2, font: FontKind.Interface);
+            var hdr = UiRoot.Q<VisualElement>(className: "section-header__i-12");
+            if (hdr != null) FigmaUi.SetInstanceText(hdr, "text-0", n == null ? "Select a path" : $"{TypeName(n.type)} node");
 
-            if (travelBtn != null)
+            var descLbl = UiRoot.Q<UiLabel>(className: "gravebound-archer-hollow-squire-vars");
+            if (descLbl != null) descLbl.text = n == null ? "NO PATH IS OPEN." : Describe(n);
+
+            var curLbl = UiRoot.Q<UiLabel>(className: "node-vars-7");
+            if (curLbl != null)
             {
-                travelBtn.interactable = n != null;
-                travelBtn.label.Set(n == null ? "Travel" : PixelFont.Fit($"Travel to {TypeName(n.type)}", SideW - 66, FontKind.DotGothic));
-                travelBtn.visual(travelBtn.menu != null && travelBtn.menu.Current == travelBtn);
+                curLbl.text = n != null && n.type == NodeType.Shop ? "RUN GOLD" : "—";
+                curLbl.style.color = n != null && n.type == NodeType.Shop ? Palette.Ember1 : Palette.Mist3;
+                curLbl.style.left = n != null && n.type == NodeType.Shop ? 1152 : 1226;
             }
-            if (view != null)
+
+            var riskLbl = UiRoot.Q<UiLabel>(className: "combat-vars-2");
+            if (riskLbl != null)
             {
-                arrow.gameObject.SetActive(true);
-                var p = view.transform.localPosition;
-                arrow.transform.localPosition = new Vector3(p.x + view.size.x / 2 - 3, p.y + 10, 0);
+                riskLbl.text = n == null ? "—" : Risk(n.type);
+                riskLbl.style.color = n != null && (n.type == NodeType.Boss || n.type == NodeType.Elite) ? Palette.Err : Palette.Mist1;
             }
-            else arrow.gameObject.SetActive(false);
+
+            if (travelInst != null)
+            {
+                string label = n == null ? "Travel" : $"Travel to {TypeName(n.type)}";
+                FigmaUi.SetInstanceText(travelInst, "text-1", label);
+            }
+            if (travelItem != null)
+                travelItem.interactable = n != null;
+
+            if (view != null && arrowLbl != null)
+            {
+                arrowLbl.style.display = DisplayStyle.Flex;
+                arrowLbl.style.left = view.style.left.value.value + view.style.width.value.value / 2f - 12f;
+                arrowLbl.style.top = view.style.top.value.value - 22f;
+                arrowLbl.BringToFront();
+            }
+            else if (arrowLbl != null)
+            {
+                arrowLbl.style.display = DisplayStyle.None;
+            }
+        }
+
+        void BindPartyMini()
+        {
+            string[] spriteClasses = { "sprite-knight", "sprite-rogue", "sprite-mage", "sprite-healer" };
+            string[] nameClasses = { "knight-vars-3", "rogue-vars-3", "mage-vars-3", "healer-vars-3" };
+            var hpGauges = UiRoot.Query<VisualElement>(className: "gauge-hp").ToList();
+            var mpGauges = UiRoot.Query<VisualElement>(className: "gauge-mp").ToList();
+            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+
+            for (int i = 0; i < 4; i++)
+            {
+                var fig = UiRoot.Q<VisualElement>(className: spriteClasses[i]);
+                var nLbl = UiRoot.Q<UiLabel>(className: nameClasses[i]);
+                var hpG = i < hpGauges.Count ? hpGauges[i] : null;
+                var mpG = i < mpGauges.Count ? mpGauges[i] : null;
+                if (i >= party.Count)
+                {
+                    if (fig?.parent != null) fig.parent.style.display = DisplayStyle.None;
+                    if (nLbl != null) nLbl.style.display = DisplayStyle.None;
+                    if (hpG != null) hpG.style.display = DisplayStyle.None;
+                    if (mpG != null) mpG.style.display = DisplayStyle.None;
+                    continue;
+                }
+                var u = party[i];
+                if (fig != null && u.sprite != null && u.sprite.Length > 0)
+                    FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "map_mini_" + (u.classDef?.id ?? u.name)));
+                if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow; }
+                float hp = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
+                FigmaUi.SetGaugeFill(hpG, hp, hp < 0.25f ? Palette.HpLow : Palette.Hp);
+                FigmaUi.SetGaugeFill(mpG, (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp);
+            }
+        }
+
+        // ------------------------------------------------------------ Pause & Abandon modals
+
+        void CloseModals()
+        {
+            pauseOverlay?.RemoveFromHierarchy();
+            pauseOverlay = null;
+        }
+
+        void OpenPause()
+        {
+            CloseModals();
+            pauseOverlay = new VisualElement { name = "MapPauseOverlay" };
+            pauseOverlay.style.position = Position.Absolute;
+            pauseOverlay.style.left = 0;
+            pauseOverlay.style.top = 0;
+            pauseOverlay.style.right = 0;
+            pauseOverlay.style.bottom = 0;
+            pauseOverlay.style.backgroundColor = Palette.Hex(0x05070F, 204);
+            pauseOverlay.style.justifyContent = Justify.Center;
+            pauseOverlay.style.alignItems = UnityEngine.UIElements.Align.Center;
+
+            var card = new VisualElement();
+            card.style.width = 430;
+            card.style.paddingLeft = 22;
+            card.style.paddingRight = 22;
+            card.style.paddingTop = 20;
+            card.style.paddingBottom = 18;
+            card.style.backgroundColor = Palette.Ink2;
+            card.style.borderTopWidth = 2;
+            card.style.borderBottomWidth = 2;
+            card.style.borderLeftWidth = 2;
+            card.style.borderRightWidth = 2;
+            card.style.borderTopColor = Palette.Gold3;
+            card.style.borderBottomColor = Palette.Gold3;
+            card.style.borderLeftColor = Palette.Gold3;
+            card.style.borderRightColor = Palette.Gold3;
+
+            var title = new UiLabel("Paused");
+            title.style.fontSize = 30;
+            title.style.color = Palette.Gold2;
+            title.style.marginBottom = 14;
+            card.Add(title);
+
+            var modalMenu = Root.gameObject.AddComponent<UitkMenu>();
+            modalMenu.AttachRoot(UiRoot);
+            Action closePause = () =>
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(modalMenu);
+                else UnityEngine.Object.DestroyImmediate(modalMenu);
+                CloseModals();
+            };
+            modalMenu.onBack = closePause;
+
+            void AddPauseRow(string text, Action go, bool enabled = true, string note = null, Color? tint = null)
+            {
+                var row = new VisualElement();
+                row.style.height = 36;
+                row.style.paddingLeft = 10;
+                row.style.paddingRight = 10;
+                row.style.marginBottom = 4;
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = UnityEngine.UIElements.Align.Center;
+                row.style.borderTopWidth = 1;
+                row.style.borderBottomWidth = 1;
+                row.style.borderLeftWidth = 1;
+                row.style.borderRightWidth = 1;
+
+                var lbl = new UiLabel(text)
+                {
+                    style = { flexGrow = 1, fontSize = 18, color = !enabled ? Palette.Mist3 : (tint ?? Palette.Mist1) }
+                };
+                row.Add(lbl);
+                if (!string.IsNullOrEmpty(note))
+                    row.Add(new UiLabel(note) { style = { fontSize = 12, color = Palette.Mist3 } });
+                card.Add(row);
+
+                var item = modalMenu.Add(row, text, go, interactable: enabled);
+                item.visual = on =>
+                {
+                    row.style.backgroundColor = on && enabled ? Palette.Hex(0x2B2210) : Color.clear;
+                    var b = on && enabled ? Palette.Gold2 : Color.clear;
+                    row.style.borderTopColor = b;
+                    row.style.borderBottomColor = b;
+                    row.style.borderLeftColor = b;
+                    row.style.borderRightColor = b;
+                    if (enabled) lbl.style.color = on ? Palette.Gold1 : (tint ?? Palette.Mist1);
+                };
+                item.visual(false);
+            }
+
+            AddPauseRow("Resume", closePause, true, "ESC");
+            AddPauseRow("QTE Assists", () => { closePause(); Game.Go(GameState.Settings); });
+            AddPauseRow("Settings", () => { closePause(); Game.Go(GameState.Settings); });
+            AddPauseRow("Save Game", null, false, "HUB ONLY");
+            AddPauseRow("Load Game", null, false, "HUB OR MAIN MENU");
+
+            var sep = new VisualElement { style = { height = 2, backgroundColor = Palette.Ink5, marginTop = 6, marginBottom = 6 } };
+            card.Add(sep);
+
+            AddPauseRow("Return to Hub...", () => { closePause(); OpenAbandon(); }, true, "ABANDON", Palette.Hex(0xFFC7BB));
+
+            int gold = Run != null ? Run.Gold : 0;
+            var footer = new VisualElement { style = { marginTop = 10, paddingTop = 8, borderTopWidth = 1, borderTopColor = Palette.Ink4 } };
+            footer.Add(new UiLabel($"DUNGEON {Run?.Act ?? 1} OF 8 · NODE {Run?.Floor ?? 1} · {gold} RUN GOLD")
+            {
+                style = { fontSize = 12, color = Palette.Mist2, marginBottom = 4 }
+            });
+            footer.Add(new UiLabel("DUNGEON RUNS CAN'T BE SAVED OR RESUMED. PROGRESS IS COMMITTED ONLY BY DUNGEON CLEAR.")
+            {
+                style = { fontSize = 11, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal }
+            });
+            card.Add(footer);
+
+            pauseOverlay.Add(card);
+            UiRoot.Add(pauseOverlay);
+        }
+
+        void OpenAbandon()
+        {
+            int act = Run?.Act ?? 1, gold = Run != null ? Run.Gold : 0;
+            string body = $"DUNGEON {act} ENDS AND CAN'T BE RESUMED.\n\n" +
+                $"LOST: RUN GOLD {gold}, EXP, SP, SKILLS AND ITEMS GAINED IN THIS DUNGEON.\n" +
+                (act > 1 ? $"KEPT: EVERYTHING COMMITTED BY DUNGEONS 1-{act - 1}, HUB GOLD AND RELICS." : "KEPT: HUB GOLD AND RELICS.");
+
+            FigmaUi.ShowConfirmationModal(
+                UiRoot,
+                "Return to Hub?",
+                body,
+                "Return to Hub",
+                () =>
+                {
+                    Run?.AbandonExpedition();
+                    Game.Go(GameState.Hub);
+                },
+                OpenPause);
         }
 
         static string TypeName(NodeType t) => t switch
@@ -209,192 +569,6 @@ namespace Obscure
             NodeType.Battle => "VS", NodeType.Elite => "VS", NodeType.Event => "?", NodeType.Shop => "SH",
             NodeType.Rest => "ZZ", NodeType.Treasure => "TR", _ => "!",
         };
-
-        // ------------------------------------------------------------ U · Pause
-
-        GameObject pause;
-        bool abandonOpen;
-
-        // Esc on the map opens the pause menu (Starlit Reliquary "U · Pause Menu (dungeon)").
-        void OnAbandonClicked() { abandonOpen = false; OpenPause(); }
-
-        void ClosePause()
-        {
-            if (pause == null) return;
-            if (Application.isPlaying) Object.Destroy(pause);
-            else Object.DestroyImmediate(pause);
-            pause = null;
-        }
-
-        void OpenPause()
-        {
-            ClosePause();
-            pause = new GameObject("Pause");
-            pause.transform.SetParent(Root, false);
-            var t = pause.transform;
-            int O = Ui.Overlay;
-            Ui.Rect(t, 0, 0, Ui.Width, Ui.Height, Palette.Hex(0x05070F, 204), O - 6);
-
-            // Pause panel (gold)
-            const int px = 75, py = 45, pw = 210, ph = 252;
-            Ui.Image(t, PixelArt.Box(pw, ph, Palette.Ink2, Palette.Gold3), px, py, O - 5);
-            Ui.Label(t, "Paused", px + 10, py + 10, Palette.Gold2, Align.Left, 2, FontKind.DotGothic, O);
-            var menu = pause.AddComponent<Menu>();
-            menu.onBack = () => { if (abandonOpen) { abandonOpen = false; OpenPause(); } else ClosePause(); };
-
-            int y = py + 38;
-            Selectable Item(string text, System.Action go, bool enabled = true, string note = null, Color? ink = null)
-            {
-                var b = Ui.Button(t, text, px + 22, y, pw - 30, go, 18, interactable: enabled, style: ButtonStyle.Flat);
-                foreach (var sr in b.GetComponentsInChildren<SpriteRenderer>(true)) sr.sortingOrder += O;
-                if (ink.HasValue && enabled)
-                {
-                    var baseVisual = b.visual;
-                    b.visual = on => { baseVisual(on); if (!on) b.label.Color = ink.Value; };
-                    b.visual(false);
-                }
-                if (note != null) Ui.Label(b.transform, note, pw - 34, 6, Palette.Mist3, Align.Right, order: O + Ui.Widget + 1, font: FontKind.Interface);
-                y += 20;
-                if (enabled) menu.Add(b);
-                return b;
-            }
-            var resume = Item("Resume", ClosePause);
-            Ui.Badge(resume.transform, "ESC", pw - 54, 3, 20, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, order: O + Ui.Widget + 1, font: FontKind.Interface);
-            Item("QTE Assists", () => Game.Go(GameState.Settings));
-            Item("Settings", () => Game.Go(GameState.Settings));
-            Item("Save Game", null, false, "HUB ONLY");
-            Item("Load Game", null, false, "HUB OR MAIN MENU");
-            y += 4;
-            Ui.Rect(t, px + 10, y - 2, pw - 20, 1, Palette.Ink5, O - 4);
-            y += 4;
-            Item("Return to Hub...", () => { abandonOpen = true; OpenPause(); }, true, "ABANDON", Palette.Hex(0xFFC7BB));
-
-            // Footer: where you are, Run Gold, assist note
-            int fy = py + ph - 62;
-            Ui.Rect(t, px + 2, fy, pw - 4, 1, Palette.Ink4, O - 4);
-            Ui.Label(t, $"DUNGEON {Run?.Act ?? 1} OF 8 · NODE {Run?.Floor ?? 1}", px + 10, fy + 8, Palette.Mist2, order: O, font: FontKind.Interface);
-            int gold = Run != null ? Run.Gold : 0;
-            Ui.Image(t, PixelArt.Coin(7, false), px + pw - 18 - PixelFont.Measure(gold.ToString(), FontKind.Interface), fy + 8, O);
-            Ui.Label(t, gold.ToString(), px + pw - 10, fy + 8, Palette.Ember1, Align.Right, order: O, font: FontKind.Interface);
-            var assist = (Game?.Settings ?? GameSettings.Load()).Assist;
-            if (assist != QteAssist.Standard)
-            {
-                int aw = Ui.Tag(t, "ASSIST", px + 10, fy + 20, TagKind.Temp, 11, O);
-                Ui.Label(t, $"{assist.ToString().ToUpperInvariant()} ACTIVE · NOTED ON RUN SUMMARY", px + 14 + aw, fy + 22, Palette.Mist2, order: O, font: FontKind.Interface);
-            }
-            Ui.Label(t, PixelFont.Wrap("DUNGEON RUNS CAN'T BE SAVED OR RESUMED. PROGRESS IS COMMITTED ONLY BY DUNGEON CLEAR.", pw - 20, FontKind.Interface), px + 10, fy + 36, Palette.Mist3, order: O, font: FontKind.Interface);
-
-            if (abandonOpen) BuildAbandon(t, O);
-        }
-
-        // "Return to Hub?" dialog (.dlg, ember frame): what is lost vs kept.
-        void BuildAbandon(Transform t, int O)
-        {
-            const int dx = 320, dy = 105, dw = 270, dh = 118;
-            Ui.Image(t, PixelArt.Box(dw, dh, Palette.Ink2, Palette.Ember2), dx, dy, O + 50);
-            Ui.Label(t, "Return to Hub?", dx + 10, dy + 9, Palette.Gold1, order: O + 51);
-            int act = Run?.Act ?? 1, gold = Run != null ? Run.Gold : 0;
-            Ui.Label(t, $"DUNGEON {act} ENDS AND CAN'T BE RESUMED.", dx + 10, dy + 26, Palette.Mist1, order: O + 51, font: FontKind.Interface);
-            int lw = Ui.Tag(t, "LOST", dx + 10, dy + 39, TagKind.Temp, 11, O + 51);
-            Ui.Label(t, PixelFont.Wrap($"RUN GOLD {gold}, AND THE EXP, SP, SKILLS AND ITEMS GAINED IN THIS DUNGEON.", dw - lw - 26, FontKind.Interface), dx + 16 + lw, dy + 41, Palette.Mist2, order: O + 51, font: FontKind.Interface);
-            int kw = Ui.Tag(t, "KEPT", dx + 10, dy + 62, TagKind.Keep, 11, O + 51);
-            Ui.Label(t, PixelFont.Wrap(act > 1 ? $"EVERYTHING COMMITTED BY DUNGEONS 1-{act - 1}, HUB GOLD AND RELICS." : "HUB GOLD AND RELICS.", dw - kw - 26, FontKind.Interface), dx + 16 + kw, dy + 64, Palette.Mist2, order: O + 51, font: FontKind.Interface);
-            Ui.Rect(t, dx + 2, dy + dh - 30, dw - 4, 28, Palette.Ink1, O + 51);
-            Ui.Rect(t, dx + 2, dy + dh - 30, dw - 4, 1, Palette.Ink4, O + 51);
-
-            var go = new GameObject("AbandonDialog");
-            go.transform.SetParent(t, false);
-            var menu = go.AddComponent<Menu>();
-            menu.onBack = () => { abandonOpen = false; OpenPause(); };
-            var leave = Ui.Button(t, "Return to Hub", dx + dw - 226, dy + dh - 25, 96, () =>
-            {
-                Run?.AbandonExpedition();
-                Game.Go(GameState.Hub);
-            }, 20, showCursor: false, style: ButtonStyle.Danger);
-            var stay = Ui.Button(t, "Continue Expedition", dx + dw - 124, dy + dh - 25, 114, () => { abandonOpen = false; ClosePause(); }, 20, showCursor: false, style: ButtonStyle.Primary);
-            foreach (var b in new[] { leave, stay })
-                foreach (var sr in b.GetComponentsInChildren<SpriteRenderer>(true)) sr.sortingOrder += O + 50;
-            menu.Add(leave);
-            menu.Add(stay);
-            menu.Focus(1, false, true);
-        }
-
-        HashSet<NodeDef> Ahead(List<NodeDef> from)
-        {
-            var seen = new HashSet<NodeDef>();
-            var stack = new Stack<NodeDef>(from);
-            while (stack.Count > 0)
-            {
-                var n = stack.Pop();
-                if (!seen.Add(n)) continue;
-                foreach (var id in n.next) stack.Push(currentMap.Get(id));
-            }
-            return seen;
-        }
-
-        Vector2Int Center(NodeDef n, int dx)
-        {
-            int count = currentMap.nodes.Count(m => m.floor == n.floor);
-            return new Vector2Int(X0 + n.floor * dx, CY + Mathf.RoundToInt((n.lane - (count - 1) / 2f) * DY));
-        }
-
-        enum LinkState { Locked, Open, Done }
-
-        // Path between nodes (.lnk): done = solid mist, open = dashed white, locked = dashed ink.
-        void Link(Vector2Int a, Vector2Int b, LinkState state)
-        {
-            float len = Vector2.Distance(a, b);
-            Color color = state == LinkState.Done ? Palette.Mist3 : state == LinkState.Open ? Palette.Mist1 : Palette.Ink5;
-            for (float d = 15; d < len - 14; d += 1)
-            {
-                if (state != LinkState.Done && (int)d % 7 >= 4) continue;
-                var p = Vector2.Lerp(a, b, d / len);
-                Ui.Image(Root, PixelArt.Pixel, Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y), Ui.World, color).transform.localScale = new Vector3(2, 2, 1);
-            }
-        }
-
-        // Map node (.nd): cleared = muted + ✓, current = gold + YOU, choosable = white frame, ahead/locked = dashed ink; final = diamond.
-        Selectable NodeView(NodeDef n, bool available, int dx)
-        {
-            bool boss = n.type == NodeType.Boss;
-            int size = boss ? 34 : Node;
-            var c = Center(n, dx);
-            bool cleared = Run != null && Run.Cleared.Contains(n.id);
-            bool current = Run != null && n == Run.Current;
-
-            var go = new GameObject("Node:" + n.id);
-            go.transform.SetParent(Root, false);
-            go.transform.localPosition = new Vector3(c.x - size / 2, -(c.y - size / 2), 0);
-
-            var box = Ui.Image(go.transform, null, 0, 0, Ui.Widget);
-            Color ink = current ? Palette.Gold1 : available ? Palette.Mist1 : cleared ? Palette.Mist3 : Palette.Ink5;
-            if (boss) Ui.Image(go.transform, PixelArt.FromRows(Art.Icon(n.type)), (size - 9) / 2, (size - 9) / 2, Ui.Widget + 1, available || current ? Palette.Mist1 : Palette.Mist3);
-            else Ui.Label(go.transform, Glyph(n.type), size / 2, (size - PixelFont.GlyphHeight) / 2, ink, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
-            if (n.type == NodeType.Elite && !boss) Ui.Rect(go.transform, size / 2 - 4, size - 6, 8, 1, ink, Ui.Widget + 1);
-            if (cleared)
-            {
-                Ui.Image(go.transform, PixelArt.Badge(9, 9, Palette.Mist3, Palette.Mist3), size - 5, -4, Ui.Widget + 2);
-                Ui.Label(go.transform, "✓", size - 3, -3, Palette.Ink0, order: Ui.Widget + 3, font: FontKind.Interface);
-            }
-            if (current) Ui.Badge(go.transform, "YOU", size / 2 - 12, -15, 24, 11, Palette.Gold2, Palette.Gold2, Palette.Ink0, font: FontKind.Interface);
-
-            Color fill = current ? Palette.Hex(0x2B2210) : available ? Palette.Ink4 : cleared ? Palette.Ink3 : boss ? Palette.Ink4 : Palette.Ink1;
-            Color border = current ? Palette.Gold2 : available ? Palette.Mist1 : cleared ? Palette.Mist3 : Palette.Ink5;
-            var ring = Ui.Image(go.transform, null, -2, -2, Ui.Widget - 1);
-            var sel = go.AddComponent<Selectable>();
-            sel.size = new Vector2Int(size, size);
-            if (!Selectable.All.Contains(sel)) Selectable.All.Add(sel);
-            sel.visual = on =>
-            {
-                if (boss) box.sprite = PixelArt.Diamond(size, on ? Palette.Gold2 : fill);
-                else box.sprite = available || current || cleared ? PixelArt.Badge(size, size, fill, on ? Palette.Gold1 : border) : PixelArt.DashedBadge(size, size, fill, border);
-                ring.sprite = current && !boss ? PixelArt.Badge(size + 4, size + 4, Color.clear, Palette.Gold3) : null;
-            };
-            sel.visual(false);
-            sel.interactable = available;
-            if (available) sel.onClick = () => Enter(n);
-            return sel;
-        }
 
         static void Enter(NodeDef n)
         {

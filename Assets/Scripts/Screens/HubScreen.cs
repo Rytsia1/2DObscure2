@@ -2,19 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Obscure
 {
-    // Hub — Starlit Reliquary "D · Hub — Geistwald City" board at 640x360:
-    // night town scene, top bar (safe-zone label, city name, Auto Saved tag, Save / Load / Main Menu, Hub Gold),
-    // facility menu (each facility opens its own screen), run progress panel, party strip,
-    // and a tooltip describing the focused facility.
+    using UiLabel = UnityEngine.UIElements.Label;
+    // Hub — Figma "04 — Hub — Geistwald City" rendered via UI Toolkit:
+    // night town silhouette, top bar (auto-save tag, Save/Load/Main Menu, Hub Gold),
+    // interactive facility list + Dungeon Entrance, tooltip card, run progress chips, and party strip.
     public class HubScreen : GameScreen
     {
-        Menu menu;
-        SpriteRenderer tipBox;
-        Label tipTitle, tipText;
-        Label feedbackLabel;
+        UitkMenu menu;
+        UiLabel tipTitleLbl, tipBodyLbl, feedbackLbl;
 
         protected override void Build()
         {
@@ -29,215 +28,183 @@ namespace Obscure
                 SaveManager.AutoSave(out _);
             }
 
-            BuildScene();
-            BuildTopBar();
-            BuildFacilityMenu();
-            BuildProgress();
-            BuildPartyStrip();
+            UiRoot = FigmaUi.Mount(Root.gameObject, "04---Hub---Geistwald-City");
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            menu.onFocus = ShowTip;
+
+            BindTopBar();
+            BindFacilityMenu();
+            BindProgress();
+            BindPartyStrip();
+            EnsureFeedbackLabel();
         }
 
-        // ------------------------------------------------------------- scene
-
-        void BuildScene()
+        void BindTopBar()
         {
-            Backdrop.Create(Root, false, 14, Palette.Hex(0x070B1C), Palette.Hex(0x101A3A), Palette.Hex(0x28284F), Palette.Hex(0x3A2F55));
-            var rng = new System.Random(11);
-            for (int i = 0; i < 40; i++)
-                Ui.Rect(Root, rng.Next(8, Ui.Width - 8), rng.Next(6, 150), 1, 1, i % 5 == 0 ? Palette.Gold1 : i % 2 == 0 ? Palette.Mist1 : Palette.Mist2, Ui.Back + 1);
-
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 187, Palette.Hex(0x1A2146), 3), 0, 173, Ui.Back + 2);
-
-            // Town silhouettes (placeholder for hub art), windows and the dungeon gate
-            Gable(210, 155, 75, 85, Palette.Hex(0x141B3C));
-            Gable(295, 180, 60, 60, Palette.Hex(0x171F44));
-            Ui.Rect(Root, 365, 160, 85, 80, Palette.Hex(0x121939), Ui.Back + 3);
-            Ui.Rect(Root, 390, 125, 34, 35, Palette.Hex(0x121939), Ui.Back + 3);
-            Ui.Rect(Root, 472, 98, 36, 142, Palette.Hex(0x0F1534), Ui.Back + 3);
-            Ui.Rect(Root, 466, 106, 48, 134, Palette.Hex(0x0F1534), Ui.Back + 3);
-            Ui.Image(Root, PixelArt.Box(20, 32, Palette.Hex(0x2A1A10), Palette.Ember2), 480, 208, Ui.Back + 4);
-            Ui.Rect(Root, 235, 206, 7, 9, Palette.Gold2, Ui.Back + 4);
-            Ui.Rect(Root, 320, 211, 7, 9, Palette.Gold2, Ui.Back + 4);
-            Ui.Rect(Root, 390, 196, 7, 9, Palette.Ember2, Ui.Back + 4);
-            Ui.Rect(Root, 0, 239, Ui.Width, 121, Palette.Hex(0x0B1024), Ui.Back + 5);
-
-            // Vignette
-            Color vign = Palette.Hex(0x05070F, 110);
-            Ui.Rect(Root, 0, Ui.Height - 12, Ui.Width, 12, vign, Ui.Back + 6);
-            Ui.Rect(Root, 0, 0, 12, Ui.Height, vign, Ui.Back + 6);
-            Ui.Rect(Root, Ui.Width - 12, 0, 12, Ui.Height, vign, Ui.Back + 6);
-        }
-
-        // Pitched-roof house silhouette.
-        void Gable(int x, int y, int w, int h, Color c)
-        {
-            int roof = h * 2 / 5;
-            for (int i = 0; i < roof; i += 2)
+            var autoTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "AUTO SAVED · 10:35");
+            if (autoTag != null)
             {
-                int inset = (roof - i) * w / (2 * roof);
-                Ui.Rect(Root, x + inset, y + i, w - 2 * inset, 2, c, Ui.Back + 3);
+                var auto = SaveManager.GetSlotMetadata(SaveSlotId.AutoSave);
+                string when = auto != null && auto.isOccupied && auto.lastSavedTicks > 0
+                    ? new DateTime(auto.lastSavedTicks).ToString("HH:mm")
+                    : "HUB";
+                FigmaUi.SetInstanceText(autoTag, "text-0", $"AUTO SAVED · {when}");
             }
-            Ui.Rect(Root, x, y + roof, w, h - roof, c, Ui.Back + 3);
-        }
-
-        // ------------------------------------------------------------ top bar
-
-        void BuildTopBar()
-        {
-            Ui.Image(Root, PixelArt.Gradient(Ui.Width, 48, Palette.Hex(0x070A14, 218), Palette.Hex(0x070A14, 0)), 0, 0, Ui.Panels);
-            Ui.Label(Root, "HUB · SAFE ZONE", 14, 9, Palette.Mist3, font: FontKind.Interface);
-            Ui.Label(Root, "Geistwald City", 14, 19, Palette.Gold2);
 
             int gold = Run != null ? Run.Gold : 0;
-            int gw = Ui.CurrencyTagWidth(gold, true);
-            int x = 626 - gw;
-            Ui.CurrencyTag(Root, gold, true, x, 11);
+            var goldTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "0 HUB GOLD");
+            if (goldTag != null)
+                FigmaUi.SetInstanceText(goldTag, "text-0", $"{gold:#,##0} HUB GOLD");
 
-            x -= 6 + 66;
-            Ui.Button(Root, "Main Menu", x, 11, 66, OnTitleClicked, 18, showCursor: false);
-            x -= 4 + 40;
-            Ui.Button(Root, "Load", x, 11, 40, () => Game.Go(GameState.Load), 18, showCursor: false);
-            x -= 4 + 40;
-            Ui.Button(Root, "Save", x, 11, 40, () => Game.Go(GameState.Save), 18, showCursor: false);
-
-            var auto = SaveManager.GetSlotMetadata(SaveSlotId.AutoSave);
-            string when = auto != null && auto.isOccupied && auto.lastSavedTicks > 0 ? new DateTime(auto.lastSavedTicks).ToString("HH:mm") : "HUB";
-            string tag = $"AUTO SAVED · {when}";
-            Ui.Tag(Root, tag, x - 8 - PixelFont.Measure(tag, FontKind.Interface) - 8, 14, TagKind.Keep, 13);
+            var saveBtn = FigmaUi.FindButton(UiRoot, "Save");
+            if (saveBtn != null) menu.Add(saveBtn, "Save", () => Game?.Go(GameState.Save), tooltip: "SAVE COMMITTED CAMPAIGN PROGRESS TO A SLOT.");
+            var loadBtn = FigmaUi.FindButton(UiRoot, "Load");
+            if (loadBtn != null) menu.Add(loadBtn, "Load", () => Game?.Go(GameState.Load), tooltip: "LOAD A SAVED CAMPAIGN.");
+            var mainMenuBtn = FigmaUi.FindButton(UiRoot, "Main Menu");
+            if (mainMenuBtn != null) menu.Add(mainMenuBtn, "Main Menu", OnTitleClicked, tooltip: "RETURN TO THE TITLE SCREEN.");
         }
 
-        // ------------------------------------------------------- facility menu
-
-        void BuildFacilityMenu()
+        void BindFacilityMenu()
         {
-            var nav = new GameObject("FacilityMenu").transform;
-            nav.SetParent(Root, false);
-            const int px = 14, py = 48, pw = 165, ph = 224;
-            Ui.Panel(nav, px, py, pw, ph);
-
-            menu = Root.gameObject.AddComponent<Menu>();
-            menu.onFocus = ShowTip;
             var party = Run?.Party ?? new List<Unit>();
             int sp = party.Sum(u => u.skillLoadout?.SkillPoints ?? 0);
             int dead = party.Count(u => !u.Alive);
             int relics = Run?.Relics.Count ?? 0;
 
-            int y = py + 5;
-            Item(nav, "Character / Party", y, () => Game.Go(GameState.Party), "VIEW THE PARTY, STATUS AND LINEUP.");
-            Item(nav, "Equipment", y += 19, () => Game.Go(GameState.Equipment), "EQUIP GEAR ON EACH MEMBER AND COMPARE STATS.");
-            Item(nav, "Inventory", y += 19, () => Game.Go(GameState.Inventory), "EQUIPMENT BAG, CONSUMABLES, MATERIALS AND KEY ITEMS.");
-            Item(nav, "Shop", y += 19, () => Game.Go(GameState.HubShop), "CONSUMABLES FOR HUB GOLD. UNLIMITED STOCK.", note: "CONSUMABLES");
-            Item(nav, "Armory", y += 19, () => Game.Go(GameState.Armory), "WEAPONS AND ARMOR FOR HUB GOLD.", note: "EQUIPMENT");
-            Item(nav, "Blacksmith", y += 19, () => Game.Go(GameState.Blacksmith), "UPGRADE GEAR. UPGRADES RAISE BASE STATS ONLY.");
-            Item(nav, "Training Ground", y += 19, () => Game.Go(GameState.Skills), "SPEND SKILL POINTS AND CHOOSE TALENTS.", buff: sp > 0 ? $"{sp} SP" : null);
-            Item(nav, "Temple", y += 19, () => Game.Go(GameState.Temple), "REVIVE FALLEN MEMBERS AND RECOVER HP / MP.", danger: dead > 0 ? $"{dead} DEAD" : null);
-            Item(nav, "Magic Shop", y += 19, () => Game.Go(GameState.MagicShop), "BUY AND SELL PERMANENT RELICS.", note: $"RELICS {relics}/5");
+            BindFacilityRow("Character / Party", () => Game?.Go(GameState.Party), "VIEW THE PARTY, STATUS AND LINEUP.");
+            BindFacilityRow("Equipment", () => Game?.Go(GameState.Equipment), "EQUIP GEAR ON EACH MEMBER AND COMPARE STATS.");
+            BindFacilityRow("Inventory", () => Game?.Go(GameState.Inventory), "EQUIPMENT BAG, CONSUMABLES, MATERIALS AND KEY ITEMS.");
+            BindFacilityRow("Shop", () => Game?.Go(GameState.HubShop), "CONSUMABLES FOR HUB GOLD. UNLIMITED STOCK.");
+            BindFacilityRow("Armory", () => Game?.Go(GameState.Armory), "WEAPONS AND ARMOR FOR HUB GOLD.");
+            BindFacilityRow("Blacksmith", () => Game?.Go(GameState.Blacksmith), "UPGRADE GEAR. UPGRADES RAISE BASE STATS ONLY.");
+            BindFacilityRow("Training Ground", () => Game?.Go(GameState.Skills), "SPEND SKILL POINTS AND CHOOSE TALENTS.",
+                badgeText: sp > 0 ? $"{sp} SP" : null, badgeClass: "uitk-badge-ok");
+            BindFacilityRow("Temple", () => Game?.Go(GameState.Temple), "REVIVE FALLEN MEMBERS AND RECOVER HP / MP.",
+                badgeText: dead > 0 ? $"{dead} DEAD" : null, badgeClass: "uitk-badge-err");
+            BindFacilityRow("Magic Shop", () => Game?.Go(GameState.MagicShop), "BUY AND SELL PERMANENT RELICS.",
+                replaceRightText: $"RELICS {relics}/5");
 
-            y += 22;
-            Ui.Rect(nav, px + 6, y, pw - 12, 1, Palette.Ink5, Ui.Panels + 2);
+            tipTitleLbl = FigmaUi.FindLabel(UiRoot, "Dungeon Entrance");
+            tipBodyLbl = FigmaUi.FindLabel(UiRoot, "BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.");
+
             int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
-            var gate = Ui.Button(nav, "Dungeon Entrance", px + 14, y + 5, pw - 20, OnEmbarkClicked, 22, style: ButtonStyle.Flat);
-            gate.label.Color = Palette.Gold1;
-            var baseVisual = gate.visual;
-            gate.visual = on => { baseVisual(on); gate.label.Color = on ? Palette.Gold1 : Palette.Gold2; };
-            gate.visual(false);
-            Ui.Badge(gate.transform, "Z", pw - 36, 5, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, order: Ui.Widget + 1, font: FontKind.Interface);
-            gate.tooltip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR." : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.";
-            gate.name = "Dungeon Entrance";
-            menu.Add(gate);
-
-            feedbackLabel = Ui.Label(Root, "", 190, 262, Palette.Err, font: FontKind.Interface);
-
-            // Tooltip (.tip) beside the town — describes the focused facility.
-            tipBox = Ui.Image(Root, null, 451, 105, Ui.Overlay - 2);
-            tipTitle = Ui.Label(Root, "", 457, 110, Palette.Gold1, order: Ui.Overlay - 1);
-            tipText = Ui.Label(Root, "", 457, 124, Palette.Mist2, order: Ui.Overlay - 1, font: FontKind.Interface);
-            menu.Focus(menu.items.Count - 1, false, true); // Dungeon Entrance is the default focus
-        }
-
-        void Item(Transform nav, string text, int y, Action go, string tip, string note = null, string buff = null, string danger = null)
-        {
-            const int x = 31, w = 143;
-            var b = Ui.Button(nav, text, x, y, w, go, 18, style: ButtonStyle.Flat);
-            b.tooltip = tip;
-            b.name = text;
-            if (note != null) Ui.Label(b.transform, note, w - 4, 6, Palette.Mist2, Align.Right, order: Ui.Widget + 1, font: FontKind.Interface);
-            if (buff != null)
+            var gate = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "Dungeon Entrance");
+            if (gate != null)
             {
-                int bw = PixelFont.Measure(buff, FontKind.Interface) + 12;
-                Ui.Image(b.transform, PixelArt.Badge(bw, 12, Palette.Ink0, Palette.Hex(0x3B9A67)), w - 4 - bw, 3, Ui.Widget + 1);
-                Ui.Image(b.transform, PixelArt.Diamond(5, Palette.Hex(0x9AF0BF)), w - bw, 6, Ui.Widget + 2);
-                Ui.Label(b.transform, buff, w - 4 - bw + 9, 5, Palette.Hex(0x9AF0BF), order: Ui.Widget + 2, font: FontKind.Interface);
+                string tip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR." : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.";
+                var gateItem = menu.Add(gate, "Dungeon Entrance", OnEmbarkClicked, tooltip: tip);
+                menu.Focus(gateItem, false, true);
             }
-            if (danger != null)
+        }
+
+        void BindFacilityRow(string labelText, Action go, string tip, string badgeText = null, string badgeClass = null, string replaceRightText = null)
+        {
+            var lbl = FigmaUi.FindLabel(UiRoot, labelText);
+            var row = lbl?.parent;
+            if (row == null) return;
+
+            row.AddToClassList("uitk-flat-item");
+            var cursor = new UiLabel("▸") { name = "uitkCursor" };
+            cursor.AddToClassList("uitk-flat-cursor");
+            cursor.AddToClassList("uitk-cursor-hidden");
+            row.Insert(0, cursor);
+            lbl.AddToClassList("uitk-flat-label");
+
+            if (!string.IsNullOrEmpty(replaceRightText) && row.childCount > 2 && row[2] is UiLabel rightLbl)
+                rightLbl.text = replaceRightText;
+
+            if (!string.IsNullOrEmpty(badgeText))
             {
-                int dw = PixelFont.Measure(danger, FontKind.Interface) + 8;
-                Ui.Image(b.transform, PixelArt.Badge(dw, 12, Palette.Hex(0x3A1418), Palette.Err), w - 4 - dw, 3, Ui.Widget + 1);
-                Ui.Label(b.transform, danger, w - dw, 5, Palette.Hex(0xFFD2CC), order: Ui.Widget + 2, font: FontKind.Interface);
+                var badge = new UiLabel(badgeText);
+                badge.AddToClassList(badgeClass);
+                row.Add(badge);
             }
-            menu.Add(b);
+
+            menu.Add(row, labelText, go, tooltip: tip);
         }
 
-        void ShowTip(Selectable s)
+        void ShowTip(UitkMenu.Item item)
         {
-            if (tipBox == null || s == null) return;
-            int w = Mathf.Max(118, PixelFont.Measure(s.name) + 14);
-            string body = PixelFont.Wrap(s.tooltip ?? "", w - 12, FontKind.Interface);
-            int h = 22 + (body.Count(c => c == '\n') + 1) * PixelFont.LineHeight;
-            tipBox.sprite = PixelArt.Box(w, h, Palette.Ink2, Palette.Gold3);
-            tipTitle.Set(s.name);
-            tipText.Set(body);
+            if (item == null) return;
+            if (tipTitleLbl != null) tipTitleLbl.text = item.text;
+            if (tipBodyLbl != null) tipBodyLbl.text = item.tooltip ?? "";
         }
 
-        // ------------------------------------------------------------ progress
-
-        void BuildProgress()
+        void BindProgress()
         {
-            const int x = 14, y = 290, w = 165, h = 56;
-            Ui.Panel(Root, x, y, w, h);
-            int act = Run != null ? Run.Act : 1;
+            int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
             int cleared = Math.Clamp(act - 1, 0, 8);
-            Ui.Label(Root, "RUN PROGRESS", x + 7, y + 7, Palette.Mist3, font: FontKind.Interface);
-            Ui.Label(Root, $"{cleared}/8 CLEARED", x + w - 7, y + 7, Palette.Gold2, Align.Right, font: FontKind.Interface);
-            int bw = (w - 14 - 7 * 2) / 8;
+            var clearedLbl = FigmaUi.FindLabel(UiRoot, "0/8 CLEARED");
+            if (clearedLbl != null) clearedLbl.text = $"{cleared}/8 CLEARED";
+
             for (int i = 1; i <= 8; i++)
             {
-                int bx = x + 7 + (i - 1) * (bw + 2), by = y + 20;
+                var chip = FigmaUi.FindInstanceWithText(UiRoot, "text-0", i.ToString())?.parent;
+                if (chip == null) continue;
                 bool done = i < act, now = i == act;
-                var sprite = done ? PixelArt.Badge(bw, 11, Palette.Ink4, Palette.Mist3)
-                    : now ? PixelArt.Badge(bw, 11, Palette.Hex(0x2B2210), Palette.Gold2)
-                    : PixelArt.DashedBadge(bw, 11, Color.clear, Palette.Ink5);
-                Ui.Image(Root, sprite, bx, by, Ui.Widget);
-                Ui.Label(Root, i.ToString(), bx + bw / 2, by + 2, done ? Palette.Mist2 : now ? Palette.Gold1 : Palette.Ink5, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
+                var inner = chip.childCount > 0 ? chip[0] : chip;
+                inner.style.borderTopColor = now ? Palette.Gold2 : done ? Palette.Mist3 : Palette.Ink5;
+                inner.style.borderRightColor = now ? Palette.Gold2 : done ? Palette.Mist3 : Palette.Ink5;
+                inner.style.borderBottomColor = now ? Palette.Gold2 : done ? Palette.Mist3 : Palette.Ink5;
+                inner.style.borderLeftColor = now ? Palette.Gold2 : done ? Palette.Mist3 : Palette.Ink5;
+                inner.style.backgroundColor = now ? new Color(0.17f, 0.13f, 0.06f, 1f) : done ? Palette.Ink4 : Color.clear;
+                var txt = chip.Q<UiLabel>("text-0");
+                if (txt != null) txt.style.color = now ? Palette.Gold1 : done ? Palette.Mist2 : Palette.Ink5;
             }
-            Ui.Label(Root, "A WIPE RESETS RUN PROGRESS.", x + 7, y + 36, Palette.Mist2, font: FontKind.Interface);
-            Ui.Label(Root, "EQUIPMENT IS ALWAYS KEPT.", x + 7, y + 45, Palette.Mist2, font: FontKind.Interface);
         }
 
-        // ---------------------------------------------------------- party strip
-
-        void BuildPartyStrip()
+        void BindPartyStrip()
         {
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            const int cw = 98, ch = 32, gap = 5, y = 314;
-            int x0 = 626 - 4 * cw - 3 * gap;
-            for (int i = 0; i < 4 && i < party.Count; i++)
+            var cards = UiRoot.Query<VisualElement>(className: "hero-card").ToList();
+            for (int i = 0; i < cards.Count; i++)
             {
+                var card = cards[i];
+                if (i >= party.Count)
+                {
+                    card.style.display = DisplayStyle.None;
+                    continue;
+                }
+                card.style.display = DisplayStyle.Flex;
                 var u = party[i];
-                int x = x0 + i * (cw + gap);
-                Ui.Panel(Root, x, y, cw, ch);
-                Color c = Palette.ForClass(u.classDef?.id);
-                Ui.Image(Root, PixelArt.Box(20, 20, Color.Lerp(c, Palette.Ink1, 0.7f), Palette.Ink5), x + 5, y + 6, Ui.Widget);
-                Ui.Rect(Root, x + 12, y + 10, 6, 5, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 1);
-                Ui.Rect(Root, x + 8, y + 19, 14, 4, c, Ui.Widget + 1);
-                Ui.Label(Root, PixelFont.Fit(u.name, 46, FontKind.DotGothic), x + 29, y + 4, u.Alive ? Palette.Mist1 : Palette.Mist3, order: Ui.Widget);
-                Ui.Label(Root, $"LV {u.level}", x + cw - 5, y + 6, Palette.Mist3, Align.Right, order: Ui.Widget, font: FontKind.Interface);
-                float hp = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
-                Ui.Image(Root, PixelArt.GaugeBar(cw - 34, 4, hp, hp < 0.25f ? Palette.HpLow : Palette.Hp), x + 29, y + 17, Ui.Widget);
-                Ui.Image(Root, PixelArt.GaugeBar(cw - 34, 4, (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp), x + 29, y + 23, Ui.Widget);
+
+                var portraitBox = card[0];
+                if (portraitBox != null && portraitBox.childCount > 0 && u.sprite != null)
+                    FigmaUi.SetBackgroundContain(portraitBox[0], FigmaUi.GetSpriteTexture(u.sprite, "unit_" + (u.classDef?.id ?? u.name)));
+
+                var infoCol = card.childCount > 1 ? card[1] : null;
+                if (infoCol == null) continue;
+                var labels = infoCol.Query<UiLabel>().ToList();
+                if (labels.Count > 0)
+                {
+                    labels[0].text = u.name;
+                    labels[0].style.color = u.Alive ? Palette.Mist1 : Palette.Mist3;
+                    labels[0].style.maxWidth = 96;
+                    labels[0].style.overflow = Overflow.Hidden;
+                }
+                if (labels.Count > 1)
+                    labels[1].text = $"LV {u.level}";
+
+                var hpGauge = infoCol.Q<VisualElement>(className: "gauge-hp");
+                var mpGauge = infoCol.Q<VisualElement>(className: "gauge-mp");
+                float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
+                float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
+                FigmaUi.SetGaugeFill(hpGauge, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
+                FigmaUi.SetGaugeFill(mpGauge, mpRatio, Palette.Mp);
             }
         }
 
-        // ------------------------------------------------------------- actions
+        void EnsureFeedbackLabel()
+        {
+            feedbackLbl = new UiLabel { name = "HubFeedback" };
+            feedbackLbl.style.position = Position.Absolute;
+            feedbackLbl.style.left = 380;
+            feedbackLbl.style.top = 560;
+            feedbackLbl.style.fontSize = 16;
+            feedbackLbl.style.color = Palette.HpLow;
+            (UiRoot.Q<VisualElement>(className: "_04-hub-geistwald-city") ?? UiRoot).Add(feedbackLbl);
+        }
 
         void OnEmbarkClicked()
         {
@@ -245,7 +212,7 @@ namespace Obscure
             if (Run.Party.All(u => !u.Alive))
             {
                 Sfx.Play(Sound.Deny);
-                feedbackLabel?.Set("ALL HEROES ARE DOWN — REVIVE AT THE TEMPLE FIRST.");
+                if (feedbackLbl != null) feedbackLbl.text = "ALL HEROES ARE DOWN — REVIVE AT THE TEMPLE FIRST.";
                 return;
             }
 
@@ -257,7 +224,7 @@ namespace Obscure
 
             if (targetAct > 8)
             {
-                Game.Go(GameState.Victory);
+                Game?.Go(GameState.Victory);
                 return;
             }
 
@@ -266,15 +233,15 @@ namespace Obscure
                 var nextMap = MapGenerator.Generate(Run.Seed + targetAct, targetAct);
                 Run.AdvanceToNextDungeon(nextMap);
             }
-            Game.Go(GameState.Map);
+            Game?.Go(GameState.Map);
         }
 
         void OnTitleClicked()
         {
-            new ConfirmationModal(Root, "RETURN TO TITLE",
+            FigmaUi.ShowConfirmationModal(UiRoot, "RETURN TO TITLE",
                 "Return to the Main Menu?\nEnsure your progress is saved before exiting the Hub.",
                 "RETURN TO TITLE",
-                () => Game.Go(GameState.MainMenu));
+                () => Game?.Go(GameState.MainMenu));
         }
     }
 }

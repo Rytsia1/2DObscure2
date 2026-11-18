@@ -711,12 +711,11 @@ namespace Obscure.Tests
                 var root = hubHost.transform.Find("HubScreen");
                 Assert.IsNotNull(root, "HubScreen root must exist.");
 
-                // Board D: facilities are a menu panel; each facility opens its own screen
-                var facility = root.Find("FacilityMenu");
-                Assert.IsNotNull(facility, "FacilityMenu panel must be rendered.");
-
-                // Verify registered selectables count includes facilities and top-bar buttons
-                Assert.Greater(Selectable.All.Count, 5, "HubScreen must populate multiple clickable Selectables.");
+                var uiDoc = root.GetComponent<UnityEngine.UIElements.UIDocument>();
+                Assert.IsNotNull(uiDoc, "HubScreen must mount a UIDocument.");
+                var uitkMenu = root.GetComponent<UitkMenu>();
+                Assert.IsNotNull(uitkMenu, "HubScreen must attach UitkMenu.");
+                Assert.Greater(uitkMenu.items.Count, 5, "HubScreen must populate multiple interactive UitkMenu items.");
 
                 hub.Close();
             }

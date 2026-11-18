@@ -2,170 +2,254 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Dungeon Shop Screen:
-    // Conforms to 640x360 reference resolution, Serif headers, and retro JRPG aesthetics.
-    // Uses GOLD (run-based currency). Sells consumables, equipment, and rare Phoenix Plumes (Revive Item).
+    // Dungeon Outpost Caravan Shop (Run Gold) — migrated to Figma 20---Dungeon-Shop---Run-Gold.uxml.
     public class ShopScreen : GameScreen
     {
         enum ShopTab { BuyConsumables, BuyEquipment, Sell }
 
         ShopTab currentTab = ShopTab.BuyConsumables;
         DungeonShopData shopData;
-        Transform contentRoot;
-        Menu menu;
-        Selectable consTabBtn, equipTabBtn, sellTabBtn, leaveBtn;
-        Label feedbackLabel;
-        Label goldBadgeLabel;
-        readonly Label[] partyHpRows = new Label[4];
-        readonly SpriteRenderer[] partyHpGauges = new SpriteRenderer[4];
+        UitkMenu menu;
+        int selectedIndex;
+        string feedback = "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.";
+        bool feedbackBad;
 
         protected override void Build()
         {
             shopData = Run?.CurrentDungeonShop ?? DungeonShopData.Generate(Run?.Map?.act ?? 1);
-            Backdrop.Create(Root, false, 28, Palette.Hex(0x131722), Palette.Hex(0x0C0E17), Palette.Gold3);
-
-            // Header banner per FELNA — UI System (Page 24)
-            Ui.Label(Root, "DUNGEON OUTPOST CARAVAN", 320, 16, Palette.AntiqueGoldBright, Align.Center, 2, FontKind.DotGothic);
-            Ui.Divider(Root, 140, 38, 360, Palette.DarkBorder, Palette.AntiqueGoldBright);
-
-            // Run Gold Badge
-            int currentRunGold = Run != null ? Run.Gold : 0;
-            Ui.Panel(Root, 480, 12, 140, 24, Palette.Hex(0x22120A), Palette.Gold1);
-            goldBadgeLabel = Ui.Label(Root, $"{currentRunGold:#,##0} RUN GOLD", 550, 18, Palette.Gold1, Align.Center, font: FontKind.DotGothic);
-
-            // Left panel (370x240): Shop Tabs & Inventory Items
-            Ui.Panel(Root, 20, 52, 380, 250, Palette.DeepCharcoal, Palette.DarkBorder);
-
-            // Tab Buttons
-            menu = Root.gameObject.AddComponent<Menu>();
-            menu.onBack = OnLeaveShop;
-            consTabBtn = Ui.Button(Root, "SUPPLIES", 24, 56, 110, () => SwitchTab(ShopTab.BuyConsumables), 20, style: ButtonStyle.Slab, font: FontKind.DotGothic);
-            equipTabBtn = Ui.Button(Root, "EQUIPMENT", 140, 56, 120, () => SwitchTab(ShopTab.BuyEquipment), 20, style: ButtonStyle.Slab, font: FontKind.DotGothic);
-            sellTabBtn = Ui.Button(Root, "SELL GEAR", 266, 56, 120, () => SwitchTab(ShopTab.Sell), 20, style: ButtonStyle.Slab, font: FontKind.DotGothic);
-
-            Ui.Divider(Root, 24, 80, 372, Palette.DarkBorder, Palette.AntiqueGoldDim);
-
-            // Right panel (210x250): Party Status
-            Ui.Panel(Root, 410, 52, 210, 250, Palette.DeepCharcoal, Palette.DarkBorder);
-            Ui.Label(Root, "PARTY VITALITY", 420, 60, Palette.AntiqueGoldBright, Align.Left, 1, FontKind.DotGothic);
-            Ui.Divider(Root, 420, 74, 190, Palette.DarkBorder, Palette.AntiqueGoldDim);
-
-            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < partyHpRows.Length && i < party.Count; i++)
-            {
-                var u = party[i];
-                int y = 84 + i * 44;
-                Color hpCol = Palette.ForHp(u.hp, u.stats.maxHp);
-                Ui.Label(Root, PixelFont.Fit(u.name.ToUpperInvariant(), 100, FontKind.DotGothic), 420, y, u.Alive ? Palette.WarmIvory : Palette.SpecCrimson, Align.Left, 1, FontKind.DotGothic);
-                partyHpRows[i] = Ui.Label(Root, u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)", 610, y, u.Alive ? hpCol : Palette.SpecCrimson, Align.Right, font: FontKind.DotGothic);
-                partyHpGauges[i] = Ui.Image(Root, PixelArt.GaugeBar(190, 6, u.Alive ? hpCol : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp)), 420, y + 16, Ui.Widget);
-            }
-
-            // Bottom bar: feedback and leave button
-            feedbackLabel = Ui.Label(Root, "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.", 24, 314, Palette.WarmIvory, Align.Left, font: FontKind.DotGothic);
-            leaveBtn = Ui.Button(Root, "LEAVE CARAVAN", 480, 310, 140, OnLeaveShop, 24, style: ButtonStyle.Primary, font: FontKind.DotGothic);
-
-            RefreshContent();
+            MountFigma("20---Dungeon-Shop---Run-Gold");
+            Rebuild();
         }
 
         void SwitchTab(ShopTab tab)
         {
             currentTab = tab;
-            RefreshContent();
+            selectedIndex = 0;
+            Rebuild();
         }
 
-        void RefreshContent()
+        void Rebuild()
         {
-            if (contentRoot != null)
+            UiRoot = FigmaUi.Mount(Root.gameObject, "20---Dungeon-Shop---Run-Gold");
+            if (menu != null)
             {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(contentRoot.gameObject);
-                else UnityEngine.Object.DestroyImmediate(contentRoot.gameObject);
+                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
+                else UnityEngine.Object.DestroyImmediate(menu);
             }
-            contentRoot = new GameObject("ShopContent").transform;
-            contentRoot.SetParent(Root, false);
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            menu.onBack = OnLeaveShop;
+
+            var backBtn = FigmaUi.FindButton(UiRoot, "Back");
+            if (backBtn != null)
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", OnLeaveShop));
 
             int currentRunGold = Run != null ? Run.Gold : 0;
-            goldBadgeLabel?.Set($"{currentRunGold} RUN GOLD");
+            var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
+            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{currentRunGold:#,##0} RUN GOLD");
 
-            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            for (int i = 0; i < partyHpRows.Length && i < party.Count; i++)
+            var screen = UiRoot.Q<VisualElement>(className: "_20-dungeon-shop-run-gold") ?? UiRoot;
+            var leftPanel = UiRoot.Q<VisualElement>(className: "panel-default__i-31");
+            var rightPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-16");
+            if (leftPanel != null)
             {
-                var u = party[i];
-                if (partyHpRows[i] != null) partyHpRows[i].Set(u.Alive ? $"HP {u.hp}/{u.stats.maxHp}" : "FALLEN (DEAD)");
-                if (partyHpGauges[i] != null) partyHpGauges[i].sprite = PixelArt.GaugeBar(190, 6, u.Alive ? Palette.Emerald : Palette.HpLow, (float)u.hp / Mathf.Max(1, u.stats.maxHp));
+                int lIdx = screen.IndexOf(leftPanel);
+                int rIdx = rightPanel != null ? screen.IndexOf(rightPanel) : screen.childCount;
+                for (int i = lIdx + 1; i < screen.childCount; i++)
+                    if (i != rIdx) screen[i].style.display = DisplayStyle.None;
             }
 
-            menu.items.Clear();
-            menu.Add(consTabBtn);
-            menu.Add(equipTabBtn);
-            menu.Add(sellTabBtn);
+            // Tab strip across top of left panel
+            var tabRow = new VisualElement { style = { position = Position.Absolute, left = 44, top = 80, flexDirection = FlexDirection.Row } };
+            foreach (var (tab, lbl) in new[] { (ShopTab.BuyConsumables, "SUPPLIES"), (ShopTab.BuyEquipment, "EQUIPMENT"), (ShopTab.Sell, "SELL GEAR") })
+            {
+                var t = tab;
+                bool active = currentTab == t;
+                var tag = FigmaUi.InstantiateTemplate(active ? "Tag-Gold" : "Tag-Cls");
+                if (tag != null)
+                {
+                    FigmaUi.SetInstanceText(tag, "text-0", lbl);
+                    tag.style.marginRight = 8;
+                    tabRow.Add(tag);
+                    var it = menu.Add(tag, lbl, () => SwitchTab(t), selected: active);
+                    it.visual = on => tag.style.opacity = on || active ? 1f : 0.72f;
+                }
+            }
+            screen.Add(tabRow);
 
+            var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 802, height = 500, flexDirection = FlexDirection.Column } };
+            screen.Add(listHost);
+
+            var entries = BuildEntries();
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, Math.Max(0, entries.Count - 1));
+
+            for (int i = 0; i < entries.Count && i < 7; i++)
+            {
+                int idx = i;
+                var e = entries[i];
+                bool chosen = i == selectedIndex;
+                var row = new VisualElement
+                {
+                    style =
+                    {
+                        height = 56, marginBottom = 6, paddingLeft = 12, paddingRight = 12,
+                        flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    }
+                };
+                row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2 } });
+                var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
+                col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : Palette.Mist1 } });
+                col.Add(new UiLabel(e.sub) { style = { fontSize = 12, color = Palette.Mist3 } });
+                row.Add(col);
+                row.Add(new UiLabel(e.stock) { style = { width = 100, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
+                row.Add(new UiLabel(e.priceText) { style = { width = 90, fontSize = 16, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
+                listHost.Add(row);
+
+                var it = menu.Add(row, e.title, () =>
+                {
+                    if (selectedIndex != idx) { selectedIndex = idx; Rebuild(); }
+                    else e.action?.Invoke();
+                }, selected: chosen);
+                it.visual = on =>
+                {
+                    row.style.backgroundColor = on || chosen ? Palette.Hex(0x2B2210) : Palette.Ink2;
+                    var b = on ? Palette.Gold1 : chosen ? Palette.Gold2 : Palette.Ink5;
+                    row.style.borderTopColor = b; row.style.borderBottomColor = b; row.style.borderLeftColor = b; row.style.borderRightColor = b;
+                };
+                it.visual(false);
+            }
+
+            if (entries.Count == 0)
+                listHost.Add(new UiLabel("NO EQUIPMENT IN INVENTORY TO SELL.") { style = { fontSize = 15, color = Palette.Mist3, alignSelf = UnityEngine.UIElements.Align.Center, marginTop = 80 } });
+
+            listHost.Add(new UiLabel(feedback)
+            {
+                style = { fontSize = 13, color = feedbackBad ? Palette.Err : Palette.Gold1, marginTop = 10, whiteSpace = WhiteSpace.Normal }
+            });
+
+            BuildDetail(screen, entries.Count > 0 ? entries[selectedIndex] : null, currentRunGold);
+        }
+
+        class Entry
+        {
+            public string title, sub, desc, stock, priceText, btnText, tagText;
+            public int owned, price;
+            public bool dim, canAct;
+            public Action action;
+        }
+
+        List<Entry> BuildEntries()
+        {
+            var list = new List<Entry>();
             if (currentTab == ShopTab.BuyConsumables)
             {
-                int y = 92;
                 foreach (var c in shopData.consumables)
                 {
-                    string stockStr = c.isUnlimitedStock ? "UNLIMITED" : $"x{c.stockCount}";
-                    string text = $"{c.name.ToUpperInvariant()} ({stockStr}) - {c.cost}G";
-                    var btn = Ui.Button(contentRoot, PixelFont.Fit(text, 360), 28, y, 364, () => BuyConsumable(c), 24);
-                    btn.tooltip = c.description.ToUpperInvariant();
-                    if (!c.isUnlimitedStock && c.stockCount <= 0)
+                    var item = c;
+                    bool soldOut = !item.isUnlimitedStock && item.stockCount <= 0;
+                    int own = Run?.Inventory?.GetConsumableCount(item.itemId) ?? 0;
+                    list.Add(new Entry
                     {
-                        btn.label.Color = Palette.Mist3;
-                    }
-                    else if (c.isReviveItem)
-                    {
-                        btn.label.Color = Palette.Gold2;
-                    }
-                    menu.Add(btn);
-                    y += 30;
+                        title = item.name,
+                        sub = item.description.ToUpperInvariant(),
+                        desc = item.description.ToUpperInvariant(),
+                        stock = item.isUnlimitedStock ? "UNLIMITED" : $"× {item.stockCount}",
+                        priceText = soldOut ? "SOLD" : item.cost.ToString(),
+                        btnText = soldOut ? "Sold Out" : $"Buy · {item.cost} Run Gold",
+                        tagText = item.isReviveItem ? "REVIVE ITEM" : "CONSUMABLE",
+                        owned = own,
+                        price = item.cost,
+                        dim = soldOut,
+                        canAct = !soldOut && (Run?.Gold ?? 0) >= item.cost,
+                        action = () => BuyConsumable(item),
+                    });
                 }
             }
             else if (currentTab == ShopTab.BuyEquipment)
             {
-                int y = 92;
-                var equipList = shopData.equipmentShop.items;
-                for (int i = 0; i < equipList.Count && i < 6; i++)
+                foreach (var eq in shopData.equipmentShop.items.Take(7))
                 {
-                    var eqItem = equipList[i];
-                    string status = eqItem.isSold ? "[SOLD OUT]" : $"{eqItem.cost}G";
-                    string name = eqItem.item?.Definition?.name ?? "Equipment";
-                    string text = $"{name.ToUpperInvariant()} - {status}";
-                    var btn = Ui.Button(contentRoot, PixelFont.Fit(text, 360), 28, y, 364, () => BuyEquipment(eqItem), 24);
-                    btn.tooltip = eqItem.item?.Definition?.description?.ToUpperInvariant() ?? "";
-                    if (eqItem.isSold) btn.label.Color = Palette.Mist3;
-                    menu.Add(btn);
-                    y += 30;
-                }
-            }
-            else // Sell tab
-            {
-                int y = 92;
-                var inventory = Run?.Inventory?.equipment ?? new List<EquipmentInstance>();
-                if (inventory.Count == 0)
-                {
-                    Ui.Label(contentRoot, "NO EQUIPMENT IN INVENTORY TO SELL.", 210, 150, Palette.Mist3, Align.Center);
-                }
-                else
-                {
-                    for (int i = 0; i < inventory.Count && i < 6; i++)
+                    var item = eq;
+                    string name = item.item?.Definition?.name ?? "Equipment";
+                    list.Add(new Entry
                     {
-                        var eq = inventory[i];
-                        int sellVal = eq.CalculateSellValue();
-                        string text = $"{eq.Definition?.name.ToUpperInvariant()} - SELL FOR {sellVal}G";
-                        var btn = Ui.Button(contentRoot, PixelFont.Fit(text, 360), 28, y, 364, () => SellEquipment(eq), 24);
-                        btn.tooltip = $"SELL {eq.Definition?.name.ToUpperInvariant()} FOR {sellVal} GOLD";
-                        menu.Add(btn);
-                        y += 30;
-                    }
+                        title = name,
+                        sub = item.item?.Definition != null ? EquipmentSlots.DisplayName(item.item.Definition.slot).ToUpperInvariant() : "GEAR",
+                        desc = item.item?.Definition?.description?.ToUpperInvariant() ?? "",
+                        stock = item.isSold ? "SOLD OUT" : "× 1",
+                        priceText = item.isSold ? "—" : item.cost.ToString(),
+                        btnText = item.isSold ? "Sold Out" : $"Buy · {item.cost} Run Gold",
+                        tagText = "EQUIPMENT",
+                        owned = 0,
+                        price = item.cost,
+                        dim = item.isSold,
+                        canAct = !item.isSold && (Run?.Gold ?? 0) >= item.cost,
+                        action = () => BuyEquipment(item),
+                    });
                 }
             }
+            else
+            {
+                var inv = Run?.Inventory?.equipment ?? new List<EquipmentInstance>();
+                foreach (var eq in inv.Take(7))
+                {
+                    var item = eq;
+                    int val = item.CalculateSellValue();
+                    list.Add(new Entry
+                    {
+                        title = item.Definition?.name ?? "Equipment",
+                        sub = item.Definition != null ? EquipmentSlots.DisplayName(item.Definition.slot).ToUpperInvariant() : "GEAR",
+                        desc = $"SELL FOR {val} RUN GOLD.",
+                        stock = "OWNED",
+                        priceText = $"+{val}",
+                        btnText = $"Sell · {val} Run Gold",
+                        tagText = item.isEquipped ? "EQUIPPED" : "BAG",
+                        owned = 1,
+                        price = -val,
+                        dim = item.isEquipped,
+                        canAct = !item.isEquipped,
+                        action = () => SellEquipment(item),
+                    });
+                }
+            }
+            return list;
+        }
 
-            menu.Add(leaveBtn);
-            menu.Focus(0, false, true);
+        void BuildDetail(VisualElement screen, Entry e, int runGold)
+        {
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column } };
+            screen.Add(host);
+            if (e == null) return;
+
+            host.Add(FigmaUi.CreateSectionHeader(e.title, 346f));
+            var t = FigmaUi.InstantiateTemplate("Tag-Temp");
+            if (t != null) { FigmaUi.SetInstanceText(t, "text-0", e.tagText); t.style.marginTop = 10; t.style.marginBottom = 10; host.Add(t); }
+
+            host.Add(new UiLabel(e.desc) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 18 } });
+
+            VisualElement Line(string l, string r)
+            {
+                var v = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, height = 28, borderBottomWidth = 2, borderBottomColor = Palette.Ink3 } };
+                v.Add(new UiLabel(l) { style = { fontSize = 13, color = Palette.Mist2 } });
+                v.Add(new UiLabel(r) { style = { fontSize = 13, color = Palette.Mist1 } });
+                return v;
+            }
+            host.Add(Line("IN STOCK", e.stock));
+            host.Add(Line("YOU OWN", e.owned.ToString()));
+            host.Add(Line("PRICE", e.price >= 0 ? $"{e.price} RUN GOLD" : $"+{-e.price} RUN GOLD"));
+            host.Add(Line("RUN GOLD AFTER", $"{runGold} › {runGold - e.price}"));
+
+            host.Add(new VisualElement { style = { flexGrow = 1 } });
+            var btn = FigmaUi.CreateButton(e.btnText, e.canAct ? "button-primary" : "button-slab", 346f);
+            btn.SetEnabled(e.canAct);
+            host.Add(btn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(btn, e.btnText, e.action, interactable: e.canAct));
         }
 
         void BuyConsumable(ConsumableShopEntry c)
@@ -174,14 +258,11 @@ namespace Obscure
             if (shopData.TryBuyConsumable(Run, c.itemId, out _, out string err))
             {
                 Sfx.Play(Sound.Success);
-                feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} GOLD!", 520));
-                RefreshContent();
+                feedback = $"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} GOLD!";
+                feedbackBad = false;
+                Rebuild();
             }
-            else
-            {
-                Sfx.Play(Sound.Deny);
-                feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-            }
+            else { Sfx.Play(Sound.Deny); feedback = err.ToUpperInvariant(); feedbackBad = true; Rebuild(); }
         }
 
         void BuyEquipment(ShopItem eqItem)
@@ -190,14 +271,11 @@ namespace Obscure
             if (shopData.TryBuyEquipment(Run, eqItem.shopItemId, out var bought, out string err))
             {
                 Sfx.Play(Sound.Success);
-                feedbackLabel?.Set(PixelFont.Fit($"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} GOLD!", 520));
-                RefreshContent();
+                feedback = $"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} GOLD!";
+                feedbackBad = false;
+                Rebuild();
             }
-            else
-            {
-                Sfx.Play(Sound.Deny);
-                feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-            }
+            else { Sfx.Play(Sound.Deny); feedback = err.ToUpperInvariant(); feedbackBad = true; Rebuild(); }
         }
 
         void SellEquipment(EquipmentInstance eq)
@@ -206,22 +284,17 @@ namespace Obscure
             if (shopData.TrySellEquipment(Run, eq.instanceId, out int goldGained, out string err))
             {
                 Sfx.Play(Sound.Success);
-                feedbackLabel?.Set(PixelFont.Fit($"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} GOLD!", 520));
-                RefreshContent();
+                feedback = $"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} GOLD!";
+                feedbackBad = false;
+                Rebuild();
             }
-            else
-            {
-                Sfx.Play(Sound.Deny);
-                feedbackLabel?.Set(PixelFont.Fit(err.ToUpperInvariant(), 520));
-            }
+            else { Sfx.Play(Sound.Deny); feedback = err.ToUpperInvariant(); feedbackBad = true; Rebuild(); }
         }
 
         void OnLeaveShop()
         {
             if (Run != null && Run.Current != null)
-            {
                 Run.Cleared.Add(Run.Current.id);
-            }
             Game.Go(GameState.Map);
         }
     }

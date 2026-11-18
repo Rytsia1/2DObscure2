@@ -1,0 +1,228 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16de0cfc27c7a4d47b6655803ce3924f, type: 3}
+  m_Name: FigmaScreenCatalog
+  m_EditorClassIdentifier: Obscure::Obscure.FigmaScreenCatalog
+  panelSettings: {fileID: 11400000, guid: 72b05d84ae27aad4ab47806934a037ed, type: 2}
+  tokensStylesheet: {fileID: 7433441132597879392, guid: 1b66044838c1e9b41bc231271910b98c, type: 3}
+  runtimeStylesheet: {fileID: 7433441132597879392, guid: ea9bcbefc8daf1d4fa2f3849535fecd1, type: 3}
+  entries:
+  - key: 00---Main-Menu
+    uxml: {fileID: 9197481963319205126, guid: dcbf32bf045c75d4dbc6ea2c8311ddf6, type: 3}
+    uss: {fileID: 7433441132597879392, guid: ffc76f0cc8b3d864bac481942fecd052, type: 3}
+  - key: 01---Settings
+    uxml: {fileID: 9197481963319205126, guid: d9c4f42c38a322149a30ead2bbb0f09d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0ed2ab703e3020e4e9bfa5177cc023d3, type: 3}
+  - key: 02---Character-Creation---Race
+    uxml: {fileID: 9197481963319205126, guid: 897be2579366e0d48bda1ead143f3bc5, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 69efe60d85a6445478f91fdaf8cde7b7, type: 3}
+  - key: 03---Load-Game
+    uxml: {fileID: 9197481963319205126, guid: 2fa64a3719e2cfd4fb412a821094c7de, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6fb5ce2e564da6f4aae053ac1822b9be, type: 3}
+  - key: 04---Hub---Geistwald-City
+    uxml: {fileID: 9197481963319205126, guid: 4f3af7eb106bc3e479c0d05d793abf57, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 4ef566c4b9e422b41b4d63837cc219c7, type: 3}
+  - key: 05---Party
+    uxml: {fileID: 9197481963319205126, guid: c5dd736f1ba8501498128eb25e589bf5, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 3443b6b06a3888143a7fa73f1b59dce9, type: 3}
+  - key: 06---Shop---Consumables
+    uxml: {fileID: 9197481963319205126, guid: e7d0360debc8b1740b5ab30e780ba9a8, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c5578790e62b23d4da291a6e8fd8cbcf, type: 3}
+  - key: 07---Armory---Equipment
+    uxml: {fileID: 9197481963319205126, guid: 6875a2b877029f04b89a9f720090cba4, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 10beb6090dbf0844db7d774a21026b68, type: 3}
+  - key: 08---Blacksmith---Upgrade
+    uxml: {fileID: 9197481963319205126, guid: 2afdbc3ed66ce524fa98e7cb4d276835, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 351b46348c7178f419b498aef79a7357, type: 3}
+  - key: 09---Temple---Revive---Recovery
+    uxml: {fileID: 9197481963319205126, guid: d8ee13973fd100a45bcc3cefb3bed841, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a3412b89bf8c62647be95c4b66554a2d, type: 3}
+  - key: 10---Magic-Shop---Relics
+    uxml: {fileID: 9197481963319205126, guid: 69e5f47f5ffd92b4da977622f8595885, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 46747d76021d1ec42b3f37e263525912, type: 3}
+  - key: 11---Save-Game
+    uxml: {fileID: 9197481963319205126, guid: 1466d234f43885e4eb3292d9b5a9c13e, type: 3}
+    uss: {fileID: 7433441132597879392, guid: df8f12519c068c24587d804de49cb6a5, type: 3}
+  - key: 12---Dungeon-Map
+    uxml: {fileID: 9197481963319205126, guid: d20eadfd7154ad94da463551c15ef3b3, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 546d930a910d0d84bb7b404b5196f834, type: 3}
+  - key: 13---Character-Status
+    uxml: {fileID: 9197481963319205126, guid: ce42db501d4c5af4fa5962ec122e90db, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 279f401eb21343a469048a288f36dcfa, type: 3}
+  - key: 14---Inventory
+    uxml: {fileID: 9197481963319205126, guid: 16e4699647fec684c9070d2f4780435e, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6536845ddca895a4cb904fba5213e23c, type: 3}
+  - key: 15---Equipment
+    uxml: {fileID: 9197481963319205126, guid: 0e039ee807f4a00449f7e2d4e891d3c6, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0b96a76762491e74e9e27ef926b1a1bc, type: 3}
+  - key: 16---Training-Ground---Skill-Tree
+    uxml: {fileID: 9197481963319205126, guid: 97b187638c63da7429170c11abde7cee, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 798a264005805854499db1caac234047, type: 3}
+  - key: 17---Talent-Selection
+    uxml: {fileID: 9197481963319205126, guid: d3e028142300a18499455dfa7603ff2c, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 03ab9cf3944110b4f90903f5da2fcf63, type: 3}
+  - key: 18---Event---Whispering-Shrine
+    uxml: {fileID: 9197481963319205126, guid: 0b68d217be3c0354eac14cfe956f3030, type: 3}
+    uss: {fileID: 7433441132597879392, guid: e85555927a0dc7d4fb2b5f34fb6883e2, type: 3}
+  - key: 19---Rest---Campfire-Sanctuary
+    uxml: {fileID: 9197481963319205126, guid: cddf189a7b88f8e4488601a2a0bacbbe, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0ee00d631365b8044836902952748481, type: 3}
+  - key: 20---Dungeon-Shop---Run-Gold
+    uxml: {fileID: 9197481963319205126, guid: eafb5e134030e0448a9f42fa79d2d786, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 10bdfc2b498bfa1409ef3bfc8b4fef92, type: 3}
+  - key: 21---Combat-Victory---Rewards
+    uxml: {fileID: 9197481963319205126, guid: dffcdda64fb1ef24798938eb8fe56a83, type: 3}
+    uss: {fileID: 7433441132597879392, guid: e840ecdecc364ed49a46c2128a1d7e3a, type: 3}
+  - key: 22---Combat-HUD
+    uxml: {fileID: 9197481963319205126, guid: 91b40fe982ef28c42bb94056d34c7b31, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 78badce33e3d21149af01cbac12f748f, type: 3}
+  - key: 23---Dungeon-Clear
+    uxml: {fileID: 9197481963319205126, guid: c4aa0aa8ec8bae841b9f7d46e1838032, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c3f8c7d69c529ed439bbe21c8a4910eb, type: 3}
+  - key: 24---Run-Failure---Defeat
+    uxml: {fileID: 9197481963319205126, guid: 671e2cd355e8dc64ab7b966fe5b9a525, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 98d5775fa99c85f4dba1237a942219aa, type: 3}
+  - key: Button-Flat-Focus
+    uxml: {fileID: 9197481963319205126, guid: f5237baf3e9c772479920016c9bef1d8, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6ec87486d88b1044c9fcc4daf6ae657c, type: 3}
+  - key: Button-Primary-Focus
+    uxml: {fileID: 9197481963319205126, guid: 957eff98f8bf71d4f9b9e44d472dac6d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 9c5e269b7c801484e897660fd1567f1e, type: 3}
+  - key: Button-Slab-Focus
+    uxml: {fileID: 9197481963319205126, guid: d80ac196a725fe64b87dd32742c947e2, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 8e6bab30a5dca774cbf95d2150c95ddc, type: 3}
+  - key: Currency-Tag-Hub
+    uxml: {fileID: 9197481963319205126, guid: e848a8bb81314924d885153ff42fd666, type: 3}
+    uss: {fileID: 7433441132597879392, guid: f4d25a3c2ae4bfa4dadc4cb33ee52166, type: 3}
+  - key: Currency-Tag-Run
+    uxml: {fileID: 9197481963319205126, guid: ff8fd90f576e5e14189040f0a3326b0b, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 389f3f1875c728347be4dbe02d498a0f, type: 3}
+  - key: Element-Chip-AL
+    uxml: {fileID: 9197481963319205126, guid: b639654a57ae2484eb8e33bac7d2b470, type: 3}
+    uss: {fileID: 7433441132597879392, guid: e4bace2c5a571b2469f945cdcf8db23f, type: 3}
+  - key: Element-Chip-EA
+    uxml: {fileID: 9197481963319205126, guid: 94363bd63cfe77347bd292cd3e20fbe9, type: 3}
+    uss: {fileID: 7433441132597879392, guid: dd52149d485e2a04b83f6796759f500b, type: 3}
+  - key: Element-Chip-FI
+    uxml: {fileID: 9197481963319205126, guid: ae74fc77c2dfb8349911065d6cc0a7cc, type: 3}
+    uss: {fileID: 7433441132597879392, guid: b4eb996b16b07b444a1df9c20827c9bf, type: 3}
+  - key: Element-Chip-HO
+    uxml: {fileID: 9197481963319205126, guid: 2009f0682cd3ab5479dac9e8e29c9529, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 683312dae37d0ec4b913b8796f973205, type: 3}
+  - key: Element-Chip-IC
+    uxml: {fileID: 9197481963319205126, guid: 7dc963db34692684192d9afafca5b5a5, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0c2f4ef20d175964ab668d920f7dee04, type: 3}
+  - key: Element-Chip-LI
+    uxml: {fileID: 9197481963319205126, guid: 96a3ffd79694ffd4f8f4afc8f35825b7, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0d590afe314a824439395113d9e0fd16, type: 3}
+  - key: Element-Chip-PH
+    uxml: {fileID: 9197481963319205126, guid: 131d9e258bcf42845885cd6799b4fdd2, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0bd9064633b66914bbe6e22abab9d0f5, type: 3}
+  - key: Element-Chip-SH
+    uxml: {fileID: 9197481963319205126, guid: 8c1fd8a846c0ebf47a72ed9a64f87342, type: 3}
+    uss: {fileID: 7433441132597879392, guid: d1a02cdb36f37e34086b874898150dd4, type: 3}
+  - key: Element-Chip-WA
+    uxml: {fileID: 9197481963319205126, guid: bfd6dbca9dea4de4da981435a148fc3f, type: 3}
+    uss: {fileID: 7433441132597879392, guid: b2eb4a946e5c1514d9b5f3c364883890, type: 3}
+  - key: Element-Chip-WI
+    uxml: {fileID: 9197481963319205126, guid: b825807a406aa22408a2a6c469c57c0c, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 81145057e5ec57443a80342c7f94695b, type: 3}
+  - key: Gauge-HP-Low
+    uxml: {fileID: 9197481963319205126, guid: 3de6cfc55303b91428217ea27f41ed31, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a1a51b4a5222d404a97ecc11b55d35c3, type: 3}
+  - key: Gauge-MP
+    uxml: {fileID: 9197481963319205126, guid: b75d97139363dde4a9df2313694ee0a7, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 29a3f04064b65564ca330ed99df76d58, type: 3}
+  - key: Item-Slot-Empty
+    uxml: {fileID: 9197481963319205126, guid: b3ff03e98db4aa1429cac88cf8b0503b, type: 3}
+    uss: {fileID: 7433441132597879392, guid: d67dfaf81e918134583193ef7af481f4, type: 3}
+  - key: Item-Slot-Filled
+    uxml: {fileID: 9197481963319205126, guid: 58448fc6fac9ae9498e346a2f2dd3540, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6dd9bdb2318ea984a911c3c89191c089, type: 3}
+  - key: Item-Slot-Selected
+    uxml: {fileID: 9197481963319205126, guid: 946632ebae8cec443836808f17d89691, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 9b10f0159f03e914db70cbf7fdf98238, type: 3}
+  - key: Key-Hint
+    uxml: {fileID: 9197481963319205126, guid: 1eb6be658f86ca745aeaaa14656ba9d8, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 555701d649f31d1488ea769b39f5466c, type: 3}
+  - key: List-Row
+    uxml: {fileID: 9197481963319205126, guid: 30407bc8c34519343b777694cf45de6a, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 2910e68741c5e1246bb25b4a30f28b14, type: 3}
+  - key: List-Row-Focus
+    uxml: {fileID: 9197481963319205126, guid: b83cda3d6497c5c49b54a1eb6a275ff9, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6ee2999eddade7c4dbe890de11108719, type: 3}
+  - key: Map-Node-Choosable
+    uxml: {fileID: 9197481963319205126, guid: 482d35271c6ed684e8164f635e2810e5, type: 3}
+    uss: {fileID: 7433441132597879392, guid: fa406b1dc0b70324480c98d27433e1af, type: 3}
+  - key: Map-Node-Current
+    uxml: {fileID: 9197481963319205126, guid: 52cf9b881d5cb6d4cbf069e2c3154ba1, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 39df5b094a7e5c64d8c2e6a933ebb128, type: 3}
+  - key: Map-Node-Locked
+    uxml: {fileID: 9197481963319205126, guid: dceee2ce72941d042bc793af5931442d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 3ac32b9a51901534c9ec0a589bb07ec8, type: 3}
+  - key: Panel-Default
+    uxml: {fileID: 9197481963319205126, guid: 82c1c812fda8e464c8f70a18c7711018, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 741e76d4118c6f543870fb1fac48fb57, type: 3}
+  - key: Panel-Gold
+    uxml: {fileID: 9197481963319205126, guid: 6923600101f240a41a90167b16e53e26, type: 3}
+    uss: {fileID: 7433441132597879392, guid: b9a945919b06c7f4aaef5d9d5c2f02cf, type: 3}
+  - key: Panel-Raised
+    uxml: {fileID: 9197481963319205126, guid: 3416d6e9cc92b8549937dbeba6e80cfc, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0c2806127180f95498d49d8750de1cfd, type: 3}
+  - key: Section-Header
+    uxml: {fileID: 9197481963319205126, guid: 0df125ce3c9f71c4082a94464b2ecb00, type: 3}
+    uss: {fileID: 7433441132597879392, guid: fc461ea045ce0fa4699b9d8ea3f1e5a7, type: 3}
+  - key: Slot-Card
+    uxml: {fileID: 9197481963319205126, guid: ab6dc0a142004484586218281df8e8a3, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6a5ac28893ab04a4a82fe208991d6619, type: 3}
+  - key: Slot-Card-Selected
+    uxml: {fileID: 9197481963319205126, guid: 437cba2e3094c4d4787990f59534fd43, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 1f7df4cc87aaf6d4fb33f9744d3a133a, type: 3}
+  - key: Sprite-Rogue
+    uxml: {fileID: 9197481963319205126, guid: 4ec32e2ef3efa634fbf2c3c46c42a4de, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c1484d520a093c342a7da99fecac0349, type: 3}
+  - key: Status-Badge-Debuff
+    uxml: {fileID: 9197481963319205126, guid: c3f4374faa874b8408728b17d10dc90c, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 79b2a7ba4fddbc84ba02acd0c3732c45, type: 3}
+  - key: Tag-Cls
+    uxml: {fileID: 9197481963319205126, guid: 52d9fd98920b02542bfa09d240855e9d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 11b51ac5559cec8478443202c5e80cf5, type: 3}
+  - key: Tag-Cond
+    uxml: {fileID: 9197481963319205126, guid: cd0c3d0fff37ccb49b7260b608084ced, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 1a062e5ed58ce104f80273b5bebf0813, type: 3}
+  - key: Tag-Gold
+    uxml: {fileID: 9197481963319205126, guid: 4d2e2324da59ebf41bd8604a2e5215cc, type: 3}
+    uss: {fileID: 7433441132597879392, guid: e4a9d227addd05647ab9ef5f1b35d8b0, type: 3}
+  - key: Tag-Keep
+    uxml: {fileID: 9197481963319205126, guid: 094b2f2a534bde34ca1a691a9692c149, type: 3}
+    uss: {fileID: 7433441132597879392, guid: bb2eb0cafb440a040a3edb68953d7331, type: 3}
+  - key: Tag-Temp
+    uxml: {fileID: 9197481963319205126, guid: b60d6bf1ff8710d4cb49a1e19b87762b, type: 3}
+    uss: {fileID: 7433441132597879392, guid: ddcec7629f3a0e44d8d1604adeb41b8c, type: 3}
+  - key: Toast-Error
+    uxml: {fileID: 9197481963319205126, guid: 456d298f979215a4b8b9be771927968e, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 80c0b9889f0bbf7439a5cf7ea8035db6, type: 3}
+  - key: Toast-Info
+    uxml: {fileID: 9197481963319205126, guid: ee34a4566d7034247b30dace9c9d41b6, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 84bc28f1f735425438ddc56b06cdfb5f, type: 3}
+  - key: Turn-Chip-Active
+    uxml: {fileID: 9197481963319205126, guid: 49db0efe71ab0674fac7d0e8d8ebc2e7, type: 3}
+    uss: {fileID: 7433441132597879392, guid: e74240499e325d84fb617baaba802ff3, type: 3}
+  - key: Turn-Chip-Enemy
+    uxml: {fileID: 9197481963319205126, guid: e97b9c5d10f41bd40b21275dbe55cc45, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 7eb02ed3a867a41418dc47c8c38f029d, type: 3}
+  - key: Turn-Chip-Hero
+    uxml: {fileID: 9197481963319205126, guid: df5fda81098b1534ea41f1ebcfe85541, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 7f05dd59445d62548af981d43b345d66, type: 3}
+  - key: Turn-Chip-Next-Round
+    uxml: {fileID: 9197481963319205126, guid: d045e1719b02f7f4cbb5291cebbf8296, type: 3}
+    uss: {fileID: 7433441132597879392, guid: e245fa26c228f58469cc0bf3e97c2674, type: 3}

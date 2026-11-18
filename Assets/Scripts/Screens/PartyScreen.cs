@@ -1,22 +1,22 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Party Management — Starlit Reliquary "C · Party Management" board at 640x360:
-    // title + party-size tag + Hub Gold, four member cards (figure, level, KO state, HP/MP), party overview, footer.
+    // Party Management — migrated to Figma 05---Party.uxml (1280x720 UI Toolkit).
     public class PartyScreen : GameScreen
     {
-        // Member picked here is the one Character Status opens on.
         public static int SelectedIndex { get; private set; }
-
-        const int Left = 14, RightEdge = 626, CardsY = 38, CardH = 166, FooterY = 327;
 
         List<Unit> party;
         static GameState BackTo => Game.I == null || Game.I.LastBase == GameState.MainMenu ? GameState.Hub : Game.I.LastBase;
-        Menu menu;
-        Transform page;
+        UitkMenu menu;
+        VisualElement[] cardSlots;
+        UiLabel cursorArrow;
 
         protected override void Build()
         {
@@ -25,151 +25,328 @@ namespace Obscure
                 ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             SelectedIndex = Mathf.Clamp(SelectedIndex, 0, Mathf.Max(0, party.Count - 1));
 
-            Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
-            menu = Root.gameObject.AddComponent<Menu>();
-            menu.onBack = () => Game?.Go(BackTo);
+            MountFigma("05---Party");
             Rebuild();
         }
 
         void Select(int i)
         {
-            if (i == SelectedIndex) return;
+            if (i == SelectedIndex || i < 0 || i >= party.Count) return;
             SelectedIndex = i;
-            Rebuild();
+            UpdateSelectionVisuals();
         }
 
         void Rebuild()
         {
-            if (page != null)
-            {
-                if (Application.isPlaying) Object.Destroy(page.gameObject);
-                else Object.DestroyImmediate(page.gameObject);
-            }
-            page = new GameObject("Party").transform;
-            page.SetParent(Root, false);
-            menu.items.Clear();
-            menu.onFocus = null;
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            menu.onBack = () => Game?.Go(BackTo);
 
-            // Header: title, party size tag, Hub Gold
-            Ui.Label(page, "Party", Left, 14, Palette.Gold2);
+            // Header
             string size = party.Count >= CharacterRoster.PartySize ? $"{party.Count} / 4 · PARTY FULL" : $"{party.Count} / 4";
-            Ui.Tag(page, size, Left + PixelFont.Measure("Party", FontKind.DotGothic) + 10, 13, TagKind.Keep, 13);
-            int gold = Run != null ? Run.Gold : 0;
-            int gw = Ui.CurrencyTagWidth(gold, true);
-            Ui.CurrencyTag(page, gold, true, RightEdge - gw, 10);
+            var sizeTag = UiRoot.Q<VisualElement>(className: "tag-keep");
+            if (sizeTag != null) FigmaUi.SetInstanceText(sizeTag, "text-0", size);
 
-            // Member cards
-            int cw = (RightEdge - Left - 3 * 8) / 4;
+            int gold = Run != null ? Run.Gold : 0;
+            var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
+            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold} HUB GOLD");
+
+            var backButtons = UiRoot.Query<Button>(className: "button-slab").ToList();
+            foreach (var btn in backButtons)
+            {
+                if (btn.text == "Back")
+                {
+                    var item = menu.Add(btn, "Back", () => Game?.Go(BackTo));
+                    FigmaUi.ApplyDefaultFocusVisual(item, btn);
+                }
+            }
+
+            cursorArrow = UiRoot.Q<UiLabel>(className: "node-vars-3");
+
+            // 4 Member cards: in 05---Party.uxml, card elements sit at absolute x = 28 + i*310, y = 76, w = 292, h = 332.
+            string[] cardPanelClasses = { "panel-gold__i-3", "panel-default__i-8", "panel-default__i-9", "panel-default__i-10" };
+            string[] wellClasses = { "rectangle-vars-67", "rectangle-vars-68", "rectangle-vars-69", "rectangle-vars-70" };
+            string[] numeralClasses = { "i-vars", "ii-vars", "iii-vars", "iv-vars" };
+            string[] lvClasses = { "lv-1-vars-2", "lv-1-vars-3", "lv-1-vars-4", "lv-1-vars-5" };
+            string[] spriteClasses = { "sprite-knight", "sprite-rogue", "sprite-mage", "sprite-healer" };
+            string[] nameClasses = { "knight-vars", "rogue-vars", "mage-vars", "healer-vars" };
+            string[] hpValClasses = { "_125-vars", "_85-vars", "_60-vars", "_80-vars" };
+            string[] mpValClasses = { "_20-vars", "_25-vars", "_60-vars-2", "_55-vars" };
+
+            var hpGauges = UiRoot.Query<VisualElement>(className: "gauge-hp").ToList();
+            var mpGauges = UiRoot.Query<VisualElement>(className: "gauge-mp").ToList();
+            var screenBox = UiRoot.Q<VisualElement>(className: "_05-party") ?? UiRoot;
+            cardSlots = new VisualElement[4];
+
             string[] numerals = { "I", "II", "III", "IV" };
             for (int i = 0; i < 4; i++)
             {
-                int x = Left + i * (cw + 8);
+                var panel = UiRoot.Q<VisualElement>(className: cardPanelClasses[i]);
+                var well = UiRoot.Q<VisualElement>(className: wellClasses[i]);
+                var numLbl = UiRoot.Q<UiLabel>(className: numeralClasses[i]);
+                var lvLbl = UiRoot.Q<UiLabel>(className: lvClasses[i]);
+                var fig = UiRoot.Q<VisualElement>(className: spriteClasses[i]);
+                var nameLbl = UiRoot.Q<UiLabel>(className: nameClasses[i]);
+                var hpVal = UiRoot.Q<UiLabel>(className: hpValClasses[i]);
+                var mpVal = UiRoot.Q<UiLabel>(className: mpValClasses[i]);
+                var hpGauge = i < hpGauges.Count ? hpGauges[i] : null;
+                var mpGauge = i < mpGauges.Count ? mpGauges[i] : null;
+                var hpCap = UiRoot.Q<UiLabel>(className: i == 0 ? "hp-vars" : $"hp-vars-{i + 1}");
+                var mpCap = UiRoot.Q<UiLabel>(className: i == 0 ? "mp-vars" : $"mp-vars-{i + 1}");
+
+                // Tag container sits right after nameLbl in 05---Party.uxml
+                VisualElement tagRow = null;
+                if (nameLbl != null && nameLbl.parent != null)
+                {
+                    int idxInParent = nameLbl.parent.IndexOf(nameLbl);
+                    if (idxInParent + 1 < nameLbl.parent.childCount)
+                        tagRow = nameLbl.parent[idxInParent + 1];
+                }
+
                 if (i >= party.Count)
                 {
-                    Ui.Image(page, PixelArt.DashedBadge(cw, CardH, Palette.Ink0, Palette.Ink5), x, CardsY, Ui.Panels);
-                    Ui.Label(page, "+ Create member", x + cw / 2, CardsY + CardH / 2 - 5, Palette.Mist3, Align.Center);
+                    if (well != null) well.style.display = DisplayStyle.None;
+                    if (numLbl != null) numLbl.text = numerals[i];
+                    if (lvLbl != null) lvLbl.text = "";
+                    if (fig != null) fig.style.display = DisplayStyle.None;
+                    if (nameLbl != null) { nameLbl.text = "+ Create member"; nameLbl.style.color = Palette.Mist3; }
+                    if (tagRow != null) tagRow.style.display = DisplayStyle.None;
+                    if (hpCap != null) hpCap.style.display = DisplayStyle.None;
+                    if (mpCap != null) mpCap.style.display = DisplayStyle.None;
+                    if (hpGauge != null) hpGauge.style.display = DisplayStyle.None;
+                    if (mpGauge != null) mpGauge.style.display = DisplayStyle.None;
+                    if (hpVal != null) hpVal.style.display = DisplayStyle.None;
+                    if (mpVal != null) mpVal.style.display = DisplayStyle.None;
                     continue;
                 }
-                int idx = i;
+
+                int cardIdx = i;
                 var u = party[i];
-                var card = Ui.Button(page, "", x, CardsY, cw, () => { SelectedIndex = idx; Game?.Go(GameState.CharacterStatus); }, CardH, style: ButtonStyle.Card);
-                card.selected = i == SelectedIndex;
-                card.visual(false);
-                menu.Add(card);
-                MemberCard(card.transform, u, cw, numerals[i], i == SelectedIndex);
+                if (numLbl != null) { numLbl.text = numerals[i]; numLbl.style.color = Palette.Mist3; }
+                if (lvLbl != null) { lvLbl.text = $"LV {u.level}"; lvLbl.style.color = Palette.Gold1; }
+
+                if (fig != null)
+                {
+                    fig.style.display = DisplayStyle.Flex;
+                    if (u.sprite != null && u.sprite.Length > 0)
+                        FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "party_" + (u.classDef?.id ?? u.name)));
+                    fig.style.opacity = u.Alive ? 1f : 0.35f;
+                }
+
+                if (nameLbl != null)
+                {
+                    nameLbl.text = u.name ?? "Hero";
+                    nameLbl.style.color = u.Alive ? Palette.Mist1 : Palette.Mist3;
+                    nameLbl.style.maxWidth = 260;
+                    nameLbl.style.overflow = Overflow.Hidden;
+                }
+
+                if (tagRow != null)
+                {
+                    tagRow.Clear();
+                    foreach (var tagText in new[] { u.race?.name ?? "Human", u.classDef?.name ?? u.role ?? "" }.Where(s => !string.IsNullOrEmpty(s)))
+                    {
+                        var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
+                        if (tag != null)
+                        {
+                            FigmaUi.SetInstanceText(tag, "text-0", tagText.ToUpperInvariant());
+                            tag.style.marginRight = 6;
+                            tagRow.Add(tag);
+                        }
+                    }
+                }
+
+                float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
+                float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
+                FigmaUi.SetGaugeFill(hpGauge, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
+                FigmaUi.SetGaugeFill(mpGauge, mpRatio, Palette.Mp);
+                if (hpVal != null) { hpVal.text = u.hp.ToString(); hpVal.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow; }
+                if (mpVal != null) mpVal.text = u.mp.ToString();
+
+                // Interactive card overlay button for keyboard/mouse selection + KO badge
+                var cardBtn = new Button { name = $"PartyCard_{i}", text = "" };
+                cardBtn.style.position = Position.Absolute;
+                cardBtn.style.left = 28 + i * 310;
+                cardBtn.style.top = 76;
+                cardBtn.style.width = 292;
+                cardBtn.style.height = 332;
+                cardBtn.style.backgroundColor = Color.clear;
+                cardBtn.style.borderTopWidth = 2;
+                cardBtn.style.borderBottomWidth = 2;
+                cardBtn.style.borderLeftWidth = 2;
+                cardBtn.style.borderRightWidth = 2;
+                cardSlots[i] = cardBtn;
+
+                if (!u.Alive)
+                {
+                    var koBadge = new UiLabel("KO · INCAPACITATED");
+                    koBadge.style.position = Position.Absolute;
+                    koBadge.style.left = 48;
+                    koBadge.style.right = 48;
+                    koBadge.style.top = 180;
+                    koBadge.style.paddingTop = 4;
+                    koBadge.style.paddingBottom = 4;
+                    koBadge.style.unityTextAlign = TextAnchor.MiddleCenter;
+                    koBadge.style.fontSize = 12;
+                    koBadge.style.color = Palette.Hex(0xFFD2CC);
+                    koBadge.style.backgroundColor = Palette.Hex(0x3A1418);
+                    koBadge.style.borderTopWidth = 1;
+                    koBadge.style.borderBottomWidth = 1;
+                    koBadge.style.borderLeftWidth = 1;
+                    koBadge.style.borderRightWidth = 1;
+                    koBadge.style.borderTopColor = Palette.Err;
+                    koBadge.style.borderBottomColor = Palette.Err;
+                    koBadge.style.borderLeftColor = Palette.Err;
+                    koBadge.style.borderRightColor = Palette.Err;
+                    cardBtn.Add(koBadge);
+                }
+
+                screenBox.Add(cardBtn);
+                menu.Add(cardBtn, u.name ?? numerals[i], () =>
+                {
+                    SelectedIndex = cardIdx;
+                    Game?.Go(GameState.CharacterStatus);
+                }, visual: on =>
+                {
+                    var col = on ? Palette.Gold1 : cardIdx == SelectedIndex ? Palette.Gold2 : Color.clear;
+                    cardBtn.style.borderTopColor = col;
+                    cardBtn.style.borderBottomColor = col;
+                    cardBtn.style.borderLeftColor = col;
+                    cardBtn.style.borderRightColor = col;
+                });
             }
 
-            // Party overview
-            int oy = CardsY + CardH + 8, oh = 319 - oy;
-            Ui.Panel(page, Left, oy, RightEdge - Left, oh);
-            Ui.Header(page, "Party Overview", Left + 8, oy + 6, RightEdge - Left - 4);
-            int colW = (RightEdge - Left - 20) / 3, cx = Left + 10, cy = oy + 26;
+            // Party Overview section
+            BindOverview(screenBox);
 
-            Ui.Label(page, "ROLES COVERED", cx, cy, Palette.Mist3, font: FontKind.Interface);
-            int tx = cx, ty = cy + 11;
-            foreach (var role in party.Select(u => u.classDef?.role).Where(r => !string.IsNullOrEmpty(r)).Distinct())
+            // Bottom action buttons
+            var viewBtn = FigmaUi.FindButton(UiRoot, "View Status");
+            if (viewBtn != null)
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(viewBtn, "View Status", () => Game?.Go(GameState.CharacterStatus)), viewBtn);
+
+            var confirmBtn = FigmaUi.FindButton(UiRoot, "Confirm Party");
+            if (confirmBtn != null)
             {
-                string t = PixelFont.Fit(role.ToUpperInvariant(), colW - 12);
-                int w = PixelFont.Measure(t, FontKind.Interface) + 8;
-                if (tx + w > cx + colW - 6) { tx = cx; ty += 14; }
-                tx += Ui.Tag(page, t, tx, ty) + 3;
+                var item = menu.Add(confirmBtn, "Confirm Party", () => Game?.Go(BackTo));
+                item.visual = on =>
+                {
+                    confirmBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
+                    confirmBtn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
+                    confirmBtn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
+                    confirmBtn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
+                };
+                item.visual(false);
             }
 
-            cx += colW + 10;
-            Ui.Label(page, "DAMAGE TYPES AVAILABLE", cx, cy, Palette.Mist3, font: FontKind.Interface);
-            var elements = party.SelectMany(u => u.skills ?? new string[0])
-                .Where(id => Database.Skills.ContainsKey(id)).Select(id => Database.Skills[id].element)
-                .Prepend(Element.Physical).Distinct().ToList();
-            int ex = cx;
-            foreach (var el in elements)
+            menu.onFocus = item =>
             {
-                ElementChip(page, el, ex, cy + 11);
-                ex += 15;
-                if (ex > cx + colW - 14) break;
+                if (item != null && item.element is Button b && b.name != null && b.name.StartsWith("PartyCard_"))
+                {
+                    if (int.TryParse(b.name.Substring("PartyCard_".Length), out int idx))
+                        Select(idx);
+                }
+            };
+
+            if (party.Count > 0)
+            {
+                int focusTarget = menu.items.FindIndex(it => it.element == cardSlots[SelectedIndex]);
+                menu.Focus(focusTarget >= 0 ? focusTarget : 0, false, true);
             }
-
-            cx += colW + 10;
-            Ui.Label(page, "NEEDS ATTENTION", cx, cy, Palette.Mist3, font: FontKind.Interface);
-            var ko = party.Where(u => !u.Alive).Select(u => u.name).ToList();
-            string note = ko.Count == 0 ? "ALL MEMBERS READY." : $"{string.Join(", ", ko)} {(ko.Count == 1 ? "IS" : "ARE")} KO — REVIVE AT THE TEMPLE BEFORE ENTERING A DUNGEON.";
-            Ui.Label(page, PixelFont.Wrap(note.ToUpperInvariant(), colW - 8, FontKind.Interface), cx, cy + 12, ko.Count == 0 ? Palette.Ok : Palette.Err, font: FontKind.Interface);
-
-            // Footer
-            menu.Add(Ui.Button(page, "Back", Left, FooterY, 52, () => Game?.Go(BackTo), 22, showCursor: false));
-            int hx = Ui.KeyHint(page, Left + 62, FooterY + 5, "SELECT MEMBER", "LT", "RT");
-            Ui.KeyHint(page, hx, FooterY + 5, "STATUS", "S");
-            menu.Add(Ui.Button(page, "Confirm Party", RightEdge - 104, FooterY, 104, () => Game?.Go(BackTo), 22, showCursor: false, style: ButtonStyle.Primary));
-            menu.Add(Ui.Button(page, "View Status", RightEdge - 104 - 8 - 88, FooterY, 88, () => Game?.Go(GameState.CharacterStatus), 22, showCursor: false));
-
-            if (party.Count > 0) menu.Focus(SelectedIndex, false, true);
-            menu.onFocus = s => { int i = menu.items.IndexOf(s); if (i >= 0 && i < party.Count) Select(i); };
+            UpdateSelectionVisuals();
         }
 
-        // One member card (.pnl, gold when selected): figure well, slot numeral, level, KO tag, name, race/class tags, HP/MP bars.
-        static void MemberCard(Transform t, Unit u, int w, string numeral, bool selected)
+        void UpdateSelectionVisuals()
         {
-            const int wellH = 105;
-            Ui.Image(t, PixelArt.Gradient(w - 4, wellH, Palette.Hex(0x16204A), Palette.Ink1), 2, 2, Ui.Widget + 1);
-            Ui.Rect(t, 2, wellH + 2, w - 4, 1, Palette.Ink4, Ui.Widget + 1);
-            if (selected) Ui.Rect(t, 2, 2, w - 4, 2, Palette.Gold2, Ui.Widget + 3);
-            if (u.sprite != null && u.sprite.Length > 0)
+            if (cursorArrow != null && party.Count > 0)
             {
-                int scale = Mathf.Max(1, (wellH - 20) / u.sprite.Length);
-                var fig = Ui.Image(t, PixelArt.FromRows(u.sprite), 0, 0, Ui.Widget + 2, u.Alive ? Color.white : new Color(1, 1, 1, 0.35f));
-                fig.transform.localScale = new Vector3(scale, scale, 1);
-                fig.transform.localPosition = new Vector3((w - u.sprite[0].Length * scale) / 2, -(wellH - 7 - u.sprite.Length * scale), 0);
+                cursorArrow.style.left = 8 + SelectedIndex * 310;
+                cursorArrow.style.top = 230;
+                cursorArrow.style.color = Palette.Gold2;
             }
-            Ui.Label(t, numeral, 6, 5, Palette.Mist3, order: Ui.Widget + 3);
-            Ui.Label(t, $"LV {u.level}", w - 6, 6, Palette.Gold1, Align.Right, order: Ui.Widget + 3, font: FontKind.Interface);
-            if (!u.Alive)
+            if (cardSlots != null)
             {
-                const string ko = "KO · INCAPACITATED";
-                int kw = PixelFont.Measure(ko, FontKind.Interface) + 8;
-                Ui.Image(t, PixelArt.Badge(kw, 12, Palette.Hex(0x3A1418), Palette.Err), (w - kw) / 2, 46, Ui.Widget + 3);
-                Ui.Label(t, ko, (w - kw) / 2 + 4, 49, Palette.Hex(0xFFD2CC), order: Ui.Widget + 4, font: FontKind.Interface);
+                for (int i = 0; i < cardSlots.Length; i++)
+                {
+                    if (cardSlots[i] == null) continue;
+                    bool focused = menu != null && menu.Current?.element == cardSlots[i];
+                    var col = focused ? Palette.Gold1 : i == SelectedIndex ? Palette.Gold2 : Color.clear;
+                    cardSlots[i].style.borderTopColor = col;
+                    cardSlots[i].style.borderBottomColor = col;
+                    cardSlots[i].style.borderLeftColor = col;
+                    cardSlots[i].style.borderRightColor = col;
+                }
             }
-
-            int y = wellH + 8;
-            Ui.Label(t, PixelFont.Fit(u.name ?? "Hero", w - 14, FontKind.DotGothic), 7, y, u.Alive ? Palette.Mist1 : Palette.Mist3, order: Ui.Widget + 2);
-            y += 14;
-            int tx = 7;
-            tx += Ui.Tag(t, u.race?.name ?? "Human", tx, y, TagKind.Cls, 11, Ui.Widget + 2) + 3;
-            Ui.Tag(t, PixelFont.Fit((u.classDef?.name ?? u.role ?? "").ToUpperInvariant(), w - tx - 10), tx, y, TagKind.Cls, 11, Ui.Widget + 2);
-            y += 15;
-            float hp = (float)u.hp / Mathf.Max(1, u.stats.maxHp);
-            VitalRow(t, "HP", y, w, hp, hp < 0.25f ? Palette.HpLow : Palette.Hp, u.hp.ToString());
-            VitalRow(t, "MP", y + 10, w, (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp, u.mp.ToString());
         }
 
-        // Bar row (.br): label · segmented bar · value.
-        static void VitalRow(Transform t, string label, int y, int w, float ratio, Color fill, string value)
+        void BindOverview(VisualElement screenBox)
         {
-            Ui.Label(t, label, 7, y, Palette.Mist3, order: Ui.Widget + 2, font: FontKind.Interface);
-            Ui.Image(t, PixelArt.GaugeBar(w - 54, 6, Mathf.Clamp01(ratio), fill), 20, y, Ui.Widget + 2);
-            Ui.Label(t, value, w - 7, y, Palette.Mist1, Align.Right, order: Ui.Widget + 2, font: FontKind.Interface);
+            var rolesHdr = UiRoot.Q<UiLabel>(className: "roles-covered-vars");
+            if (rolesHdr != null && rolesHdr.parent != null)
+            {
+                int idx = rolesHdr.parent.IndexOf(rolesHdr);
+                if (idx + 1 < rolesHdr.parent.childCount)
+                {
+                    var row = rolesHdr.parent[idx + 1];
+                    row.Clear();
+                    row.style.flexWrap = Wrap.Wrap;
+                    row.style.maxWidth = 390;
+                    foreach (var role in party.Select(u => u.classDef?.role).Where(r => !string.IsNullOrEmpty(r)).Distinct())
+                    {
+                        var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
+                        if (tag != null)
+                        {
+                            FigmaUi.SetInstanceText(tag, "text-0", role.ToUpperInvariant());
+                            tag.style.marginRight = 6;
+                            tag.style.marginBottom = 4;
+                            row.Add(tag);
+                        }
+                    }
+                }
+            }
+
+            var dmgHdr = UiRoot.Q<UiLabel>(className: "damage-types-available-vars");
+            if (dmgHdr != null && dmgHdr.parent != null)
+            {
+                int idx = dmgHdr.parent.IndexOf(dmgHdr);
+                if (idx + 1 < dmgHdr.parent.childCount)
+                {
+                    var row = dmgHdr.parent[idx + 1];
+                    row.Clear();
+                    row.style.flexWrap = Wrap.Wrap;
+                    row.style.maxWidth = 390;
+                    var elements = party.SelectMany(u => u.skills ?? new string[0])
+                        .Where(id => Database.Skills.ContainsKey(id)).Select(id => Database.Skills[id].element)
+                        .Prepend(Element.Physical).Distinct().ToList();
+                    foreach (var el in elements)
+                    {
+                        string code = Palette.ElementCode(el);
+                        var chip = FigmaUi.InstantiateTemplate($"Element-Chip-{code}");
+                        if (chip != null)
+                        {
+                            FigmaUi.SetInstanceText(chip, "text-0", code);
+                            chip.style.marginRight = 6;
+                            chip.style.marginBottom = 4;
+                            row.Add(chip);
+                        }
+                    }
+                }
+            }
+
+            var noteLbl = UiRoot.Q<UiLabel>(className: "all-members-ready-vars");
+            if (noteLbl != null)
+            {
+                var ko = party.Where(u => !u.Alive).Select(u => u.name).ToList();
+                string note = ko.Count == 0
+                    ? "ALL MEMBERS READY."
+                    : $"{string.Join(", ", ko)} {(ko.Count == 1 ? "IS" : "ARE")} KO — REVIVE AT THE TEMPLE BEFORE ENTERING A DUNGEON.";
+                noteLbl.text = note.ToUpperInvariant();
+                noteLbl.style.whiteSpace = WhiteSpace.Normal;
+                noteLbl.style.maxWidth = 350;
+                noteLbl.style.color = ko.Count == 0 ? Palette.Ok : Palette.Err;
+            }
         }
 
-        // Element chip (.el): hue square with the 2-letter code.
+        // Legacy compatibility helper kept for callers like CharacterStatusScreen if still referenced.
         public static void ElementChip(Transform t, Element el, int x, int y, int order = Ui.Widget)
         {
             Ui.Image(t, PixelArt.Badge(13, 13, Palette.ForElement(el), Palette.Ink0), x, y, order);

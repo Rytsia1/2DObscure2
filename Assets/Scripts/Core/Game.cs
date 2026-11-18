@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.UIElements;
 
 namespace Obscure
 {
@@ -11,8 +12,12 @@ namespace Obscure
     public abstract class GameScreen
     {
         protected Transform Root { get; private set; }
+        public VisualElement UiRoot { get; protected set; }
         protected static Game Game => Game.I;
         protected static RunState Run => Game.I != null ? Game.I.Run : null;
+
+        protected VisualElement MountFigma(string screenKey, int sortingOrder = 10)
+            => UiRoot = FigmaUi.Mount(Root.gameObject, screenKey, sortingOrder);
 
         // Back target for service screens (Status, Equipment, Inventory, Skills, Talents): the hub-side screen
         // they were opened from, else the map during a run, else the title.
@@ -81,6 +86,7 @@ namespace Obscure
             // Screen origin at the camera's top-left so children use pixel coordinates.
             transform.position = new Vector3(-Ui.Width / 2, Ui.Height / 2, 0);
             SetupCamera();
+            EnsureEventSystem();
             UiPointerDispatcher.Ensure(gameObject);
             Settings = GameSettings.Load();
             Sfx.Init(gameObject);
@@ -96,6 +102,13 @@ namespace Obscure
             if (I == this) I = null;
         }
 
+        static void EnsureEventSystem()
+        {
+            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+            var esGo = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+            DontDestroyOnLoad(esGo);
+        }
+
         static void SetupCamera()
         {
             var cam = Camera.main;
@@ -107,12 +120,7 @@ namespace Obscure
             cam.backgroundColor = Palette.Void;
             cam.transform.position = new Vector3(0, 0, -10);
             var ppc = cam.GetComponent<PixelPerfectCamera>();
-            if (ppc == null) ppc = cam.gameObject.AddComponent<PixelPerfectCamera>();
-            ppc.assetsPPU = 1;
-            ppc.refResolutionX = Ui.Width;
-            ppc.refResolutionY = Ui.Height;
-            ppc.gridSnapping = PixelPerfectCamera.GridSnapping.PixelSnapping;
-            ppc.cropFrame = PixelPerfectCamera.CropFrame.Windowbox;
+            if (ppc != null) ppc.enabled = false;
         }
 
         // Main Menu -> New Game (Section 2):
@@ -253,10 +261,13 @@ namespace Obscure
             for (float t = 0; t < duration; t += Time.unscaledDeltaTime)
             {
                 // Stepped alpha keeps the fade feeling retro rather than smooth.
-                fader.color = new Color(Palette.Void.r, Palette.Void.g, Palette.Void.b, Mathf.Round(Mathf.Lerp(from, to, t / duration) * 4) / 4);
+                float alpha = Mathf.Round(Mathf.Lerp(from, to, t / duration) * 4) / 4;
+                fader.color = new Color(Palette.Void.r, Palette.Void.g, Palette.Void.b, alpha);
+                FigmaUi.SetFadeAlpha(alpha);
                 yield return null;
             }
             fader.color = new Color(Palette.Void.r, Palette.Void.g, Palette.Void.b, to);
+            FigmaUi.SetFadeAlpha(to);
         }
 
         static GameScreen Create(GameState s) => s switch

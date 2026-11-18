@@ -22,7 +22,8 @@ namespace Obscure
 
         public static Clip Load(string name)
         {
-            if (cache.TryGetValue(name, out var clip)) return clip;
+            if (cache.TryGetValue(name, out var clip) && clip != null && clip.frames != null && clip.frames.Length > 0 && clip.frames[0] != null)
+                return clip;
             var tex = Resources.Load<Texture2D>("Fx/" + name);
             var json = Resources.Load<TextAsset>("Fx/" + name);
             if (tex == null || json == null) { cache[name] = null; return null; }

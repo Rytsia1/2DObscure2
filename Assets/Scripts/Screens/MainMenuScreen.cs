@@ -1,126 +1,206 @@
+using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Obscure
 {
-    // Main Menu — Starlit Reliquary "A · Main Menu" board at 640x360:
+    using UiLabel = UnityEngine.UIElements.Label;
+    // Main Menu — Figma "00 — Main Menu" rendered via UI Toolkit:
     // night sky + tower silhouette, left-aligned gold title, flat menu list, key-prompt footer.
     public class MainMenuScreen : GameScreen
     {
-        public Selectable NewGameButton { get; private set; }
-        public Selectable ContinueButton { get; private set; }
-        public Selectable LoadGameButton { get; private set; }
-        public Selectable SettingsButton { get; private set; }
-        public Selectable ExitButton { get; private set; }
+        public UitkMenu.Item NewGameButton { get; private set; }
+        public UitkMenu.Item ContinueButton { get; private set; }
+        public UitkMenu.Item LoadGameButton { get; private set; }
+        public UitkMenu.Item SettingsButton { get; private set; }
+        public UitkMenu.Item ExitButton { get; private set; }
 
         protected override void Build()
         {
-            Backdrop.Create(Root, true, 16);
+            UiRoot = FigmaUi.Mount(Root.gameObject, "00---Main-Menu");
+            var menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
 
-            // Tower silhouette with lit windows, then mountain ranges
-            Color tower = Palette.Hex(0x0E1430);
-            Ui.Rect(Root, 487, 120, 36, 180, tower, Ui.Back + 5);
-            Ui.Rect(Root, 478, 165, 54, 135, tower, Ui.Back + 5);
-            Ui.Rect(Root, 497, 104, 16, 16, tower, Ui.Back + 5);
-            Ui.Rect(Root, 502, 112, 5, 7, Palette.Gold2, Ui.Back + 6);
-            Ui.Rect(Root, 508, 153, 4, 6, Palette.Ember2, Ui.Back + 6);
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 80, Palette.Hex(0x1A2146), 3), 0, 250, Ui.Back + 7);
-            Ui.Image(Root, PixelArt.Ridge(Ui.Width, 54, Palette.Hex(0x111733), 11), 0, 290, Ui.Back + 8);
-            Ui.Rect(Root, 0, 330, Ui.Width, 30, Palette.Hex(0x0A0F22), Ui.Back + 9);
-
-            // Title block per FELNA — UI System (Page 04)
-            Ui.Divider(Root, 48, 40, 210, Palette.Gold3, Palette.Gold2);
-            Ui.Label(Root, "FELNA", 48, 54, Palette.Gold1, Align.Left, 3, FontKind.DotGothic);
-            for (int i = 0; i < 8; i++) Ui.Image(Root, PixelArt.Diamond(7, Palette.Gold3, false), 48 + i * 10, 98, Ui.Text);
-            Ui.Label(Root, "THE WORLD'S BETWEEN · EIGHT LAYERS DOWN", 134, 98, Palette.Mist2, font: FontKind.DotGothic);
-
-            // Vignette: darken the screen edges
-            Color vign = Palette.Hex(0x05070F, 110);
-            Ui.Rect(Root, 0, 0, Ui.Width, 10, vign, Ui.Back + 10);
-            Ui.Rect(Root, 0, 0, 14, Ui.Height, vign, Ui.Back + 10);
-            Ui.Rect(Root, Ui.Width - 14, 0, 14, Ui.Height, vign, Ui.Back + 10);
-
-            // Menu list: Continue first (with save summary), then New Game, Load, Settings, Exit
-            var menu = Root.gameObject.AddComponent<Menu>();
             bool hasSave = SaveManager.HasAnySave(out var best);
             bool legacySave = !hasSave && GameSave.HasSavedGame();
+            bool canContinue = hasSave || legacySave;
 
-            ContinueButton = menu.Add(Ui.Button(Root, "CONTINUE", 61, 165, 190, () => Game?.ContinueGame(), hasSave ? 32 : 22, interactable: hasSave || legacySave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            int y = 165 + (hasSave ? 34 : 24);
-            if (hasSave)
+            var continueInst = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "CONTINUE");
+            var continueSub = FigmaUi.FindLabel(UiRoot, "AUTO SAVE · GEISTWALD CITY · 0 OF 8 CLEARED");
+            if (continueSub != null)
             {
-                // Two-line item: title on top, save summary below in body text
-                var lbl = ContinueButton.label;
-                lbl.Init(lbl.GetComponent<SpriteRenderer>(), 6, 3, Align.Left, 1, FontKind.DotGothic);
-                lbl.Set("CONTINUE");
-                var m = SaveManager.GetSlotMetadata(best);
-                string when = m.lastSavedTicks > 0 ? new System.DateTime(m.lastSavedTicks).ToString("d MMM HH:mm") : "";
-                string sub = $"{SaveSlotMetadata.FormatSlotName(best)} · GEISTWALD CITY · {Mathf.Max(0, m.committedAct - 1)} OF 8 CLEARED · {when}".ToUpperInvariant();
-                Ui.Label(ContinueButton.transform, PixelFont.Fit(sub, 180, FontKind.Interface), 6, 20, Palette.Mist2, order: Ui.Widget + 1, font: FontKind.Interface);
+                if (hasSave)
+                {
+                    var m = SaveManager.GetSlotMetadata(best);
+                    string when = m.lastSavedTicks > 0 ? new DateTime(m.lastSavedTicks).ToString("d MMM HH:mm") : "";
+                    continueSub.text = $"{SaveSlotMetadata.FormatSlotName(best)} · GEISTWALD CITY · {Mathf.Max(0, m.committedAct - 1)} OF 8 CLEARED{(string.IsNullOrEmpty(when) ? "" : " · " + when)}".ToUpperInvariant();
+                    continueSub.EnableInClassList("uitk-disabled", false);
+                }
+                else
+                {
+                    continueSub.text = legacySave ? "LEGACY SAVE READY" : "NO SAVED CAMPAIGN";
+                    continueSub.EnableInClassList("uitk-disabled", !canContinue);
+                }
             }
-            NewGameButton = menu.Add(Ui.Button(Root, "NEW GAME", 61, y, 190, () => Game?.StartNewGame(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            LoadGameButton = menu.Add(Ui.Button(Root, "LOAD GAME", 61, y + 24, 190, () => Game?.Go(GameState.Load), 22, interactable: hasSave, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            SettingsButton = menu.Add(Ui.Button(Root, "SETTINGS", 61, y + 48, 190, () => Game?.Go(GameState.Settings), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            ExitButton = menu.Add(Ui.Button(Root, "EXIT", 61, y + 72, 190, () => Game?.Quit(), 22, style: ButtonStyle.Flat, font: FontKind.DotGothic));
-            if (!ContinueButton.interactable) menu.Focus(NewGameButton, false);
 
-            // Footer: key prompts + build tag on an ink band
-            Ui.Rect(Root, 0, 334, Ui.Width, 26, Palette.Hex(0x070A14, 220), Ui.Panels);
-            int hx = Ui.KeyHint(Root, 48, 341, "SELECT", "ARROWS");
-            Ui.KeyHint(Root, hx, 341, "CONFIRM", "ENTER");
-            Ui.Label(Root, "V" + Application.version, 592, 343, Palette.Mist3, Align.Right);
+            if (continueInst != null)
+            {
+                ContinueButton = menu.Add(continueInst, "CONTINUE", () => Game?.ContinueGame(), interactable: canContinue);
+            }
+
+            NewGameButton = AddFlatButton(menu, UiRoot, "NEW GAME", () => Game?.StartNewGame(), true);
+            LoadGameButton = AddFlatButton(menu, UiRoot, "LOAD GAME", () => Game?.Go(GameState.Load), hasSave);
+            SettingsButton = AddFlatButton(menu, UiRoot, "SETTINGS", () => Game?.Go(GameState.Settings), true);
+            ExitButton = AddFlatButton(menu, UiRoot, "EXIT", () => Game?.Quit(), true);
+
+            if (!canContinue && NewGameButton != null)
+                menu.Focus(NewGameButton, false);
+            else if (ContinueButton != null)
+                menu.Focus(ContinueButton, false, true);
+
+            var versionLbl = FigmaUi.FindLabel(UiRoot, "V1.0");
+            if (versionLbl != null)
+                versionLbl.text = "V" + Application.version;
+        }
+
+        static UitkMenu.Item AddFlatButton(UitkMenu menu, VisualElement root, string text, Action onClick, bool interactable)
+        {
+            var btn = FigmaUi.FindButton(root, text);
+            if (btn == null) return null;
+            btn.SetEnabled(interactable);
+            return menu.Add(btn, text, onClick, interactable: interactable, visual: focused =>
+            {
+                btn.EnableInClassList("uitk-focus", focused);
+                btn.EnableInClassList("uitk-disabled", !interactable);
+                btn.text = focused ? $"▸  {text}" : text;
+            });
         }
     }
 
-    // Opening story sequence shown after the player confirms their 4-character New Game party
-    // and before the first expedition begins (Section 2 & Section 12).
+    // Opening story sequence shown after confirming New Game party before the first expedition.
     public class OpeningSequenceScreen : GameScreen
     {
-        public Selectable BeginExpeditionButton { get; private set; }
-        public Label StoryLabel { get; private set; }
+        public UitkMenu.Item BeginExpeditionButton { get; private set; }
 
         protected override void Build()
         {
-            Backdrop.Create(Root, true, 12, Palette.DeepCharcoal, Palette.MidnightNavy, Palette.Dusk, Palette.ArcaneViolet);
+            UiRoot = new VisualElement();
+            var catalog = FigmaScreenCatalog.Instance;
+            var ps = catalog != null ? catalog.GetPanelSettings() : null;
+            var doc = Root.gameObject.AddComponent<UIDocument>();
+            doc.sortingOrder = 10;
+            if (ps != null) doc.panelSettings = ps;
 
-            Ui.Panel(Root, 16, 14, 608, 292, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Divider(Root, 36, 22, 568, Palette.DarkBorder, Palette.AntiqueGoldBright);
-            Ui.Label(Root, "PROLOGUE: THE SEALED ABYSS", 320, 30, Palette.AntiqueGoldBright, Align.Center, 1, FontKind.Serif);
-            Ui.Divider(Root, 36, 48, 568, Palette.DarkBorder, Palette.AntiqueGoldBright);
+            UiRoot = doc.rootVisualElement ?? new VisualElement();
+            var tokens = catalog != null ? catalog.GetTokens() : null;
+            var runtime = catalog != null ? catalog.GetRuntimeStylesheet() : null;
+            if (tokens != null) UiRoot.styleSheets.Add(tokens);
+            if (runtime != null) UiRoot.styleSheets.Add(runtime);
 
-            string story =
+            UiRoot.style.flexGrow = 1;
+            UiRoot.style.backgroundColor = Palette.Ink1;
+            UiRoot.style.paddingLeft = 48;
+            UiRoot.style.paddingRight = 48;
+            UiRoot.style.paddingTop = 36;
+            UiRoot.style.paddingBottom = 36;
+            UiRoot.style.justifyContent = Justify.SpaceBetween;
+
+            var panel = new VisualElement();
+            panel.style.flexGrow = 1;
+            panel.style.backgroundColor = Palette.Ink2;
+            panel.style.borderTopWidth = 2;
+            panel.style.borderRightWidth = 2;
+            panel.style.borderBottomWidth = 2;
+            panel.style.borderLeftWidth = 2;
+            panel.style.borderTopColor = Palette.Gold3;
+            panel.style.borderRightColor = Palette.Gold3;
+            panel.style.borderBottomColor = Palette.Gold3;
+            panel.style.borderLeftColor = Palette.Gold3;
+            panel.style.paddingLeft = 36;
+            panel.style.paddingRight = 36;
+            panel.style.paddingTop = 28;
+            panel.style.paddingBottom = 28;
+            UiRoot.Add(panel);
+
+            var title = new UiLabel("PROLOGUE: THE SEALED ABYSS");
+            title.style.fontSize = 28;
+            title.style.color = Palette.Gold1;
+            title.style.unityTextAlign = TextAnchor.MiddleCenter;
+            title.style.marginBottom = 18;
+            panel.Add(title);
+
+            var div = new VisualElement();
+            div.AddToClassList("uitk-modal-divider");
+            panel.Add(div);
+
+            var story = new UiLabel(
                 "BENEATH THE ASHEN CITADEL, THE ANCIENT SEAL WEAKENS. " +
                 "FOUR SOULS BOUND BY OATH STEP BEYOND THE IRON GATE " +
-                "TO DESCEND INTO THE SHIFTING CORRIDORS OF THE ABYSS.";
-            StoryLabel = Ui.Label(Root, StoryText(story), 40, 58, Palette.WarmIvory);
+                "TO DESCEND INTO THE SHIFTING CORRIDORS OF THE ABYSS.");
+            story.style.fontSize = 20;
+            story.style.color = Palette.Mist1;
+            story.style.whiteSpace = WhiteSpace.Normal;
+            story.style.unityTextAlign = TextAnchor.MiddleCenter;
+            story.style.marginBottom = 28;
+            panel.Add(story);
 
-            // 4 hero showcase cards across 608px panel
+            var cardsRow = new VisualElement();
+            cardsRow.style.flexDirection = FlexDirection.Row;
+            cardsRow.style.justifyContent = Justify.SpaceBetween;
+            cardsRow.style.flexGrow = 1;
+            panel.Add(cardsRow);
+
             var party = Game?.Roster != null ? Game.Roster.GetActiveParty() : Database.Party.Select(id => Database.Characters[id]).ToList();
             for (int i = 0; i < party.Count && i < 4; i++)
             {
                 var hero = party[i];
-                int cx = 28 + i * 146, cy = 110;
-                Ui.Image(Root, PixelArt.Box(140, 176, Palette.MidnightNavy, Palette.DarkBorder), cx, cy, Ui.Panels + 1);
+                var card = new VisualElement();
+                card.AddToClassList("uitk-card");
+                card.style.width = 250;
+                card.style.alignItems = UnityEngine.UIElements.Align.Center;
+                card.style.paddingTop = 20;
+                card.style.paddingBottom = 20;
 
-                // Portrait frame
-                Ui.Image(Root, PixelArt.Box(36, 40, Palette.DeepCharcoal, Palette.AntiqueGoldDim), cx + 52, cy + 12, Ui.Panels + 2);
+                var portrait = new VisualElement();
+                portrait.style.width = 96;
+                portrait.style.height = 96;
+                portrait.style.marginBottom = 16;
                 if (hero.sprite != null)
-                    Ui.Image(Root, PixelArt.FromRows(hero.sprite), cx + 58, cy + 46 - hero.sprite.Length, Ui.Widget);
+                    FigmaUi.SetBackgroundContain(portrait, FigmaUi.GetSpriteTexture(hero.sprite, "hero_" + hero.id));
+                card.Add(portrait);
 
-                Ui.Divider(Root, cx + 12, cy + 62, 116, Palette.DarkBorder, Palette.AntiqueGoldDim);
+                var nameLbl = new UiLabel((hero.name ?? "HERO").ToUpperInvariant());
+                nameLbl.style.fontSize = 22;
+                nameLbl.style.color = Palette.Mist1;
+                nameLbl.style.marginBottom = 6;
+                card.Add(nameLbl);
 
-                Ui.Label(Root, PixelFont.Fit((hero.name ?? "HERO").ToUpperInvariant(), 120), cx + 70, cy + 72, Palette.WarmIvory, Align.Center, 1, FontKind.Serif);
-                Ui.Label(Root, PixelFont.Fit(RaceName(hero.raceId), 120), cx + 70, cy + 96, Palette.MutedGray, Align.Center);
-                Ui.Label(Root, PixelFont.Fit(ClassName(hero.classId), 120), cx + 70, cy + 116, Palette.AntiqueGoldBright, Align.Center);
+                var raceLbl = new UiLabel(Database.Races.TryGetValue(hero.raceId ?? "", out var r) ? r.name.ToUpperInvariant() : (hero.raceId ?? "").ToUpperInvariant());
+                raceLbl.style.fontSize = 14;
+                raceLbl.style.color = Palette.Mist3;
+                raceLbl.style.marginBottom = 4;
+                card.Add(raceLbl);
+
+                var clsLbl = new UiLabel(Database.Classes.TryGetValue(hero.classId ?? "", out var c) ? c.name.ToUpperInvariant() : (hero.classId ?? "").ToUpperInvariant());
+                clsLbl.style.fontSize = 16;
+                clsLbl.style.color = Palette.Gold1;
+                card.Add(clsLbl);
+
+                cardsRow.Add(card);
             }
 
-            var menu = Root.gameObject.AddComponent<Menu>();
-            BeginExpeditionButton = menu.Add(Ui.Button(Root, "BEGIN EXPEDITION", 230, 318, 180, () => Game?.BeginFirstExpedition(), 26));
+            var footer = new VisualElement();
+            footer.style.alignItems = UnityEngine.UIElements.Align.Center;
+            footer.style.marginTop = 24;
+            UiRoot.Add(footer);
+
+            var btnEl = FigmaUi.CreateButton("BEGIN EXPEDITION", "button-primary", 320f);
+            footer.Add(btnEl);
+
+            var menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            BeginExpeditionButton = menu.Add(btnEl, "BEGIN EXPEDITION", () => Game?.BeginFirstExpedition());
         }
-
-        static string StoryText(string s) => PixelFont.Wrap(s, 560);
-
-        static string RaceName(string id) => (id != null && Database.Races.TryGetValue(id, out var r) ? r.name : id ?? "").ToUpperInvariant();
-        static string ClassName(string id) => (id != null && Database.Classes.TryGetValue(id, out var c) ? c.name : id ?? "").ToUpperInvariant();
     }
 }

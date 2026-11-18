@@ -1,9 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure.Tests
 {
@@ -14,12 +17,18 @@ namespace Obscure.Tests
         Keyboard kb;
         Mouse mouse;
         string savedPrefs;
+        ISaveStorage realStorage;
 
         public override void Setup()
         {
+            var uiModule = Object.FindFirstObjectByType<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            if (uiModule != null) uiModule.enabled = false;
             base.Setup();
+            realStorage = SaveManager.Storage;
+            SaveManager.Storage = new MemorySaveStorage();
             kb = InputSystem.AddDevice<Keyboard>();
             mouse = InputSystem.AddDevice<Mouse>();
+            if (uiModule != null) uiModule.enabled = true;
             StartClockAfterPlayModeEntry();
             savedPrefs = PlayerPrefs.GetString(PrefKey, null);
             Time.timeScale = 4f; // combat pacing uses scaled time; menus/fades use unscaled
@@ -28,8 +37,12 @@ namespace Obscure.Tests
         public override void TearDown()
         {
             Time.timeScale = 1f;
+            if (realStorage != null) SaveManager.Storage = realStorage;
             if (savedPrefs == null) PlayerPrefs.DeleteKey(PrefKey); else PlayerPrefs.SetString(PrefKey, savedPrefs);
+            var uiModule = Object.FindFirstObjectByType<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            if (uiModule != null) uiModule.enabled = false;
             base.TearDown();
+            if (uiModule != null) uiModule.enabled = true;
         }
 
         // In the editor the Input System drops every state event stamped between leaving edit mode and entering
@@ -65,9 +78,27 @@ namespace Obscure.Tests
         {
             get
             {
-                var c = Object.FindFirstObjectByType<Menu>().Current;
-                return c.label != null ? c.label.Text : c.name;
+                var u = UitkMenu.ActiveMenu?.Current;
+                if (u != null) return u.text;
+                var c = Object.FindFirstObjectByType<Menu>()?.Current;
+                return c != null ? (c.label != null ? c.label.Text : c.name) : "";
             }
+        }
+
+        static List<string> ActiveUiTexts()
+        {
+            var list = new List<string>();
+            foreach (var doc in Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None))
+            {
+                if (doc.rootVisualElement == null) continue;
+                foreach (var l in doc.rootVisualElement.Query<UiLabel>().ToList())
+                    if (l.resolvedStyle.display != DisplayStyle.None && !string.IsNullOrEmpty(l.text))
+                        list.Add(l.text);
+            }
+            foreach (var l in Object.FindObjectsByType<Label>(FindObjectsSortMode.None))
+                if (l.gameObject.activeInHierarchy && !string.IsNullOrEmpty(l.Text))
+                    list.Add(l.Text);
+            return list;
         }
 
         static GameState State => Game.I.State;
@@ -121,8 +152,16 @@ namespace Obscure.Tests
 
         IEnumerator WinBattle()
         {
-            foreach (var e in CurrentBattle.Enemies) e.unit.hp = 1;
-            yield return MashEnterUntilLeaving(GameState.Combat);
+            for (float t = 0; t < 30f && State == GameState.Combat; t += Time.unscaledDeltaTime)
+            {
+                var cb = Object.FindFirstObjectByType<CombatView>()?.Battle;
+                if (cb != null && cb.Outcome == Outcome.None)
+                    foreach (var e in cb.Enemies)
+                        if (e.Alive && e.unit.hp > 1) e.unit.hp = 1;
+                yield return Tap(Key.Enter);
+            }
+            yield return Settle();
+            Assert.AreNotEqual(GameState.Combat, State, "battle never ended");
         }
 
         [UnityTest]
@@ -130,9 +169,8 @@ namespace Obscure.Tests
         {
             yield return Begin();
             Assert.AreEqual("NEW GAME", Focus);
-            yield return Tap(Key.DownArrow);
-            Assert.AreEqual("CONTINUE", Focus);
-            yield return Tap(Key.DownArrow);
+            yield return Tap(Key.DownArrow); // LOAD GAME
+            yield return Tap(Key.DownArrow); // SETTINGS
             Assert.AreEqual("SETTINGS", Focus);
             yield return TapAndSettle(Key.Enter);
             Assert.AreEqual(GameState.Settings, State);
@@ -140,6 +178,7 @@ namespace Obscure.Tests
             yield return Tap(Key.LeftArrow);
             Assert.AreEqual(Mathf.Max(0, volume - 1), Game.I.Settings.volume);
             yield return TapAndSettle(Key.Escape);
+            if (State == GameState.Settings) yield return TapAndSettle(Key.Enter); // confirm Unsaved Changes Apply modal
             Assert.AreEqual(GameState.MainMenu, State);
 
             yield return StartRunOnMap();
@@ -148,7 +187,7 @@ namespace Obscure.Tests
 
             // Walk the generated map by keyboard, always taking the first open node, until the boss falls.
             string rewardFocus = "";
-            for (int step = 0; step < 60 && State != GameState.Victory; step++)
+            for (int step = 0; step < 60 && State != GameState.Victory && State != GameState.DungeonClear; step++)
             {
                 switch (State)
                 {
@@ -164,21 +203,20 @@ namespace Obscure.Tests
                         yield return TapAndSettle(Key.Enter);
                         yield return TapAndSettle(Key.Enter);
                         break;
+                    case GameState.Shop:                                                  // skip shop via Back
+                        yield return TapAndSettle(Key.Escape);
+                        break;
                     default: Assert.Fail("unexpected state " + State); break;
                 }
             }
-            Assert.AreEqual(GameState.Victory, State);
+            Assert.AreEqual(GameState.DungeonClear, State);
             Assert.AreEqual(RunStatus.Victory, run.Status);
             Assert.AreEqual(run.Map.Floors, run.Stats.nodesCompleted);
             Assert.IsTrue(run.Stats.bossDefeated);
             CollectionAssert.Contains(run.Relics, Database.BossRelic, "boss reward focus was " + rewardFocus);
 
-            yield return TapAndSettle(Key.Enter); // NEW RUN from the summary
-            Assert.AreEqual(GameState.Map, State);
-            Assert.AreNotSame(run, Run);
-            Assert.AreEqual(0, Run.Gold);
-            Assert.IsEmpty(Run.Cleared);
-            Assert.AreEqual(RunStatus.Active, Run.Status);
+            yield return TapAndSettle(Key.Enter); // Return to Hub from Dungeon Clear
+            Assert.AreEqual(GameState.Hub, State);
         }
 
         [UnityTest]
@@ -196,8 +234,7 @@ namespace Obscure.Tests
             Assert.AreEqual(GameState.GameOver, State);
             Assert.AreEqual(RunStatus.Defeat, Run.Status);
             CollectionAssert.IsEmpty(Run.Available, "no node selection after defeat");
-            yield return Tap(Key.RightArrow); // TITLE
-            yield return TapAndSettle(Key.Enter);
+            yield return TapAndSettle(Key.Enter); // Return to Main Menu
             Assert.AreEqual(GameState.MainMenu, State);
         }
 
@@ -212,18 +249,14 @@ namespace Obscure.Tests
 
             for (int action = 0; action < 4; action++)
             {
-                yield return WaitFor(() =>
-                {
-                    var m = Object.FindFirstObjectByType<Menu>();
-                    return b.Active != null && !b.Active.IsEnemy && m != null && m.items.Count > 0;
-                }, "a party turn");
+                yield return WaitFor(() => PartyMenuOpen(b), "a party turn");
                 int logCount = b.Log.Count;
                 yield return Tap(Key.Enter); // ATTACK
                 yield return Tap(Key.Enter); // first target
                 yield return WaitFor(() => b.Log.Count > logCount, "the attack to resolve");
                 yield return null;
 
-                var texts = Object.FindObjectsByType<Label>(FindObjectsSortMode.None).Select(l => l.Text).ToList();
+                var texts = ActiveUiTexts();
                 foreach (var p in b.Party) CollectionAssert.Contains(texts, $"{p.unit.hp}/{p.Stats.maxHp}", p.name + " HP row");
                 CollectionAssert.Contains(texts, PixelFont.Wrap(b.Log.Last().ToUpperInvariant(), 158).Split('\n').Last(), "log shows latest line");
                 CollectionAssert.Contains(texts, $"ROUND {b.Round}");
@@ -236,7 +269,7 @@ namespace Obscure.Tests
 
         static bool PartyMenuOpen(Battle b)
         {
-            var m = Object.FindFirstObjectByType<Menu>();
+            var m = UitkMenu.ActiveMenu;
             return b.Active != null && !b.Active.IsEnemy && m != null && m.items.Count > 0 && Panel == null;
         }
 
@@ -356,7 +389,7 @@ namespace Obscure.Tests
             foreach (var e in b.Enemies) e.unit.hp = 0; // the battle ends underneath the QTE
             yield return WaitFor(() => q.Done, "cancellation");
             Assert.IsTrue(q.Cancelled);
-            yield return WaitFor(() => Object.FindObjectsByType<Label>(FindObjectsSortMode.None).Any(l => l.Text == "VICTORY"), "the victory panel");
+            yield return WaitFor(() => ActiveUiTexts().Contains("VICTORY"), "the victory panel");
             Assert.AreEqual(logCount, b.Log.Count, "the cancelled attack never resolved");
             yield return MashEnterUntilLeaving(GameState.Combat);
             Assert.AreEqual(GameState.Reward, State);
@@ -366,16 +399,27 @@ namespace Obscure.Tests
         public IEnumerator MouseClickActivatesButton()
         {
             yield return Begin();
-            var settings = GameObject.Find("Button:SETTINGS").GetComponent<Selectable>();
-            var center = settings.transform.position + new Vector3(settings.size.x / 2f, -settings.size.y / 2f);
-            Vector2 screen = Camera.main.WorldToScreenPoint(center);
+            var settingsItem = UitkMenu.ActiveMenu.items.First(it => it.text == "SETTINGS");
+            var wb = settingsItem.element.worldBound;
+            var panelSize = settingsItem.element.panel.visualTree.layout;
+            float sx = Screen.width / Mathf.Max(1f, panelSize.width);
+            float sy = Screen.height / Mathf.Max(1f, panelSize.height);
+            Vector2 screen = new Vector2(wb.center.x * sx, Screen.height - wb.center.y * sy);
 
             Set(mouse.position, screen, queueEventOnly: true);
             yield return null;
+            yield return null;
+            var es = UnityEngine.EventSystems.EventSystem.current;
+            var uiMod = Object.FindFirstObjectByType<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            var picked = settingsItem.element.panel.Pick(wb.center);
+            Debug.Log($"[DIAG-M2] Focus={Focus} wb={wb} screen={Screen.width}x{Screen.height} target={screen} es={(es != null)} mod={(uiMod != null && uiMod.enabled)} point={uiMod?.point?.action?.ReadValue<Vector2>()} picked={picked?.name}/{picked?.GetType().Name} isOver={es?.IsPointerOverGameObject()}");
             Assert.AreEqual("SETTINGS", Focus, "hover should focus");
             Press(mouse.leftButton, queueEventOnly: true);
             yield return null;
+            yield return null;
             Release(mouse.leftButton, queueEventOnly: true);
+            yield return null;
+            yield return null;
             yield return Settle();
             Assert.AreEqual(GameState.Settings, State);
             yield return TapAndSettle(Key.Escape);

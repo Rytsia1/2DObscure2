@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Training Ground / Skill Tree — Starlit Reliquary "J1 · Training Ground / Skill Tree" board at 640x360:
-    // header (Back · title · Q portraits E · hero · Skill Points), tree panel with 5 tier columns
-    // (Active = square node, Passive = diamond, rank pips, links, locked tiers hatched), loadout strip,
-    // gold detail panel (tags, stats, requirements, SP cost, Learn / Upgrade / Equip).
+    // Training Ground / Skill Tree — migrated to Figma 16---Training-Ground---Skill-Tree.uxml (1280x720 UI Toolkit).
     public class SkillTreeScreen : GameScreen
     {
         readonly GameState returnState;
@@ -16,13 +15,9 @@ namespace Obscure
         int heroIndex;
 
         public Unit CurrentHero => party[Math.Clamp(heroIndex, 0, party.Count - 1)];
-
-        const int Left = 12, RightEdge = 628, BodyY = 33, BodyBottom = 351, TreeW = 419, DetailX = 438;
-        const int TreeTop = BodyY + 22, TreeBottom = BodyBottom - 34;
         static readonly int[] TierLevel = { 1, 4, 7, 10, 13 };
 
-        Menu menu;
-        Transform page;
+        UitkMenu menu;
         string selectedSkillId;
         bool isSelectedPassive;
         bool confirmRespecActive;
@@ -31,20 +26,16 @@ namespace Obscure
         int focusIndex;
         bool rebuilding;
 
-        class Node { public string id; public bool passive; public int tier; public int row; public int x, y; }
+        class Node { public string id; public bool passive; public int tier; public int row; public float x, y; }
 
         public SkillTreeScreen() : this(null, 0, null) { }
 
         public SkillTreeScreen(IEnumerable<Unit> partyUnits = null, int initialHero = 0, GameState? backTo = null)
         {
-            if (partyUnits != null)
-                party = partyUnits.ToList();
-            else if (Game.I?.Run?.Party != null)
-                party = Game.I.Run.Party;
-            else if (Game.I?.Roster != null)
-                party = Game.I.Roster.GetActiveParty().Select(d => new Unit(d)).ToList();
-            else
-                party = Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            if (partyUnits != null) party = partyUnits.ToList();
+            else if (Game.I?.Run?.Party != null) party = Game.I.Run.Party;
+            else if (Game.I?.Roster != null) party = Game.I.Roster.GetActiveParty().Select(d => new Unit(d)).ToList();
+            else party = Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
 
             heroIndex = Math.Clamp(partyUnits == null && initialHero == 0 ? PartyScreen.SelectedIndex : initialHero, 0, Math.Max(0, party.Count - 1));
             returnState = backTo ?? ReturnTarget();
@@ -52,39 +43,9 @@ namespace Obscure
 
         protected override void Build()
         {
-            Backdrop.Create(Root, false, 0, Palette.Ink1, Palette.Ink1);
-            menu = Root.gameObject.AddComponent<Menu>();
-            menu.onBack = () => Game?.Go(returnState);
-            menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
+            MountFigma("16---Training-Ground---Skill-Tree");
             Rebuild();
         }
-
-        void Rebuild()
-        {
-            if (Root == null || rebuilding) return;
-            rebuilding = true;
-            try
-            {
-                if (page != null)
-                {
-                    if (Application.isPlaying) UnityEngine.Object.Destroy(page.gameObject);
-                    else UnityEngine.Object.DestroyImmediate(page.gameObject);
-                }
-                page = new GameObject("SkillTree").transform;
-                page.SetParent(Root, false);
-                menu.items.Clear();
-
-                var nodes = LayoutNodes();
-                if (selectedSkillId == null && nodes.Count > 0) { selectedSkillId = nodes[0].id; isSelectedPassive = nodes[0].passive; }
-                BuildHeader();
-                BuildTree(nodes);
-                BuildDetail();
-                if (menu.items.Count > 0) menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
-            }
-            finally { rebuilding = false; }
-        }
-
-        // ------------------------------------------------------------------ data
 
         List<Node> LayoutNodes()
         {
@@ -99,15 +60,16 @@ namespace Obscure
             foreach (var n in c.skillUnlockProgression ?? Array.Empty<SkillUnlockNode>())
                 if (list.All(x => x.id != n.skillId)) list.Add(new Node { id = n.skillId, passive = n.isPassive, tier = Mathf.Clamp(n.tier, 1, 5) });
 
-            int colW = (TreeW - 4) / 5, h = TreeBottom - TreeTop - 22;
+            const float colW = 161f;
+            const float topY = 92f, spanH = 380f;
             foreach (var g in list.GroupBy(n => n.tier))
             {
                 var ordered = g.OrderBy(n => n.passive).ToList();
                 for (int i = 0; i < ordered.Count; i++)
                 {
                     ordered[i].row = i;
-                    ordered[i].x = Left + 2 + (g.Key - 1) * colW + colW / 2;
-                    ordered[i].y = TreeTop + 22 + h * (i + 1) / (ordered.Count + 1);
+                    ordered[i].x = (g.Key - 1) * colW + colW / 2f;
+                    ordered[i].y = topY + spanH * (i + 1) / (ordered.Count + 1);
                 }
             }
             return list;
@@ -126,201 +88,224 @@ namespace Obscure
             return (w.Length >= 2 ? $"{w[0][0]}{w[1][0]}" : w[0].Substring(0, Math.Min(2, w[0].Length))).ToUpperInvariant();
         }
 
-        // ---------------------------------------------------------------- header
+        void Rebuild()
+        {
+            if (Root == null || rebuilding) return;
+            rebuilding = true;
+            try
+            {
+                UiRoot = FigmaUi.Mount(Root.gameObject, "16---Training-Ground---Skill-Tree");
+                if (menu != null)
+                {
+                    if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
+                    else UnityEngine.Object.DestroyImmediate(menu);
+                }
+                menu = Root.gameObject.AddComponent<UitkMenu>();
+                menu.AttachRoot(UiRoot);
+                menu.onBack = () => Game?.Go(returnState);
+                menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
+
+                var nodes = LayoutNodes();
+                if (selectedSkillId == null && nodes.Count > 0) { selectedSkillId = nodes[0].id; isSelectedPassive = nodes[0].passive; }
+
+                BuildHeader();
+
+                var screen = UiRoot.Q<VisualElement>(className: "_16-training-ground-skill-tree") ?? UiRoot;
+                var pLeft = UiRoot.Q<VisualElement>(className: "panel-default__i-27");
+                var pRight = UiRoot.Q<VisualElement>(className: "panel-gold__i-12");
+                if (pLeft != null)
+                {
+                    int i1 = screen.IndexOf(pLeft);
+                    for (int i = i1 + 1; i < screen.childCount; i++)
+                    {
+                        if (screen[i] == pRight) continue;
+                        screen[i].style.display = DisplayStyle.None;
+                    }
+                }
+
+                BuildTree(screen, nodes);
+                BuildDetail(screen);
+
+                if (menu.items.Count > 0) menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
+            }
+            finally { rebuilding = false; }
+        }
 
         void BuildHeader()
         {
             var hero = CurrentHero;
-            menu.Add(Ui.Button(page, "Back", Left, 9, 40, () => Game?.Go(returnState), 18, showCursor: false));
-            Ui.Label(page, "Training Ground", Left + 50, 13, Palette.Gold2);
-            int x = Left + 50 + PixelFont.Measure("Training Ground", FontKind.DotGothic) + 16;
-            Ui.Badge(page, "Q", x, 13, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
-            x += 15;
-            for (int i = 0; i < party.Count; i++)
-            {
-                int idx = i;
-                var p = Ui.Button(page, "", x, 9, 18, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; feedback = null; Rebuild(); } }, 18, showCursor: false, style: ButtonStyle.Card);
-                p.selected = i == heroIndex;
-                p.visual(false);
-                p.onAdjust = d => { heroIndex = (heroIndex + d + party.Count) % party.Count; selectedSkillId = null; feedback = null; Rebuild(); };
-                Color c = Palette.ForClass(party[i].classDef?.id);
-                Ui.Image(p.transform, PixelArt.Box(18, 18, Color.Lerp(c, Palette.Ink1, 0.7f), i == heroIndex ? Palette.Gold2 : Palette.Ink5), 0, 0, Ui.Widget + 1);
-                Ui.Rect(p.transform, 6, 4, 6, 6, Color.Lerp(c, Palette.Hex(0xF3DCC0), 0.55f), Ui.Widget + 2);
-                Ui.Rect(p.transform, 3, 12, 12, 4, c, Ui.Widget + 2);
-                menu.Add(p);
-                x += 21;
-            }
-            Ui.Badge(page, "E", x + 1, 13, 12, 12, Palette.Mist2, Palette.Hex(0x8790AD), Palette.Ink1, font: FontKind.Interface);
-            x += 20;
-            Ui.Label(page, PixelFont.Fit($"{hero.name} · {hero.classDef?.name} · Lv {hero.level}", 150, FontKind.DotGothic), x, 13, Palette.Mist2);
+            var backBtn = FigmaUi.FindButton(UiRoot, "Back");
+            if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
 
-            // Skill Points box (gold frame)
-            int sp = hero.skillLoadout.SkillPoints;
-            const int bw = 92;
-            Ui.Image(page, PixelArt.Badge(bw, 20, Palette.Hex(0x1D1608), Palette.Gold3), RightEdge - bw, 8, Ui.Widget);
-            Ui.Label(page, "SKILL POINTS", RightEdge - bw + 6, 15, Palette.Gold2, order: Ui.Widget + 1, font: FontKind.Interface);
-            Ui.Label(page, sp.ToString(), RightEdge - 6, 12, Palette.Gold1, Align.Right, order: Ui.Widget + 1);
-            menu.Add(Ui.Button(page, "Talents ›", RightEdge - bw - 76, 9, 70, () => Game?.Go(GameState.Talents), 18, showCursor: false));
+            string[] frames = { "frame-vars-22", "frame-vars-23", "frame-vars-24", "frame-vars-25" };
+            for (int i = 0; i < frames.Length; i++)
+            {
+                var fr = UiRoot.Q<VisualElement>(className: frames[i]);
+                if (fr == null) continue;
+                if (i >= party.Count) { fr.style.display = DisplayStyle.None; continue; }
+                int idx = i; var u = party[i]; bool on = i == heroIndex;
+                if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
+                    FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "sk_hdr_" + (u.classDef?.id ?? u.name)));
+                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d =>
+                {
+                    heroIndex = (heroIndex + d + party.Count) % party.Count; selectedSkillId = null; feedback = null; Rebuild();
+                });
+                it.visual = f => { var b = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = b; fr.style.borderBottomColor = b; fr.style.borderLeftColor = b; fr.style.borderRightColor = b; };
+                it.visual(false);
+            }
+
+            var heroLbl = UiRoot.Q<UiLabel>(className: "knight-knight-lv-1-vars");
+            if (heroLbl != null) heroLbl.text = $"{hero.name} · {hero.classDef?.name} · Lv {hero.level}";
+
+            var talBtn = FigmaUi.FindButton(UiRoot, "Talents ›");
+            if (talBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(talBtn, "Talents", () => Game?.Go(GameState.Talents)));
+
+            var spVal = UiRoot.Q<UiLabel>(className: "_0-vars-11");
+            if (spVal != null) spVal.text = hero.skillLoadout.SkillPoints.ToString();
         }
 
-        // ------------------------------------------------------------------ tree
-
-        void BuildTree(List<Node> nodes)
+        void BuildTree(VisualElement screen, List<Node> nodes)
         {
             var hero = CurrentHero;
-            Ui.Panel(page, Left, BodyY, TreeW, BodyBottom - BodyY);
-            Ui.Header(page, $"{hero.classDef?.name ?? "Class"} skill tree", Left + 8, BodyY + 6, TreeW - 4);
-            // Legend: square = Active, diamond = Passive
-            int lx = Left + TreeW - 8 - PixelFont.Measure("PASSIVE", FontKind.Interface);
-            Ui.Label(page, "PASSIVE", lx, BodyY + 8, Palette.Mist2, font: FontKind.Interface);
-            Ui.Image(page, PixelArt.Diamond(7, Palette.Mist2, false), lx - 10, BodyY + 8, Ui.Widget);
-            lx -= 14 + PixelFont.Measure("ACTIVE", FontKind.Interface) + 6;
-            Ui.Label(page, "ACTIVE", lx, BodyY + 8, Palette.Mist2, font: FontKind.Interface);
-            Ui.Image(page, PixelArt.Badge(6, 6, Color.clear, Palette.Mist2), lx - 9, BodyY + 9, Ui.Widget);
+            var host = new VisualElement { style = { position = Position.Absolute, left = 40, top = 84, width = 806, height = 602, flexDirection = FlexDirection.Column } };
+            screen.Add(host);
 
-            // Tier bands
+            var topBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
+            topBar.Add(FigmaUi.CreateSectionHeader($"{hero.classDef?.name ?? "Class"} skill tree", 580f));
+            topBar.Add(new UiLabel("□ ACTIVE   ◇ PASSIVE") { style = { fontSize = 13, color = Palette.Mist2 } });
+            host.Add(topBar);
+
+            var canvas = new VisualElement { style = { flexGrow = 1, marginTop = 8, marginBottom = 8 } };
+            host.Add(canvas);
+
             int maxTier = SkillLoadout.GetMaxUnlockedTier(hero.level);
-            int colW = (TreeW - 4) / 5;
+            const float colW = 161f;
             for (int t = 1; t <= 5; t++)
             {
-                int cx = Left + 2 + (t - 1) * colW;
                 bool open = t <= maxTier;
-                if (!open) Hatch(cx, TreeTop, colW, TreeBottom - TreeTop);
-                if (t < 5) Ui.Rect(page, cx + colW - 1, TreeTop, 1, TreeBottom - TreeTop, Palette.Ink3, Ui.Panels + 2);
-                Color col = open ? Palette.Gold1 : Palette.Mist3;
-                Ui.Label(page, $"TIER {t}", cx + colW / 2, TreeTop + 4, col, Align.Center, font: FontKind.Interface);
-                Ui.Label(page, open ? $"LV {TierLevel[t - 1]}" : $"LV {TierLevel[t - 1]} · LOCKED", cx + colW / 2, TreeTop + 13, col, Align.Center, font: FontKind.Interface);
-            }
-
-            // Links between same-row nodes of consecutive tiers
-            foreach (var a in nodes)
-            {
-                var b = nodes.FirstOrDefault(n => n.tier == a.tier + 1 && n.row == a.row);
-                if (b == null) continue;
-                int x0 = a.x + 16, x1 = b.x - 16;
-                if (x1 <= x0) continue;
-                bool ua = Unlocked(a), ub = Unlocked(b);
-                if (ua && ub) Ui.Rect(page, x0, a.y - 1, x1 - x0, 2, Palette.Gold3, Ui.Panels + 3);
-                else
+                var band = new VisualElement
                 {
-                    Color c = ua && Available(b) ? Palette.Mist1 : Palette.Ink5;
-                    for (int x = x0; x < x1; x += 7) Ui.Rect(page, x, a.y - 1, Math.Min(4, x1 - x), 2, c, Ui.Panels + 3);
-                }
+                    style =
+                    {
+                        position = Position.Absolute, left = (t - 1) * colW, top = 0, width = colW, bottom = 0,
+                        backgroundColor = open ? Color.clear : Palette.Hex(0x0F1529),
+                        borderRightWidth = t < 5 ? 2 : 0, borderRightColor = Palette.Ink3,
+                        alignItems = UnityEngine.UIElements.Align.Center, paddingTop = 8,
+                    }
+                };
+                band.Add(new UiLabel($"TIER {t}") { style = { fontSize = 14, color = open ? Palette.Gold1 : Palette.Mist3 } });
+                band.Add(new UiLabel(open ? $"LV {TierLevel[t - 1]}" : $"LV {TierLevel[t - 1]} · LOCKED") { style = { fontSize = 12, color = open ? Palette.Gold2 : Palette.Mist3 } });
+                canvas.Add(band);
             }
 
-            foreach (var n in nodes) NodeButton(n);
-
-            // Tooltip (.tip) for a selected locked node
-            var sel = nodes.FirstOrDefault(n => n.id == selectedSkillId);
-            if (sel != null && !Unlocked(sel) && !Available(sel))
+            // Connection lines via Painter2D
+            var edgeLayer = new VisualElement { style = { position = Position.Absolute, left = 0, top = 0, right = 0, bottom = 0 } };
+            edgeLayer.generateVisualContent += ctx =>
             {
-                hero.skillLoadout.CanUnlockSkill(sel.id, hero.level, hero.classDef, out string why);
-                string body = PixelFont.Wrap((why ?? "LOCKED").ToUpperInvariant(), 104);
-                int h = 22 + (body.Count(c => c == '\n') + 1) * PixelFont.LineHeight;
-                int tx = Mathf.Clamp(sel.x - 30, Left + 4, Left + TreeW - 120), ty = sel.y + 22;
-                if (ty + h > TreeBottom) ty = sel.y - 22 - h;
-                Ui.Image(page, PixelArt.Box(116, h, Palette.Ink2, Palette.Mist3), tx, ty, Ui.Overlay - 2);
-                Ui.Label(page, PixelFont.Fit($"{NameOf(sel.id, sel.passive)} · locked", 104, FontKind.DotGothic), tx + 6, ty + 5, Palette.Mist1, order: Ui.Overlay - 1);
-                Ui.Label(page, body, tx + 6, ty + 18, Palette.Mist2, order: Ui.Overlay - 1, font: FontKind.Interface);
-            }
+                var p = ctx.painter2D;
+                p.lineWidth = 2.5f;
+                foreach (var a in nodes)
+                {
+                    var b = nodes.FirstOrDefault(n => n.tier == a.tier + 1 && n.row == a.row);
+                    if (b == null) continue;
+                    float x0 = a.x + 32f, x1 = b.x - 32f;
+                    if (x1 <= x0) continue;
+                    bool ua = Unlocked(a), ub = Unlocked(b);
+                    p.strokeColor = ua && ub ? Palette.Gold3 : ua && Available(b) ? Palette.Mist1 : Palette.Ink5;
+                    if (ua && ub)
+                    {
+                        p.BeginPath(); p.MoveTo(new Vector2(x0, a.y)); p.LineTo(new Vector2(x1, b.y)); p.Stroke();
+                    }
+                    else
+                    {
+                        for (float x = x0; x < x1; x += 12f)
+                        {
+                            p.BeginPath(); p.MoveTo(new Vector2(x, a.y)); p.LineTo(new Vector2(Mathf.Min(x + 7f, x1), a.y)); p.Stroke();
+                        }
+                    }
+                }
+            };
+            canvas.Add(edgeLayer);
 
-            // Loadout strip
-            int sy = TreeBottom;
-            Ui.Rect(page, Left + 2, sy, TreeW - 4, 1, Palette.Ink4, Ui.Panels + 2);
-            Ui.Label(page, "LOADOUT", Left + 10, sy + 13, Palette.Mist3, font: FontKind.Interface);
+            foreach (var n in nodes) SpawnSkillNode(canvas, n);
+
+            // Bottom Loadout strip
+            var strip = new VisualElement { style = { height = 48, borderTopWidth = 2, borderTopColor = Palette.Ink4, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
             var lo = hero.skillLoadout;
-            int ax = Left + 60;
-            Ui.Label(page, $"ACTIVE {lo.ActiveSlots.Count(s => !string.IsNullOrEmpty(s))}/3", ax, sy + 13, Palette.Mist2, font: FontKind.Interface);
-            ax += 58;
+            strip.Add(new UiLabel("LOADOUT") { style = { fontSize = 13, color = Palette.Mist3, marginRight = 18 } });
+            strip.Add(new UiLabel($"ACTIVE {lo.ActiveSlots.Count(s => !string.IsNullOrEmpty(s))}/3") { style = { fontSize = 13, color = Palette.Mist2, marginRight = 10 } });
             for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
             {
                 string id = lo.ActiveSlots[i];
-                if (!string.IsNullOrEmpty(id))
+                var tag = FigmaUi.InstantiateTemplate("Tag-Gold");
+                if (tag != null)
                 {
-                    Ui.Image(page, PixelArt.Box(17, 17, Palette.Hex(0x2B2210), Palette.Gold2), ax, sy + 8, Ui.Widget);
-                    Ui.Label(page, Initials(NameOf(id, false)), ax + 9, sy + 13, Palette.Gold1, Align.Center, order: Ui.Widget + 1, font: FontKind.Interface);
+                    FigmaUi.SetInstanceText(tag, "text-0", string.IsNullOrEmpty(id) ? "--" : Initials(NameOf(id, false)));
+                    tag.style.marginRight = 6;
+                    if (string.IsNullOrEmpty(id)) tag.style.opacity = 0.45f;
+                    strip.Add(tag);
                 }
-                else Ui.Image(page, PixelArt.DashedBadge(17, 17, Palette.Ink3, Palette.Ink5), ax, sy + 8, Ui.Widget);
-                ax += 21;
             }
-            ax += 16;
-            Ui.Label(page, $"PASSIVE {lo.PassiveSlots.Count(s => !string.IsNullOrEmpty(s))}/3", ax, sy + 13, Palette.Mist2, font: FontKind.Interface);
-            ax += 64;
-            for (int i = 0; i < SkillLoadout.PassiveSlotCount; i++)
+            string passText = string.Join(" ", Enumerable.Range(0, SkillLoadout.PassiveSlotCount).Select(i =>
             {
                 string id = lo.PassiveSlots[i];
-                bool has = !string.IsNullOrEmpty(id);
-                Ui.Image(page, PixelArt.Diamond(15, has ? Palette.Hex(0x2B2210) : Palette.Ink3), ax, sy + 9, Ui.Widget);
-                Ui.Image(page, PixelArt.Diamond(15, has ? Palette.Gold2 : Palette.Ink5, false), ax, sy + 9, Ui.Widget + 1);
-                if (has) Ui.Label(page, Initials(NameOf(id, true)), ax + 8, sy + 13, Palette.Gold1, Align.Center, order: Ui.Widget + 2, font: FontKind.Interface);
-                ax += 19;
-            }
+                return string.IsNullOrEmpty(id) ? "◇" : $"◆{Initials(NameOf(id, true))}";
+            }));
+            strip.Add(new UiLabel($"PASSIVE {lo.PassiveSlots.Count(s => !string.IsNullOrEmpty(s))}/3   {passText}") { style = { fontSize = 14, color = Palette.Mist2, marginLeft = 20 } });
+            host.Add(strip);
         }
 
-        // Locked tier hatch: faint diagonal stripes.
-        void Hatch(int x, int y, int w, int h)
-        {
-            var px = new Color32[w * h];
-            Color32 c = Palette.Hex(0x25315A, 64);
-            for (int j = 0; j < h; j++)
-                for (int i = 0; i < w; i++)
-                    if ((i + j) % 12 < 2) px[j * w + i] = c;
-            Ui.Image(page, PixelArt.SpriteFrom(px, w, h, PixelArt.TopLeft, "hatch"), x, y, Ui.Panels + 1);
-        }
-
-        // Skill node (.sk): learned = gold, available = bright border, locked = dashed; passives are diamonds.
-        void NodeButton(Node n)
+        void SpawnSkillNode(VisualElement canvas, Node n)
         {
             var hero = CurrentHero;
             bool learned = Unlocked(n), avail = Available(n), sel = n.id == selectedSkillId;
-            int size = n.passive ? 25 : 30;
-            int x = n.x - size / 2, y = n.y - size / 2;
-            var b = Ui.Button(page, "", x, y, size, () => { selectedSkillId = n.id; isSelectedPassive = n.passive; confirmRespecActive = false; feedback = null; Rebuild(); }, size, showCursor: false);
-            var box = b.GetComponentInChildren<SpriteRenderer>();
-            Color fill = learned ? Palette.Hex(0x2B2210) : avail ? Palette.Ink4 : Palette.Ink1;
-            Color border = learned ? Palette.Gold2 : avail ? Palette.Mist1 : Palette.Ink5;
-            Color ink = learned ? Palette.Gold1 : avail ? Palette.Mist1 : Palette.Mist3;
-            var ring = Ui.Image(b.transform, null, -3, -3, Ui.Widget - 1);
-            b.visual = focus =>
+            float size = 60f;
+            var el = FigmaUi.InstantiateTemplate(learned ? "Map-Node-Current" : avail ? "Map-Node-Choosable" : "Map-Node-Locked") ?? new VisualElement();
+            el.style.position = Position.Absolute;
+            el.style.left = n.x - size / 2f;
+            el.style.top = n.y - size / 2f;
+            el.style.width = size;
+            el.style.height = size;
+            el.style.justifyContent = Justify.Center;
+            el.style.alignItems = UnityEngine.UIElements.Align.Center;
+            if (n.passive)
             {
-                if (n.passive)
-                {
-                    box.sprite = PixelArt.Diamond(size, fill);
-                    ring.sprite = sel || focus ? PixelArt.Diamond(size + 6, sel ? Palette.Gold1 : Palette.Mist3, false) : null;
-                }
-                else
-                {
-                    box.sprite = learned || avail ? PixelArt.Badge(size, size, fill, focus && !sel ? Palette.Mist1 : border) : PixelArt.DashedBadge(size, size, fill, border);
-                    ring.sprite = sel || focus ? PixelArt.Badge(size + 6, size + 6, Color.clear, sel ? Palette.Gold1 : Palette.Mist3) : null;
-                }
-            };
-            b.visual(false);
-            if (n.passive) Ui.Image(b.transform, PixelArt.Diamond(size, border, false), 0, 0, Ui.Widget + 1);
-            Ui.Label(b.transform, Initials(NameOf(n.id, n.passive)), size / 2, size / 2 - 3, ink, Align.Center, order: Ui.Widget + 2, font: FontKind.Interface);
-            b.tooltip = NameOf(n.id, n.passive);
+                el.style.borderTopLeftRadius = 24; el.style.borderTopRightRadius = 24;
+                el.style.borderBottomLeftRadius = 24; el.style.borderBottomRightRadius = 24;
+            }
+            FigmaUi.SetInstanceText(el, "text-0", Initials(NameOf(n.id, n.passive)));
+            canvas.Add(el);
 
-            // Rank pips (.pips) under learned nodes
             if (learned)
             {
                 int max = n.passive ? (Database.Passives.TryGetValue(n.id, out var p) ? p.maxRank : 3) : (Database.Skills.TryGetValue(n.id, out var s) ? s.maxRank : 3);
                 int rank = hero.skillLoadout.GetRank(n.id);
-                int px = n.x - (max * 6 - 2) / 2;
-                for (int i = 0; i < max; i++) Ui.Rect(page, px + i * 6, n.y + size / 2 + 4, 4, 4, i < rank ? Palette.Gold2 : Palette.Ink5, Ui.Widget);
+                var pips = new VisualElement { style = { position = Position.Absolute, left = n.x - 16, top = n.y + size / 2f + 4, flexDirection = FlexDirection.Row } };
+                for (int i = 0; i < max; i++)
+                    pips.Add(new VisualElement { style = { width = 8, height = 6, marginRight = 4, backgroundColor = i < rank ? Palette.Gold2 : Palette.Ink5 } });
+                canvas.Add(pips);
             }
-            menu.Add(b);
+
+            var it = menu.Add(el, NameOf(n.id, n.passive), () =>
+            {
+                selectedSkillId = n.id; isSelectedPassive = n.passive; confirmRespecActive = false; feedback = null; Rebuild();
+            }, selected: sel);
+            it.visual = on =>
+            {
+                var b = on || sel ? Palette.Gold1 : learned ? Palette.Gold2 : avail ? Palette.Mist1 : Palette.Ink5;
+                el.style.borderTopColor = b; el.style.borderBottomColor = b; el.style.borderLeftColor = b; el.style.borderRightColor = b;
+            };
+            it.visual(false);
         }
 
-        // ---------------------------------------------------------------- detail
-
-        void BuildDetail()
+        void BuildDetail(VisualElement screen)
         {
             var hero = CurrentHero;
-            int dw = RightEdge - DetailX, x = DetailX + 8, w = dw - 16;
-            Ui.Panel(page, DetailX, BodyY, dw, BodyBottom - BodyY, null, Palette.Gold3);
-            if (string.IsNullOrEmpty(selectedSkillId)) { Ui.Header(page, "Select a skill", DetailX + 8, BodyY + 6, dw - 4); return; }
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 602, flexDirection = FlexDirection.Column } };
+            screen.Add(host);
+            if (string.IsNullOrEmpty(selectedSkillId)) { host.Add(FigmaUi.CreateSectionHeader("Select a skill", 346f)); return; }
 
-            SkillDef a = null;
-            PassiveDef pv = null;
+            SkillDef a = null; PassiveDef pv = null;
             if (isSelectedPassive) Database.Passives.TryGetValue(selectedSkillId, out pv);
             else Database.Skills.TryGetValue(selectedSkillId, out a);
             string name = a?.name ?? pv?.name ?? selectedSkillId;
@@ -330,132 +315,102 @@ namespace Obscure
             int rank = lo.GetRank(selectedSkillId);
             var node = hero.classDef?.skillUnlockProgression?.FirstOrDefault(n => n.skillId == selectedSkillId);
 
-            Ui.Header(page, PixelFont.Fit(name, dw - 24, FontKind.DotGothic), DetailX + 8, BodyY + 6, dw - 4);
-            int y = BodyY + 24, tx = x;
-            tx += Ui.Tag(page, isSelectedPassive ? "PASSIVE" : "ACTIVE", tx, y) + 3;
-            tx += Ui.Tag(page, $"TIER {tier}", tx, y) + 3;
+            host.Add(FigmaUi.CreateSectionHeader(name, 346f));
+            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginTop = 10, marginBottom = 10 } };
+            var tType = FigmaUi.InstantiateTemplate("Tag-Cls"); if (tType != null) { FigmaUi.SetInstanceText(tType, "text-0", isSelectedPassive ? "PASSIVE" : "ACTIVE"); tType.style.marginRight = 6; tagRow.Add(tType); }
+            var tTier = FigmaUi.InstantiateTemplate("Tag-Cls"); if (tTier != null) { FigmaUi.SetInstanceText(tTier, "text-0", $"TIER {tier}"); tTier.style.marginRight = 6; tagRow.Add(tTier); }
             if (a != null)
             {
-                PartyScreen.ElementChip(page, a.element, tx, y - 1);
-                Ui.Label(page, a.element == Element.Physical ? "PHYSICAL" : "ELEMENTAL", tx + 16, y + 2, Palette.Mist2, font: FontKind.Interface);
+                string code = Palette.ElementCode(a.element);
+                var chip = FigmaUi.InstantiateTemplate($"Element-Chip-{code}");
+                if (chip != null) { FigmaUi.SetInstanceText(chip, "text-0", code); chip.style.marginRight = 6; tagRow.Add(chip); }
+                tagRow.Add(new UiLabel(a.element.ToString().ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist2 } });
             }
-            y += 16;
-            string desc = PixelFont.Wrap(((a?.description ?? pv?.description) ?? "").ToUpperInvariant(), w);
-            Ui.Label(page, desc, x, y, Palette.Mist1, font: FontKind.Interface);
-            y += (desc.Count(c => c == '\n') + 1) * PixelFont.LineHeight + 6;
+            host.Add(tagRow);
 
+            host.Add(new UiLabel(((a?.description ?? pv?.description) ?? "").ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 12 } });
+
+            VisualElement Line(string l, string r)
+            {
+                var v = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, height = 26, borderBottomWidth = 2, borderBottomColor = Palette.Ink3 } };
+                v.Add(new UiLabel(l) { style = { fontSize = 13, color = Palette.Mist2 } });
+                v.Add(new UiLabel(r) { style = { fontSize = 13, color = Palette.Mist1 } });
+                return v;
+            }
             int shown = Math.Max(1, rank);
             if (a != null)
             {
-                y = Row(x, y, w, "MP COST", a.GetMpCost(shown).ToString());
-                y = Row(x, y, w, "TARGET", a.target.ToString().ToUpperInvariant());
-                y = Row(x, y, w, "POWER", $"{a.GetPower(shown):0.##}X");
-                if (a.cooldown > 0) y = Row(x, y, w, "COOLDOWN", $"{a.cooldown} TURNS");
+                host.Add(Line("MP COST", a.GetMpCost(shown).ToString()));
+                host.Add(Line("TARGET", a.target.ToString().ToUpperInvariant()));
+                host.Add(Line("POWER", $"{a.GetPower(shown):0.##}X"));
+                if (a.cooldown > 0) host.Add(Line("COOLDOWN", $"{a.cooldown} TURNS"));
             }
-            y = Row(x, y, w, "RANK", learned ? $"{rank} / {maxRank}" : $"LOCKED · MAX {maxRank}");
+            host.Add(Line("RANK", learned ? $"{rank} / {maxRank}" : $"LOCKED · MAX {maxRank}"));
 
-            y += 4;
-            Ui.Label(page, "REQUIREMENTS", x, y, Palette.Mist3, font: FontKind.Interface);
-            y += 11;
+            host.Add(new UiLabel("REQUIREMENTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 10, marginBottom = 4 } });
             int req = node?.requiredLevel ?? TierLevel[Mathf.Clamp(tier - 1, 0, 4)];
-            Check(x, ref y, hero.level >= req, $"LEVEL {req} · {hero.name} IS {hero.level}");
+            bool lvOk = hero.level >= req;
+            host.Add(new UiLabel($"{(lvOk ? "✓" : "X")} LEVEL {req} · {hero.name.ToUpperInvariant()} IS LV {hero.level}") { style = { fontSize = 12, color = lvOk ? Palette.Ok : Palette.Err } });
             foreach (var pre in node?.prerequisites ?? Array.Empty<string>())
             {
                 bool met = lo.UnlockedActiveSkills.Contains(pre) || lo.UnlockedPassiveSkills.Contains(pre);
-                Check(x, ref y, met, $"{NameOf(pre, !Database.Skills.ContainsKey(pre))} LEARNED");
+                host.Add(new UiLabel($"{(met ? "✓" : "X")} {NameOf(pre, !Database.Skills.ContainsKey(pre)).ToUpperInvariant()} LEARNED") { style = { fontSize = 12, color = met ? Palette.Ok : Palette.Err } });
             }
 
-            // Equip / unequip row
+            host.Add(new VisualElement { style = { flexGrow = 1 } });
+
+            var utilRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 10 } };
+            var respecBtn = FigmaUi.CreateButton(confirmRespecActive ? "Confirm?" : "Respec SP", confirmRespecActive ? "button-danger" : "button-slab", 160f);
+            utilRow.Add(respecBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(respecBtn, "Respec SP", Respec));
+
             bool equipped = isSelectedPassive ? lo.PassiveSlots.Contains(selectedSkillId) : lo.ActiveSlots.Contains(selectedSkillId);
             if (learned)
             {
-                int ey = BodyBottom - 80;
-                Ui.Label(page, equipped ? "EQUIPPED" : "EQUIP TO", x, ey + 5, Palette.Mist3, font: FontKind.Interface);
+                var unBtn = FigmaUi.CreateButton("Unequip", "button-slab", 160f);
+                unBtn.SetEnabled(equipped);
+                utilRow.Add(unBtn);
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(unBtn, "Unequip", Unequip, interactable: equipped));
+            }
+            host.Add(utilRow);
+
+            if (learned)
+            {
+                var eqRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 10 } };
+                eqRow.Add(new UiLabel(equipped ? "EQUIPPED" : "EQUIP TO") { style = { fontSize = 12, color = Palette.Mist3, width = 92 } });
                 for (int i = 0; i < 3; i++)
                 {
                     int slot = i;
-                    menu.Add(Ui.Button(page, (i + 1).ToString(), x + 50 + i * 22, ey, 20, () => Equip(slot), 18, showCursor: false));
+                    var sBtn = FigmaUi.CreateButton((i + 1).ToString(), "button-slab", 52f);
+                    sBtn.style.marginRight = 8;
+                    eqRow.Add(sBtn);
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(sBtn, $"Slot {i + 1}", () => Equip(slot)));
                 }
-                menu.Add(Ui.Button(page, "Unequip", x + w - 54, ey, 54, Unequip, 18, interactable: equipped, showCursor: false));
+                host.Add(eqRow);
             }
 
             if (!string.IsNullOrEmpty(feedback))
-                Ui.Label(page, PixelFont.Wrap(feedback.ToUpperInvariant(), w, FontKind.Interface), x, BodyBottom - 56, feedbackBad ? Palette.Err : Palette.Ok, font: FontKind.Interface);
+                host.Add(new UiLabel(feedback.ToUpperInvariant()) { style = { fontSize = 12, color = feedbackBad ? Palette.Err : Palette.Ok, whiteSpace = WhiteSpace.Normal, marginBottom = 8 } });
 
-            // Footer: SP cost, SP after, Learn / Upgrade
-            Ui.Rect(page, DetailX + 2, BodyBottom - 34, dw - 4, 1, Palette.Ink4, Ui.Panels + 2);
             int sp = lo.SkillPoints;
             int cost = !learned ? node?.skillPointCost ?? 1 : rank < maxRank ? lo.GetUpgradeCost(selectedSkillId, rank) : 0;
             bool canAct = !learned ? lo.CanUnlockSkill(selectedSkillId, hero.level, hero.classDef, out _) : rank < maxRank && sp >= cost;
-            Ui.Label(page, cost > 0 ? $"{cost} SP" : "-", x, BodyBottom - 25, Palette.Gold1);
-            Ui.Label(page, cost > 0 ? $"{sp} › {sp - cost} LEFT" : "MAX RANK", x + 34, BodyBottom - 23, Palette.Mist2, font: FontKind.Interface);
-            string label = !learned ? "Learn" : rank < maxRank ? "Upgrade" : "Maxed";
-            menu.Add(Ui.Button(page, label, x + w - 64, BodyBottom - 28, 64, !learned ? (Action)Learn : Upgrade, 20, interactable: canAct, showCursor: false, style: ButtonStyle.Primary));
-            menu.Add(Ui.Button(page, confirmRespecActive ? "Confirm?" : "Respec SP", x, BodyBottom - 102, 76, Respec, 18, showCursor: false, style: confirmRespecActive ? ButtonStyle.Danger : ButtonStyle.Slab));
+            var foot = new VisualElement { style = { borderTopWidth = 2, borderTopColor = Palette.Ink4, paddingTop = 10, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
+            foot.Add(new UiLabel(cost > 0 ? $"{cost} SP" : "-") { style = { fontSize = 22, color = Palette.Gold1 } });
+            foot.Add(new UiLabel(cost > 0 ? $"{sp} › {sp - cost} LEFT" : "MAX RANK") { style = { fontSize = 13, color = Palette.Mist2 } });
+            string actLbl = !learned ? "Learn" : rank < maxRank ? "Upgrade" : "Maxed";
+            var actBtn = FigmaUi.CreateButton(actLbl, canAct ? "button-primary" : "button-slab", 136f);
+            actBtn.SetEnabled(canAct);
+            foot.Add(actBtn);
+            host.Add(foot);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(actBtn, actLbl, !learned ? (Action)Learn : Upgrade, interactable: canAct));
         }
 
-        int Row(int x, int y, int w, string label, string value)
-        {
-            Ui.Label(page, label, x, y + 2, Palette.Mist2, font: FontKind.Interface);
-            Ui.Label(page, value, x + w, y + 2, Palette.Mist1, Align.Right, font: FontKind.Interface);
-            Ui.Rect(page, x, y + 12, w, 1, Palette.Ink3, Ui.Panels + 2);
-            return y + 15;
-        }
-
-        void Check(int x, ref int y, bool ok, string text)
-        {
-            Ui.Label(page, PixelFont.Fit($"{(ok ? "✓" : "X")} {text}".ToUpperInvariant(), 170, FontKind.Interface), x, y, ok ? Palette.Ok : Palette.Err, font: FontKind.Interface);
-            y += 11;
-        }
-
-        // ---------------------------------------------------------------- actions
-
-        void Say(string text, bool bad)
-        {
-            feedback = text;
-            feedbackBad = bad;
-            Sfx.Play(bad ? Sound.Deny : Sound.Confirm);
-            Rebuild();
-        }
-
-        void Learn()
-        {
-            var hero = CurrentHero;
-            if (hero.skillLoadout.TryUnlockSkill(selectedSkillId, hero.level, hero.classDef, out string error)) Say($"LEARNED {NameOf(selectedSkillId, isSelectedPassive)}.", false);
-            else Say(error ?? "CANNOT LEARN THIS SKILL.", true);
-        }
-
-        void Upgrade()
-        {
-            var hero = CurrentHero;
-            if (hero.skillLoadout.TryUpgradeRank(selectedSkillId, out string error)) Say($"UPGRADED TO RANK {hero.skillLoadout.GetRank(selectedSkillId)}.", false);
-            else Say(error ?? "CANNOT UPGRADE RANK.", true);
-        }
-
-        void Equip(int slot)
-        {
-            var lo = CurrentHero.skillLoadout;
-            string err;
-            bool ok = isSelectedPassive ? lo.TryEquipPassive(slot, selectedSkillId, out err) : lo.TryEquipActive(slot, selectedSkillId, out err);
-            Say(ok ? $"EQUIPPED IN SLOT {slot + 1}." : err ?? "FAILED TO EQUIP.", !ok);
-        }
-
-        void Unequip()
-        {
-            var lo = CurrentHero.skillLoadout;
-            var slots = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots;
-            for (int i = 0; i < slots.Length; i++) if (slots[i] == selectedSkillId) slots[i] = null;
-            Say("SKILL UNEQUIPPED.", false);
-        }
-
-        void Respec()
-        {
-            var hero = CurrentHero;
-            if (!confirmRespecActive) { confirmRespecActive = true; Say("PRESS RESPEC AGAIN TO REFUND ALL SP.", false); return; }
-            hero.skillLoadout.Respec(hero.classDef, hero.level);
-            confirmRespecActive = false;
-            selectedSkillId = null;
-            Say("ALL SP REFUNDED AND THE TREE RESET.", false);
-        }
+        void Say(string text, bool bad) { feedback = text; feedbackBad = bad; Sfx.Play(bad ? Sound.Deny : Sound.Confirm); Rebuild(); }
+        void Learn() { var h = CurrentHero; if (h.skillLoadout.TryUnlockSkill(selectedSkillId, h.level, h.classDef, out string e)) Say($"LEARNED {NameOf(selectedSkillId, isSelectedPassive)}.", false); else Say(e ?? "CANNOT LEARN.", true); }
+        void Upgrade() { var h = CurrentHero; if (h.skillLoadout.TryUpgradeRank(selectedSkillId, out string e)) Say($"UPGRADED TO RANK {h.skillLoadout.GetRank(selectedSkillId)}.", false); else Say(e ?? "CANNOT UPGRADE.", true); }
+        void Equip(int slot) { var lo = CurrentHero.skillLoadout; bool ok = isSelectedPassive ? lo.TryEquipPassive(slot, selectedSkillId, out var e) : lo.TryEquipActive(slot, selectedSkillId, out e); Say(ok ? $"EQUIPPED IN SLOT {slot + 1}." : e ?? "FAILED.", !ok); }
+        void Unequip() { var lo = CurrentHero.skillLoadout; var s = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots; for (int i = 0; i < s.Length; i++) if (s[i] == selectedSkillId) s[i] = null; Say("SKILL UNEQUIPPED.", false); }
+        void Respec() { if (!confirmRespecActive) { confirmRespecActive = true; Say("PRESS RESPEC AGAIN TO REFUND ALL SP.", false); return; } CurrentHero.skillLoadout.Respec(CurrentHero.classDef, CurrentHero.level); confirmRespecActive = false; selectedSkillId = null; Say("ALL SP REFUNDED AND THE TREE RESET.", false); }
     }
 }

@@ -1,52 +1,68 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
+using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Draws a running Qte in the combat command panel and feeds it input.
-    // Starlit Reliquary "O · Reaction QTE" styling: framed track, ink miss zones, blue GOOD band, gold PERFECT zone.
+    // Renders an active Qte inside the UITK combat QTE host and feeds keyboard / button input.
     public class QtePanel : MonoBehaviour
     {
-        const int X = 365, W = 240, CenterX = 485, TrackY = 286, TrackH = 14;
-        const float Impact = 0.82f; // defense track: where hits land, as a fraction of the bar
+        const float TrackW = 480f, TrackH = 26f, Impact = 0.82f;
 
         Qte qte;
         int bornFrame, lastResolved = -1;
         Keyboard keyboard;
-        Label info, result;
-        SpriteRenderer timeFill;
-        readonly List<SpriteRenderer> markers = new List<SpriteRenderer>();
-        readonly List<Label> letters = new List<Label>();
+        UiLabel infoLbl, resultLbl;
+        VisualElement host, timeFill;
+        readonly List<VisualElement> markers = new List<VisualElement>();
+        readonly List<UiLabel> letters = new List<UiLabel>();
 
         public Qte Qte => qte;
 
-        public void Init(Qte q, string heading)
+        public void Init(Qte q, string heading, VisualElement qteHost = null)
         {
             qte = q;
+            host = qteHost;
             bornFrame = Time.frameCount;
-            Ui.Label(transform, heading, CenterX, 248, Palette.Gold1, Align.Center, 1, Ui.Widget + 2, FontKind.Serif);
-            info = Ui.Label(transform, "", CenterX, 266, Palette.MutedGray, Align.Center, order: Ui.Widget + 2);
-            result = Ui.Label(transform, "", CenterX, 326, Palette.AntiqueGoldBright, Align.Center, 2, Ui.Widget + 3, FontKind.Serif);
-            string key = Controls.QteKey.ToString().ToUpperInvariant();
 
-            switch (q)
+            if (host != null)
             {
-                case TimingQte t:
-                    info.Set($"PRESS [{key}] IN THE GOLD ZONE");
-                    BuildTrack(t.target / t.Sweep, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
-                    break;
-                case DefenseQte d:
-                    float speed = Impact / d.profile.windup;
-                    float defScale = Mathf.Clamp(1f + d.TimingBonusFraction, 0.85f, 1.25f);
-                    BuildTrack(Impact, d.profile.good * speed * defScale, d.profile.perfect * speed * defScale, d.Hits);
-                    break;
-                case TypingQte ty:
-                    BuildTyping(ty);
-                    break;
-                default:
-                    info.Set("QTE ASSIST: AUTO");
-                    break;
+                host.Clear();
+                host.style.paddingLeft = 24;
+                host.style.paddingRight = 24;
+                host.style.paddingTop = 16;
+                host.style.paddingBottom = 16;
+                host.style.alignItems = UnityEngine.UIElements.Align.Center;
+                host.style.justifyContent = Justify.SpaceBetween;
+
+                host.Add(new UiLabel(heading ?? "") { style = { fontSize = 22, color = Palette.Gold1 } });
+                infoLbl = new UiLabel("") { style = { fontSize = 14, color = Palette.Mist2 } };
+                host.Add(infoLbl);
+
+                switch (q)
+                {
+                    case TimingQte t:
+                        infoLbl.text = $"PRESS [{Controls.QteKey.ToString().ToUpperInvariant()}] IN THE GOLD ZONE";
+                        BuildTrack(t.target / t.Sweep, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
+                        break;
+                    case DefenseQte d:
+                        float speed = Impact / d.profile.windup;
+                        float defScale = Mathf.Clamp(1f + d.TimingBonusFraction, 0.85f, 1.25f);
+                        BuildTrack(Impact, d.profile.good * speed * defScale, d.profile.perfect * speed * defScale, d.Hits);
+                        break;
+                    case TypingQte ty:
+                        BuildTyping(ty);
+                        break;
+                    default:
+                        infoLbl.text = "QTE ASSIST: AUTO";
+                        host.Add(new VisualElement { style = { height = 40 } });
+                        break;
+                }
+
+                resultLbl = new UiLabel("") { style = { fontSize = 28, color = Palette.Gold1, height = 34 } };
+                host.Add(resultLbl);
             }
 
             keyboard = Keyboard.current;
@@ -79,44 +95,77 @@ namespace Obscure
             Render();
         }
 
-        // ---- building ----
-
-        SpriteRenderer Rect(int x, int y, int w, int h, Color c, int layer)
-        {
-            var sr = Ui.Image(transform, PixelArt.Pixel, x, y, Ui.Widget + layer, c);
-            sr.transform.localScale = new Vector3(Mathf.Max(1, w), h, 1);
-            return sr;
-        }
-
-        static int Px(float fraction) => Mathf.RoundToInt(fraction * W);
-
         void BuildTrack(float zone, float goodHalf, float perfectHalf, int markerCount)
         {
-            Rect(X - 3, TrackY - 3, W + 6, TrackH + 6, Palette.Ink0, 0);
-            Rect(X - 2, TrackY - 2, W + 4, TrackH + 4, Palette.Mist2, 0);
-            Rect(X - 1, TrackY - 1, W + 2, TrackH + 2, Palette.Ink1, 1);
-            int cx = X + Px(zone), gw = Mathf.Max(6, Px(goodHalf * 2)), pw = Mathf.Max(2, Px(perfectHalf * 2));
-            Rect(cx - gw / 2, TrackY, gw, TrackH, Palette.Hex(0x2C5A8F), 2);
-            Rect(cx - pw / 2, TrackY, pw, TrackH, Palette.Gold2, 3);
-            for (int i = 0; i < markerCount; i++) markers.Add(Rect(X, TrackY - 4, 3, TrackH + 8, Palette.WarmIvory, 4));
+            var track = new VisualElement
+            {
+                style =
+                {
+                    width = TrackW, height = TrackH,
+                    backgroundColor = Palette.Ink1,
+                    borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    borderTopColor = Palette.Mist2, borderBottomColor = Palette.Mist2,
+                    borderLeftColor = Palette.Mist2, borderRightColor = Palette.Mist2,
+                    overflow = Overflow.Visible,
+                }
+            };
+
+            float cx = zone * TrackW;
+            float gw = Mathf.Max(12f, goodHalf * 2f * TrackW);
+            float pw = Mathf.Max(4f, perfectHalf * 2f * TrackW);
+
+            track.Add(new VisualElement
+            {
+                style = { position = Position.Absolute, left = cx - gw / 2f, top = 0, width = gw, bottom = 0, backgroundColor = Palette.Hex(0x2C5A8F) }
+            });
+            track.Add(new VisualElement
+            {
+                style = { position = Position.Absolute, left = cx - pw / 2f, top = 0, width = pw, bottom = 0, backgroundColor = Palette.Gold2 }
+            });
+
+            markers.Clear();
+            for (int i = 0; i < markerCount; i++)
+            {
+                var m = new VisualElement
+                {
+                    style = { position = Position.Absolute, left = 0, top = -6, width = 6, height = TrackH + 12, backgroundColor = Palette.WarmIvory }
+                };
+                markers.Add(m);
+                track.Add(m);
+            }
+            host.Add(track);
         }
 
         void BuildTyping(TypingQte t)
         {
-            int x0 = CenterX - t.sequence.Length * 8;
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center, marginBottom = 8 } };
+            letters.Clear();
             for (int i = 0; i < t.sequence.Length; i++)
-                letters.Add(Ui.Label(transform, t.sequence[i].ToString(), x0 + i * 16 + 8, 280, Palette.MutedGray, Align.Center, 2, Ui.Widget + 2));
-            Rect(X - 2, 306, W + 4, 8, Palette.DarkBorder, 0);
-            Rect(X, 308, W, 4, Palette.DeepCharcoal, 1);
-            timeFill = Rect(X, 308, W, 4, Palette.ArcaneViolet, 2);
-            // Perfect requires finishing before the bar drains past this mark.
-            Rect(X + Px(1f - QteConfig.TypingPerfectFraction), 304, 3, 12, Palette.AntiqueGoldBright, 3);
-        }
+            {
+                var l = new UiLabel(t.sequence[i].ToString()) { style = { fontSize = 32, width = 32, unityTextAlign = TextAnchor.MiddleCenter, color = Palette.Mist3 } };
+                letters.Add(l);
+                row.Add(l);
+            }
+            host.Add(row);
 
-        // ---- per-frame ----
+            var bar = new VisualElement
+            {
+                style =
+                {
+                    width = TrackW, height = 14, backgroundColor = Palette.Ink0,
+                    borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4,
+                }
+            };
+            timeFill = new VisualElement { style = { width = TrackW, height = Length.Percent(100), backgroundColor = Palette.ArcaneViolet } };
+            bar.Add(timeFill);
+            bar.Add(new VisualElement { style = { position = Position.Absolute, left = (1f - QteConfig.TypingPerfectFraction) * TrackW, top = -4, width = 4, height = 18, backgroundColor = Palette.Gold1 } });
+            host.Add(bar);
+        }
 
         void Render()
         {
+            if (host == null) return;
             switch (qte)
             {
                 case TimingQte t: RenderTiming(t); break;
@@ -127,9 +176,10 @@ namespace Obscure
 
         void SetMarker(int i, float fraction, Color c)
         {
-            markers[i].enabled = true;
-            markers[i].color = c;
-            markers[i].transform.localPosition = new Vector3(X + Mathf.Clamp(Px(fraction), 0, W - 3) - 1, -(TrackY - 4), 0);
+            if (i < 0 || i >= markers.Count) return;
+            markers[i].style.display = DisplayStyle.Flex;
+            markers[i].style.backgroundColor = c;
+            markers[i].style.left = Mathf.Clamp(fraction * TrackW, 0f, TrackW - 6f) - 3f;
         }
 
         void RenderTiming(TimingQte t)
@@ -141,21 +191,26 @@ namespace Obscure
         void RenderDefense(DefenseQte d)
         {
             string key = Controls.QteKey.ToString().ToUpperInvariant();
-            if (d.InTelegraph) info.Set("GET READY TO DEFEND...");
+            if (d.InTelegraph) infoLbl.text = "GET READY TO DEFEND...";
             int next = -1;
             for (int i = 0; i < d.Hits; i++)
             {
                 float e = d.T - d.SpawnTime(i), w = d.profile.windup, hold = d.delays[i];
-                if (e < 0 || d.HitResult(i) != null) { markers[i].enabled = false; continue; }
+                if (e < 0 || d.HitResult(i) != null)
+                {
+                    if (i < markers.Count) markers[i].style.display = DisplayStyle.None;
+                    continue;
+                }
                 if (next < 0) next = i;
                 bool holding = hold > 0 && e >= w / 2 && e < w / 2 + hold;
                 float p = holding ? Impact / 2 : (e >= w / 2 + hold ? e - hold : e) / w * Impact;
                 var c = holding ? (Mathf.Repeat(d.T, 0.2f) < 0.1f ? Palette.SpecCrimson : Palette.WarmIvory)
-                    : d.heavy[i] ? Palette.CrimsonBright // Heavy marker: visible from the start of the bar (Bab 12 §4.2)
+                    : d.heavy[i] ? Palette.CrimsonBright
                     : i == next ? Palette.WarmIvory : Palette.MutedGray;
                 SetMarker(i, p, c);
             }
-            if (!d.InTelegraph) info.Set((d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : ""));
+            if (!d.InTelegraph)
+                infoLbl.text = (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : "");
 
             for (int i = d.Hits - 1; i >= 0; i--)
                 if (d.HitResult(i) is QteResult r)
@@ -168,18 +223,19 @@ namespace Obscure
         void RenderTyping(TypingQte t)
         {
             for (int i = 0; i < letters.Count; i++)
-                letters[i].Color = i < t.Index ? Palette.AntiqueGoldBright : i == t.Index ? Palette.WarmIvory : i >= t.wordLength ? Palette.ArcaneViolet : Palette.MutedGray;
+                letters[i].style.color = i < t.Index ? Palette.Gold1 : i == t.Index ? Palette.WarmIvory : i >= t.wordLength ? Palette.ArcaneViolet : Palette.MutedGray;
             float left = Mathf.Clamp01(1f - t.T / t.timeLimit);
-            timeFill.transform.localScale = new Vector3(Mathf.RoundToInt(W * left), 4, 1);
-            info.Set(t.Mistakes > 0 ? $"MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}" : "RECITE THE ANCIENT WORDS");
-            info.Color = t.Mistakes > 0 ? Palette.SpecCrimson : Palette.MutedGray;
+            if (timeFill != null) timeFill.style.width = left * TrackW;
+            infoLbl.text = t.Mistakes > 0 ? $"MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}" : "RECITE THE ANCIENT WORDS";
+            infoLbl.style.color = t.Mistakes > 0 ? Palette.SpecCrimson : Palette.Mist2;
             if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
         }
 
         void ShowResult(QteResult r, string perfect, string good, string miss)
         {
-            result.Set(r == QteResult.Perfect ? perfect : r == QteResult.Good ? good : miss);
-            result.Color = r == QteResult.Perfect ? Palette.Gold1 : r == QteResult.Good ? Palette.Hex(0xB8D6FF) : Palette.Mist3;
+            if (resultLbl == null) return;
+            resultLbl.text = r == QteResult.Perfect ? perfect : r == QteResult.Good ? good : miss;
+            resultLbl.style.color = r == QteResult.Perfect ? Palette.Gold1 : r == QteResult.Good ? Palette.Hex(0xB8D6FF) : Palette.Mist3;
         }
     }
 }
