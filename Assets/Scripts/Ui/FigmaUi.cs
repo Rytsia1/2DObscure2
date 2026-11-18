@@ -364,7 +364,7 @@ namespace Obscure
         {
             var sv = new ScrollView(ScrollViewMode.Vertical);
             sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            sv.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            sv.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
             sv.contentContainer.style.flexShrink = 0;
             sv.AddToClassList("uitk-scroll-view");
             return sv;

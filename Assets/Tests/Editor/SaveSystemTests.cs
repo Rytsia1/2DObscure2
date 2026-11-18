@@ -761,5 +761,23 @@ namespace Obscure.Tests
                 UnityEngine.Object.DestroyImmediate(host);
             }
         }
+
+        [Test]
+        public void TypographyAssets_DisplayGothicUiAndFallbacks_AreConfigured()
+        {
+            Assert.IsTrue(UnityEditor.EditorApplication.ExecuteMenuItem("FELNA/Build Figma UI Assets"));
+            var ui = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextCore.Text.FontAsset>("Assets/UI/Fonts/FelnaUIFont.asset");
+            var disp = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextCore.Text.FontAsset>("Assets/UI/Fonts/FelnaDisplayFont.asset");
+            var goth = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextCore.Text.FontAsset>("Assets/UI/Fonts/FelnaGothicFont.asset");
+            var sym = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.TextCore.Text.FontAsset>("Assets/UI/Fonts/FelnaSymbolsFont.asset");
+            Assert.IsNotNull(ui, "FelnaUIFont.asset missing");
+            Assert.IsNotNull(disp, "FelnaDisplayFont.asset missing");
+            Assert.IsNotNull(goth, "FelnaGothicFont.asset missing");
+            Assert.IsNotNull(sym, "FelnaSymbolsFont.asset missing");
+            CollectionAssert.Contains(disp.fallbackFontAssetTable, ui);
+            CollectionAssert.Contains(disp.fallbackFontAssetTable, sym);
+            CollectionAssert.Contains(goth.fallbackFontAssetTable, ui);
+            CollectionAssert.Contains(goth.fallbackFontAssetTable, sym);
+        }
     }
 }

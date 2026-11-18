@@ -1175,6 +1175,7 @@ namespace Obscure
             {
                 style = { fontSize = 48, color = won ? Palette.Gold1 : Palette.Hex(0xFF8A7A), marginBottom = 18 }
             };
+            title.AddToClassList("uitk-font-display");
             card.Add(title);
 
             var contBtn = FigmaUi.CreateButton("CONTINUE", "button-primary", 220f);

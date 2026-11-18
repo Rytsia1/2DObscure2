@@ -315,8 +315,8 @@ namespace Obscure
 
         void OnLeaveShop()
         {
-            if (Run != null && Run.Current != null)
-                Run.Cleared.Add(Run.Current.id);
+            if (Run != null && Run.Current != null && Run.Cleared.Add(Run.Current.id))
+                Run.Stats.nodesCompleted++;
             Game.Go(GameState.Map);
         }
     }

@@ -13,11 +13,63 @@
 }
 
 Label,
-Button,
 .unity-text-element,
 .unity-label,
-.unity-button {
+.uitk-font-ui {
     -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaUIFont.asset");
+}
+
+/* Display Serif (Cinzel Bold) — Titles, Screen Headers, Modals, Prologue */
+.uitk-font-display,
+.felna-vars,
+.victory-vars,
+.dungeon-clear-vars,
+.uitk-opening-title,
+.uitk-modal-title,
+.settings-vars,
+.create-character-vars,
+.load-game-vars,
+.geistwald-city-vars,
+.party-vars,
+.shop-vars-2,
+.armory-vars-2,
+.blacksmith-vars-2,
+.temple-vars-2,
+.magic-shop-vars-2,
+.save-game-vars,
+.the-sunken-crypt-vars,
+.status-vars,
+.inventory-vars-2,
+.equipment-vars-4,
+.training-ground-vars-2,
+.talents-vars,
+.wandering-merchant-vars,
+.the-sunken-crypt-vars-3 {
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaDisplayFont.asset");
+}
+
+/* Pixel Gothic (DotGothic16) — Section Headers, Buttons, Menu Rows, Card Titles, Tabs */
+.uitk-font-gothic,
+Button,
+.unity-button,
+.unity-button > .unity-label,
+.button-flat,
+.button-flat-2,
+.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2,
+.button-slab,
+.button-slab-2,
+.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2,
+.button-primary,
+.button-primary-2,
+.button-primary-2__e-2.button-primary-2__e-2.button-primary-2__e-2.button-primary-2__e-2.button-primary-2__e-2.button-primary-2__e-2.button-primary-2__e-2,
+.button-danger,
+.section-header,
+.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3,
+.uitk-card-title,
+.uitk-flat-label,
+.uitk-tab-btn,
+.uitk-opening-name {
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaGothicFont.asset");
 }
 
 .button-flat-2 {

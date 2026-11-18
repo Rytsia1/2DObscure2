@@ -94,6 +94,7 @@ namespace Obscure
         {
             Sfx.Play(Sound.DefeatStinger);
             MountFigma("24---Run-Failure---Defeat");
+            FigmaUi.FindLabel(UiRoot, "DEFEAT")?.AddToClassList("uitk-font-display");
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
 

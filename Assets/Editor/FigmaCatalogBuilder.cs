@@ -17,6 +17,10 @@ namespace Obscure.Editor
         const string RuntimeUssPath = "Assets/UI/felna-runtime.uss";
         const string FontTtfPath = "Assets/UI/Fonts/FelnaUI.ttf";
         const string FontAssetPath = "Assets/UI/Fonts/FelnaUIFont.asset";
+        const string DisplayTtfPath = "Assets/UI/Fonts/FelnaDisplay.ttf";
+        const string DisplayAssetPath = "Assets/UI/Fonts/FelnaDisplayFont.asset";
+        const string GothicTtfPath = "Assets/UI/Fonts/FelnaGothic.ttf";
+        const string GothicAssetPath = "Assets/UI/Fonts/FelnaGothicFont.asset";
 
         static FigmaCatalogBuilder()
         {
@@ -30,8 +34,11 @@ namespace Obscure.Editor
             EnsureFolder("Assets/UI");
             EnsureFolder("Assets/UI/Fonts");
 
-            var fontAsset = EnsureFontAsset();
-            var textSettings = EnsureTextSettings(fontAsset);
+            var symbolAsset = EnsureSymbolFallbackFontAsset();
+            var fontAsset = EnsureFontAsset(FontTtfPath, FontAssetPath, symbolAsset);
+            EnsureFontAsset(DisplayTtfPath, DisplayAssetPath, fontAsset, symbolAsset);
+            EnsureFontAsset(GothicTtfPath, GothicAssetPath, fontAsset, symbolAsset);
+            var textSettings = EnsureTextSettings(fontAsset, symbolAsset);
 
             var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(ThemePath);
             if (theme == null)
@@ -93,30 +100,46 @@ namespace Obscure.Editor
             FigmaScreenCatalog.ClearCache();
         }
 
-        static FontAsset EnsureFontAsset()
+        static FontAsset EnsureFontAsset(string ttfPath, string assetPath, params FontAsset[] fallbacks)
         {
-            var fa = AssetDatabase.LoadAssetAtPath<FontAsset>(FontAssetPath);
-            if (fa != null && fa.sourceFontFile != null)
-                return fa;
-
-            AssetDatabase.ImportAsset(FontTtfPath, ImportAssetOptions.ForceUpdate);
-            var ttf = AssetDatabase.LoadAssetAtPath<Font>(FontTtfPath);
-            if (ttf == null) return null;
-
-            fa = FontAsset.CreateFontAsset(ttf);
-            if (fa == null) return null;
-            AssetDatabase.CreateAsset(fa, FontAssetPath);
-            if (fa.material != null) AssetDatabase.AddObjectToAsset(fa.material, fa);
-            if (fa.atlasTextures != null)
+            var fa = AssetDatabase.LoadAssetAtPath<FontAsset>(assetPath);
+            if (fa == null || fa.sourceFontFile == null)
             {
-                foreach (var tex in fa.atlasTextures)
-                    if (tex != null) AssetDatabase.AddObjectToAsset(tex, fa);
+                AssetDatabase.ImportAsset(ttfPath, ImportAssetOptions.ForceUpdate);
+                var ttf = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
+                if (ttf == null) return null;
+
+                fa = FontAsset.CreateFontAsset(ttf);
+                if (fa == null) return null;
+                AssetDatabase.CreateAsset(fa, assetPath);
+                if (fa.material != null) AssetDatabase.AddObjectToAsset(fa.material, fa);
+                if (fa.atlasTextures != null)
+                {
+                    foreach (var tex in fa.atlasTextures)
+                        if (tex != null) AssetDatabase.AddObjectToAsset(tex, fa);
+                }
+            }
+
+            if (fallbacks != null && fallbacks.Length > 0)
+            {
+                if (fa.fallbackFontAssetTable == null)
+                    fa.fallbackFontAssetTable = new System.Collections.Generic.List<FontAsset>();
+                bool changed = false;
+                foreach (var fb in fallbacks)
+                {
+                    if (fb != null && fb != fa && !fa.fallbackFontAssetTable.Contains(fb))
+                    {
+                        fa.fallbackFontAssetTable.Add(fb);
+                        changed = true;
+                    }
+                }
+                if (changed) EditorUtility.SetDirty(fa);
             }
             EditorUtility.SetDirty(fa);
             return fa;
         }
 
-        static PanelTextSettings EnsureTextSettings(FontAsset defaultFont)
+        static PanelTextSettings EnsureTextSettings(FontAsset defaultFont, FontAsset symbolFa)
         {
             var ts = AssetDatabase.LoadAssetAtPath<PanelTextSettings>(TextSettingsPath);
             if (ts == null)
@@ -127,7 +150,6 @@ namespace Obscure.Editor
             if (defaultFont != null)
             {
                 ts.defaultFontAsset = defaultFont;
-                var symbolFa = EnsureSymbolFallbackFontAsset();
                 if (symbolFa != null)
                 {
                     if (defaultFont.fallbackFontAssetTable == null)
@@ -173,7 +195,9 @@ namespace Obscure.Editor
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
             var catalog = AssetDatabase.LoadAssetAtPath<FigmaScreenCatalog>(CatalogPath);
             var ps = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
-            if (catalog == null || ps == null || ps.textSettings == null || catalog.entries == null || catalog.entries.Count == 0 || ps.themeStyleSheet == null)
+            var dispFa = AssetDatabase.LoadAssetAtPath<FontAsset>(DisplayAssetPath);
+            var gothFa = AssetDatabase.LoadAssetAtPath<FontAsset>(GothicAssetPath);
+            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || ps.themeStyleSheet == null)
                 BuildAll();
         }
 
