@@ -7,9 +7,9 @@
     top: 0px;
     right: 0px;
     bottom: 0px;
-    width: 100%;
-    height: 100%;
-    flex-grow: 1;
+    justify-content: center;
+    align-items: center;
+    background-color: #090C14;
 }
 
 Label,
@@ -437,4 +437,133 @@ Button,
     right: 0px;
     bottom: 0px;
     background-color: var(--bg-void);
+}
+
+/* Right-anchored currency badges so large numbers (10,000+) never clip off 1280px edge */
+.uitk-currency-right {
+    position: absolute;
+    right: 24px;
+    left: auto;
+}
+
+/* Scrollable lists & grids */
+.uitk-scroll-view {
+    flex-grow: 1;
+}
+
+.uitk-scroll-view .unity-scroller--vertical {
+    width: 10px;
+}
+
+.uitk-scroll-view .unity-base-slider__tracker {
+    background-color: var(--ink-0);
+    border-width: 1px;
+    border-color: var(--ink-4);
+}
+
+.uitk-scroll-view .unity-base-slider__dragger {
+    background-color: var(--gold-3);
+    border-width: 1px;
+    border-color: var(--gold-2);
+}
+
+/* Text input field (Character Creation Name) */
+.uitk-textfield {
+    margin-bottom: 12px;
+}
+
+.uitk-textfield > .unity-base-text-field__input {
+    background-color: var(--ink-0);
+    border-width: 2px;
+    border-color: var(--border-default);
+    color: var(--text-primary);
+    font-size: 22px;
+    padding-top: 8px;
+    padding-right: 12px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaUIFont.asset");
+}
+
+.uitk-textfield > .unity-base-text-field__input:focus {
+    border-color: var(--border-accent);
+    background-color: var(--ink-1);
+}
+
+/* Opening Sequence Screen */
+.uitk-opening-root {
+    flex-grow: 1;
+    background-color: var(--bg-ground);
+    padding-top: 36px;
+    padding-right: 48px;
+    padding-bottom: 36px;
+    padding-left: 48px;
+    justify-content: space-between;
+}
+
+.uitk-opening-panel {
+    flex-grow: 1;
+    background-color: var(--bg-panel);
+    border-width: 2px;
+    border-color: var(--border-focus);
+    padding-top: 28px;
+    padding-right: 36px;
+    padding-bottom: 28px;
+    padding-left: 36px;
+}
+
+.uitk-opening-title {
+    font-size: 28px;
+    color: var(--text-highlight);
+    -unity-text-align: middle-center;
+    margin-bottom: 18px;
+}
+
+.uitk-opening-story {
+    font-size: 20px;
+    color: var(--text-primary);
+    white-space: normal;
+    -unity-text-align: middle-center;
+    margin-bottom: 28px;
+}
+
+.uitk-opening-cards {
+    flex-direction: row;
+    justify-content: space-between;
+    flex-grow: 1;
+}
+
+.uitk-opening-card {
+    width: 250px;
+    align-items: center;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.uitk-opening-portrait {
+    width: 96px;
+    height: 96px;
+    margin-bottom: 16px;
+}
+
+.uitk-opening-name {
+    font-size: 22px;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.uitk-opening-race {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.uitk-opening-class {
+    font-size: 16px;
+    color: var(--text-highlight);
+}
+
+.uitk-opening-footer {
+    align-items: center;
+    margin-top: 24px;
 }

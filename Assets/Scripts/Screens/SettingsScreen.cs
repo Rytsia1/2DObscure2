@@ -14,6 +14,8 @@ namespace Obscure
     {
         enum Category { Audio, Graphics, Controls, Qte }
         static readonly string[] CategoryNames = { "Audio", "Graphics", "Controls", "QTE" };
+        static Category? pendingCategory;
+        public static void RequestQteTab() => pendingCategory = Category.Qte;
 
         UitkMenu menu;
         VisualElement screenContainer;
@@ -22,6 +24,7 @@ namespace Obscure
         UiLabel dirtyBadgeLabel;
         UiLabel sectionHeaderLabel;
         VisualElement resetBtn, revertBtn, applyBtn, backBtn;
+        UitkMenu.Item revertItem, applyItem;
         readonly List<VisualElement> categoryEls = new List<VisualElement>();
 
         Category category = Category.Audio;
@@ -32,6 +35,11 @@ namespace Obscure
 
         protected override void Build()
         {
+            if (pendingCategory.HasValue)
+            {
+                category = pendingCategory.Value;
+                pendingCategory = null;
+            }
             UiRoot = FigmaUi.Mount(Root.gameObject, "01---Settings");
             screenContainer = UiRoot.Q<VisualElement>(className: "_01-settings") ?? UiRoot;
 
@@ -141,14 +149,6 @@ namespace Obscure
 
         void BuildPage()
         {
-            int dirty = DirtyCount;
-            if (dirtyBadge != null)
-            {
-                dirtyBadge.EnableInClassList("uitk-hidden", dirty == 0);
-                if (dirty > 0 && dirtyBadgeLabel != null)
-                    dirtyBadgeLabel.text = $"{dirty} UNSAVED CHANGE{(dirty > 1 ? "S" : "")}";
-            }
-
             if (backBtn != null)
                 menu.Add(backBtn, "Back", Leave);
 
@@ -200,6 +200,10 @@ namespace Obscure
                     break;
                 case Category.Controls:
                     SegRow(5, "QTE key", "KEY USED FOR REACTION PROMPTS", GameSettings.QteKeys.Select(k => k.ToString()).ToArray(), s.qteKey, v => s.qteKey = v);
+                    InfoRow("Navigation", "ARROWS / WASD / D-PAD");
+                    InfoRow("Confirm / Interact", "ENTER / SPACE / Z / A-BUTTON");
+                    InfoRow("Back / Pause", "ESC / BACKSPACE / X / B-BUTTON");
+                    InfoRow("Switch Party Member", "Q / E / LB / RB");
                     break;
                 default:
                     SegRow(4, "QTE assist", "STANDARD, RELAXED WINDOWS, OR AUTO (QTES OFF)", new[] { "Standard", "Relaxed", "Auto" }, s.qteAssist, v => s.qteAssist = v);
@@ -207,20 +211,40 @@ namespace Obscure
                     break;
             }
 
+            revertItem = null;
+            applyItem = null;
             if (resetBtn != null) menu.Add(resetBtn, "Reset to Default", ResetDefaults);
             if (revertBtn != null)
-            {
-                if (revertBtn is Button rb) rb.SetEnabled(dirty > 0);
-                menu.Add(revertBtn, "Revert", () => { Restore(saved); Rebuild(); }, interactable: dirty > 0);
-            }
+                revertItem = menu.Add(revertBtn, "Revert", () => { Restore(saved); Rebuild(); }, interactable: DirtyCount > 0);
             if (applyBtn != null)
+                applyItem = menu.Add(applyBtn, "Apply", Apply, interactable: DirtyCount > 0);
+            RefreshDirtyChrome();
+        }
+
+        void RefreshDirtyChrome()
+        {
+            int dirty = DirtyCount;
+            if (dirtyBadge != null)
             {
-                if (applyBtn is Button ab) ab.SetEnabled(dirty > 0);
-                menu.Add(applyBtn, "Apply", Apply, interactable: dirty > 0);
+                dirtyBadge.EnableInClassList("uitk-hidden", dirty == 0);
+                if (dirty > 0 && dirtyBadgeLabel != null)
+                    dirtyBadgeLabel.text = $"{dirty} UNSAVED CHANGE{(dirty > 1 ? "S" : "")}";
+            }
+            if (revertBtn is Button rb) rb.SetEnabled(dirty > 0);
+            if (revertItem != null)
+            {
+                revertItem.interactable = dirty > 0;
+                revertItem.visual?.Invoke(menu.Current == revertItem);
+            }
+            if (applyBtn is Button ab) ab.SetEnabled(dirty > 0);
+            if (applyItem != null)
+            {
+                applyItem.interactable = dirty > 0;
+                applyItem.visual?.Invoke(menu.Current == applyItem);
             }
         }
 
-        VisualElement RowShell(int dirtyIndex, string name, string desc)
+        (VisualElement row, VisualElement dot) RowShellWithDot(int dirtyIndex, string name, string desc)
         {
             var row = new VisualElement();
             row.AddToClassList("uitk-settings-row");
@@ -247,12 +271,23 @@ namespace Obscure
 
             row.Add(left);
             rowsContainer.Add(row);
-            return row;
+            return (row, dot);
+        }
+
+        VisualElement RowShell(int dirtyIndex, string name, string desc) => RowShellWithDot(dirtyIndex, name, desc).row;
+
+        void InfoRow(string name, string bindingText)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("uitk-settings-row");
+            row.Add(new UiLabel(name) { style = { fontSize = 18, color = Palette.Mist2, marginLeft = 18 } });
+            row.Add(new UiLabel(bindingText) { style = { fontSize = 14, color = Palette.Gold2, letterSpacing = 0.5f } });
+            rowsContainer.Add(row);
         }
 
         void SliderRow(int index, string name, string desc, int value, Action<int> set)
         {
-            var row = RowShell(index, name, desc);
+            var (row, dot) = RowShellWithDot(index, name, desc);
 
             var right = new VisualElement();
             right.style.flexDirection = FlexDirection.Row;
@@ -279,6 +314,7 @@ namespace Obscure
             var fill = new VisualElement();
             fill.style.width = new Length(value * 10f, LengthUnit.Percent);
             fill.style.backgroundColor = Palette.Gold2;
+            fill.pickingMode = PickingMode.Ignore;
             track.Add(fill);
 
             var thumb = new VisualElement();
@@ -288,6 +324,7 @@ namespace Obscure
             thumb.style.position = Position.Absolute;
             thumb.style.top = -8;
             thumb.style.left = Mathf.RoundToInt(value / 10f * 268f);
+            thumb.pickingMode = PickingMode.Ignore;
             track.Add(thumb);
 
             var valLbl = new UiLabel($"{value * 10}%");
@@ -297,13 +334,56 @@ namespace Obscure
             valLbl.style.marginLeft = 18;
             valLbl.style.unityTextAlign = TextAnchor.MiddleRight;
 
+            int currentVal = value;
+            bool dragging = false;
+
+            void ApplyValue(int next, bool playSound)
+            {
+                next = Mathf.Clamp(next, 0, 10);
+                if (next == currentVal) return;
+                currentVal = next;
+                set(next);
+                fill.style.width = new Length(next * 10f, LengthUnit.Percent);
+                thumb.style.left = Mathf.RoundToInt(next / 10f * 268f);
+                valLbl.text = $"{next * 10}%";
+                bool dirty = Dirty(index) == 1;
+                dot.EnableInClassList("uitk-dirty-dot", dirty);
+                dot.EnableInClassList("uitk-dirty-dot-off", !dirty);
+                if (playSound) Sfx.Play(Sound.Move);
+                RefreshDirtyChrome();
+            }
+
+            track.pickingMode = PickingMode.Position;
+            track.RegisterCallback<PointerDownEvent>(e =>
+            {
+                e.StopPropagation();
+                dragging = true;
+                track.CapturePointer(e.pointerId);
+                ApplyValue(Mathf.RoundToInt(e.localPosition.x / 280f * 10f), true);
+            });
+            track.RegisterCallback<PointerMoveEvent>(e =>
+            {
+                if (!dragging || !track.HasPointerCapture(e.pointerId)) return;
+                e.StopPropagation();
+                ApplyValue(Mathf.RoundToInt(e.localPosition.x / 280f * 10f), true);
+            });
+            track.RegisterCallback<PointerUpEvent>(e =>
+            {
+                if (!dragging) return;
+                dragging = false;
+                if (track.HasPointerCapture(e.pointerId)) track.ReleasePointer(e.pointerId);
+                e.StopPropagation();
+            });
+            track.RegisterCallback<PointerCaptureOutEvent>(_ => dragging = false);
+            track.RegisterCallback<ClickEvent>(e => e.StopPropagation());
+
             right.Add(track);
             right.Add(valLbl);
             row.Add(right);
 
-            menu.Add(row, name, () => { set((value + 1) % 11); Rebuild(); },
+            menu.Add(row, name, () => ApplyValue((currentVal + 1) % 11, false),
                 visual: on => row.EnableInClassList("uitk-focus", on),
-                onAdjust: d => { set(Mathf.Clamp(value + d, 0, 10)); Rebuild(); });
+                onAdjust: d => ApplyValue(currentVal + d, false));
         }
 
         void ToggleRow(int index, string name, string desc, bool value, Action<bool> set)

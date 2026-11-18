@@ -73,6 +73,8 @@ namespace Obscure
             menu.AttachRoot(UiRoot);
             menu.onBack = () => Game?.Go(returnState);
             menu.onFocus = OnFocus;
+            menu.onPrevPage = () => SwitchHero(-1);
+            menu.onNextPage = () => SwitchHero(1);
 
             Refresh();
         }
@@ -107,13 +109,14 @@ namespace Obscure
             mainHost.style.left = 326;
             mainHost.style.top = 118;
             mainHost.style.width = 914;
-            mainHost.style.height = 568;
+            mainHost.style.height = 516;
+            mainHost.style.overflow = Overflow.Hidden;
             screen.Add(mainHost);
 
             tooltipStrip = new VisualElement { name = "StatusTooltipStrip" };
             tooltipStrip.style.position = Position.Absolute;
             tooltipStrip.style.left = 326;
-            tooltipStrip.style.bottom = 26;
+            tooltipStrip.style.bottom = 20;
             tooltipStrip.style.width = 914;
             tooltipStrip.style.paddingLeft = 10;
             tooltipStrip.style.paddingRight = 10;
@@ -175,7 +178,7 @@ namespace Obscure
                 else UnityEngine.Object.DestroyImmediate(hiddenBindings.gameObject);
             }
 
-            menu.items.Clear();
+            menu.Clear();
             PrimaryStatLabels.Clear();
             DerivedStatLabels.Clear();
             detailLabel = null;
@@ -250,7 +253,11 @@ namespace Obscure
 
             int gold = Run != null ? Run.Gold : 0;
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
-            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold} HUB GOLD");
+            if (hubTag != null)
+            {
+                FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold:#,##0} HUB GOLD");
+                FigmaUi.AnchorRight(hubTag, 24f);
+            }
         }
 
         void BindIdentity(Unit u)
@@ -393,8 +400,13 @@ namespace Obscure
             derCol.Add(SectionTitle("Derived Stats"));
             foreach (var st in OverviewDerived)
             {
+                var stat = st;
                 var def = Database.DerivedStatDefs[st];
-                derCol.Add(StatRow((def.displayName ?? def.shortName).ToUpperInvariant(), null, u.Derived.FormatValue(st), null));
+                string tip = GetStatTooltip(stat);
+                var row = StatRow((def.displayName ?? def.shortName).ToUpperInvariant(), null, u.Derived.FormatValue(st), () => ShowTip(tip));
+                derCol.Add(row);
+                var it = menu.Add(row, def.shortName, () => ShowTip(tip), tooltip: tip);
+                it.visual = on => row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
             }
             topRow.Add(derCol);
 
@@ -433,9 +445,13 @@ namespace Obscure
             // Col 1 Bottom: Status Effects
             var stCol = ColumnBox(280, 28);
             stCol.Add(SectionTitle("Status Effects"));
-            var stTxt = new UiLabel("NONE ACTIVE. BUFFS AND DEBUFFS SHOW HERE DURING A DUNGEON RUN.");
+            var activeSummaries = BuildActiveEffectsSummary(u);
+            string ovStatus = activeSummaries.Count > 0
+                ? string.Join("\n", activeSummaries.Take(3).Select(x => "• " + x.title.ToUpperInvariant()))
+                : "NO ACTIVE COMBAT EFFECTS. BUFFS AND DEBUFFS SHOW DURING A DUNGEON RUN.";
+            var stTxt = new UiLabel(ovStatus);
             stTxt.style.fontSize = 13;
-            stTxt.style.color = Palette.Mist3;
+            stTxt.style.color = activeSummaries.Count > 0 ? Palette.Mist1 : Palette.Mist3;
             stTxt.style.whiteSpace = WhiteSpace.Normal;
             stCol.Add(stTxt);
             botRow.Add(stCol);
@@ -543,14 +559,55 @@ namespace Obscure
             mainHost.Add(DetailPane(914, 140));
         }
 
+        List<(string title, string detail, Color col)> BuildActiveEffectsSummary(Unit u)
+        {
+            var list = new List<(string, string, Color)>();
+            if (Run != null && Run.BattleBuffs.Count > 0)
+            {
+                foreach (var b in Run.BattleBuffs)
+                    list.Add(($"NEXT BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} TURNS", Palette.Ok));
+            }
+            if (u.background != null)
+            {
+                var rank = u.background.GetRank(u.level);
+                list.Add(($"PERK: {rank?.perkName ?? u.background.perkName}", rank?.perkDescription ?? "", Palette.Gold1));
+            }
+            if (Run != null && Run.Relics != null)
+            {
+                foreach (var rid in Run.Relics)
+                {
+                    if (Database.Relics.TryGetValue(rid, out var r))
+                        list.Add(($"RELIC: {r.name}", r.gameplayEffect ?? r.description ?? "", Ui.RelicColor(r)));
+                }
+            }
+            return list;
+        }
+
         void BuildStatusList()
         {
-            mainHost.Add(SectionTitle("Status Effects"));
-            var lbl = new UiLabel("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.");
-            lbl.style.fontSize = 14;
-            lbl.style.color = Palette.Mist3;
-            lbl.style.whiteSpace = WhiteSpace.Normal;
-            mainHost.Add(lbl);
+            mainHost.Add(SectionTitle("Active Buffs, Perks & Relics"));
+            var items = BuildActiveEffectsSummary(CurrentUnit);
+            if (items.Count == 0)
+            {
+                var lbl = new UiLabel("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.");
+                lbl.style.fontSize = 14;
+                lbl.style.color = Palette.Mist3;
+                lbl.style.whiteSpace = WhiteSpace.Normal;
+                mainHost.Add(lbl);
+                return;
+            }
+
+            var scroll = FigmaUi.CreateVerticalScrollView();
+            scroll.style.maxHeight = 440;
+            foreach (var (title, detail, col) in items)
+            {
+                var card = new VisualElement();
+                card.AddToClassList("uitk-card");
+                card.Add(new UiLabel(title.ToUpperInvariant()) { style = { fontSize = 16, color = col, marginBottom = 4 } });
+                card.Add(new UiLabel(detail.ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
+                scroll.Add(card);
+            }
+            mainHost.Add(scroll);
         }
 
         VisualElement DetailPane(int width, int height)
@@ -613,8 +670,6 @@ namespace Obscure
                 row.Add(new UiLabel(midText) { style = { fontSize = 13, color = Palette.Mist3, marginRight = 10 } });
             row.Add(new UiLabel(rightText) { style = { fontSize = 14, color = Palette.Mist1 } });
 
-            if (onClick != null)
-                row.RegisterCallback<PointerDownEvent>(_ => onClick());
             return row;
         }
 

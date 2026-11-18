@@ -69,6 +69,10 @@ namespace Obscure
                 nextLbl.text = $"TIME {(int)dur.TotalMinutes}:{dur.Seconds:00} · ACT {act} CLEARED";
             }
 
+            var keepTags = UiRoot.Query<VisualElement>(className: "tag-keep").ToList();
+            if (keepTags.Count >= 2)
+                FigmaUi.SetInstanceText(keepTags[1], "text-0", $"{Run?.Relics.Count ?? 0} RELICS STAY");
+
             var newRunInst = UiRoot.Q<VisualElement>(className: "button-primary-2__i-9");
             if (newRunInst != null)
             {

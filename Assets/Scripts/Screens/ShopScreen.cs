@@ -16,6 +16,8 @@ namespace Obscure
         DungeonShopData shopData;
         UitkMenu menu;
         int selectedIndex;
+        int focusIndex;
+        bool rebuilding;
         string feedback = "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.";
         bool feedbackBad;
 
@@ -35,107 +37,121 @@ namespace Obscure
 
         void Rebuild()
         {
-            UiRoot = FigmaUi.Mount(Root.gameObject, "20---Dungeon-Shop---Run-Gold");
-            if (menu != null)
+            if (Root == null || rebuilding) return;
+            rebuilding = true;
+            try
             {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
-                else UnityEngine.Object.DestroyImmediate(menu);
-            }
-            menu = Root.gameObject.AddComponent<UitkMenu>();
-            menu.AttachRoot(UiRoot);
-            menu.onBack = OnLeaveShop;
+                UiRoot = FigmaUi.Mount(Root.gameObject, "20---Dungeon-Shop---Run-Gold");
+                FigmaUi.DestroyMenu(ref menu);
+                menu = Root.gameObject.AddComponent<UitkMenu>();
+                menu.AttachRoot(UiRoot);
+                menu.onBack = OnLeaveShop;
+                menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
 
-            var backBtn = FigmaUi.FindButton(UiRoot, "Back");
-            if (backBtn != null)
-                FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", OnLeaveShop));
+                var backBtn = FigmaUi.FindButton(UiRoot, "Back");
+                if (backBtn != null)
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", OnLeaveShop));
 
-            int currentRunGold = Run != null ? Run.Gold : 0;
-            var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
-            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{currentRunGold:#,##0} RUN GOLD");
-
-            var screen = UiRoot.Q<VisualElement>(className: "_20-dungeon-shop-run-gold") ?? UiRoot;
-            var leftPanel = UiRoot.Q<VisualElement>(className: "panel-default__i-31");
-            var rightPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-16");
-            if (leftPanel != null)
-            {
-                int lIdx = screen.IndexOf(leftPanel);
-                int rIdx = rightPanel != null ? screen.IndexOf(rightPanel) : screen.childCount;
-                for (int i = lIdx + 1; i < screen.childCount; i++)
-                    if (i != rIdx) screen[i].style.display = DisplayStyle.None;
-            }
-
-            // Tab strip across top of left panel
-            var tabRow = new VisualElement { style = { position = Position.Absolute, left = 44, top = 80, flexDirection = FlexDirection.Row } };
-            foreach (var (tab, lbl) in new[] { (ShopTab.BuyConsumables, "SUPPLIES"), (ShopTab.BuyEquipment, "EQUIPMENT"), (ShopTab.Sell, "SELL GEAR") })
-            {
-                var t = tab;
-                bool active = currentTab == t;
-                var tag = FigmaUi.InstantiateTemplate(active ? "Tag-Gold" : "Tag-Cls");
-                if (tag != null)
+                int currentRunGold = Run != null ? Run.Gold : 0;
+                var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
+                if (runGold != null)
                 {
-                    FigmaUi.SetInstanceText(tag, "text-0", lbl);
-                    tag.style.marginRight = 8;
-                    tabRow.Add(tag);
-                    var it = menu.Add(tag, lbl, () => SwitchTab(t), selected: active);
-                    it.visual = on => tag.style.opacity = on || active ? 1f : 0.72f;
+                    FigmaUi.SetInstanceText(runGold, "text-0", $"{currentRunGold:#,##0} RUN GOLD");
+                    FigmaUi.AnchorRight(runGold, 24f);
                 }
-            }
-            screen.Add(tabRow);
 
-            var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 802, height = 500, flexDirection = FlexDirection.Column } };
-            screen.Add(listHost);
-
-            var entries = BuildEntries();
-            selectedIndex = Mathf.Clamp(selectedIndex, 0, Math.Max(0, entries.Count - 1));
-
-            for (int i = 0; i < entries.Count && i < 7; i++)
-            {
-                int idx = i;
-                var e = entries[i];
-                bool chosen = i == selectedIndex;
-                var row = new VisualElement
+                var screen = UiRoot.Q<VisualElement>(className: "_20-dungeon-shop-run-gold") ?? UiRoot;
+                var leftPanel = UiRoot.Q<VisualElement>(className: "panel-default__i-31");
+                var rightPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-16");
+                if (leftPanel != null)
                 {
-                    style =
+                    int lIdx = screen.IndexOf(leftPanel);
+                    int rIdx = rightPanel != null ? screen.IndexOf(rightPanel) : screen.childCount;
+                    for (int i = lIdx + 1; i < screen.childCount; i++)
+                        if (i != rIdx) screen[i].style.display = DisplayStyle.None;
+                }
+
+                // Tab strip across top of left panel
+                var tabRow = new VisualElement { style = { position = Position.Absolute, left = 44, top = 80, flexDirection = FlexDirection.Row } };
+                foreach (var (tab, lbl) in new[] { (ShopTab.BuyConsumables, "SUPPLIES"), (ShopTab.BuyEquipment, "EQUIPMENT"), (ShopTab.Sell, "SELL GEAR") })
+                {
+                    var t = tab;
+                    bool active = currentTab == t;
+                    var tag = FigmaUi.InstantiateTemplate(active ? "Tag-Gold" : "Tag-Cls");
+                    if (tag != null)
                     {
-                        height = 56, marginBottom = 6, paddingLeft = 12, paddingRight = 12,
-                        flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
-                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        FigmaUi.SetInstanceText(tag, "text-0", lbl);
+                        tag.style.marginRight = 8;
+                        tabRow.Add(tag);
+                        var it = menu.Add(tag, lbl, () => SwitchTab(t), selected: active);
+                        it.visual = on => tag.style.opacity = on || active ? 1f : 0.72f;
                     }
-                };
-                row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2 } });
-                var icon = IconArt.Inline(e.icon, 3);
-                if (icon != null) { if (e.dim) icon.style.opacity = 0.5f; row.Add(icon); }
-                var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
-                col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : Palette.Mist1 } });
-                col.Add(new UiLabel(e.sub) { style = { fontSize = 12, color = Palette.Mist3 } });
-                row.Add(col);
-                row.Add(new UiLabel(e.stock) { style = { width = 100, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
-                row.Add(new UiLabel(e.priceText) { style = { width = 90, fontSize = 16, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
-                listHost.Add(row);
+                }
+                screen.Add(tabRow);
 
-                var it = menu.Add(row, e.title, () =>
+                var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 802, height = 560, flexDirection = FlexDirection.Column } };
+                screen.Add(listHost);
+
+                var scroll = FigmaUi.CreateVerticalScrollView();
+                scroll.style.maxHeight = 490;
+                listHost.Add(scroll);
+
+                var entries = BuildEntries();
+                selectedIndex = Mathf.Clamp(selectedIndex, 0, Math.Max(0, entries.Count - 1));
+
+                for (int i = 0; i < entries.Count; i++)
                 {
-                    if (selectedIndex != idx) { selectedIndex = idx; Rebuild(); }
-                    else e.action?.Invoke();
-                }, selected: chosen);
-                it.visual = on =>
+                    int idx = i;
+                    var e = entries[i];
+                    bool chosen = i == selectedIndex;
+                    var row = new VisualElement
+                    {
+                        style =
+                        {
+                            height = 56, marginBottom = 6, paddingLeft = 12, paddingRight = 12,
+                            flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                            borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        }
+                    };
+                    row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2 } });
+                    var icon = IconArt.Inline(e.icon, 3);
+                    if (icon != null) { if (e.dim) icon.style.opacity = 0.5f; row.Add(icon); }
+                    var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
+                    col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : Palette.Mist1 } });
+                    col.Add(new UiLabel(e.sub) { style = { fontSize = 12, color = Palette.Mist3 } });
+                    row.Add(col);
+                    row.Add(new UiLabel(e.stock) { style = { width = 100, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
+                    row.Add(new UiLabel(e.priceText) { style = { width = 90, fontSize = 16, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
+                    scroll.Add(row);
+
+                    var it = menu.Add(row, e.title, () =>
+                    {
+                        if (selectedIndex != idx) { selectedIndex = idx; Rebuild(); }
+                        else e.action?.Invoke();
+                    }, selected: chosen);
+                    it.visual = on =>
+                    {
+                        row.style.backgroundColor = on || chosen ? Palette.Hex(0x2B2210) : Palette.Ink2;
+                        var b = on ? Palette.Gold1 : chosen ? Palette.Gold2 : Palette.Ink5;
+                        row.style.borderTopColor = b; row.style.borderBottomColor = b; row.style.borderLeftColor = b; row.style.borderRightColor = b;
+                    };
+                    it.visual(false);
+                }
+
+                if (entries.Count == 0)
+                    scroll.Add(new UiLabel("NO EQUIPMENT IN INVENTORY TO SELL.") { style = { fontSize = 15, color = Palette.Mist3, alignSelf = UnityEngine.UIElements.Align.Center, marginTop = 80 } });
+
+                listHost.Add(new UiLabel(feedback)
                 {
-                    row.style.backgroundColor = on || chosen ? Palette.Hex(0x2B2210) : Palette.Ink2;
-                    var b = on ? Palette.Gold1 : chosen ? Palette.Gold2 : Palette.Ink5;
-                    row.style.borderTopColor = b; row.style.borderBottomColor = b; row.style.borderLeftColor = b; row.style.borderRightColor = b;
-                };
-                it.visual(false);
+                    style = { fontSize = 13, color = feedbackBad ? Palette.Err : Palette.Gold1, marginTop = 10, whiteSpace = WhiteSpace.Normal }
+                });
+
+                BuildDetail(screen, entries.Count > 0 ? entries[selectedIndex] : null, currentRunGold);
+
+                if (menu.items.Count > 0)
+                    menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
             }
-
-            if (entries.Count == 0)
-                listHost.Add(new UiLabel("NO EQUIPMENT IN INVENTORY TO SELL.") { style = { fontSize = 15, color = Palette.Mist3, alignSelf = UnityEngine.UIElements.Align.Center, marginTop = 80 } });
-
-            listHost.Add(new UiLabel(feedback)
-            {
-                style = { fontSize = 13, color = feedbackBad ? Palette.Err : Palette.Gold1, marginTop = 10, whiteSpace = WhiteSpace.Normal }
-            });
-
-            BuildDetail(screen, entries.Count > 0 ? entries[selectedIndex] : null, currentRunGold);
+            finally { rebuilding = false; }
         }
 
         class Entry
@@ -177,7 +193,7 @@ namespace Obscure
             }
             else if (currentTab == ShopTab.BuyEquipment)
             {
-                foreach (var eq in shopData.equipmentShop.items.Take(7))
+                foreach (var eq in shopData.equipmentShop.items)
                 {
                     var item = eq;
                     string name = item.item?.Definition?.name ?? "Equipment";
@@ -202,7 +218,7 @@ namespace Obscure
             else
             {
                 var inv = Run?.Inventory?.equipment ?? new List<EquipmentInstance>();
-                foreach (var eq in inv.Take(7))
+                foreach (var eq in inv)
                 {
                     var item = eq;
                     int val = item.CalculateSellValue();

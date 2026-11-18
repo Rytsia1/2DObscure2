@@ -128,6 +128,8 @@ namespace Obscure
         VisualElement backBtn, actionRow;
         UiLabel detailTitleLbl, detailBodyLbl, feedbackLabel;
         UitkMenu menu;
+        int focusIndex;
+        bool rebuilding;
         readonly List<VisualElement> actionEls = new List<VisualElement>();
 
         protected override void Build()
@@ -136,6 +138,7 @@ namespace Obscure
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onBack = () => Game?.Go(GameState.Hub);
+            menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
 
             backBtn = FigmaUi.FindButton(UiRoot, "Back");
             slotCards = SaveSlotUitkHelper.FindSlotCards(UiRoot);
@@ -202,44 +205,58 @@ namespace Obscure
 
         void RebuildMenu(bool focusAction)
         {
-            menu.Clear();
-            int cardCount = 0;
-            for (int i = 0; i < 5; i++)
+            rebuilding = true;
+            try
             {
-                if (slotCards[i] == null) continue;
-                var slot = (SaveSlotId)i;
-                cardCount++;
-                menu.Add(slotCards[i], SaveSlotMetadata.FormatSlotName(slot), () =>
+                menu.Clear();
+                int cardCount = 0;
+                for (int i = 0; i < 5; i++)
                 {
-                    selectedSlot = slot;
-                    RefreshAll(false);
-                }, selected: selectedSlot == slot);
+                    if (slotCards[i] == null) continue;
+                    var slot = (SaveSlotId)i;
+                    cardCount++;
+                    menu.Add(slotCards[i], SaveSlotMetadata.FormatSlotName(slot), () =>
+                    {
+                        selectedSlot = slot;
+                        RefreshAll(false);
+                    }, selected: selectedSlot == slot);
+                }
+
+                foreach (var el in actionEls)
+                {
+                    string label = el.userData as string ?? "ACTION";
+                    menu.Add(el, label, btnActions.TryGetValue(el, out var act) ? act : null);
+                }
+
+                if (backBtn != null)
+                    menu.Add(backBtn, "Back", () => Game?.Go(GameState.Hub));
+
+                if (focusAction && actionEls.Count > 0)
+                    focusIndex = cardCount;
+                if (menu.items.Count > 0)
+                    menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
             }
+            finally { rebuilding = false; }
+        }
 
-            foreach (var el in actionEls)
-            {
-                string label = el.userData as string ?? "ACTION";
-                menu.Add(el, label, btnActions.TryGetValue(el, out var act) ? act : null);
-            }
-
-            if (backBtn != null)
-                menu.Add(backBtn, "Back", () => Game?.Go(GameState.Hub));
-
-            if (focusAction && actionEls.Count > 0)
-                menu.Focus(cardCount, false, true);
+        void SetFeedback(string msg, bool bad)
+        {
+            if (feedbackLabel == null) return;
+            feedbackLabel.text = msg;
+            feedbackLabel.style.color = bad ? Palette.Err : Palette.Ok;
         }
 
         void OnSaveClicked()
         {
-            if (feedbackLabel != null) feedbackLabel.text = "Saving campaign progress...";
+            SetFeedback("Saving campaign progress...", false);
             if (SaveManager.Save(selectedSlot, out string err))
             {
-                if (feedbackLabel != null) feedbackLabel.text = $"Successfully saved to {SaveSlotMetadata.FormatSlotName(selectedSlot)}!";
+                SetFeedback($"Successfully saved to {SaveSlotMetadata.FormatSlotName(selectedSlot)}!", false);
                 RefreshAll(false);
             }
-            else if (feedbackLabel != null)
+            else
             {
-                feedbackLabel.text = $"Save failed: {err}";
+                SetFeedback($"Save failed: {err}", true);
             }
         }
 
@@ -252,12 +269,12 @@ namespace Obscure
                 {
                     if (SaveManager.Save(selectedSlot, out string err))
                     {
-                        if (feedbackLabel != null) feedbackLabel.text = $"Successfully overwritten {SaveSlotMetadata.FormatSlotName(selectedSlot)}!";
+                        SetFeedback($"Successfully overwritten {SaveSlotMetadata.FormatSlotName(selectedSlot)}!", false);
                         RefreshAll(false);
                     }
-                    else if (feedbackLabel != null)
+                    else
                     {
-                        feedbackLabel.text = $"Overwrite failed: {err}";
+                        SetFeedback($"Overwrite failed: {err}", true);
                     }
                 });
         }
@@ -271,12 +288,12 @@ namespace Obscure
                 {
                     if (SaveManager.Delete(selectedSlot, out string err))
                     {
-                        if (feedbackLabel != null) feedbackLabel.text = $"Deleted {SaveSlotMetadata.FormatSlotName(selectedSlot)}.";
+                        SetFeedback($"Deleted {SaveSlotMetadata.FormatSlotName(selectedSlot)}.", false);
                         RefreshAll(false);
                     }
-                    else if (feedbackLabel != null)
+                    else
                     {
-                        feedbackLabel.text = $"Delete failed: {err}";
+                        SetFeedback($"Delete failed: {err}", true);
                     }
                 });
         }
@@ -290,6 +307,8 @@ namespace Obscure
         VisualElement backBtn, actionRow;
         UiLabel detailTitleLbl, detailBodyLbl, feedbackLabel;
         UitkMenu menu;
+        int focusIndex;
+        bool rebuilding;
         readonly List<(VisualElement el, string text, Action action)> actionEls = new List<(VisualElement, string, Action)>();
 
         public LoadScreen(GameState returnState = GameState.MainMenu)
@@ -303,6 +322,7 @@ namespace Obscure
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onBack = () => Game?.Go(returnState);
+            menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
 
             backBtn = FigmaUi.FindButton(UiRoot, "Back");
             slotCards = SaveSlotUitkHelper.FindSlotCards(UiRoot);
@@ -355,28 +375,42 @@ namespace Obscure
 
         void RebuildMenu(bool focusAction)
         {
-            menu.Clear();
-            int cardCount = 0;
-            for (int i = 0; i < 5; i++)
+            rebuilding = true;
+            try
             {
-                if (slotCards[i] == null) continue;
-                var slot = (SaveSlotId)i;
-                cardCount++;
-                menu.Add(slotCards[i], SaveSlotMetadata.FormatSlotName(slot), () =>
+                menu.Clear();
+                int cardCount = 0;
+                for (int i = 0; i < 5; i++)
                 {
-                    selectedSlot = slot;
-                    RefreshAll(false);
-                }, selected: selectedSlot == slot);
+                    if (slotCards[i] == null) continue;
+                    var slot = (SaveSlotId)i;
+                    cardCount++;
+                    menu.Add(slotCards[i], SaveSlotMetadata.FormatSlotName(slot), () =>
+                    {
+                        selectedSlot = slot;
+                        RefreshAll(false);
+                    }, selected: selectedSlot == slot);
+                }
+
+                foreach (var (el, text, act) in actionEls)
+                    menu.Add(el, text, act);
+
+                if (backBtn != null)
+                    menu.Add(backBtn, "Back", () => Game?.Go(returnState));
+
+                if (focusAction && actionEls.Count > 0)
+                    focusIndex = cardCount;
+                if (menu.items.Count > 0)
+                    menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
             }
+            finally { rebuilding = false; }
+        }
 
-            foreach (var (el, text, act) in actionEls)
-                menu.Add(el, text, act);
-
-            if (backBtn != null)
-                menu.Add(backBtn, "Back", () => Game?.Go(returnState));
-
-            if (focusAction && actionEls.Count > 0)
-                menu.Focus(cardCount, false, true);
+        void SetLoadFeedback(string msg, bool bad)
+        {
+            if (feedbackLabel == null) return;
+            feedbackLabel.text = msg;
+            feedbackLabel.style.color = bad ? Palette.Err : Palette.Ok;
         }
 
         void OnLoadClicked()
@@ -396,15 +430,11 @@ namespace Obscure
 
         void ExecuteLoad()
         {
-            if (feedbackLabel != null) feedbackLabel.text = "Loading campaign...";
+            SetLoadFeedback("Loading campaign...", false);
             if (SaveManager.Load(selectedSlot, out string err))
-            {
-                if (feedbackLabel != null) feedbackLabel.text = "Campaign loaded successfully!";
-            }
-            else if (feedbackLabel != null)
-            {
-                feedbackLabel.text = $"Load failed: {err}";
-            }
+                SetLoadFeedback("Campaign loaded successfully!", false);
+            else
+                SetLoadFeedback($"Load failed: {err}", true);
         }
     }
 }

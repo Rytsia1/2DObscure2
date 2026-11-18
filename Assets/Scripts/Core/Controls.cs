@@ -8,11 +8,12 @@ namespace Obscure
     public static class Controls
     {
         public static bool Locked;
+        public static bool SuppressKeyboardNavigation;
 
         static bool Pressed(params Key[] keys)
         {
             var kb = Keyboard.current;
-            if (Locked || kb == null) return false;
+            if (Locked || SuppressKeyboardNavigation || kb == null) return false;
             foreach (var k in keys) if (kb[k].wasPressedThisFrame) return true;
             return false;
         }
@@ -26,6 +27,8 @@ namespace Obscure
         public static bool Right => Pressed(Key.RightArrow, Key.D) || Pad(p => p.dpad.right);
         public static bool Confirm => Pressed(Key.Enter, Key.NumpadEnter, Key.Space, Key.Z) || Pad(p => p.buttonSouth);
         public static bool Back => Pressed(Key.Escape, Key.Backspace, Key.X) || Pad(p => p.buttonEast);
+        public static bool PrevPage => Pressed(Key.Q) || Pad(p => p.leftShoulder);
+        public static bool NextPage => Pressed(Key.E) || Pad(p => p.rightShoulder);
 
         // Timing/defense QTE button: one remappable key (Settings) plus gamepad south.
         public static Key QteKey = Key.Space;

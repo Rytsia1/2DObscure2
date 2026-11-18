@@ -726,5 +726,40 @@ namespace Obscure.Tests
                 UnityEngine.Object.DestroyImmediate(hubHost);
             }
         }
+
+        [Test]
+        public void UiAuditFixes_TalentBlacksmithAndCharacterCreationSteps_WorkCleanly()
+        {
+            var host = new GameObject("UiAuditHost");
+            try
+            {
+                // 1. CharacterCreationScreen starts at Page.Race (7 steps, NAME step removed)
+                var creation = new CharacterCreationScreen();
+                creation.Open(host.transform);
+                Assert.AreEqual(CharacterCreationScreen.Page.Race, creation.CurrentPage);
+                Assert.AreEqual(7, Enum.GetValues(typeof(CharacterCreationScreen.Page)).Length);
+                Assert.IsNull(FigmaUi.FindInstanceWithText(creation.UiRoot, "text-0", "+ NAME"), "NAME step chip must be removed from UXML.");
+                creation.Close();
+
+                // 2. TalentScreen exposes all compatible talents (more than 6) in a ScrollView
+                var talent = new TalentScreen();
+                talent.Open(host.transform);
+                var sv = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.ScrollView>(talent.UiRoot);
+                Assert.IsNotNull(sv, "TalentScreen must wrap talent cards in a ScrollView.");
+                int cardCount = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.VisualElement>(sv, className: "tag-cls").ToList().Count;
+                Assert.Greater(cardCount, 6, "TalentScreen must render all compatible talents, not cap at 6.");
+                talent.Close();
+
+                // 3. BlacksmithScreen uses a ScrollView so >7 equipment items are not truncated
+                var bs = new BlacksmithScreen();
+                bs.Open(host.transform);
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.ScrollView>(bs.UiRoot), "BlacksmithScreen must use ScrollView.");
+                bs.Close();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
     }
 }

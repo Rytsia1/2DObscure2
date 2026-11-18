@@ -425,5 +425,46 @@ namespace Obscure.Tests
             yield return TapAndSettle(Key.Escape);
             Assert.AreEqual(GameState.MainMenu, State);
         }
+
+        [UnityTest]
+        public IEnumerator PartyStatusHeroSwitchAndTalentModalDoNotLeak()
+        {
+            yield return Begin();
+            yield return StartRunOnMap();
+
+            // Open Party -> Q/E switches selected member -> Enter opens CharacterStatus -> Q switches hero
+            yield return Tap(Key.RightArrow); // focus Party button? Let's click Party item cleanly
+            var partyBtn = UitkMenu.ActiveMenu.items.First(it => it.text == "Party");
+            UitkMenu.ActiveMenu.Focus(partyBtn, false, true);
+            yield return TapAndSettle(Key.Enter);
+            Assert.AreEqual(GameState.Party, State);
+
+            int beforeIdx = PartyScreen.SelectedIndex;
+            yield return Tap(Key.E);
+            Assert.AreNotEqual(beforeIdx, PartyScreen.SelectedIndex, "E should cycle party member");
+
+            yield return TapAndSettle(Key.Enter);
+            Assert.AreEqual(GameState.CharacterStatus, State);
+            var status = Game.I.CurrentScreen as CharacterStatusScreen;
+            Assert.IsNotNull(status);
+            var firstUnit = status.CurrentUnit;
+            yield return Tap(Key.E);
+            Assert.AreNotEqual(firstUnit, status.CurrentUnit, "E should switch hero on CharacterStatusScreen");
+
+            // Navigate to Talents and open/close Scroll of Emptiness dialog twice without leaking UitkMenu
+            Game.I.Go(GameState.Talents);
+            yield return Settle();
+            Assert.AreEqual(GameState.Talents, State);
+            var screenGo = Game.I.CurrentScreen.UiRoot != null ? Object.FindFirstObjectByType<UitkMenu>()?.gameObject : null;
+            Assert.IsNotNull(screenGo);
+
+            var scrollItem = UitkMenu.ActiveMenu.items.First(it => it.text == "Scroll of Emptiness");
+            UitkMenu.ActiveMenu.Focus(scrollItem, false, true);
+            yield return Tap(Key.Enter);
+            Assert.AreEqual(2, screenGo.GetComponents<UitkMenu>().Length, "Modal opens a second UitkMenu");
+            yield return Tap(Key.Escape);
+            yield return null;
+            Assert.AreEqual(1, screenGo.GetComponents<UitkMenu>().Length, "Closing modal must destroy dialog UitkMenu");
+        }
     }
 }

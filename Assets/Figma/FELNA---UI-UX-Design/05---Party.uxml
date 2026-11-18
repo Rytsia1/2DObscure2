@@ -177,11 +177,11 @@
         <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 28px; top: 656px;" />
         <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 152px; top: 666px;">
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="LT RT" />
+                <AttributeOverrides element-name="text-0" text="Q / E" />
                 <AttributeOverrides element-name="text-1" text="SELECT MEMBER" />
             </ui:Instance>
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="S" />
+                <AttributeOverrides element-name="text-0" text="ENTER" />
                 <AttributeOverrides element-name="text-1" text="STATUS" />
             </ui:Instance>
         </ui:VisualElement>

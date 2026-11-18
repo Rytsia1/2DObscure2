@@ -49,7 +49,7 @@ namespace Obscure.Editor
 
             ps.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             ps.referenceResolution = new Vector2Int(1280, 720);
-            ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            ps.screenMatchMode = PanelScreenMatchMode.Expand;
             ps.match = 0.5f;
             ps.sortingOrder = 10;
             ps.clearColor = false;

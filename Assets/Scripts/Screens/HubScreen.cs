@@ -55,7 +55,10 @@ namespace Obscure
             int gold = Run != null ? Run.Gold : 0;
             var goldTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "0 HUB GOLD");
             if (goldTag != null)
+            {
                 FigmaUi.SetInstanceText(goldTag, "text-0", $"{gold:#,##0} HUB GOLD");
+                FigmaUi.AnchorRight(goldTag, 24f);
+            }
 
             var saveBtn = FigmaUi.FindButton(UiRoot, "Save");
             if (saveBtn != null) menu.Add(saveBtn, "Save", () => Game?.Go(GameState.Save), tooltip: "SAVE COMMITTED CAMPAIGN PROGRESS TO A SLOT.");
@@ -87,6 +90,8 @@ namespace Obscure
 
             tipTitleLbl = FigmaUi.FindLabel(UiRoot, "Dungeon Entrance");
             tipBodyLbl = FigmaUi.FindLabel(UiRoot, "BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.");
+            var tipPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-2");
+            if (tipPanel != null) tipPanel.style.height = 128;
 
             int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
             var gate = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "Dungeon Entrance");

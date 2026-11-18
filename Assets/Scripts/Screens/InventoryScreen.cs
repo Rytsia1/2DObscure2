@@ -23,6 +23,8 @@ namespace Obscure
 
         bool confirmSellActive;
         string feedbackText = "";
+        int focusIndex;
+        bool rebuilding;
         UitkMenu menu;
 
         public InventoryScreen() : this(null, null, null) { }
@@ -56,15 +58,16 @@ namespace Obscure
 
         void Refresh()
         {
-            UiRoot = FigmaUi.Mount(Root.gameObject, "14---Inventory");
-            if (menu != null)
+            if (Root == null || rebuilding) return;
+            rebuilding = true;
+            try
             {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
-                else UnityEngine.Object.DestroyImmediate(menu);
-            }
-            menu = Root.gameObject.AddComponent<UitkMenu>();
-            menu.AttachRoot(UiRoot);
-            menu.onBack = () => Game?.Go(returnState);
+                UiRoot = FigmaUi.Mount(Root.gameObject, "14---Inventory");
+                FigmaUi.DestroyMenu(ref menu);
+                menu = Root.gameObject.AddComponent<UitkMenu>();
+                menu.AttachRoot(UiRoot);
+                menu.onBack = () => Game?.Go(returnState);
+                menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
 
             var backBtn = FigmaUi.FindButton(UiRoot, "Back");
             if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
@@ -133,23 +136,30 @@ namespace Obscure
             var leftHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 798, height = 560, flexDirection = FlexDirection.Column } };
             screen.Add(leftHost);
 
+            bool isEqTab = currentCategory == InventoryCategory.Equipment;
             var topCtrl = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 12 } };
             var sortBtn = FigmaUi.CreateButton($"SORT: {currentSortMode.ToString().ToUpperInvariant()}", "button-slab", 270f);
             sortBtn.style.marginRight = 10;
+            sortBtn.SetEnabled(isEqTab);
             string fltName = currentSlotFilter.HasValue ? EquipmentSlots.DisplayName(currentSlotFilter.Value).ToUpperInvariant() : "ALL";
             var filterBtn = FigmaUi.CreateButton($"FILTER: {fltName}", "button-slab", 270f);
+            filterBtn.SetEnabled(isEqTab);
             topCtrl.Add(sortBtn);
             topCtrl.Add(filterBtn);
             leftHost.Add(topCtrl);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(sortBtn, "Sort", CycleSortMode));
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(filterBtn, "Filter", CycleFilter));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(sortBtn, "Sort", CycleSortMode, interactable: isEqTab));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(filterBtn, "Filter", CycleFilter, interactable: isEqTab));
 
             // 10x4 Item Grid
             int total = CategoryCount(currentCategory);
             int totalPages = Math.Max(1, (total + ItemsPerPage - 1) / ItemsPerPage);
             if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+            int pageCount = Math.Max(0, Math.Min(ItemsPerPage, total - pageIndex * ItemsPerPage));
+            selectedIndex = pageCount > 0 ? Mathf.Clamp(selectedIndex, 0, pageCount - 1) : 0;
 
             var grid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 680, height = 270 } };
+            int gridStartMenuIdx = menu.items.Count;
+            var gridMenuItems = new List<UitkMenu.Item>();
             for (int i = 0; i < ItemsPerPage; i++)
             {
                 int slotIdx = i;
@@ -171,7 +181,15 @@ namespace Obscure
                 grid.Add(cell);
                 if (has)
                 {
+                    int gIdx = gridMenuItems.Count;
                     var it = menu.Add(cell, info.title, () => SelectItem(slotIdx), selected: sel);
+                    gridMenuItems.Add(it);
+                    it.onNavigate = dir =>
+                    {
+                        if (dir == 0 && gIdx >= Cols) return gridStartMenuIdx + gIdx - Cols;
+                        if (dir == 2 && gIdx + Cols < gridMenuItems.Count) return gridStartMenuIdx + gIdx + Cols;
+                        return -1;
+                    };
                     it.visual = on =>
                     {
                         var border = on ? Palette.Gold1 : sel ? Palette.Gold2 : (info.tint ?? Palette.Ink4);
@@ -201,6 +219,11 @@ namespace Obscure
             leftHost.Add(new UiLabel("CONSUMABLES AND MATERIALS STACK — ONE SLOT PER ITEM TYPE.") { style = { fontSize = 13, color = Palette.Mist2 } });
 
             BuildDetailPanel(screen, pageIndex * ItemsPerPage + selectedIndex);
+
+                if (menu.items.Count > 0)
+                    menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
+            }
+            finally { rebuilding = false; }
         }
 
         (bool has, string badge, Color? tint, string title, Texture2D icon) CellContent(int itemIdx)
@@ -330,7 +353,10 @@ namespace Obscure
 
             host.Add(new VisualElement { style = { flexGrow = 1 } });
 
-            bool isEq = currentCategory == InventoryCategory.Equipment;
+            bool hasSel = dName != "";
+            bool isEq = hasSel && currentCategory == InventoryCategory.Equipment;
+            bool canDiscard = hasSel && currentCategory != InventoryCategory.KeyItems;
+            bool canUse = hasSel && currentCategory == InventoryCategory.Consumables;
             var r1 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 8 } };
             var eqBtn = FigmaUi.CreateButton("Equip", "button-slab", 110f); eqBtn.SetEnabled(isEq);
             eqBtn.style.paddingLeft = 8; eqBtn.style.paddingRight = 8;
@@ -342,16 +368,16 @@ namespace Obscure
             host.Add(r1);
 
             var r2 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween } };
-            var disBtn = FigmaUi.CreateButton("Discard", "button-danger", 160f); disBtn.SetEnabled(currentCategory != InventoryCategory.KeyItems);
-            var useBtn = FigmaUi.CreateButton("Use on...", currentCategory == InventoryCategory.Consumables ? "button-primary" : "button-slab", 174f); useBtn.SetEnabled(currentCategory == InventoryCategory.Consumables);
+            var disBtn = FigmaUi.CreateButton("Discard", "button-danger", 160f); disBtn.SetEnabled(canDiscard);
+            var useBtn = FigmaUi.CreateButton("Use on...", canUse ? "button-primary" : "button-slab", 174f); useBtn.SetEnabled(canUse);
             r2.Add(disBtn); r2.Add(useBtn);
             host.Add(r2);
 
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(eqBtn, "Equip", OnEquipClicked, interactable: isEq));
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(upBtn, "Upgrade", OnUpgradeClicked, interactable: isEq));
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(sellBtn, "Sell", OnSellClicked, interactable: isEq));
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(disBtn, "Discard", OnDiscardClicked, interactable: currentCategory != InventoryCategory.KeyItems));
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(useBtn, "Use on...", OnUseClicked, interactable: currentCategory == InventoryCategory.Consumables));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(disBtn, "Discard", OnDiscardClicked, interactable: canDiscard));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(useBtn, "Use on...", OnUseClicked, interactable: canUse));
         }
 
         void SelectCategory(InventoryCategory cat) { currentCategory = cat; selectedIndex = 0; pageIndex = 0; confirmSellActive = false; Refresh(); }
@@ -416,7 +442,7 @@ namespace Obscure
             int goldCost = eq.GetUpgradeCostGold(), matCost = eq.GetUpgradeCostMaterials(), playerGold = Game.I?.Run?.Gold ?? 9999, playerMat = inventory.GetMaterialCount("iron_ingot");
             if (!eq.CanUpgrade(out string reason)) { Sfx.Play(Sound.Deny); Say(reason); return; }
             if (Game.I?.Run != null && Game.I.Run.Gold < goldCost) { Sfx.Play(Sound.Deny); Say($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)"); return; }
-            if (playerMat < matCost && inventory.materials.Count > 0) { Sfx.Play(Sound.Deny); Say($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})"); return; }
+            if (matCost > 0 && playerMat < matCost) { Sfx.Play(Sound.Deny); Say($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})"); return; }
             if (Game.I?.Run != null) Game.I.Run.Gold -= goldCost;
             inventory.RemoveMaterial("iron_ingot", matCost);
             eq.TryUpgrade(out _);
@@ -459,6 +485,16 @@ namespace Obscure
                 var c = inventory.consumables[SelectedStackIndex];
                 inventory.RemoveConsumable(c.itemId, 1);
                 Say($"DISCARDED 1 {c.Definition?.name ?? c.itemId}.");
+            }
+            else if (currentCategory == InventoryCategory.Materials)
+            {
+                var mats = inventory.materials.ToList();
+                if (SelectedStackIndex < mats.Count)
+                {
+                    var m = mats[SelectedStackIndex];
+                    inventory.RemoveMaterial(m.Key, 1);
+                    Say($"DISCARDED 1 {m.Key.ToUpperInvariant()}.");
+                }
             }
         }
 

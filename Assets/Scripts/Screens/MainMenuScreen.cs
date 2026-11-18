@@ -98,36 +98,14 @@ namespace Obscure
             if (tokens != null) UiRoot.styleSheets.Add(tokens);
             if (runtime != null) UiRoot.styleSheets.Add(runtime);
 
-            UiRoot.style.flexGrow = 1;
-            UiRoot.style.backgroundColor = Palette.Ink1;
-            UiRoot.style.paddingLeft = 48;
-            UiRoot.style.paddingRight = 48;
-            UiRoot.style.paddingTop = 36;
-            UiRoot.style.paddingBottom = 36;
-            UiRoot.style.justifyContent = Justify.SpaceBetween;
+            UiRoot.AddToClassList("uitk-opening-root");
 
             var panel = new VisualElement();
-            panel.style.flexGrow = 1;
-            panel.style.backgroundColor = Palette.Ink2;
-            panel.style.borderTopWidth = 2;
-            panel.style.borderRightWidth = 2;
-            panel.style.borderBottomWidth = 2;
-            panel.style.borderLeftWidth = 2;
-            panel.style.borderTopColor = Palette.Gold3;
-            panel.style.borderRightColor = Palette.Gold3;
-            panel.style.borderBottomColor = Palette.Gold3;
-            panel.style.borderLeftColor = Palette.Gold3;
-            panel.style.paddingLeft = 36;
-            panel.style.paddingRight = 36;
-            panel.style.paddingTop = 28;
-            panel.style.paddingBottom = 28;
+            panel.AddToClassList("uitk-opening-panel");
             UiRoot.Add(panel);
 
             var title = new UiLabel("PROLOGUE: THE SEALED ABYSS");
-            title.style.fontSize = 28;
-            title.style.color = Palette.Gold1;
-            title.style.unityTextAlign = TextAnchor.MiddleCenter;
-            title.style.marginBottom = 18;
+            title.AddToClassList("uitk-opening-title");
             panel.Add(title);
 
             var div = new VisualElement();
@@ -138,17 +116,11 @@ namespace Obscure
                 "BENEATH THE ASHEN CITADEL, THE ANCIENT SEAL WEAKENS. " +
                 "FOUR SOULS BOUND BY OATH STEP BEYOND THE IRON GATE " +
                 "TO DESCEND INTO THE SHIFTING CORRIDORS OF THE ABYSS.");
-            story.style.fontSize = 20;
-            story.style.color = Palette.Mist1;
-            story.style.whiteSpace = WhiteSpace.Normal;
-            story.style.unityTextAlign = TextAnchor.MiddleCenter;
-            story.style.marginBottom = 28;
+            story.AddToClassList("uitk-opening-story");
             panel.Add(story);
 
             var cardsRow = new VisualElement();
-            cardsRow.style.flexDirection = FlexDirection.Row;
-            cardsRow.style.justifyContent = Justify.SpaceBetween;
-            cardsRow.style.flexGrow = 1;
+            cardsRow.AddToClassList("uitk-opening-cards");
             panel.Add(cardsRow);
 
             var party = Game?.Roster != null ? Game.Roster.GetActiveParty() : Database.Party.Select(id => Database.Characters[id]).ToList();
@@ -157,42 +129,31 @@ namespace Obscure
                 var hero = party[i];
                 var card = new VisualElement();
                 card.AddToClassList("uitk-card");
-                card.style.width = 250;
-                card.style.alignItems = UnityEngine.UIElements.Align.Center;
-                card.style.paddingTop = 20;
-                card.style.paddingBottom = 20;
+                card.AddToClassList("uitk-opening-card");
 
                 var portrait = new VisualElement();
-                portrait.style.width = 96;
-                portrait.style.height = 96;
-                portrait.style.marginBottom = 16;
+                portrait.AddToClassList("uitk-opening-portrait");
                 if (hero.sprite != null)
                     FigmaUi.SetBackgroundContain(portrait, FigmaUi.GetSpriteTexture(hero.sprite, "hero_" + hero.id));
                 card.Add(portrait);
 
                 var nameLbl = new UiLabel((hero.name ?? "HERO").ToUpperInvariant());
-                nameLbl.style.fontSize = 22;
-                nameLbl.style.color = Palette.Mist1;
-                nameLbl.style.marginBottom = 6;
+                nameLbl.AddToClassList("uitk-opening-name");
                 card.Add(nameLbl);
 
                 var raceLbl = new UiLabel(Database.Races.TryGetValue(hero.raceId ?? "", out var r) ? r.name.ToUpperInvariant() : (hero.raceId ?? "").ToUpperInvariant());
-                raceLbl.style.fontSize = 14;
-                raceLbl.style.color = Palette.Mist3;
-                raceLbl.style.marginBottom = 4;
+                raceLbl.AddToClassList("uitk-opening-race");
                 card.Add(raceLbl);
 
                 var clsLbl = new UiLabel(Database.Classes.TryGetValue(hero.classId ?? "", out var c) ? c.name.ToUpperInvariant() : (hero.classId ?? "").ToUpperInvariant());
-                clsLbl.style.fontSize = 16;
-                clsLbl.style.color = Palette.Gold1;
+                clsLbl.AddToClassList("uitk-opening-class");
                 card.Add(clsLbl);
 
                 cardsRow.Add(card);
             }
 
             var footer = new VisualElement();
-            footer.style.alignItems = UnityEngine.UIElements.Align.Center;
-            footer.style.marginTop = 24;
+            footer.AddToClassList("uitk-opening-footer");
             UiRoot.Add(footer);
 
             var btnEl = FigmaUi.CreateButton("BEGIN EXPEDITION", "button-primary", 320f);
@@ -200,6 +161,7 @@ namespace Obscure
 
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
+            menu.onBack = () => Game?.Go(GameState.CharacterCreation);
             BeginExpeditionButton = menu.Add(btnEl, "BEGIN EXPEDITION", () => Game?.BeginFirstExpedition());
         }
     }

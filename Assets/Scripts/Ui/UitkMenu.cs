@@ -18,15 +18,20 @@ namespace Obscure
             public string tooltip;
             public Action onClick;
             public Action<int> onAdjust;
+            public Func<int, int> onNavigate; // 0=Up, 1=Right, 2=Down, 3=Left -> target item index, or -1 for default
             public bool interactable = true;
             public bool selected;
             public Action<bool> visual;
             public UitkMenu menu;
+            internal EventCallback<PointerEnterEvent> pointerEnterCb;
+            internal EventCallback<ClickEvent> clickCb;
         }
 
         public readonly List<Item> items = new List<Item>();
         public Action onBack;
         public Action<Item> onFocus;
+        public Action onPrevPage;
+        public Action onNextPage;
 
         int index;
         int bornFrame;
@@ -48,6 +53,8 @@ namespace Obscure
 
         void OnDestroy()
         {
+            Clear();
+            Controls.SuppressKeyboardNavigation = false;
             if (ActiveMenu == this) ActiveMenu = previousMenu != null ? previousMenu : null;
         }
 
@@ -59,6 +66,14 @@ namespace Obscure
             root.RegisterCallback<NavigationMoveEvent>(e => e.StopPropagation(), TrickleDown.TrickleDown);
             root.RegisterCallback<NavigationSubmitEvent>(e => e.StopPropagation(), TrickleDown.TrickleDown);
             root.RegisterCallback<NavigationCancelEvent>(e => e.StopPropagation(), TrickleDown.TrickleDown);
+            root.RegisterCallback<FocusInEvent>(e =>
+            {
+                if (e.target is TextField) Controls.SuppressKeyboardNavigation = true;
+            });
+            root.RegisterCallback<FocusOutEvent>(e =>
+            {
+                if (e.target is TextField) Controls.SuppressKeyboardNavigation = false;
+            });
         }
 
         public Item Current => index >= 0 && index < items.Count ? items[index] : null;
@@ -84,14 +99,13 @@ namespace Obscure
                 menu = this,
             };
 
-            el.RegisterCallback<PointerEnterEvent>(_ =>
+            EventCallback<PointerEnterEvent> onEnter = _ =>
             {
                 if (Controls.Locked || (ActiveMenu != null && ActiveMenu != this)) return;
                 if (item.interactable)
                     Focus(item, false);
-            });
-
-            el.RegisterCallback<ClickEvent>(_ =>
+            };
+            EventCallback<ClickEvent> onClickCb = _ =>
             {
                 if (Controls.Locked || (ActiveMenu != null && ActiveMenu != this)) return;
                 if (!item.interactable)
@@ -105,7 +119,11 @@ namespace Obscure
                     Sfx.Play(Sound.Confirm);
                     item.onClick();
                 }
-            });
+            };
+            item.pointerEnterCb = onEnter;
+            item.clickCb = onClickCb;
+            el.RegisterCallback(onEnter);
+            el.RegisterCallback(onClickCb);
 
             items.Add(item);
             item.visual(false);
@@ -115,6 +133,13 @@ namespace Obscure
 
         public void Clear()
         {
+            for (int i = 0; i < items.Count; i++)
+            {
+                var it = items[i];
+                if (it?.element == null) continue;
+                if (it.pointerEnterCb != null) it.element.UnregisterCallback(it.pointerEnterCb);
+                if (it.clickCb != null) it.element.UnregisterCallback(it.clickCb);
+            }
             items.Clear();
             index = 0;
         }
@@ -127,8 +152,22 @@ namespace Obscure
             index = i;
             Current?.visual?.Invoke(true);
             ActiveMenu = this;
+            ScrollIntoView(Current?.element);
             if (sound) Sfx.Play(Sound.Move);
             onFocus?.Invoke(Current);
+        }
+
+        static void ScrollIntoView(VisualElement el)
+        {
+            if (el == null || el.layout.height <= 0f) return;
+            for (var p = el.parent; p != null; p = p.parent)
+            {
+                if (p is ScrollView sv && sv.contentViewport != null && sv.contentViewport.layout.height > 0f)
+                {
+                    sv.ScrollTo(el);
+                    break;
+                }
+            }
         }
 
         public void Focus(Item item, bool sound = true, bool force = false)
@@ -142,11 +181,36 @@ namespace Obscure
             if (Controls.Locked || items.Count == 0 || Time.frameCount == bornFrame) return;
             if (ActiveMenu != null && ActiveMenu != this) return;
 
+            if (onPrevPage != null && Controls.PrevPage)
+            {
+                Sfx.Play(Sound.Move);
+                onPrevPage();
+                return;
+            }
+            if (onNextPage != null && Controls.NextPage)
+            {
+                Sfx.Play(Sound.Move);
+                onNextPage();
+                return;
+            }
+
+            var nav = Current?.onNavigate;
             var adjust = Current?.onAdjust;
             if (adjust != null && (Controls.Left || Controls.Right))
             {
                 Sfx.Play(Sound.Move);
                 adjust(Controls.Left ? -1 : 1);
+            }
+            else if (nav != null && (Controls.Up || Controls.Right || Controls.Down || Controls.Left))
+            {
+                int dir = Controls.Up ? 0 : Controls.Right ? 1 : Controls.Down ? 2 : 3;
+                int target = nav(dir);
+                if (target >= 0 && target < items.Count)
+                    Focus(target);
+                else if (dir == 0 || dir == 3)
+                    Focus((index - 1 + items.Count) % items.Count);
+                else
+                    Focus((index + 1) % items.Count);
             }
             else if (Controls.Up || Controls.Left)
             {

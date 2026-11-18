@@ -74,6 +74,7 @@ namespace Obscure
         }
 
         readonly Dictionary<Combatant, Hud> huds = new Dictionary<Combatant, Hud>();
+        readonly Dictionary<Combatant, (UitkMenu.Item item, Action choose)> activeTargets = new Dictionary<Combatant, (UitkMenu.Item, Action)>();
         readonly List<UiLabel> logLabels = new List<UiLabel>();
         readonly List<string> logLines = new List<string>();
         readonly List<ActiveFx> activeFxs = new List<ActiveFx>();
@@ -107,7 +108,12 @@ namespace Obscure
 
             actBanner = UiRoot.Q<UiLabel>(className: "act-1-ashen-ruins-vars");
             if (actBanner != null)
-                actBanner.text = encounter.tier == Tier.Boss ? "ACT 1: THE INNER SANCTUM" : $"ACT {Game.I?.Run?.Act ?? 1}: {(Game.I?.Run?.Map?.name ?? "ASHEN RUINS").ToUpperInvariant()}";
+            {
+                int act = Game.I?.Run?.Act ?? 1;
+                actBanner.text = encounter.tier == Tier.Boss
+                    ? $"ACT {act}: THE INNER SANCTUM"
+                    : $"ACT {act}: {(Game.I?.Run?.Map?.name ?? "ASHEN RUINS").ToUpperInvariant()}";
+            }
 
             roundLabel = UiRoot.Q<UiLabel>(className: "round-1-vars");
 
@@ -261,6 +267,7 @@ namespace Obscure
             };
             if (spr != null && spr.Length > 0)
                 FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(spr, "cbt_p_" + (c.unit.classDef?.id ?? c.name)));
+            RegisterStageTargetEvents(fig, c);
             stageHost.Add(fig);
 
             var arrow = new UiLabel("▾")
@@ -346,6 +353,7 @@ namespace Obscure
             card.Add(brkBarBg);
             card.Add(weakLbl);
             card.Add(statusLbl);
+            RegisterStageTargetEvents(card, c);
             stageHost.Add(card);
 
             var arrow = new UiLabel("▾")
@@ -939,8 +947,31 @@ namespace Obscure
             h.flashing = false;
         }
 
+        void RegisterStageTargetEvents(VisualElement el, Combatant c)
+        {
+            if (el == null || c == null) return;
+            el.pickingMode = PickingMode.Position;
+            el.RegisterCallback<PointerEnterEvent>(_ =>
+            {
+                if (Controls.Locked || currentMenu == null || UitkMenu.ActiveMenu != currentMenu) return;
+                if (activeTargets.TryGetValue(c, out var entry) && entry.item != null && entry.item.interactable)
+                    currentMenu.Focus(entry.item, false);
+            });
+            el.RegisterCallback<ClickEvent>(_ =>
+            {
+                if (Controls.Locked || currentMenu == null || UitkMenu.ActiveMenu != currentMenu) return;
+                if (activeTargets.TryGetValue(c, out var entry) && entry.item != null)
+                {
+                    if (!entry.item.interactable) { Sfx.Play(Sound.Deny); return; }
+                    Sfx.Play(Sound.Confirm);
+                    entry.choose?.Invoke();
+                }
+            });
+        }
+
         void ClearPhase()
         {
+            activeTargets.Clear();
             if (phaseGo != null) Destroy(phaseGo);
             phaseGo = new GameObject("CombatPhase");
             phaseGo.transform.SetParent(transform, false);
@@ -1093,7 +1124,9 @@ namespace Obscure
                 btn.SetEnabled(valid);
                 menuHost.Add(btn);
 
-                var item = m.Add(btn, cand.name.ToUpperInvariant(), () => Choose(make(cand)), interactable: valid, tooltip: tip);
+                var actionToTake = make(cand);
+                var item = m.Add(btn, cand.name.ToUpperInvariant(), () => Choose(actionToTake), interactable: valid, tooltip: tip);
+                activeTargets[cand] = (item, () => Choose(actionToTake));
                 item.visual = on =>
                 {
                     btn.style.backgroundColor = !valid ? Palette.Ink1 : on ? Palette.Hex(0x2B2210) : Palette.Ink2;

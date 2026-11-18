@@ -23,7 +23,12 @@ namespace Obscure
             var doc = host.GetComponent<UIDocument>();
             if (doc == null) doc = host.AddComponent<UIDocument>();
             doc.sortingOrder = sortingOrder;
-            if (ps != null) doc.panelSettings = ps;
+            if (ps != null)
+            {
+                if (ps.screenMatchMode != PanelScreenMatchMode.Expand)
+                    ps.screenMatchMode = PanelScreenMatchMode.Expand;
+                doc.panelSettings = ps;
+            }
 
             VisualElement root = null;
             if (entry?.uxml != null)
@@ -50,12 +55,7 @@ namespace Obscure
 
             AttachSharedStyles(root, catalog, entry);
             if (root != null)
-            {
                 root.AddToClassList("uitk-screen-root");
-                root.style.width = new Length(100, LengthUnit.Percent);
-                root.style.height = new Length(100, LengthUnit.Percent);
-                root.style.flexGrow = 1;
-            }
             return root;
         }
 
@@ -358,6 +358,31 @@ namespace Obscure
             panel.Add(row);
             backdrop.Add(panel);
             screenRoot.Add(backdrop);
+        }
+
+        public static ScrollView CreateVerticalScrollView()
+        {
+            var sv = new ScrollView(ScrollViewMode.Vertical);
+            sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            sv.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            sv.contentContainer.style.flexShrink = 0;
+            sv.AddToClassList("uitk-scroll-view");
+            return sv;
+        }
+
+        public static void AnchorRight(VisualElement el, float rightPx = 24f)
+        {
+            if (el == null) return;
+            el.style.left = StyleKeyword.Auto;
+            el.style.right = rightPx;
+        }
+
+        public static void DestroyMenu(ref UitkMenu m)
+        {
+            if (m == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(m);
+            else UnityEngine.Object.DestroyImmediate(m);
+            m = null;
         }
     }
 }

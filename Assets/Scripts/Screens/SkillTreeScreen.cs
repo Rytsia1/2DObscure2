@@ -78,6 +78,15 @@ namespace Obscure
         bool Unlocked(Node n) => n.passive ? CurrentHero.skillLoadout.UnlockedPassiveSkills.Contains(n.id) : CurrentHero.skillLoadout.UnlockedActiveSkills.Contains(n.id);
         bool Available(Node n) => !Unlocked(n) && CurrentHero.skillLoadout.CanUnlockSkill(n.id, CurrentHero.level, CurrentHero.classDef, out _);
 
+        void SwitchHero(int delta)
+        {
+            if (party == null || party.Count == 0) return;
+            heroIndex = (heroIndex + delta + party.Count) % party.Count;
+            selectedSkillId = null;
+            feedback = null;
+            Rebuild();
+        }
+
         static string NameOf(string id, bool passive) =>
             passive ? (Database.Passives.TryGetValue(id, out var p) ? p.name : id) : (Database.Skills.TryGetValue(id, out var s) ? s.name : id);
 
@@ -95,15 +104,13 @@ namespace Obscure
             try
             {
                 UiRoot = FigmaUi.Mount(Root.gameObject, "16---Training-Ground---Skill-Tree");
-                if (menu != null)
-                {
-                    if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
-                    else UnityEngine.Object.DestroyImmediate(menu);
-                }
+                FigmaUi.DestroyMenu(ref menu);
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
                 menu.onBack = () => Game?.Go(returnState);
                 menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
+                menu.onPrevPage = () => SwitchHero(-1);
+                menu.onNextPage = () => SwitchHero(1);
 
                 var nodes = LayoutNodes();
                 if (selectedSkillId == null && nodes.Count > 0) { selectedSkillId = nodes[0].id; isSelectedPassive = nodes[0].passive; }
@@ -198,29 +205,56 @@ namespace Obscure
                 canvas.Add(band);
             }
 
-            // Connection lines via Painter2D
+            // Connection lines via Painter2D using actual skill prerequisites
             var edgeLayer = new VisualElement { style = { position = Position.Absolute, left = 0, top = 0, right = 0, bottom = 0 } };
             edgeLayer.generateVisualContent += ctx =>
             {
                 var p = ctx.painter2D;
                 p.lineWidth = 2.5f;
-                foreach (var a in nodes)
+                var byId = nodes.ToDictionary(x => x.id, x => x);
+                foreach (var b in nodes)
                 {
-                    var b = nodes.FirstOrDefault(n => n.tier == a.tier + 1 && n.row == a.row);
-                    if (b == null) continue;
-                    float x0 = a.x + 32f, x1 = b.x - 32f;
-                    if (x1 <= x0) continue;
-                    bool ua = Unlocked(a), ub = Unlocked(b);
-                    p.strokeColor = ua && ub ? Palette.Gold3 : ua && Available(b) ? Palette.Mist1 : Palette.Ink5;
-                    if (ua && ub)
+                    var nodeMeta = hero.classDef?.skillUnlockProgression?.FirstOrDefault(u => u.skillId == b.id);
+                    string[] prereqs = nodeMeta?.prerequisites;
+                    if ((prereqs == null || prereqs.Length == 0) && !b.passive && Database.Skills.TryGetValue(b.id, out var skDef))
+                        prereqs = skDef.prerequisites;
+
+                    var targets = new List<Node>();
+                    if (prereqs != null && prereqs.Length > 0)
                     {
-                        p.BeginPath(); p.MoveTo(new Vector2(x0, a.y)); p.LineTo(new Vector2(x1, b.y)); p.Stroke();
+                        foreach (var pid in prereqs)
+                            if (!string.IsNullOrEmpty(pid) && byId.TryGetValue(pid, out var pa))
+                                targets.Add(pa);
                     }
-                    else
+                    else if (b.tier > 1)
                     {
-                        for (float x = x0; x < x1; x += 12f)
+                        var fallback = nodes.FirstOrDefault(x => x.tier == b.tier - 1 && x.row == b.row);
+                        if (fallback != null) targets.Add(fallback);
+                    }
+
+                    foreach (var a in targets)
+                    {
+                        var pStart = new Vector2(a.x + 32f, a.y);
+                        var pEnd = new Vector2(b.x - 32f, b.y);
+                        float dist = Vector2.Distance(pStart, pEnd);
+                        if (dist < 4f) continue;
+
+                        bool ua = Unlocked(a), ub = Unlocked(b);
+                        p.strokeColor = ua && ub ? Palette.Gold3 : ua && Available(b) ? Palette.Mist1 : Palette.Ink5;
+                        if (ua && ub)
                         {
-                            p.BeginPath(); p.MoveTo(new Vector2(x, a.y)); p.LineTo(new Vector2(Mathf.Min(x + 7f, x1), a.y)); p.Stroke();
+                            p.BeginPath(); p.MoveTo(pStart); p.LineTo(pEnd); p.Stroke();
+                        }
+                        else
+                        {
+                            for (float d = 0f; d < dist; d += 12f)
+                            {
+                                float d2 = Mathf.Min(d + 7f, dist);
+                                p.BeginPath();
+                                p.MoveTo(Vector2.Lerp(pStart, pEnd, d / dist));
+                                p.LineTo(Vector2.Lerp(pStart, pEnd, d2 / dist));
+                                p.Stroke();
+                            }
                         }
                     }
                 }
@@ -380,13 +414,15 @@ namespace Obscure
             {
                 var eqRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 10 } };
                 eqRow.Add(new UiLabel(equipped ? "EQUIPPED" : "EQUIP TO") { style = { fontSize = 12, color = Palette.Mist3, width = 92 } });
+                var slotArr = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots;
                 for (int i = 0; i < 3; i++)
                 {
                     int slot = i;
-                    var sBtn = FigmaUi.CreateButton((i + 1).ToString(), "button-slab", 52f);
+                    bool inThisSlot = slot < slotArr.Length && slotArr[slot] == selectedSkillId;
+                    var sBtn = FigmaUi.CreateButton((i + 1).ToString(), inThisSlot ? "button-primary" : "button-slab", 52f);
                     sBtn.style.marginRight = 8;
                     eqRow.Add(sBtn);
-                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(sBtn, $"Slot {i + 1}", () => Equip(slot)));
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(sBtn, $"Slot {i + 1}", () => Equip(slot), selected: inThisSlot));
                 }
                 host.Add(eqRow);
             }

@@ -17,6 +17,9 @@ namespace Obscure
         int heroIndex = 0;
         int selectedSlotIndex = 0;
         int candidateIndex = -1;
+        int focusIndex = 0;
+        bool focusEquipOnRefresh;
+        bool rebuilding;
         string feedback;
         UitkMenu menu;
 
@@ -83,6 +86,7 @@ namespace Obscure
         {
             candidateIndex = index < rows.Count && !rows[index].equipped && rows[index].lockReason == null ? index : -1;
             feedback = null;
+            focusEquipOnRefresh = candidateIndex >= 0;
             Refresh();
         }
 
@@ -134,64 +138,78 @@ namespace Obscure
 
         void Refresh()
         {
-            UiRoot = FigmaUi.Mount(Root.gameObject, "15---Equipment");
-            if (menu != null)
+            if (Root == null || rebuilding) return;
+            rebuilding = true;
+            try
             {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
-                else UnityEngine.Object.DestroyImmediate(menu);
-            }
-            menu = Root.gameObject.AddComponent<UitkMenu>();
-            menu.AttachRoot(UiRoot);
-            menu.onBack = () => Game?.Go(returnState);
+                UiRoot = FigmaUi.Mount(Root.gameObject, "15---Equipment");
+                FigmaUi.DestroyMenu(ref menu);
+                menu = Root.gameObject.AddComponent<UitkMenu>();
+                menu.AttachRoot(UiRoot);
+                menu.onBack = () => Game?.Go(returnState);
+                menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
+                menu.onPrevPage = () => SwitchHero(-1);
+                menu.onNextPage = () => SwitchHero(1);
 
-            var hero = CurrentHero;
-            hero.RecalculateStats();
-            var rows = BuildRows();
-            if (candidateIndex >= rows.Count) candidateIndex = -1;
+                var hero = CurrentHero;
+                hero.RecalculateStats();
+                var rows = BuildRows();
+                if (candidateIndex >= rows.Count) candidateIndex = -1;
 
-            var backBtn = FigmaUi.FindButton(UiRoot, "Back");
-            if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
+                var backBtn = FigmaUi.FindButton(UiRoot, "Back");
+                if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
 
-            // Header portrait switcher
-            string[] hdrFrames = { "frame-vars-18", "frame-vars-19", "frame-vars-20", "frame-vars-21" };
-            for (int i = 0; i < hdrFrames.Length; i++)
-            {
-                var fr = UiRoot.Q<VisualElement>(className: hdrFrames[i]);
-                if (fr == null) continue;
-                if (i >= party.Count) { fr.style.display = DisplayStyle.None; continue; }
-                int idx = i; var u = party[i]; bool on = i == heroIndex;
-                if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
-                    FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "eq_hdr_" + (u.classDef?.id ?? u.name)));
-                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; candidateIndex = -1; feedback = null; Refresh(); } }, selected: on, onAdjust: SwitchHero);
-                it.visual = f => { var col = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = col; fr.style.borderBottomColor = col; fr.style.borderLeftColor = col; fr.style.borderRightColor = col; };
-                it.visual(false);
-            }
-
-            var bagBtn = FigmaUi.FindButton(UiRoot, "BAG 12 / 100");
-            if (bagBtn != null)
-            {
-                bagBtn.text = $"BAG {inventory.EquipmentCount} / {InventoryRuntime.MaxEquipmentCapacity}";
-                FigmaUi.ApplyDefaultFocusVisual(menu.Add(bagBtn, "Bag", () => Game?.Go(GameState.Inventory)));
-            }
-
-            var screen = UiRoot.Q<VisualElement>(className: "_15-equipment") ?? UiRoot;
-            var p1 = UiRoot.Q<VisualElement>(className: "panel-default__i-25");
-            var p2 = UiRoot.Q<VisualElement>(className: "panel-default__i-26");
-            var p3 = UiRoot.Q<VisualElement>(className: "panel-gold__i-11");
-            if (p1 != null)
-            {
-                int i1 = screen.IndexOf(p1);
-                for (int i = i1 + 1; i < screen.childCount; i++)
+                // Header portrait switcher
+                string[] hdrFrames = { "frame-vars-18", "frame-vars-19", "frame-vars-20", "frame-vars-21" };
+                for (int i = 0; i < hdrFrames.Length; i++)
                 {
-                    var ch = screen[i];
-                    if (ch == p2 || ch == p3) continue;
-                    ch.style.display = DisplayStyle.None;
+                    var fr = UiRoot.Q<VisualElement>(className: hdrFrames[i]);
+                    if (fr == null) continue;
+                    if (i >= party.Count) { fr.style.display = DisplayStyle.None; continue; }
+                    int idx = i; var u = party[i]; bool on = i == heroIndex;
+                    if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
+                        FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "eq_hdr_" + (u.classDef?.id ?? u.name)));
+                    var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; candidateIndex = -1; feedback = null; Refresh(); } }, selected: on, onAdjust: SwitchHero);
+                    it.visual = f => { var col = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = col; fr.style.borderBottomColor = col; fr.style.borderLeftColor = col; fr.style.borderRightColor = col; };
+                    it.visual(false);
                 }
-            }
 
-            BuildPaperDoll(screen, hero);
-            BuildGearList(screen, hero, rows);
-            BuildCompare(screen, hero, rows);
+                var bagBtn = FigmaUi.FindButton(UiRoot, "BAG 12 / 100");
+                if (bagBtn != null)
+                {
+                    bagBtn.text = $"BAG {inventory.EquipmentCount} / {InventoryRuntime.MaxEquipmentCapacity}";
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(bagBtn, "Bag", () => Game?.Go(GameState.Inventory)));
+                }
+
+                var screen = UiRoot.Q<VisualElement>(className: "_15-equipment") ?? UiRoot;
+                var p1 = UiRoot.Q<VisualElement>(className: "panel-default__i-25");
+                var p2 = UiRoot.Q<VisualElement>(className: "panel-default__i-26");
+                var p3 = UiRoot.Q<VisualElement>(className: "panel-gold__i-11");
+                if (p1 != null)
+                {
+                    int i1 = screen.IndexOf(p1);
+                    for (int i = i1 + 1; i < screen.childCount; i++)
+                    {
+                        var ch = screen[i];
+                        if (ch == p2 || ch == p3) continue;
+                        ch.style.display = DisplayStyle.None;
+                    }
+                }
+
+                BuildPaperDoll(screen, hero);
+                BuildGearList(screen, hero, rows);
+                BuildCompare(screen, hero, rows);
+
+                if (focusEquipOnRefresh)
+                {
+                    focusEquipOnRefresh = false;
+                    int eqIdx = menu.items.FindIndex(it => it.text == "EQUIP");
+                    if (eqIdx >= 0) focusIndex = eqIdx;
+                }
+                if (menu.items.Count > 0)
+                    menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
+            }
+            finally { rebuilding = false; }
         }
 
         void BuildPaperDoll(VisualElement screen, Unit hero)
@@ -269,7 +287,11 @@ namespace Obscure
             top.Add(new UiLabel("SORT: RARITY") { style = { fontSize = 12, color = Palette.Mist3 } });
             host.Add(top);
 
-            for (int i = 0; i < 8 && i < rows.Count; i++)
+            var scroll = FigmaUi.CreateVerticalScrollView();
+            scroll.style.height = 496;
+            host.Add(scroll);
+
+            for (int i = 0; i < rows.Count; i++)
             {
                 int rIdx = i;
                 var d = rows[i];
@@ -314,7 +336,7 @@ namespace Obscure
                 col.Add(new UiLabel(sub) { style = { fontSize = 11, color = d.lockReason != null ? Down : Palette.Mist3 } });
                 row.Add(col);
                 row.Add(new UiLabel(right) { style = { fontSize = 14, color = rightCol, minWidth = 54, unityTextAlign = TextAnchor.MiddleRight } });
-                host.Add(row);
+                scroll.Add(row);
 
                 bool canPick = !d.equipped && d.lockReason == null;
                 var it = menu.Add(row, d.def.name, () => SelectCandidate(rIdx, rows), interactable: canPick, selected: chosen);
@@ -328,7 +350,7 @@ namespace Obscure
             }
 
             host.Add(new VisualElement { style = { flexGrow = 1 } });
-            string foot = rows.Count > 8 ? $"+{rows.Count - 8} MORE IN THE BAG" : rows.Count == 0 ? "NOTHING IN THE BAG FITS THIS SLOT." : $"{rows.Count} ITEMS FIT THIS SLOT";
+            string foot = rows.Count == 0 ? "NOTHING IN THE BAG FITS THIS SLOT." : $"{rows.Count} ITEMS FIT THIS SLOT";
             host.Add(new UiLabel(foot) { style = { fontSize = 13, color = Palette.Mist3 } });
         }
 

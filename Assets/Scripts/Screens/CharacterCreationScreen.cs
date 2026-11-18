@@ -35,8 +35,8 @@ namespace Obscure
 
         public EquipmentSlot SelectedEquipmentSlot { get; private set; } = EquipmentSlot.MainHand;
 
-        public enum Page { Name, Race, Class, Abilities, Background, Passive, Gear, Review }
-        static readonly string[] PageNames = { "NAME", "RACE", "CLASS", "ABILITIES", "BACKGROUND", "PASSIVE", "GEAR", "REVIEW" };
+        public enum Page { Race, Class, Abilities, Background, Passive, Gear, Review }
+        static readonly string[] PageNames = { "RACE", "CLASS", "ABILITIES", "BACKGROUND", "PASSIVE", "GEAR", "REVIEW" };
         public Page CurrentPage { get; private set; } = Page.Race;
 
         static readonly string[] RaceIds = Database.PlayableRaceIds;
@@ -52,14 +52,14 @@ namespace Obscure
             DerivedStatId.PhysicalBreakPower, DerivedStatId.StatusResistance, DerivedStatId.QteTimingBonus,
         };
 
-        UitkMenu menu;
+        UitkMenu menu, bgModalMenu;
         Transform bindingsRoot;
         VisualElement screenContainer;
         VisualElement middleBody, rightBody;
-        VisualElement backBtn, confirmBtn, nextBtn, lockLabel, keyHintRow;
+        VisualElement backBtn, nextBtn, keyHintRow;
         UiLabel previewMemberTag, previewNameLbl, previewNoteLbl;
         VisualElement previewSpriteEl, previewRaceTag;
-        readonly VisualElement[] stepChips = new VisualElement[8];
+        readonly VisualElement[] stepChips = new VisualElement[7];
         readonly VisualElement[] abilityPreviewTags = new VisualElement[6];
         readonly Dictionary<UitkMenu.Item, Action> focusActions = new Dictionary<UitkMenu.Item, Action>();
 
@@ -153,9 +153,20 @@ namespace Obscure
 
         void CacheShellElements()
         {
-            string[] defaultStepTexts = { "+ NAME", "2 RACE", "3 CLASS", "4 ABILITIES", "5 BACKGROUND", "6 PASSIVE", "7 GEAR", "8 REVIEW" };
-            for (int i = 0; i < 8; i++)
+            string[] defaultStepTexts = { "1 RACE", "2 CLASS", "3 ABILITIES", "4 BACKGROUND", "5 PASSIVE", "6 GEAR", "7 REVIEW" };
+            for (int i = 0; i < 7; i++)
+            {
                 stepChips[i] = FigmaUi.FindInstanceWithText(screenContainer, "text-0", defaultStepTexts[i]);
+                if (stepChips[i] != null)
+                {
+                    int pageIdx = i;
+                    stepChips[i].pickingMode = PickingMode.Position;
+                    stepChips[i].RegisterCallback<ClickEvent>(_ =>
+                    {
+                        if (!InReview) GoToPage((Page)pageIdx);
+                    });
+                }
+            }
 
             previewMemberTag = FigmaUi.FindInstanceWithText(screenContainer, "text-0", "MEMBER 1 / 4")?.Q<UiLabel>("text-0");
             previewSpriteEl = screenContainer.Q<VisualElement>(className: "sprite-knight");
@@ -168,9 +179,7 @@ namespace Obscure
                 abilityPreviewTags[i] = FigmaUi.FindInstanceWithText(screenContainer, "text-0", abDefaults[i]);
 
             backBtn = FigmaUi.FindButton(screenContainer, "Back");
-            confirmBtn = FigmaUi.FindButton(screenContainer, "Confirm");
             nextBtn = FigmaUi.FindButton(screenContainer, "Next: Class");
-            lockLabel = FigmaUi.FindLabel(screenContainer, "🔒 CONFIRM UNLOCKS ON REVIEW");
             keyHintRow = FigmaUi.FindInstanceWithText(screenContainer, "text-0", "DN")?.parent;
         }
 
@@ -208,11 +217,13 @@ namespace Obscure
 
             if (menu.items.Count > 0)
                 menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
+            if (IsBackgroundModalOpen)
+                RenderBackgroundModal();
         }
 
         void UpdateStepChips()
         {
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 7; i++)
             {
                 var chip = stepChips[i];
                 if (chip == null) continue;
@@ -300,8 +311,6 @@ namespace Obscure
 
             if (CurrentPage == Page.Review)
             {
-                if (lockLabel != null) lockLabel.style.display = DisplayStyle.None;
-                if (confirmBtn != null) confirmBtn.style.display = DisplayStyle.None;
                 if (nextBtn is Button nb)
                 {
                     bool canDo = InReview ? Builder.CanConfirmParty : Session.CanConfirm;
@@ -312,12 +321,6 @@ namespace Obscure
                 return;
             }
 
-            if (lockLabel != null) lockLabel.style.display = DisplayStyle.Flex;
-            if (confirmBtn is Button cb)
-            {
-                cb.style.display = DisplayStyle.Flex;
-                cb.SetEnabled(false);
-            }
             if (nextBtn is Button nxt)
             {
                 string nextText = "Next: " + (CurrentPage == Page.Background ? "Starter Passive" : ((Page)((int)CurrentPage + 1)).ToString());
@@ -349,7 +352,7 @@ namespace Obscure
             parent.Add(hdr);
         }
 
-        UitkMenu.Item AddCard(VisualElement parent, string title, string rightText, string subText, bool selected, Action select, Action<int> onAdjust = null)
+        UitkMenu.Item AddCard(VisualElement parent, string title, string rightText, string subText, bool selected, Action select, Action<int> onAdjust = null, bool selectOnFocus = true)
         {
             var card = new VisualElement();
             card.AddToClassList("uitk-card");
@@ -382,7 +385,7 @@ namespace Obscure
 
             parent.Add(card);
             var item = menu.Add(card, title, select, selected: selected, onAdjust: onAdjust);
-            if (select != null) focusActions[item] = select;
+            if (select != null && selectOnFocus) focusActions[item] = select;
             return item;
         }
 
@@ -567,7 +570,7 @@ namespace Obscure
                 int r = race[ab]; int m = mods[ab];
                 string rStr = r > 0 ? $"+{r}" : r < 0 ? r.ToString() : "-";
                 string info = $"BASE {bases[ab]}   RACE {rStr}   TOT {fin[ab]}   ({AbilityScores.FormatMod(m)})";
-                AddCard(middleBody, ab.ToString(), $"COST {Session.PointBuy.GetCost(ab)}", info, false, () => AdjustAbility(ab, 1), d => AdjustAbility(ab, d));
+                AddCard(middleBody, ab.ToString(), $"COST {Session.PointBuy.GetCost(ab)}", info, false, () => AdjustAbility(ab, 1), d => AdjustAbility(ab, d), selectOnFocus: false);
             }
 
             var btnRow = new VisualElement();
@@ -887,19 +890,22 @@ namespace Obscure
         public void CloseBackgroundDetailsModal()
         {
             backgroundModalOpen = false;
+            FigmaUi.DestroyMenu(ref bgModalMenu);
             backgroundModalEl?.RemoveFromHierarchy();
             backgroundModalEl = null;
         }
 
         void RenderBackgroundModal()
         {
-            if (UiRoot == null) return;
+            if (UiRoot == null || Root == null) return;
+            FigmaUi.DestroyMenu(ref bgModalMenu);
             backgroundModalEl?.RemoveFromHierarchy();
             var bg = Session.Background;
             if (bg == null) return;
 
             backgroundModalEl = new VisualElement { name = "BackgroundModal" };
             backgroundModalEl.AddToClassList("uitk-modal-backdrop");
+            backgroundModalEl.pickingMode = PickingMode.Position;
             var panel = new VisualElement();
             panel.AddToClassList("uitk-modal-panel");
             var title = new UiLabel($"{bg.name} · {bg.perkName}");
@@ -920,10 +926,14 @@ namespace Obscure
             }
 
             var closeBtn = FigmaUi.CreateButton("CLOSE", "button-slab", 160f);
-            closeBtn.RegisterCallback<ClickEvent>(_ => CloseBackgroundDetailsModal());
             panel.Add(closeBtn);
             backgroundModalEl.Add(panel);
             UiRoot.Add(backgroundModalEl);
+
+            bgModalMenu = Root.gameObject.AddComponent<UitkMenu>();
+            bgModalMenu.AttachRoot(backgroundModalEl);
+            bgModalMenu.onBack = CloseBackgroundDetailsModal;
+            FigmaUi.ApplyDefaultFocusVisual(bgModalMenu.Add(closeBtn, "CLOSE", CloseBackgroundDetailsModal));
         }
 
         public void CycleBackground(int dir)

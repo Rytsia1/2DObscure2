@@ -44,6 +44,7 @@ namespace Obscure.Tests
                     // Combat needs a moment to reach the first player turn's command menu.
                     float wait = Screens[i] == GameState.Combat ? 2.5f : 0.3f;
                     for (float t = 0; t < wait; t += Time.unscaledDeltaTime) yield return null;
+                    yield return new WaitForEndOfFrame();
                     Save(Path.Combine(dir, $"{i:00}-{Screens[i]}.png"));
                 }
             }
@@ -59,28 +60,10 @@ namespace Obscure.Tests
 
         static void Save(string path)
         {
-            const int w = Ui.Width, h = Ui.Height, s = 2;
-            var cam = Camera.main;
-            var rt = RenderTexture.GetTemporary(w, h, 24);
-            cam.targetTexture = rt;
-            cam.Render();
-            RenderTexture.active = rt;
-            var src = new Texture2D(w, h, TextureFormat.RGB24, false);
-            src.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-            cam.targetTexture = null;
-            RenderTexture.active = null;
-            RenderTexture.ReleaseTemporary(rt);
-
-            var big = new Texture2D(w * s, h * s, TextureFormat.RGB24, false);
-            var px = src.GetPixels32();
-            var outPx = new Color32[w * s * h * s];
-            for (int y = 0; y < h * s; y++)
-                for (int x = 0; x < w * s; x++)
-                    outPx[y * w * s + x] = px[(y / s) * w + x / s];
-            big.SetPixels32(outPx);
-            File.WriteAllBytes(path, big.EncodeToPNG());
-            UnityEngine.Object.Destroy(src);
-            UnityEngine.Object.Destroy(big);
+            var tex = ScreenCapture.CaptureScreenshotAsTexture();
+            if (tex == null) return;
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            UnityEngine.Object.Destroy(tex);
         }
     }
 }

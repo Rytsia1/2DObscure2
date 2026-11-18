@@ -53,7 +53,11 @@ namespace Obscure
 
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
-            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} RUN GOLD");
+            if (runGold != null)
+            {
+                FigmaUi.SetInstanceText(runGold, "text-0", $"{gold:#,##0} RUN GOLD");
+                FigmaUi.AnchorRight(runGold, 24f);
+            }
 
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
@@ -504,7 +508,7 @@ namespace Obscure
             }
 
             AddPauseRow("Resume", closePause, true, "ESC");
-            AddPauseRow("QTE Assists", () => { closePause(); Game.Go(GameState.Settings); });
+            AddPauseRow("QTE Assists", () => { closePause(); SettingsScreen.RequestQteTab(); Game.Go(GameState.Settings); });
             AddPauseRow("Settings", () => { closePause(); Game.Go(GameState.Settings); });
             AddPauseRow("Save Game", null, false, "HUB ONLY");
             AddPauseRow("Load Game", null, false, "HUB OR MAIN MENU");

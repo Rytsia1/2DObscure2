@@ -12,29 +12,26 @@
     <ui:VisualElement class="_02-character-creation-race _02-character-creation-race-vars" style="overflow: hidden;">
         <ui:Label text="Create Character" class="unity-label create-character-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 28px; top: 22px;" />
         <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 405px; top: 22px;">
-            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="+ NAME" />
-            </ui:Instance>
             <ui:Instance template="Tag-Keep" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="2 RACE" />
+                <AttributeOverrides element-name="text-0" text="1 RACE" />
             </ui:Instance>
             <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="3 CLASS" />
+                <AttributeOverrides element-name="text-0" text="2 CLASS" />
             </ui:Instance>
             <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="4 ABILITIES" />
+                <AttributeOverrides element-name="text-0" text="3 ABILITIES" />
             </ui:Instance>
             <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="5 BACKGROUND" />
+                <AttributeOverrides element-name="text-0" text="4 BACKGROUND" />
             </ui:Instance>
             <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="6 PASSIVE" />
+                <AttributeOverrides element-name="text-0" text="5 PASSIVE" />
             </ui:Instance>
             <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="7 GEAR" />
+                <AttributeOverrides element-name="text-0" text="6 GEAR" />
             </ui:Instance>
             <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="8 REVIEW" />
+                <AttributeOverrides element-name="text-0" text="7 REVIEW" />
             </ui:Instance>
         </ui:VisualElement>
         <ui:Instance template="Panel-Default" class="panel-default__i-3" style="position: absolute; left: 28px; top: 70px; width: 250px; height: 566px;" />
@@ -150,8 +147,6 @@
                 <AttributeOverrides element-name="text-1" text="BROWSE RACES" />
             </ui:Instance>
         </ui:VisualElement>
-        <ui:Label text="🔒 CONFIRM UNLOCKS ON REVIEW" class="unity-label confirm-unlocks-on-review-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 596px; top: 670px;" />
-        <ui:Button text="Confirm" enabled="false" class="button-slab unity-button" style="position: absolute; left: 916px; top: 656px;" />
         <ui:Button text="Next: Class" class="button-primary unity-button" style="width: 192px; position: absolute; left: 1060px; top: 656px;" />
     </ui:VisualElement>
 </ui:UXML>

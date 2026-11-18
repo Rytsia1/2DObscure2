@@ -16,6 +16,7 @@ namespace Obscure
         static GameState BackTo => Game.I == null || Game.I.LastBase == GameState.MainMenu ? GameState.Hub : Game.I.LastBase;
         UitkMenu menu;
         VisualElement[] cardSlots;
+        readonly VisualElement[] cardPanels = new VisualElement[4];
         UiLabel cursorArrow;
 
         protected override void Build()
@@ -49,7 +50,11 @@ namespace Obscure
 
             int gold = Run != null ? Run.Gold : 0;
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
-            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold} HUB GOLD");
+            if (hubTag != null)
+            {
+                FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold:#,##0} HUB GOLD");
+                FigmaUi.AnchorRight(hubTag, 24f);
+            }
 
             var backButtons = UiRoot.Query<Button>(className: "button-slab").ToList();
             foreach (var btn in backButtons)
@@ -82,6 +87,7 @@ namespace Obscure
             for (int i = 0; i < 4; i++)
             {
                 var panel = UiRoot.Q<VisualElement>(className: cardPanelClasses[i]);
+                cardPanels[i] = panel;
                 var well = UiRoot.Q<VisualElement>(className: wellClasses[i]);
                 var numLbl = UiRoot.Q<UiLabel>(className: numeralClasses[i]);
                 var lvLbl = UiRoot.Q<UiLabel>(className: lvClasses[i]);
@@ -243,9 +249,12 @@ namespace Obscure
                 if (item != null && item.element is Button b && b.name != null && b.name.StartsWith("PartyCard_"))
                 {
                     if (int.TryParse(b.name.Substring("PartyCard_".Length), out int idx))
-                        Select(idx);
+                        SelectedIndex = idx;
                 }
+                UpdateSelectionVisuals();
             };
+            menu.onPrevPage = () => CycleMember(-1);
+            menu.onNextPage = () => CycleMember(1);
 
             if (party.Count > 0)
             {
@@ -255,13 +264,32 @@ namespace Obscure
             UpdateSelectionVisuals();
         }
 
+        void CycleMember(int delta)
+        {
+            if (party == null || party.Count == 0) return;
+            SelectedIndex = (SelectedIndex + delta + party.Count) % party.Count;
+            int target = menu.items.FindIndex(it => it.element == cardSlots[SelectedIndex]);
+            if (target >= 0) menu.Focus(target, false, true);
+            UpdateSelectionVisuals();
+        }
+
         void UpdateSelectionVisuals()
         {
+            bool cardFocused = menu != null && menu.Current?.element is Button fb && fb.name != null && fb.name.StartsWith("PartyCard_");
             if (cursorArrow != null && party.Count > 0)
             {
+                cursorArrow.style.display = cardFocused ? DisplayStyle.Flex : DisplayStyle.None;
                 cursorArrow.style.left = 8 + SelectedIndex * 310;
                 cursorArrow.style.top = 230;
                 cursorArrow.style.color = Palette.Gold2;
+            }
+            for (int i = 0; i < cardPanels.Length; i++)
+            {
+                var p = cardPanels[i]?.childCount > 0 ? cardPanels[i][0] : cardPanels[i];
+                if (p == null) continue;
+                var border = i == SelectedIndex ? Palette.Gold2 : Palette.Ink4;
+                p.style.borderTopColor = border; p.style.borderBottomColor = border;
+                p.style.borderLeftColor = border; p.style.borderRightColor = border;
             }
             if (cardSlots != null)
             {

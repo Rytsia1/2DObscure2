@@ -25,6 +25,7 @@ namespace Obscure
         string feedback;
         bool feedbackBad;
         int focusIndex;
+        int dialogFocusIndex = -1;
         bool rebuilding;
 
         public TalentScreen() : this(null, 0, null) { }
@@ -56,6 +57,15 @@ namespace Obscure
                 .OrderBy(t => hero.HasTalent(t.id)).ThenBy(t => t.category).ThenBy(t => t.name).ToList();
         }
 
+        void SwitchHero(int delta)
+        {
+            if (party == null || party.Count == 0 || respecOpen) return;
+            heroIndex = (heroIndex + delta + party.Count) % party.Count;
+            selectedId = null;
+            feedback = null;
+            Rebuild();
+        }
+
         string ClassName(Unit hero) => hero.classDef?.name ?? "Class";
 
         void Rebuild()
@@ -65,16 +75,14 @@ namespace Obscure
             try
             {
                 UiRoot = FigmaUi.Mount(Root.gameObject, "17---Talent-Selection");
-                if (menu != null)
-                {
-                    if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
-                    else UnityEngine.Object.DestroyImmediate(menu);
-                }
-                dialogMenu = null;
+                FigmaUi.DestroyMenu(ref dialogMenu);
+                FigmaUi.DestroyMenu(ref menu);
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
                 menu.onBack = () => { if (respecOpen) { respecOpen = false; Rebuild(); } else Game?.Go(returnState); };
                 menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
+                menu.onPrevPage = () => SwitchHero(-1);
+                menu.onNextPage = () => SwitchHero(1);
 
                 var hero = CurrentHero;
                 if (hero == null) return;
@@ -106,7 +114,13 @@ namespace Obscure
                 if (respecOpen) BuildRespecDialog();
 
                 if (menu.items.Count > 0) menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
-                if (dialogMenu != null && dialogMenu.items.Count > 0) dialogMenu.Focus(dialogMenu.items.Count - 1, false, true);
+                if (dialogMenu != null && dialogMenu.items.Count > 0)
+                {
+                    int target = dialogFocusIndex >= 0
+                        ? Mathf.Clamp(dialogFocusIndex, 0, dialogMenu.items.Count - 1)
+                        : (Scrolls > 0 ? dialogMenu.items.Count - 1 : Math.Max(0, dialogMenu.items.Count - 2));
+                    dialogMenu.Focus(target, false, true);
+                }
             }
             finally { rebuilding = false; }
         }
@@ -137,7 +151,7 @@ namespace Obscure
             if (scrollTag != null)
             {
                 FigmaUi.SetInstanceText(scrollTag, "text-0", $"SCROLL OF EMPTINESS × {Scrolls}");
-                FigmaUi.ApplyDefaultFocusVisual(menu.Add(scrollTag, "Scroll of Emptiness", () => { respecOpen = true; respecTarget = heroIndex; Rebuild(); }));
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(scrollTag, "Scroll of Emptiness", () => { respecOpen = true; respecTarget = heroIndex; dialogFocusIndex = -1; Rebuild(); }));
             }
         }
 
@@ -197,34 +211,52 @@ namespace Obscure
             }
             screen.Add(tabRow);
 
-            var grid = new VisualElement { style = { position = Position.Absolute, left = 44, top = 236, width = 804, height = 430, flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
+            var scroll = FigmaUi.CreateVerticalScrollView();
+            scroll.style.position = Position.Absolute;
+            scroll.style.left = 44;
+            scroll.style.top = 232;
+            scroll.style.width = 804;
+            scroll.style.height = 450;
+
+            var grid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
+            scroll.Add(grid);
+
             var shown = pool.Where(t => filter == 0 || (filter == 1) == (t.category == TalentCategory.Shared)).ToList();
-            foreach (var t in shown.Take(6))
+            int firstCardMenuIdx = menu.items.Count;
+            const int cols = 3;
+            for (int i = 0; i < shown.Count; i++)
             {
-                var td = t;
-                bool owned = hero.HasTalent(t.id), sel = t.id == selectedId;
+                var td = shown[i];
+                int cardIdx = i;
+                bool owned = hero.HasTalent(td.id), sel = td.id == selectedId;
                 var card = new VisualElement
                 {
                     style =
                     {
-                        width = 254, height = 148, marginRight = 12, marginBottom = 12,
+                        width = 250, height = 148, marginRight = 10, marginBottom = 12,
                         paddingLeft = 12, paddingRight = 12, paddingTop = 10, paddingBottom = 10,
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                     }
                 };
-                card.Add(new UiLabel(t.name) { style = { fontSize = 18, color = owned ? Palette.Mist3 : sel ? Palette.Gold1 : Palette.Mist1, marginBottom = 6 } });
+                card.Add(new UiLabel(td.name) { style = { fontSize = 18, color = owned ? Palette.Mist3 : sel ? Palette.Gold1 : Palette.Mist1, marginBottom = 6 } });
                 var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
                 if (tag != null)
                 {
-                    FigmaUi.SetInstanceText(tag, "text-0", t.category == TalentCategory.Shared ? "SHARED" : ClassName(hero).ToUpperInvariant());
+                    FigmaUi.SetInstanceText(tag, "text-0", td.category == TalentCategory.Shared ? "SHARED" : ClassName(hero).ToUpperInvariant());
                     tag.style.marginBottom = 8;
                     card.Add(tag);
                 }
-                string fx = (owned ? "OWNED · " : "") + (t.description ?? "");
+                string fx = (owned ? "OWNED · " : "") + (td.description ?? "");
                 card.Add(new UiLabel(fx.ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
                 grid.Add(card);
 
-                var it = menu.Add(card, t.name, () => { selectedId = td.id; Rebuild(); }, selected: sel);
+                var it = menu.Add(card, td.name, () => { selectedId = td.id; Rebuild(); }, selected: sel);
+                it.onNavigate = dir =>
+                {
+                    if (dir == 0 && cardIdx >= cols) return firstCardMenuIdx + cardIdx - cols;
+                    if (dir == 2 && cardIdx + cols < shown.Count) return firstCardMenuIdx + cardIdx + cols;
+                    return -1;
+                };
                 it.visual = on =>
                 {
                     card.style.backgroundColor = on || sel ? Palette.Hex(0x2B2210) : owned ? Palette.Ink1 : Palette.Ink2;
@@ -233,7 +265,7 @@ namespace Obscure
                 };
                 it.visual(false);
             }
-            screen.Add(grid);
+            screen.Add(scroll);
         }
 
         void BuildDetail(VisualElement screen, Unit hero)
@@ -297,7 +329,8 @@ namespace Obscure
 
             dialogMenu = Root.gameObject.AddComponent<UitkMenu>();
             dialogMenu.AttachRoot(backdrop);
-            dialogMenu.onBack = () => { respecOpen = false; Rebuild(); };
+            dialogMenu.onFocus = s => { if (!rebuilding && s != null) dialogFocusIndex = dialogMenu.items.IndexOf(s); };
+            dialogMenu.onBack = () => { respecOpen = false; dialogFocusIndex = -1; Rebuild(); };
 
             var charRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 14 } };
             for (int i = 0; i < party.Count; i++)
@@ -328,7 +361,7 @@ namespace Obscure
             backdrop.Add(card);
             UiRoot.Add(backdrop);
 
-            FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(cancel, "Cancel", () => { respecOpen = false; Rebuild(); }));
+            FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(cancel, "Cancel", () => { respecOpen = false; dialogFocusIndex = -1; Rebuild(); }));
             FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(use, "Use", () => UseScroll(target), interactable: canUse));
         }
 
@@ -342,6 +375,7 @@ namespace Obscure
 
         void UseScroll(Unit target)
         {
+            dialogFocusIndex = -1;
             if (Bag != null && Bag.UseScrollOfEmptiness(target, out _))
             {
                 Game.I?.Run?.Items.Remove("scroll_of_emptiness");

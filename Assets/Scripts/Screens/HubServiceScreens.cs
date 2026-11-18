@@ -16,7 +16,7 @@ namespace Obscure
         protected string feedback;
         protected bool feedbackBad;
         protected int focusIndex;
-        bool rebuilding;
+        protected bool rebuilding;
 
         protected static int Gold => Run != null ? Run.Gold : 0;
         protected static InventoryRuntime Bag => Run?.Inventory ?? new InventoryRuntime();
@@ -37,11 +37,7 @@ namespace Obscure
 
         protected void ResetMenu()
         {
-            if (menu != null)
-            {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
-                else UnityEngine.Object.DestroyImmediate(menu);
-            }
+            FigmaUi.DestroyMenu(ref menu);
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onBack = () => Game?.Go(GameState.Hub);
@@ -89,7 +85,11 @@ namespace Obscure
         protected void BindHubGold()
         {
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
-            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{Money(Gold)} HUB GOLD");
+            if (hubTag != null)
+            {
+                FigmaUi.SetInstanceText(hubTag, "text-0", $"{Money(Gold)} HUB GOLD");
+                FigmaUi.AnchorRight(hubTag, 24f);
+            }
         }
 
         protected static void HideElementsByClass(VisualElement root, params string[] classes)
@@ -242,6 +242,7 @@ namespace Obscure
         int selected;
         bool dialogOpen;
         int qty = 1;
+        int dialogFocusIndex = -1;
         UitkMenu dialogMenu;
 
         protected override string FigmaScreenKey => "06---Shop---Consumables";
@@ -251,7 +252,10 @@ namespace Obscure
         protected override void AfterRebuild()
         {
             if (dialogMenu != null && dialogMenu.items.Count > 0)
-                dialogMenu.Focus(dialogMenu.items.Count - 1, false, true);
+            {
+                int target = dialogFocusIndex >= 0 ? Mathf.Clamp(dialogFocusIndex, 0, dialogMenu.items.Count - 1) : dialogMenu.items.Count - 1;
+                dialogMenu.Focus(target, false, true);
+            }
         }
 
         List<(string id, string name, string sub, ItemDef def, int price, int owned)> Rows()
@@ -268,7 +272,7 @@ namespace Obscure
         {
             BindBackButton();
             BindHubGold();
-            dialogMenu = null;
+            FigmaUi.DestroyMenu(ref dialogMenu);
 
             var armoryBtn = FigmaUi.FindButton(UiRoot, "Armory ›");
             if (armoryBtn != null)
@@ -304,10 +308,15 @@ namespace Obscure
             var rows = Rows();
             selected = Mathf.Clamp(selected, 0, Mathf.Max(0, rows.Count - 1));
 
-            var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 148, width = 798, height = 530, flexDirection = FlexDirection.Column } };
+            var listHost = FigmaUi.CreateVerticalScrollView();
+            listHost.style.position = Position.Absolute;
+            listHost.style.left = 44;
+            listHost.style.top = 148;
+            listHost.style.width = 798;
+            listHost.style.height = 530;
             screen.Add(listHost);
 
-            for (int i = 0; i < rows.Count && i < 8; i++)
+            for (int i = 0; i < rows.Count; i++)
             {
                 int idx = i;
                 var r = rows[i];
@@ -318,7 +327,8 @@ namespace Obscure
                 var row = CreateListRow(r.name, r.sub.ToUpperInvariant(), mid, Money(r.price), subRight, rc, afford ? Palette.Gold1 : Palette.Err, i == selected, false, () =>
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
-                    else if (!sellTab) { qty = 1; dialogOpen = true; Rebuild(); }
+                    else if (!sellTab) { qty = 1; dialogFocusIndex = -1; dialogOpen = true; Rebuild(); }
+                    else { Sell(r.id, r.price); }
                 }, IconArt.Item(r.id));
                 listHost.Add(row);
             }
@@ -370,7 +380,7 @@ namespace Obscure
             var actBtn = FigmaUi.CreateButton(sellTab ? $"Sell for {Money(r.price)}" : "Buy...", canAct ? "button-primary" : "button-slab", 346f);
             actBtn.SetEnabled(canAct);
             host.Add(actBtn);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(actBtn, sellTab ? "Sell" : "Buy", sellTab ? (Action)(() => Sell(r.id, r.price)) : () => { qty = 1; dialogOpen = true; Rebuild(); }, interactable: canAct));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(actBtn, sellTab ? "Sell" : "Buy", sellTab ? (Action)(() => Sell(r.id, r.price)) : () => { qty = 1; dialogFocusIndex = -1; dialogOpen = true; Rebuild(); }, interactable: canAct));
         }
 
         void BuildDialog((string id, string name, string sub, ItemDef def, int price, int owned) r)
@@ -418,11 +428,12 @@ namespace Obscure
 
             dialogMenu = Root.gameObject.AddComponent<UitkMenu>();
             dialogMenu.AttachRoot(backdrop);
-            dialogMenu.onBack = () => { dialogOpen = false; Rebuild(); };
+            dialogMenu.onFocus = item => { if (!rebuilding && item != null) dialogFocusIndex = dialogMenu.items.IndexOf(item); };
+            dialogMenu.onBack = () => { dialogOpen = false; dialogFocusIndex = -1; Rebuild(); };
 
             FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(minusBtn, "-", () => { qty--; Rebuild(); }, interactable: qty > 1));
             FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(plusBtn, "+", () => { qty++; Rebuild(); }, interactable: qty < maxQty));
-            FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(cancelBtn, "Cancel", () => { dialogOpen = false; Rebuild(); }));
+            FigmaUi.ApplyDefaultFocusVisual(dialogMenu.Add(cancelBtn, "Cancel", () => { dialogOpen = false; dialogFocusIndex = -1; Rebuild(); }));
             var cItem = dialogMenu.Add(confirmBtn, "Buy", () => Buy(r.id, qty, r.name), onAdjust: d => { qty = Mathf.Clamp(qty + d, 1, maxQty); Rebuild(); });
             FigmaUi.ApplyDefaultFocusVisual(cItem);
         }
@@ -430,6 +441,7 @@ namespace Obscure
         void Buy(string id, int count, string name)
         {
             dialogOpen = false;
+            dialogFocusIndex = -1;
             if (HubEconomy.TryBuyHubConsumable(Run, id, count, out string err)) Say($"BOUGHT {count} X {name}.", false);
             else Say(err, true);
         }
@@ -450,6 +462,7 @@ namespace Obscure
         protected override Sound SuccessSound => Sound.Coin;
         static ShopInventory stock;
         static int stockAct = -1;
+        static int stockSeed = int.MinValue;
         int heroIndex, selected;
         int filter;
         static readonly string[] FilterNames = { "All", "Main Hand", "Second Hand", "Head", "Body", "Leg", "Foot", "Accessory" };
@@ -459,7 +472,13 @@ namespace Obscure
         protected override void Init()
         {
             int act = Run?.Act ?? 1;
-            if (stock == null || stockAct != act) { stock = EquipmentShopManager.GenerateShop(act, itemCount: 8); stockAct = act; }
+            int seed = Run?.Seed ?? 0;
+            if (stock == null || stockAct != act || stockSeed != seed)
+            {
+                stock = EquipmentShopManager.GenerateShop(act, itemCount: 8);
+                stockAct = act;
+                stockSeed = seed;
+            }
             heroIndex = Mathf.Clamp(PartyScreen.SelectedIndex, 0, Mathf.Max(0, Party.Count - 1));
         }
 
@@ -480,6 +499,8 @@ namespace Obscure
             BindBackButton();
             BindHubGold();
             var party = Party;
+            menu.onPrevPage = () => { if (party.Count > 0) { heroIndex = (heroIndex - 1 + party.Count) % party.Count; Rebuild(); } };
+            menu.onNextPage = () => { if (party.Count > 0) { heroIndex = (heroIndex + 1) % party.Count; Rebuild(); } };
             var hero = party[Mathf.Clamp(heroIndex, 0, party.Count - 1)];
 
             var screen = UiRoot.Q<VisualElement>(className: "_07-armory-equipment") ?? UiRoot;
@@ -538,9 +559,14 @@ namespace Obscure
             var items = stock.items.Where(s => s.item?.Definition != null && InFilter(s.item.Definition, filter)).ToList();
             selected = Mathf.Clamp(selected, 0, Mathf.Max(0, items.Count - 1));
 
-            var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 162, width = 802, height = 520, flexDirection = FlexDirection.Column } };
+            var listHost = FigmaUi.CreateVerticalScrollView();
+            listHost.style.position = Position.Absolute;
+            listHost.style.left = 44;
+            listHost.style.top = 162;
+            listHost.style.width = 802;
+            listHost.style.height = 520;
             screen.Add(listHost);
-            for (int i = 0; i < items.Count && i < 8; i++)
+            for (int i = 0; i < items.Count; i++)
             {
                 int idx = i;
                 var s = items[i];
@@ -694,16 +720,20 @@ namespace Obscure
             }
             leftHost.Add(fltRow);
 
-            for (int i = 0; i < gear.Count && i < 7; i++)
+            var listScroll = FigmaUi.CreateVerticalScrollView();
+            listScroll.style.height = 490;
+            leftHost.Add(listScroll);
+
+            for (int i = 0; i < gear.Count; i++)
             {
                 int idx = i;
                 var e = gear[i];
-                leftHost.Add(CreateListRow(Name(e), Owner(e), null, $"+{e.upgradeLevel}", null, EquipmentRarities.GetColor(e.rarity), Palette.Mist2, i == selected, false, () =>
+                listScroll.Add(CreateListRow(Name(e), Owner(e), null, $"+{e.upgradeLevel}", null, EquipmentRarities.GetColor(e.rarity), Palette.Mist2, i == selected, false, () =>
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
                 }, IconArt.Gear(e.Definition)));
             }
-            if (gear.Count == 0) leftHost.Add(new UiLabel("NO EQUIPMENT TO UPGRADE.") { style = { fontSize = 14, color = Palette.Mist3, marginTop = 24 } });
+            if (gear.Count == 0) listScroll.Add(new UiLabel("NO EQUIPMENT TO UPGRADE.") { style = { fontSize = 14, color = Palette.Mist3, marginTop = 24 } });
 
             var sel = gear.Count > 0 ? gear[selected] : null;
             BuildAnvil(screen, sel);
@@ -786,7 +816,7 @@ namespace Obscure
             btnRow.Add(cancelBtn);
             btnRow.Add(upBtn);
             host.Add(btnRow);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(cancelBtn, "Cancel", () => { selected = 0; feedback = null; Rebuild(); }));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(cancelBtn, "Cancel", () => Game?.Go(GameState.Hub)));
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(upBtn, "Upgrade", () => Upgrade(e), interactable: canUp && afford));
         }
 
@@ -860,8 +890,17 @@ namespace Obscure
                 titleLine.Add(new UiLabel(u.Alive ? (full ? "FULL" : "HURT") : "DEAD") { style = { fontSize = 12, color = !u.Alive ? Palette.Err : full ? Ok : Palette.Gold1 } });
                 midCol.Add(titleLine);
 
-                float hp = (float)u.hp / Mathf.Max(1, u.stats.maxHp), mp = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
-                midCol.Add(new UiLabel($"HP {u.hp}/{u.stats.maxHp}  ·  MP {u.mp}/{u.stats.maxMp}") { style = { fontSize = 12, color = Palette.Mist2 } });
+                float hp = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f, mp = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
+                midCol.Add(new UiLabel($"HP {u.hp}/{u.stats.maxHp}  ·  MP {u.mp}/{u.stats.maxMp}") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 4 } });
+
+                VisualElement MiniBar(float ratio, Color col)
+                {
+                    var track = new VisualElement { style = { width = 220, height = 5, backgroundColor = Palette.Ink0, borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1, borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4, marginBottom = 3 } };
+                    track.Add(new VisualElement { style = { width = Length.Percent(Mathf.Clamp01(ratio) * 100f), height = Length.Percent(100), backgroundColor = col } });
+                    return track;
+                }
+                midCol.Add(MiniBar(hp, hp < 0.25f ? Palette.HpLow : Palette.Hp));
+                midCol.Add(MiniBar(mp, Palette.Mp));
                 card.Add(midCol);
 
                 var btnCol = new VisualElement { style = { flexDirection = FlexDirection.Row } };
