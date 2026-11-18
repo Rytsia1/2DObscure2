@@ -75,20 +75,40 @@ function render(def, map) {
 
 const IDLE = [[0, 0], [1, 1], [1, 2], [0, 1]]; // [body dy, head dy]; head lags a frame
 const DELAY = [320, 180, 320, 180];
-function frames(def) {
+
+// One posed frame. Every pixel belongs to one group, each moved by its own offset:
+//   g ground (legs/feet, or the robe from groundFrom down), b body, a front arm + held weapon (def.arm), h head (lags).
+// squash: n rows are cut out of the legs just below the hips and everything above sinks n rows (crouch / kneel).
+// fx(buf, info): effects drawn after the outline (smears, glows); info.arm is the weapon's box in output pixels.
+function pose(def, p = {}) {
   const W = def.w || 20, H = def.h || 25, ground = def.ground || "", head = def.head || "";
   let map = norm(def.map, W, H);
-  if (def.flip) map = map.map((r) => [...r].reverse().join("")); // drawn facing right, mirrored to face left; light stays top-left
   const isHead = (c, y) => head.includes(c) || (def.headTo !== undefined && y < def.headTo);
-  return IDLE.map(([dyB, dyH]) => {
-    const m = Array.from({ length: H }, () => Array(W).fill("."));
-    // robes: everything from groundFrom down stays put (trim letters repeat above and below the belt)
-    const isGround = (c, y) => (def.groundFrom !== undefined ? y >= def.groundFrom : ground.includes(c));
-    const put = (dy, ok) => map.forEach((r, y) => [...r].forEach((c, x) => { if (c !== "." && ok(c, y) && y + dy < H) m[y + dy][x] = c; }));
-    put(0, (c, y) => isGround(c, y));
-    put(dyB, (c, y) => !isGround(c, y) && !isHead(c, y));
-    put(dyH, (c, y) => !isGround(c, y) && isHead(c, y));
-    return P.selout(render(def, m.map((r) => r.join(""))), def.lit ?? R.steel[1], VOID);
-  });
+  // robes: everything from groundFrom down stays put (trim letters repeat above and below the belt)
+  const isGround = (c, y) => (def.groundFrom !== undefined ? y >= def.groundFrom : ground.includes(c));
+  const isArm = (c, x) => def.arm && def.arm.letters.includes(c) && x >= def.arm.minX;
+  const group = (c, x, y) => (isGround(c, y) ? "g" : isArm(c, x) ? "a" : isHead(c, y) ? "h" : "b");
+  let hip = def.groundFrom;
+  if (hip === undefined) hip = map.findIndex((r, y) => [...r].some((c, x) => c !== "." && group(c, x, y) === "g"));
+  if (def.flip) map = map.map((r) => [...r].reverse().join("")); // drawn facing right, mirrored to face left; light stays top-left
+  const fx = (x) => (def.flip ? W - 1 - x : x);
+  const n = p.squash || 0, off = { g: p.g || [0, 0], b: p.b || [0, 0], a: p.a || p.b || [0, 0], h: p.h || [0, 0] };
+  const m = Array.from({ length: H }, () => Array(W).fill(".")), armBox = [99, 99, -1, -1];
+  // ground, body, arm, head: the same order idle always used (the arm used to be part of the body)
+  for (const want of "gbah") map.forEach((r, y) => [...r].forEach((c, x) => {
+    if (c === "." || group(c, fx(x), y) !== want) return;
+    if (want === "g" && y >= hip && y < hip + n) return;
+    const [dx, dy] = off[want], sink = want === "g" ? 0 : n, X = x + dx, Y = y + dy + sink;
+    if (X < 0 || Y < 0 || X >= W || Y >= H) return;
+    m[Y][X] = c;
+    if (want === "a") { armBox[0] = Math.min(armBox[0], X); armBox[1] = Math.min(armBox[1], Y); armBox[2] = Math.max(armBox[2], X); armBox[3] = Math.max(armBox[3], Y); }
+  }));
+  const out = P.selout(render(def, m.map((r) => r.join(""))), def.lit ?? R.steel[1], VOID);
+  if (p.fx) p.fx(out, { arm: armBox.map((v) => v + 1), W: W + 2, H: H + 2 });
+  return out;
 }
-module.exports = { P, R, VOID, W, H, frames, DELAY, norm };
+
+function frames(def) {
+  return IDLE.map(([dyB, dyH]) => pose(def, { b: [0, dyB], h: [0, dyH] }));
+}
+module.exports = { P, R, VOID, W, H, frames, pose, DELAY, norm };

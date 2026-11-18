@@ -1,0 +1,369 @@
+{
+ "clips": [
+  {
+   "hero": "knight",
+   "clip": "act",
+   "style": "melee",
+   "strike": 2,
+   "delays": [
+    0.11,
+    0.13,
+    0.07,
+    0.12,
+    0.12,
+    0.09
+   ]
+  },
+  {
+   "hero": "knight",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "knight",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "fighter",
+   "clip": "act",
+   "style": "melee",
+   "strike": 2,
+   "delays": [
+    0.11,
+    0.13,
+    0.07,
+    0.12,
+    0.12,
+    0.09
+   ]
+  },
+  {
+   "hero": "fighter",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "fighter",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "barbarian",
+   "clip": "act",
+   "style": "melee",
+   "strike": 2,
+   "delays": [
+    0.11,
+    0.13,
+    0.07,
+    0.12,
+    0.12,
+    0.09
+   ]
+  },
+  {
+   "hero": "barbarian",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "barbarian",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "martial_artist",
+   "clip": "act",
+   "style": "melee",
+   "strike": 2,
+   "delays": [
+    0.11,
+    0.13,
+    0.07,
+    0.12,
+    0.12,
+    0.09
+   ]
+  },
+  {
+   "hero": "martial_artist",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "martial_artist",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "rogue",
+   "clip": "act",
+   "style": "melee",
+   "strike": 2,
+   "delays": [
+    0.11,
+    0.13,
+    0.07,
+    0.12,
+    0.12,
+    0.09
+   ]
+  },
+  {
+   "hero": "rogue",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "rogue",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "ranger",
+   "clip": "act",
+   "style": "shoot",
+   "strike": 2,
+   "delays": [
+    0.12,
+    0.16,
+    0.07,
+    0.12,
+    0.11
+   ]
+  },
+  {
+   "hero": "ranger",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "ranger",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "cleric",
+   "clip": "act",
+   "style": "cast",
+   "strike": 2,
+   "delays": [
+    0.12,
+    0.16,
+    0.2,
+    0.14,
+    0.11
+   ]
+  },
+  {
+   "hero": "cleric",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "cleric",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "wizard",
+   "clip": "act",
+   "style": "cast",
+   "strike": 2,
+   "delays": [
+    0.12,
+    0.16,
+    0.2,
+    0.14,
+    0.11
+   ]
+  },
+  {
+   "hero": "wizard",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "wizard",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "warlock",
+   "clip": "act",
+   "style": "cast",
+   "strike": 2,
+   "delays": [
+    0.12,
+    0.16,
+    0.2,
+    0.14,
+    0.11
+   ]
+  },
+  {
+   "hero": "warlock",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "warlock",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  },
+  {
+   "hero": "druid",
+   "clip": "act",
+   "style": "cast",
+   "strike": 2,
+   "delays": [
+    0.12,
+    0.16,
+    0.2,
+    0.14,
+    0.11
+   ]
+  },
+  {
+   "hero": "druid",
+   "clip": "hit",
+   "style": "hit",
+   "strike": -1,
+   "delays": [
+    0.09,
+    0.11,
+    0.09
+   ]
+  },
+  {
+   "hero": "druid",
+   "clip": "ko",
+   "style": "ko",
+   "strike": -1,
+   "delays": [
+    0.1,
+    0.14,
+    0.16,
+    0.6
+   ]
+  }
+ ]
+}

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -55,10 +56,54 @@ namespace Obscure
             return rows != null && legacyEnemies.TryGetValue(rows, out var id) ? Load("Enemies/" + id) : null;
         }
 
-        static Texture2D[] Load(string path)
+        // A one-shot hero combat clip: "act" (attack / shot / cast, by class), "hit" or "ko".
+        // Frames are Resources/Heroes/<id>_<clip>_<i>.png; delays and the strike frame come from Resources/Heroes/clips.json,
+        // both written by `node anims.js --export`.
+        public class Clip
+        {
+            public Texture2D[] frames;
+            public float[] delays;
+            public string style;  // melee | shoot | cast | hit | ko; enemies also pounce | reap
+            public int strike;    // frame the blow lands on, -1 when the clip has none
+            public float TimeTo(int frame) { float t = 0; for (int i = 0; i < frame && i < delays.Length; i++) t += delays[i]; return t; }
+        }
+
+        [Serializable] class ClipJson { public string hero, clip, style; public int strike; public float[] delays; }
+        [Serializable] class ClipList { public ClipJson[] clips; }
+        static readonly Dictionary<string, Dictionary<string, ClipJson>> clipInfo = new Dictionary<string, Dictionary<string, ClipJson>>();
+        static readonly Dictionary<string, Clip> clipCache = new Dictionary<string, Clip>();
+
+        public static Clip HeroClip(string[] rows, string clip) =>
+            rows != null && heroes.TryGetValue(rows, out var id) ? LoadClip("Heroes", id, clip) : null;
+
+        // An enemy's attack clip ("atk"), found the same way as its idle art: by enemy id, then legacy rows.
+        // Frames are Resources/Enemies/<id>_atk_<i>.png, timings Resources/Enemies/clips.json (`node anims.js --export-enemies`).
+        public static Clip EnemyClip(string enemyId, string[] rows)
+        {
+            if (enemyId != null && enemies.Contains(enemyId)) return LoadClip("Enemies", enemyId, "atk");
+            return rows != null && legacyEnemies.TryGetValue(rows, out var id) ? LoadClip("Enemies", id, "atk") : null;
+        }
+
+        static Clip LoadClip(string folder, string id, string clip)
+        {
+            string key = folder + "/" + id + "_" + clip;
+            if (clipCache.TryGetValue(key, out var c) && (c == null || c.frames[0] != null)) return c;
+            if (!clipInfo.TryGetValue(folder, out var infos))
+            {
+                clipInfo[folder] = infos = new Dictionary<string, ClipJson>();
+                var json = Resources.Load<TextAsset>(folder + "/clips");
+                if (json != null)
+                    foreach (var j in JsonUtility.FromJson<ClipList>(json.text).clips) infos[j.hero + "_" + j.clip] = j;
+            }
+            if (!infos.TryGetValue(id + "_" + clip, out var info)) return clipCache[key] = null;
+            var frames = Load(key, info.delays.Length);
+            return clipCache[key] = frames == null ? null : new Clip { frames = frames, delays = info.delays, style = info.style, strike = info.strike };
+        }
+
+        static Texture2D[] Load(string path, int count = 4)
         {
             if (cache.TryGetValue(path, out var frames) && (frames == null || frames[0] != null)) return frames;
-            frames = new Texture2D[IdleDelays.Length];
+            frames = new Texture2D[count];
             for (int i = 0; i < frames.Length; i++)
             {
                 frames[i] = Resources.Load<Texture2D>($"{path}_{i}");

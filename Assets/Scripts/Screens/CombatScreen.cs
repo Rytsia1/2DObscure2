@@ -56,6 +56,8 @@ namespace Obscure
             public float idleOffset;
             public int idleFrame;
             public string artKey;    // enemy id the idle frames belong to; a boss phase swaps the def and the art with it
+            public bool busy;        // a one-shot clip (attack, hit, KO) owns the sprite; the idle loop waits
+            public bool fallen;      // KO played and held until the hero is revived
         }
 
         class ActiveFx
@@ -503,7 +505,15 @@ namespace Obscure
                     h.idle = UnitArt.Enemy(h.artKey, c.unit.sprite);
                     h.idleFrame = -1;
                 }
-                if (h.idle == null || h.spriteEl == null || !c.Alive) continue;
+                // A hero who falls (any cause: a blow, poison, a status) slumps once and holds it; revived, they stand again.
+                if (!c.IsEnemy && !c.Alive && !h.fallen && h.spriteEl != null)
+                {
+                    h.fallen = true;
+                    var ko = UnitArt.HeroClip(c.unit.sprite, "ko");
+                    if (ko != null) StartCoroutine(PlayClip(h, ko));
+                }
+                if (h.fallen && c.Alive) { h.fallen = false; h.idleFrame = -1; }
+                if (h.idle == null || h.spriteEl == null || !c.Alive || h.busy) continue;
                 int f = UnitArt.FrameAt(Time.time + h.idleOffset);
                 if (f == h.idleFrame) continue;
                 h.idleFrame = f;
@@ -669,6 +679,18 @@ namespace Obscure
             Hint("");
             HideDossier();
             if (action.kind == ActionKind.Guard) Sfx.Play(Sound.Guard);
+            // The actor swings, shoots, casts, pounces or reaps first; the blows land on the clip's strike frame.
+            // Melee and pouncing attackers slide toward the other side (heroes face right, enemies left).
+            // An enemy that only charges this turn does not attack yet.
+            var actor = action.actor;
+            if (actor != null && !action.charging && (action.kind == ActionKind.Attack || action.kind == ActionKind.Skill)
+                && huds.TryGetValue(actor, out var actorHud)
+                && (actor.IsEnemy ? UnitArt.EnemyClip(actor.enemy?.id, actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act")) is UnitArt.Clip act)
+            {
+                float lunge = act.style == "melee" || act.style == "pounce" ? (actor.IsEnemy ? -MeleeLunge : MeleeLunge) : 0f;
+                StartCoroutine(PlayClip(actorHud, act, lunge));
+                yield return new WaitForSeconds(act.TimeTo(act.strike));
+            }
             int idx = 0;
             foreach (var h in Battle.Perform(action, power, defense))
             {
@@ -805,6 +827,34 @@ namespace Obscure
                 SpawnPopup(hit.effect == Effectiveness.Weak ? "* WEAK! *" : "RESIST", cx, h.pos.y - 24f,
                     hit.effect == Effectiveness.Weak ? Palette.Gold1 : Palette.Mist3, 14);
             if (!hit.heal && hit.amount > 0) StartCoroutine(Flash(h, hit.target));
+            // A hero who takes damage and stays up flinches (a fall is handled by the KO in Update).
+            if (!hit.heal && hit.amount > 0 && !hit.target.IsEnemy && hit.target.Alive && !h.busy
+                && UnitArt.HeroClip(hit.target.unit.sprite, "hit") is UnitArt.Clip flinch)
+                StartCoroutine(PlayClip(h, flinch));
+        }
+
+        // Melee attackers slide this far toward the other side while they strike (UI px; 7 sprite px at 4x).
+        const float MeleeLunge = 28f;
+        // How far along the lunge each frame of a melee clip sits: hold, lean back, strike, follow through, return, stance.
+        static readonly float[] LungeCurve = { 0f, -0.15f, 1f, 1f, 0.4f, 0f };
+
+        // Plays a one-shot hero clip; the idle loop waits while it runs. A KO's last frame simply stays up
+        // (the idle loop never repaints a fallen hero).
+        IEnumerator PlayClip(Hud h, UnitArt.Clip clip, float lunge = 0f)
+        {
+            if (h.spriteEl == null) yield break;
+            h.busy = true;
+            for (int i = 0; i < clip.frames.Length; i++)
+            {
+                if (h.fallen && clip.style != "ko") break; // the hero fell mid-clip: the KO owns the sprite now
+                h.spriteEl.style.backgroundImage = new StyleBackground(clip.frames[i]);
+                if (lunge != 0f) h.spriteEl.style.translate = new Translate(lunge * (i < LungeCurve.Length ? LungeCurve[i] : 0f), 0);
+                yield return new WaitForSeconds(clip.delays[i]);
+            }
+            if (lunge != 0f) h.spriteEl.style.translate = new Translate(0, 0);
+            if (h.fallen && clip.style != "ko") yield break; // leave busy to the KO clip
+            h.busy = false;
+            h.idleFrame = -1;
         }
 
         void SpawnPopup(string text, float cx, float y, Color color, int fontSize)

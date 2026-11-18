@@ -51,15 +51,16 @@ const ENEMIES = {
     map: [
       "......................", "......hhhhh...........", ".....hhhkhhhh.........", ".....hSSSSSSSS........",
       ".....hSkkSSkkS........", "......SkkSSkeS........", "......SSSSkSSS........", "......SkSkSkSS........",
-      ".......kkkkkkk........", "...oo..SkSkSS.........", "..ooooBBBBBBBbb.......", ".oOOOoBkkkkBB.bb......",
-      ".oOROoBBBBBBB..bb.....", ".oOO.oBkkkkBB...cc....", "..oo..BBBBBB....cc....", "......rjjjjr..........",
+      ".......kkkkkkk........", "...oo..SkSkSS.........", "..ooooBBBBBBBbb.......", ".oOOOoBvvvvBB.bb......",
+      ".oOROoBBBBBBB..bb.....", ".oOO.oBvvvvBB...cc....", "..oo..BBBBBB....cc....", "......rjjjjr..........",
       ".....rrPPPPPr.........", ".....r.LL..LLr........", ".....r.LL..LL.........", "......LL....LL........",
       "......LL....LL........", "......LL....LL........", ".....FFF....FFF.......", ".....FFFF...FFFF......",
     ],
     parts: { h: [E.iron, -0.05, 2.5], S: [E.bone, 0.1, 2.5], B: [E.bone, 0, 2], b: [E.bone, -0.05, 1], c: [E.bone, 0.05, 1],
       j: [E.bone, -0.15, 1], P: [E.bone, -0.05, 1.5], L: [E.bone, -0.1, 1], F: [E.bone, -0.2, 1.5], r: [E.rag, 0, 1],
       o: [E.rust, -0.1, 1], O: [E.rust, 0.1, 2], R: [E.rust, 0.35, 1] },
-    fixed: { k: VOID, e: EYE, X: E.iron[2], Q: GORE }, group: { O: "OR" }, noSeam: "OR",
+    // v: gaps between the ribs; own letter because "k" (sockets, maw) lags with the head and must not drag them along
+    fixed: { k: VOID, v: VOID, e: EYE, X: E.iron[2], Q: GORE }, group: { O: "OR" }, noSeam: "OR",
     ground: "LF", head: "hSke",
     after: (m) => over(over(m, "X", [[18, 15], [19, 15], [19, 16], [20, 16], [20, 17], [21, 18]]), "Q", [[20, 17], [21, 18], [19, 16]]),
   },
@@ -69,14 +70,14 @@ const ENEMIES = {
     map: [
       "......................", "...HHHH...............", "..HHHHHHH.............", ".HHHHHHHHH............",
       ".HHHHHkkkkH...........", ".HHHHkkSSSk...........", ".HHHHkkSkeS...........", ".HHHHkkSSSS...........",
-      ".HHHHHkSkSk...........", ".HHHHHHkkk............", ".HHHHBBBBBBBbbbbb.....", ".HHHBkkkkBBB..........",
-      ".HHHBBBBBBBB..........", ".HHHBkkkkBB...........", ".HH.H.BBBBB...........", ".HH.H..jjjj...........",
+      ".HHHHHkSkSk...........", ".HHHHHHkkk............", ".HHHHBBBBBBBbbbbb.....", ".HHHBvvvvBBB..........",
+      ".HHHBBBBBBBB..........", ".HHHBvvvvBB...........", ".HH.H.BBBBB...........", ".HH.H..jjjj...........",
       ".H..H..PPPP...........", ".H....PP..PP..........", "......LL..LL..........", "......LL..LL..........",
       "......LL...LL.........", "......LL...LL.........", ".....FFF...FFF........", ".....FFFF..FFFF.......",
     ],
     parts: { H: [E.grave, 0, 2.5], S: [E.bone, 0.05, 1.5], B: [E.bone, -0.05, 2], b: [E.bone, -0.05, 1], j: [E.bone, -0.15, 1],
       P: [E.bone, -0.05, 1.5], L: [E.bone, -0.1, 1], F: [E.bone, -0.2, 1.5], w: [WOOD, -0.05, 1], c: [E.bone, 0.1, 1] },
-    fixed: { k: VOID, e: EYE, s: E.bone[1], a: WOOD[2], X: E.iron[3] },
+    fixed: { k: VOID, v: VOID, e: EYE, s: E.bone[1], a: WOOD[2], X: E.iron[3] },
     ground: "LF", head: "HSke",
     after: (m) => {
       const bow = [[15, 1], [16, 2], [16, 3], [17, 4], [17, 5], ...vline(18, 6, 14), [17, 15], [17, 16], [16, 17], [16, 18], [15, 19]];
@@ -170,15 +171,16 @@ const ENEMIES = {
     map: [
       "......................", "......hhhhh...........", ".....hhhhhhh..........", "...hhhhhhhkhhh........",
       ".....ZZZZZZZ..........", ".....ZZkZZeZ..........", ".....ZZZZSSS..........", ".....ZZkSkSk..........",
-      "......ZZSSS...........", "....GGGGGGGG..........", "...GGGGkGGGGAA........", "..GGGGSkSGgGGA........",
-      "..AAGGkSkGGGG.........", "..AAGGGGGgGGG.........", "..ZZ.WWWWWWW..........", "..Z..GGGQGGG..........",
+      "......ZZSSS...........", "....GGGGGGGG..........", "...GGGGvGGGGAA........", "..GGGGbvbGgGGA........",
+      "..AAGGvbvGGGG.........", "..AAGGGGGgGGG.........", "..ZZ.WWWWWWW..........", "..Z..GGGQGGG..........",
       ".....GG.GGGG..........", ".....LLL.MMM..........", ".....LLL.MMM..........", ".....LLL.MMM..........",
       ".....LLL.MMM..........", ".....LLL.MMM..........", "....BBBB.CCCC.........", "....BBBB.CCCCC........",
     ],
     parts: { h: [E.iron, -0.12, 2.5], Z: [E.rot, 0.05, 2], S: [E.bone, 0.05, 1], G: [E.quilt, 0.05, 3], A: [E.quilt, -0.05, 1.5],
       W: [R.leather, -0.1, 1], L: [E.rag, 0, 1.5], M: [E.rag, 0.1, 1.5], B: [R.leather, -0.15, 1.5], C: [R.leather, -0.05, 1.5],
-      w: [WOOD, -0.1, 1], z: [E.rot, 0, 1] },
-    fixed: { k: VOID, e: EYE, g: E.quilt[0], X: E.iron[3], x: E.iron[4], Q: BLOOD[0] }, group: { G: "Gg" },
+      w: [WOOD, -0.1, 1], z: [E.rot, 0, 1], b: [E.bone, 0.05, 1] },
+    // v / b: the coat's torn holes and the ribs behind them; own letters so they stay with the body, not the head
+    fixed: { k: VOID, v: VOID, e: EYE, g: E.quilt[0], X: E.iron[3], x: E.iron[4], Q: BLOOD[0] }, group: { G: "Gg" },
     ground: "LMBC", head: "hZkeS",
     after: (m) => {
       m = over(m, "w", vline(16, 3, 23), true);
