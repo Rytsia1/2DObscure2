@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Status-Badge-Debuff.uss" />
+    <ui:VisualElement class="status-badge-debuff">
+        <ui:Label name="text-0" text="▲ ATK 3T" class="unity-label status-badge-debuff__e" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,249 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp-low {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+._19-rest-campfire-sanctuary {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._19-rest-campfire-sanctuary {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+.campfire-sanctuary-vars.campfire-sanctuary-vars.campfire-sanctuary-vars.campfire-sanctuary-vars.campfire-sanctuary-vars.campfire-sanctuary-vars {
+    color: var(--text-highlight);
+}
+
+.a-quiet-hollow-the-party-can-catch-its-breath-before-pushing-deeper-vars.a-quiet-hollow-the-party-can-catch-its-breath-before-pushing-deeper-vars.a-quiet-hollow-the-party-can-catch-its-breath-before-pushing-deeper-vars.a-quiet-hollow-the-party-can-catch-its-breath-before-pushing-deeper-vars.a-quiet-hollow-the-party-can-catch-its-breath-before-pushing-deeper-vars.a-quiet-hollow-the-party-can-catch-its-breath-before-pushing-deeper-vars {
+    color: var(--text-body);
+}
+
+.frame-vars-32.frame-vars-32.frame-vars-32.frame-vars-32.frame-vars-32.frame-vars-32 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-vars-5.knight-vars-5.knight-vars-5.knight-vars-5.knight-vars-5.knight-vars-5 {
+    color: var(--text-primary);
+}
+
+.hp-vars-11.hp-vars-11.hp-vars-11.hp-vars-11.hp-vars-11.hp-vars-11 {
+    color: var(--text-muted);
+}
+
+.fill-vars-34.fill-vars-34.fill-vars-34.fill-vars-34.fill-vars-34.fill-vars-34 {
+    background-color: var(--vital-hp);
+}
+
+._55-vars-2._55-vars-2._55-vars-2._55-vars-2._55-vars-2._55-vars-2 {
+    color: var(--text-primary);
+}
+
+.mp-vars-10.mp-vars-10.mp-vars-10.mp-vars-10.mp-vars-10.mp-vars-10 {
+    color: var(--text-muted);
+}
+
+.fill-vars-35.fill-vars-35.fill-vars-35.fill-vars-35.fill-vars-35.fill-vars-35 {
+    background-color: var(--vital-mp);
+}
+
+._70-vars._70-vars._70-vars._70-vars._70-vars._70-vars {
+    color: var(--text-primary);
+}
+
+.frame-vars-33.frame-vars-33.frame-vars-33.frame-vars-33.frame-vars-33.frame-vars-33 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.rogue-vars-4.rogue-vars-4.rogue-vars-4.rogue-vars-4.rogue-vars-4.rogue-vars-4 {
+    color: var(--text-primary);
+}
+
+.hp-vars-12.hp-vars-12.hp-vars-12.hp-vars-12.hp-vars-12.hp-vars-12 {
+    color: var(--text-muted);
+}
+
+.fill-vars-36.fill-vars-36.fill-vars-36.fill-vars-36.fill-vars-36.fill-vars-36 {
+    background-color: var(--vital-hp-low);
+}
+
+._30-vars-2._30-vars-2._30-vars-2._30-vars-2._30-vars-2._30-vars-2 {
+    color: var(--text-primary);
+}
+
+.mp-vars-11.mp-vars-11.mp-vars-11.mp-vars-11.mp-vars-11.mp-vars-11 {
+    color: var(--text-muted);
+}
+
+.fill-vars-37.fill-vars-37.fill-vars-37.fill-vars-37.fill-vars-37.fill-vars-37 {
+    background-color: var(--vital-mp);
+}
+
+._50-vars._50-vars._50-vars._50-vars._50-vars._50-vars {
+    color: var(--text-primary);
+}
+
+.frame-vars-34.frame-vars-34.frame-vars-34.frame-vars-34.frame-vars-34.frame-vars-34 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.mage-vars-4.mage-vars-4.mage-vars-4.mage-vars-4.mage-vars-4.mage-vars-4 {
+    color: var(--text-primary);
+}
+
+.hp-vars-13.hp-vars-13.hp-vars-13.hp-vars-13.hp-vars-13.hp-vars-13 {
+    color: var(--text-muted);
+}
+
+.fill-vars-38.fill-vars-38.fill-vars-38.fill-vars-38.fill-vars-38.fill-vars-38 {
+    background-color: var(--vital-hp);
+}
+
+._80-vars-2._80-vars-2._80-vars-2._80-vars-2._80-vars-2._80-vars-2 {
+    color: var(--text-primary);
+}
+
+.mp-vars-12.mp-vars-12.mp-vars-12.mp-vars-12.mp-vars-12.mp-vars-12 {
+    color: var(--text-muted);
+}
+
+.fill-vars-39.fill-vars-39.fill-vars-39.fill-vars-39.fill-vars-39.fill-vars-39 {
+    background-color: var(--vital-mp);
+}
+
+._20-vars-2._20-vars-2._20-vars-2._20-vars-2._20-vars-2._20-vars-2 {
+    color: var(--text-primary);
+}
+
+.frame-vars-35.frame-vars-35.frame-vars-35.frame-vars-35.frame-vars-35.frame-vars-35 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.healer-vars-5.healer-vars-5.healer-vars-5.healer-vars-5.healer-vars-5.healer-vars-5 {
+    color: var(--text-primary);
+}
+
+.hp-vars-14.hp-vars-14.hp-vars-14.hp-vars-14.hp-vars-14.hp-vars-14 {
+    color: var(--text-muted);
+}
+
+.fill-vars-40.fill-vars-40.fill-vars-40.fill-vars-40.fill-vars-40.fill-vars-40 {
+    background-color: var(--vital-hp);
+}
+
+._65-vars._65-vars._65-vars._65-vars._65-vars._65-vars {
+    color: var(--text-primary);
+}
+
+.mp-vars-13.mp-vars-13.mp-vars-13.mp-vars-13.mp-vars-13.mp-vars-13 {
+    color: var(--text-muted);
+}
+
+.fill-vars-41.fill-vars-41.fill-vars-41.fill-vars-41.fill-vars-41.fill-vars-41 {
+    background-color: var(--vital-mp);
+}
+
+._90-vars._90-vars._90-vars._90-vars._90-vars._90-vars {
+    color: var(--text-primary);
+}
+
+.panel-default__i-30 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-21 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.panel-gold__i-15 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-22 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.list-row__i-6 > .list-row.list-row.list-row.list-row.list-row.list-row.list-row {
+    width: 100%;
+}
+
+.list-row-2__i-18 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-19 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-20 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+

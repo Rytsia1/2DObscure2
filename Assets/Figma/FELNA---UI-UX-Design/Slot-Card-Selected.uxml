@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Slot-Card-Selected.uss" />
+    <ui:VisualElement class="slot-card">
+        <ui:VisualElement class="slot-card__e">
+            <ui:Label name="text-0" text="MANUAL SLOT 1" class="unity-label slot-card__e-2" />
+            <ui:VisualElement class="slot-card__e-3" />
+            <ui:Label name="text-1" text="ACT 1 · GEISTWALD" class="unity-label slot-card__e-4" />
+        </ui:VisualElement>
+        <ui:Label name="text-2" text="KNIGHT, ROGUE, MAGE, HEALER" class="unity-label slot-card__e-5" />
+        <ui:Label name="text-3" text="2026-11-17 10:44 · 600 HUB GOLD · 00:12:40" class="unity-label slot-card__e-6" />
+    </ui:VisualElement>
+</ui:UXML>

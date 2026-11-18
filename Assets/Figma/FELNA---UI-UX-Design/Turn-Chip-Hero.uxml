@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Turn-Chip-Hero.uss" />
+    <ui:VisualElement class="turn-chip-hero">
+        <ui:Label name="text-0" text="ROG" class="unity-label turn-chip-hero__e" />
+    </ui:VisualElement>
+</ui:UXML>

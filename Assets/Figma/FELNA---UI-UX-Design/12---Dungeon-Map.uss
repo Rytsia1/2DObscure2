@@ -1,0 +1,271 @@
+.sprite-iconboss {
+    width: 27px;
+    height: 27px;
+}
+
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+._12-dungeon-map {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._12-dungeon-map {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._12-dungeon-map-vars._12-dungeon-map-vars._12-dungeon-map-vars._12-dungeon-map-vars._12-dungeon-map-vars._12-dungeon-map-vars {
+    background-color: var(--bg-ground);
+}
+
+.dungeon-1-of-8-vars.dungeon-1-of-8-vars.dungeon-1-of-8-vars.dungeon-1-of-8-vars.dungeon-1-of-8-vars.dungeon-1-of-8-vars {
+    color: var(--text-muted);
+}
+
+.the-sunken-crypt-vars.the-sunken-crypt-vars.the-sunken-crypt-vars.the-sunken-crypt-vars.the-sunken-crypt-vars.the-sunken-crypt-vars {
+    color: var(--text-accent);
+}
+
+.node-vars-5.node-vars-5.node-vars-5.node-vars-5.node-vars-5.node-vars-5 {
+    color: var(--accent-gold);
+}
+
+.map-field-vars.map-field-vars.map-field-vars.map-field-vars.map-field-vars.map-field-vars {
+    background-color: var(--bg-void);
+}
+
+.node-vars-6.node-vars-6.node-vars-6.node-vars-6.node-vars-6.node-vars-6 {
+    color: var(--text-highlight);
+}
+
+.rectangle-vars-90.rectangle-vars-90.rectangle-vars-90.rectangle-vars-90.rectangle-vars-90.rectangle-vars-90 {
+    background-color: var(--border-line);
+}
+
+.rectangle-vars-91.rectangle-vars-91.rectangle-vars-91.rectangle-vars-91.rectangle-vars-91.rectangle-vars-91 {
+    background-color: var(--bg-ground);
+}
+
+.combat-vars.combat-vars.combat-vars.combat-vars.combat-vars.combat-vars {
+    color: var(--text-body);
+}
+
+.event-vars.event-vars.event-vars.event-vars.event-vars.event-vars {
+    color: var(--text-body);
+}
+
+.shop-vars-3.shop-vars-3.shop-vars-3.shop-vars-3.shop-vars-3.shop-vars-3 {
+    color: var(--text-body);
+}
+
+.rest-vars.rest-vars.rest-vars.rest-vars.rest-vars.rest-vars {
+    color: var(--text-body);
+}
+
+.treasure-vars.treasure-vars.treasure-vars.treasure-vars.treasure-vars.treasure-vars {
+    color: var(--text-body);
+}
+
+.final-dashed-locked-vars.final-dashed-locked-vars.final-dashed-locked-vars.final-dashed-locked-vars.final-dashed-locked-vars.final-dashed-locked-vars {
+    color: var(--text-muted);
+}
+
+.gravebound-archer-hollow-squire-vars.gravebound-archer-hollow-squire-vars.gravebound-archer-hollow-squire-vars.gravebound-archer-hollow-squire-vars.gravebound-archer-hollow-squire-vars.gravebound-archer-hollow-squire-vars {
+    color: var(--text-primary);
+}
+
+.currency-vars.currency-vars.currency-vars.currency-vars.currency-vars.currency-vars {
+    color: var(--text-body);
+}
+
+.node-vars-7.node-vars-7.node-vars-7.node-vars-7.node-vars-7.node-vars-7 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-92.rectangle-vars-92.rectangle-vars-92.rectangle-vars-92.rectangle-vars-92.rectangle-vars-92 {
+    background-color: var(--border-line);
+}
+
+.risk-vars.risk-vars.risk-vars.risk-vars.risk-vars.risk-vars {
+    color: var(--text-body);
+}
+
+.combat-vars-2.combat-vars-2.combat-vars-2.combat-vars-2.combat-vars-2.combat-vars-2 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-93.rectangle-vars-93.rectangle-vars-93.rectangle-vars-93.rectangle-vars-93.rectangle-vars-93 {
+    background-color: var(--border-line);
+}
+
+.frame-vars-9.frame-vars-9.frame-vars-9.frame-vars-9.frame-vars-9.frame-vars-9 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-vars-3.knight-vars-3.knight-vars-3.knight-vars-3.knight-vars-3.knight-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-23.fill-vars-23.fill-vars-23.fill-vars-23.fill-vars-23.fill-vars-23 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-24.fill-vars-24.fill-vars-24.fill-vars-24.fill-vars-24.fill-vars-24 {
+    background-color: var(--vital-mp);
+}
+
+.frame-vars-10.frame-vars-10.frame-vars-10.frame-vars-10.frame-vars-10.frame-vars-10 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.rogue-vars-3.rogue-vars-3.rogue-vars-3.rogue-vars-3.rogue-vars-3.rogue-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-25.fill-vars-25.fill-vars-25.fill-vars-25.fill-vars-25.fill-vars-25 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-26.fill-vars-26.fill-vars-26.fill-vars-26.fill-vars-26.fill-vars-26 {
+    background-color: var(--vital-mp);
+}
+
+.frame-vars-11.frame-vars-11.frame-vars-11.frame-vars-11.frame-vars-11.frame-vars-11 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.mage-vars-3.mage-vars-3.mage-vars-3.mage-vars-3.mage-vars-3.mage-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-27.fill-vars-27.fill-vars-27.fill-vars-27.fill-vars-27.fill-vars-27 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-28.fill-vars-28.fill-vars-28.fill-vars-28.fill-vars-28.fill-vars-28 {
+    background-color: var(--vital-mp);
+}
+
+.frame-vars-12.frame-vars-12.frame-vars-12.frame-vars-12.frame-vars-12.frame-vars-12 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.healer-vars-3.healer-vars-3.healer-vars-3.healer-vars-3.healer-vars-3.healer-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-29.fill-vars-29.fill-vars-29.fill-vars-29.fill-vars-29.fill-vars-29 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-30.fill-vars-30.fill-vars-30.fill-vars-30.fill-vars-30.fill-vars-30 {
+    background-color: var(--vital-mp);
+}
+
+.panel-default__i-21 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-gold__i-8 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-12 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.toast-info__i-2 > .toast-info.toast-info.toast-info.toast-info.toast-info.toast-info.toast-info {
+    width: 100%;
+}
+
+.panel-default__i-22 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-13 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+

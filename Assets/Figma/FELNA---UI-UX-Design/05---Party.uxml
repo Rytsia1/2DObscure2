@@ -1,0 +1,193 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="05---Party.uss" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Element-Chip-PH" src="Element-Chip-PH.uxml" />
+    <Template name="Element-Chip-FI" src="Element-Chip-FI.uxml" />
+    <Template name="Element-Chip-IC" src="Element-Chip-IC.uxml" />
+    <Template name="Element-Chip-SH" src="Element-Chip-SH.uxml" />
+    <Template name="Element-Chip-HO" src="Element-Chip-HO.uxml" />
+    <Template name="Key-Hint" src="Key-Hint.uxml" />
+    <ui:VisualElement class="_05-party _05-party-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Party" class="unity-label party-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 204px; top: 26px;">
+            <AttributeOverrides element-name="text-0" text="4 / 4 · PARTY FULL" />
+        </ui:Instance>
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 1108px; top: 18px;">
+            <AttributeOverrides element-name="text-0" text="0 HUB GOLD" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-3" style="position: absolute; left: 28px; top: 76px; width: 292px; height: 332px;" />
+        <ui:VisualElement class="rectangle-vars-67" style="width: 284px; height: 180px; position: absolute; left: 32px; top: 108px;" />
+        <ui:Label text="I" class="unity-label i-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 42px; top: 82px;" />
+        <ui:Label text="LV 1" class="unity-label lv-1-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 267px; top: 88px;" />
+        <ui:VisualElement class="sprite-knight" style="width: 128px; height: 160px; position: absolute; left: 110px; top: 118px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-ef505139dfbfcdd664ecd710993894c4-2503.svg?fileID=7388822144124034973&amp;guid=3ceefce85cc99d442976c4de4e9f81df&amp;type=3#img-ef505139dfbfcdd664ecd710993894c4-2503&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:Label text="Knight" class="unity-label knight-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 42px; top: 298px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 42px; top: 330px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="HUMAN" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="KNIGHT" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="HP" class="unity-label hp-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 42px; top: 364px;" />
+        <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 68px; top: 368px;">
+            <ui:VisualElement class="fill-vars-9" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="125" class="unity-label _125-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 275px; top: 362px;" />
+        <ui:Label text="MP" class="unity-label mp-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 42px; top: 384px;" />
+        <ui:VisualElement class="gauge-mp" style="width: 190px; padding: 1px; position: absolute; left: 68px; top: 388px;">
+            <ui:VisualElement class="fill-vars-10" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="20" class="unity-label _20-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 284px; top: 382px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-8" style="position: absolute; left: 338px; top: 76px; width: 292px; height: 332px;" />
+        <ui:VisualElement class="rectangle-vars-68" style="width: 284px; height: 180px; position: absolute; left: 342px; top: 108px;" />
+        <ui:Label text="II" class="unity-label ii-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 352px; top: 82px;" />
+        <ui:Label text="LV 1" class="unity-label lv-1-vars-3" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 577px; top: 88px;" />
+        <ui:VisualElement class="sprite-rogue" style="width: 128px; height: 160px; position: absolute; left: 420px; top: 118px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-fe201df5ce0a5a56d3b799f2c6ebc5c3-2319.svg?fileID=7388822144124034973&amp;guid=cbd8cee09ffb4c9468ebeda975257b3d&amp;type=3#img-fe201df5ce0a5a56d3b799f2c6ebc5c3-2319&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:Label text="Rogue" class="unity-label rogue-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 352px; top: 298px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 352px; top: 330px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ELF" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ROGUE" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="HP" class="unity-label hp-vars-2" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 352px; top: 364px;" />
+        <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 378px; top: 368px;">
+            <ui:VisualElement class="fill-vars-11" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="85" class="unity-label _85-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 594px; top: 362px;" />
+        <ui:Label text="MP" class="unity-label mp-vars-2" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 352px; top: 384px;" />
+        <ui:VisualElement class="gauge-mp" style="width: 190px; padding: 1px; position: absolute; left: 378px; top: 388px;">
+            <ui:VisualElement class="fill-vars-12" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="25" class="unity-label _25-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 594px; top: 382px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-9" style="position: absolute; left: 648px; top: 76px; width: 292px; height: 332px;" />
+        <ui:VisualElement class="rectangle-vars-69" style="width: 284px; height: 180px; position: absolute; left: 652px; top: 108px;" />
+        <ui:Label text="III" class="unity-label iii-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 662px; top: 82px;" />
+        <ui:Label text="LV 1" class="unity-label lv-1-vars-4" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 887px; top: 88px;" />
+        <ui:VisualElement class="sprite-mage" style="width: 128px; height: 152px; position: absolute; left: 730px; top: 118px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-5013ea8be30871aab97c2267649cfee2-1958.svg?fileID=7388822144124034973&amp;guid=abc71f96897a2a4439f263950bf28e89&amp;type=3#img-5013ea8be30871aab97c2267649cfee2-1958&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:Label text="Mage" class="unity-label mage-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 662px; top: 298px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 662px; top: 330px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="HIGHBORN" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="MAGE" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="HP" class="unity-label hp-vars-3" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 662px; top: 364px;" />
+        <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 688px; top: 368px;">
+            <ui:VisualElement class="fill-vars-13" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="60" class="unity-label _60-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 904px; top: 362px;" />
+        <ui:Label text="MP" class="unity-label mp-vars-3" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 662px; top: 384px;" />
+        <ui:VisualElement class="gauge-mp" style="width: 190px; padding: 1px; position: absolute; left: 688px; top: 388px;">
+            <ui:VisualElement class="fill-vars-14" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="60" class="unity-label _60-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 904px; top: 382px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-10" style="position: absolute; left: 958px; top: 76px; width: 292px; height: 332px;" />
+        <ui:VisualElement class="rectangle-vars-70" style="width: 284px; height: 180px; position: absolute; left: 962px; top: 108px;" />
+        <ui:Label text="IV" class="unity-label iv-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 972px; top: 82px;" />
+        <ui:Label text="LV 1" class="unity-label lv-1-vars-5" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1197px; top: 88px;" />
+        <ui:VisualElement class="sprite-healer" style="width: 128px; height: 152px; position: absolute; left: 1040px; top: 118px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-c6b2621ea65222f116c2dcf4f3749fc7-2072.svg?fileID=7388822144124034973&amp;guid=09f8f7470d9c2a44b8f8d6dff1eaa954&amp;type=3#img-c6b2621ea65222f116c2dcf4f3749fc7-2072&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:Label text="Healer" class="unity-label healer-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 972px; top: 298px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 972px; top: 330px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="SANCTIFIED" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="HEALER" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="HP" class="unity-label hp-vars-4" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 972px; top: 364px;" />
+        <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 998px; top: 368px;">
+            <ui:VisualElement class="fill-vars-15" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="80" class="unity-label _80-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1214px; top: 362px;" />
+        <ui:Label text="MP" class="unity-label mp-vars-4" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 972px; top: 384px;" />
+        <ui:VisualElement class="gauge-mp" style="width: 190px; padding: 1px; position: absolute; left: 998px; top: 388px;">
+            <ui:VisualElement class="fill-vars-16" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label text="55" class="unity-label _55-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1214px; top: 382px;" />
+        <ui:Label text="▸" class="unity-label node-vars-3" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 230px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-11" style="position: absolute; left: 28px; top: 424px; width: 1224px; height: 212px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-4" style="position: absolute; left: 44px; top: 438px; width: 1192px;">
+            <AttributeOverrides element-name="text-0" text="Party Overview" />
+        </ui:Instance>
+        <ui:Label text="ROLES COVERED" class="unity-label roles-covered-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 48px; top: 484px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 48px; top: 508px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="DEFENDER" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="STRIKER" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="CASTER" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="SUPPORT" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="DAMAGE TYPES AVAILABLE" class="unity-label damage-types-available-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 462px; top: 484px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 462px; top: 510px;">
+            <ui:Instance template="Element-Chip-PH" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="PH" />
+            </ui:Instance>
+            <ui:Instance template="Element-Chip-FI" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="FI" />
+            </ui:Instance>
+            <ui:Instance template="Element-Chip-IC" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="IC" />
+            </ui:Instance>
+            <ui:Instance template="Element-Chip-SH" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="SH" />
+            </ui:Instance>
+            <ui:Instance template="Element-Chip-HO" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="HO" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="NEEDS ATTENTION" class="unity-label needs-attention-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 876px; top: 484px;" />
+        <ui:Label text="ALL MEMBERS READY." class="unity-label all-members-ready-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 876px; top: 508px;" />
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 28px; top: 656px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 152px; top: 666px;">
+            <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="LT RT" />
+                <AttributeOverrides element-name="text-1" text="SELECT MEMBER" />
+            </ui:Instance>
+            <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="S" />
+                <AttributeOverrides element-name="text-1" text="STATUS" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 922px; top: 656px;">
+            <ui:Button text="View Status" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Button text="Confirm Party" class="button-primary unity-button" style="flex-shrink: 0;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

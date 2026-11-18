@@ -1,0 +1,24 @@
+.item-slot {
+    display: flex;
+    width: 56px;
+    height: 56px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    background-color: var(--bg-void);
+    border-color: var(--border-accent);
+    color: var(--rarity-rare);
+}
+
+.item-slot__e.item-slot__e.item-slot__e.item-slot__e.item-slot__e.item-slot__e.item-slot__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--rarity-rare);
+}
+

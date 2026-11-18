@@ -1,0 +1,71 @@
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-rogue__e.sprite-rogue__e.sprite-rogue__e.sprite-rogue__e.sprite-rogue__e.sprite-rogue__e.sprite-rogue__e {
+    -unity-background-image-tint-color: #070A14;
+    position: absolute;
+    left: 6.25%;
+    right: 6.25%;
+    top: 10%;
+    bottom: 0%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-87d53b9b29c1cc7da5dee6dd1fa71e0f-1146.svg?fileID=7388822144124034973&guid=3116030aa9780824ba632cba60e4cf5a&type=3#img-87d53b9b29c1cc7da5dee6dd1fa71e0f-1146");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sprite-rogue__e-2.sprite-rogue__e-2.sprite-rogue__e-2.sprite-rogue__e-2.sprite-rogue__e-2.sprite-rogue__e-2.sprite-rogue__e-2 {
+    -unity-background-image-tint-color: #432F20;
+    position: absolute;
+    left: 12.5%;
+    right: 18.75%;
+    top: 15%;
+    bottom: 5%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-d309e817e6f9d9f0cd64941d9cdc959b-573.svg?fileID=7388822144124034973&guid=d881e94acaae16c40905dd9bb17f1000&type=3#img-d309e817e6f9d9f0cd64941d9cdc959b-573");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sprite-rogue__e-3.sprite-rogue__e-3.sprite-rogue__e-3.sprite-rogue__e-3.sprite-rogue__e-3.sprite-rogue__e-3.sprite-rogue__e-3 {
+    -unity-background-image-tint-color: #D4A383;
+    position: absolute;
+    left: 6.25%;
+    right: 25%;
+    top: 25%;
+    bottom: 30%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-82129abf21f728ba23bd2282133c27cd-229.svg?fileID=7388822144124034973&guid=7c8ef1399b6190d43a4f51dfa18cbb35&type=3#img-82129abf21f728ba23bd2282133c27cd-229");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sprite-rogue__e-4.sprite-rogue__e-4.sprite-rogue__e-4.sprite-rogue__e-4.sprite-rogue__e-4.sprite-rogue__e-4.sprite-rogue__e-4 {
+    -unity-background-image-tint-color: #25315A;
+    position: absolute;
+    left: 25%;
+    right: 31.25%;
+    top: 45%;
+    bottom: 15%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-3c040eee11b2ae5ee50cf6d939a89e68-293.svg?fileID=7388822144124034973&guid=26cf48c76482e0440a7752e479f942f8&type=3#img-3c040eee11b2ae5ee50cf6d939a89e68-293");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sprite-rogue__e-5.sprite-rogue__e-5.sprite-rogue__e-5.sprite-rogue__e-5.sprite-rogue__e-5.sprite-rogue__e-5.sprite-rogue__e-5 {
+    -unity-background-image-tint-color: #B8BFCE;
+    position: absolute;
+    left: 0%;
+    right: 6.25%;
+    top: 45%;
+    bottom: 25%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-16e9d545ffbb669ba2b4c93a2993492c-177.svg?fileID=7388822144124034973&guid=9b411e43bbc03e84bb18bbc1f7e2a175&type=3#img-16e9d545ffbb669ba2b4c93a2993492c-177");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sprite-rogue__e-6.sprite-rogue__e-6.sprite-rogue__e-6.sprite-rogue__e-6.sprite-rogue__e-6.sprite-rogue__e-6.sprite-rogue__e-6 {
+    -unity-background-image-tint-color: #C75B5B;
+    position: absolute;
+    left: 37.5%;
+    right: 50%;
+    top: 55%;
+    bottom: 40%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-e573c2415644507a0e4ad8a611d56b06-138.svg?fileID=7388822144124034973&guid=cf8474f1a6210424a9f72043e2755810&type=3#img-e573c2415644507a0e4ad8a611d56b06-138");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

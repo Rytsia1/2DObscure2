@@ -1,0 +1,157 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="02---Character-Creation---Race.uss" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Tag-Cond" src="Tag-Cond.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Tag-Gold" src="Tag-Gold.uxml" />
+    <Template name="Key-Hint" src="Key-Hint.uxml" />
+    <ui:VisualElement class="_02-character-creation-race _02-character-creation-race-vars" style="overflow: hidden;">
+        <ui:Label text="Create Character" class="unity-label create-character-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 28px; top: 22px;" />
+        <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 405px; top: 22px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="+ NAME" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Keep" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="2 RACE" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="3 CLASS" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="4 ABILITIES" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="5 BACKGROUND" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="6 PASSIVE" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="7 GEAR" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="8 REVIEW" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Instance template="Panel-Default" class="panel-default__i-3" style="position: absolute; left: 28px; top: 70px; width: 250px; height: 566px;" />
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 44px; top: 84px;">
+            <AttributeOverrides element-name="text-0" text="MEMBER 1 / 4" />
+        </ui:Instance>
+        <ui:VisualElement class="rectangle-vars-59" style="width: 242px; height: 200px; position: absolute; left: 32px; top: 112px;" />
+        <ui:VisualElement class="sprite-knight" style="width: 128px; height: 160px; position: absolute; left: 89px; top: 132px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-ef505139dfbfcdd664ecd710993894c4-2503.svg?fileID=7388822144124034973&amp;guid=3ceefce85cc99d442976c4de4e9f81df&amp;type=3#img-ef505139dfbfcdd664ecd710993894c4-2503&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:Label text="Fighter" class="unity-label fighter-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 44px; top: 324px;" />
+        <ui:Label text="LV 1" class="unity-label lv-1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 232px; top: 330px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 44px; top: 358px;">
+            <AttributeOverrides element-name="text-0" text="HUMAN" />
+        </ui:Instance>
+        <ui:Label text="SCORES AFTER RACIAL BONUS" class="unity-label scores-after-racial-bonus-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 44px; top: 392px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 44px; top: 414px;">
+            <AttributeOverrides element-name="text-0" text="STR 9" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 120px; top: 414px;">
+            <AttributeOverrides element-name="text-0" text="DEX 8" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 196px; top: 414px;">
+            <AttributeOverrides element-name="text-0" text="VIT 9" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 44px; top: 448px;">
+            <AttributeOverrides element-name="text-0" text="INT 8" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 120px; top: 448px;">
+            <AttributeOverrides element-name="text-0" text="WIS 8" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 196px; top: 448px;">
+            <AttributeOverrides element-name="text-0" text="CHA 8" />
+        </ui:Instance>
+        <ui:Label text="CAP 15 BEFORE BONUS · 17 AFTER · 20 BY PROGRESSION" class="unity-label cap-15-before-bonus-17-after-20-by-progression-vars" style="width: 218px; font-size: 12px; letter-spacing: 0.48px; white-space: normal; position: absolute; left: 44px; top: 492px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-4" style="position: absolute; left: 296px; top: 70px; width: 300px; height: 566px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-2" style="position: absolute; left: 312px; top: 84px; width: 268px;">
+            <AttributeOverrides element-name="text-0" text="Choose a Race" />
+        </ui:Instance>
+        <ui:VisualElement class="race-human-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 124px;">
+            <ui:Label text="Human" class="unity-label human-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+1 STR +1 VIT" class="unity-label _1-str-1-vit-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 118px; top: 8px;" />
+            <ui:Label text="ADAPTABLE SURVIVORS." class="unity-label adaptable-survivors-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="race-elf-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 182px;">
+            <ui:Label text="Elf" class="unity-label elf-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+2 DEX" class="unity-label _2-dex-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 179px; top: 8px;" />
+            <ui:Label text="SWIFT HUNTERS, ATTUNED." class="unity-label swift-hunters-attuned-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="race-dwarf-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 240px;">
+            <ui:Label text="Dwarf" class="unity-label dwarf-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+2 VIT" class="unity-label _2-vit-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 185px; top: 8px;" />
+            <ui:Label text="STOUT DELVE-FOLK." class="unity-label stout-delve-folk-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="race-halfling-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 298px;">
+            <ui:Label text="Halfling" class="unity-label halfling-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+2 DEX" class="unity-label _2-dex-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 179px; top: 8px;" />
+            <ui:Label text="NIMBLE AND FORTUNATE." class="unity-label nimble-and-fortunate-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="race-dragonborn-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 356px;">
+            <ui:Label text="Dragonborn" class="unity-label dragonborn-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+2 STR" class="unity-label _2-str-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 181px; top: 8px;" />
+            <ui:Label text="PROUD WARRIORS." class="unity-label proud-warriors-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="race-liichtian-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 414px;">
+            <ui:Label text="Liichtian" class="unity-label liichtian-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+2 WIS" class="unity-label _2-wis-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 183px; top: 8px;" />
+            <ui:Label text="MORTALS OF CELESTIAL LINE." class="unity-label mortals-of-celestial-line-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="race-merfolk-vars" style="width: 256px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 320px; top: 472px;">
+            <ui:Label text="Merfolk" class="unity-label merfolk-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 8px; top: 2px;" />
+            <ui:Label text="+2 WIS" class="unity-label _2-wis-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 183px; top: 8px;" />
+            <ui:Label text="DENIZENS OF THE SUNKEN SEA." class="unity-label denizens-of-the-sunken-sea-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 8px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:Label text="▸" class="unity-label node-vars-2" style="font-size: 20px; white-space: nowrap; position: absolute; left: 304px; top: 136px;" />
+        <ui:Instance template="Panel-Gold" class="panel-gold__i" style="position: absolute; left: 614px; top: 70px; width: 638px; height: 566px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-3" style="position: absolute; left: 630px; top: 84px; width: 606px;">
+            <AttributeOverrides element-name="text-0" text="Human" />
+        </ui:Instance>
+        <ui:Label text="ADAPTABLE SURVIVORS OF THE SURFACE KINGDOMS" class="unity-label adaptable-survivors-of-the-surface-kingdoms-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 800px; top: 92px;" />
+        <ui:Label text="RACIAL ABILITY BONUS" class="unity-label racial-ability-bonus-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 630px; top: 132px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 630px; top: 158px;">
+            <ui:Label text="BONUS:" class="unity-label bonus-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="+1 STR" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="+1 VIT" />
+            </ui:Instance>
+            <ui:Label text="APPLIED AFTER POINT BUY" class="unity-label applied-after-point-buy-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="rectangle-vars-60" style="width: 606px; height: 2px; position: absolute; left: 630px; top: 196px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 630px; top: 208px;">
+            <ui:Label text="RACIAL FEAT" class="unity-label racial-feat-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            <ui:Label text="Determination" class="unity-label determination-vars" style="flex-shrink: 0; font-size: 24px; white-space: nowrap;" />
+        </ui:VisualElement>
+        <ui:Label text="SHIELD 20% MAX HP + ALL DAMAGE BONUS +15% FOR 2 TURNS WHEN DROPPED TO ≤ 30% HP (1/BATTLE)." class="unity-label shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars" style="width: 590px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 630px; top: 244px;" />
+        <ui:VisualElement class="rectangle-vars-61" style="width: 606px; height: 2px; position: absolute; left: 630px; top: 300px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 630px; top: 312px;">
+            <ui:Label text="RACIAL UTILITY" class="unity-label racial-utility-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            <ui:Label text="Adaptability" class="unity-label adaptability-vars" style="flex-shrink: 0; font-size: 24px; white-space: nowrap;" />
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ADAPTABLE" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="ADAPTABLE ACROSS VARIED EXPEDITION CHALLENGES." class="unity-label adaptable-across-varied-expedition-challenges-vars" style="width: 590px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 630px; top: 350px;" />
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 28px; top: 656px;" />
+        <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 152px; top: 666px;">
+            <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="UP" />
+                <AttributeOverrides element-name="text-1" text="" />
+            </ui:Instance>
+            <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="DN" />
+                <AttributeOverrides element-name="text-1" text="BROWSE RACES" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="🔒 CONFIRM UNLOCKS ON REVIEW" class="unity-label confirm-unlocks-on-review-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 596px; top: 670px;" />
+        <ui:Button text="Confirm" enabled="false" class="button-slab unity-button" style="position: absolute; left: 916px; top: 656px;" />
+        <ui:Button text="Next: Class" class="button-primary unity-button" style="width: 192px; position: absolute; left: 1060px; top: 656px;" />
+    </ui:VisualElement>
+</ui:UXML>

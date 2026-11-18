@@ -1,0 +1,60 @@
+.currency-tag-hub {
+    display: flex;
+    padding: 6px 12px 6px 10px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #221A08;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    border-color: var(--currency-hub);
+    color: var(--text-highlight);
+}
+
+.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.currency-tag-hub__e-2.currency-tag-hub__e-2.currency-tag-hub__e-2.currency-tag-hub__e-2.currency-tag-hub__e-2.currency-tag-hub__e-2.currency-tag-hub__e-2 {
+    -unity-background-image-tint-color: #C9932E;
+    position: absolute;
+    left: 0%;
+    right: 0%;
+    top: 0%;
+    bottom: 0%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-7ce5bd11ef449cbab785a5b2901e72b2-184.svg?fileID=7388822144124034973&guid=2bad3f732f060524cb1550335fdcbb09&type=3#img-7ce5bd11ef449cbab785a5b2901e72b2-184");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.currency-tag-hub__e-3.currency-tag-hub__e-3.currency-tag-hub__e-3.currency-tag-hub__e-3.currency-tag-hub__e-3.currency-tag-hub__e-3.currency-tag-hub__e-3 {
+    -unity-background-image-tint-color: #FFE6A3;
+    position: absolute;
+    left: 14.286%;
+    right: 14.286%;
+    top: 14.286%;
+    bottom: 14.286%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-962ffaf782fa4b5fd05b211191873001-160.svg?fileID=7388822144124034973&guid=fac2c98785835f2438f708893cabc845&type=3#img-962ffaf782fa4b5fd05b211191873001-160");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.currency-tag-hub__e-4.currency-tag-hub__e-4.currency-tag-hub__e-4.currency-tag-hub__e-4.currency-tag-hub__e-4.currency-tag-hub__e-4.currency-tag-hub__e-4 {
+    -unity-background-image-tint-color: #C9932E;
+    position: absolute;
+    left: 42.857%;
+    right: 42.857%;
+    top: 28.571%;
+    bottom: 28.571%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-cf659107ef18aca356c66f474c7a4ab4-138.svg?fileID=7388822144124034973&guid=13ec0051531725f488b279b0caaded32&type=3#img-cf659107ef18aca356c66f474c7a4ab4-138");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.currency-tag-hub__e-5.currency-tag-hub__e-5.currency-tag-hub__e-5.currency-tag-hub__e-5.currency-tag-hub__e-5.currency-tag-hub__e-5.currency-tag-hub__e-5 {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-highlight);
+}
+

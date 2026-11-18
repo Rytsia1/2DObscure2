@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Sprite-Rogue.uss" />
+    <ui:VisualElement class="sprite-rogue">
+        <ui:VisualElement class="sprite-rogue__e" />
+        <ui:VisualElement class="sprite-rogue__e-2" />
+        <ui:VisualElement class="sprite-rogue__e-3" />
+        <ui:VisualElement class="sprite-rogue__e-4" />
+        <ui:VisualElement class="sprite-rogue__e-5" />
+        <ui:VisualElement class="sprite-rogue__e-6" />
+    </ui:VisualElement>
+</ui:UXML>

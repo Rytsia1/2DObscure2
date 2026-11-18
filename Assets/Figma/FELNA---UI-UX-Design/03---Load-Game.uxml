@@ -1,0 +1,65 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="03---Load-Game.uss" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Slot-Card-Selected" src="Slot-Card-Selected.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Slot-Card" src="Slot-Card.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <ui:VisualElement class="_03-load-game _03-load-game-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Load Game" class="unity-label load-game-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 252px; top: 26px;">
+            <AttributeOverrides element-name="text-0" text="RESTORES CAMPAIGN" />
+        </ui:Instance>
+        <ui:Label text="RETURNS YOU TO THE SANCTUARY HUB." class="unity-label returns-you-to-the-sanctuary-hub-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 465px; top: 32px;" />
+        <ui:VisualElement class="rectangle-vars-62" style="width: 1232px; height: 2px; position: absolute; left: 24px; top: 66px;" />
+        <ui:Instance template="Slot-Card-Selected" style="position: absolute; left: 40px; top: 92px;">
+            <AttributeOverrides element-name="text-0" text="AUTO SAVE" />
+            <AttributeOverrides element-name="text-1" text="ACT 1 · GEISTWALD" />
+            <AttributeOverrides element-name="text-2" text="KNIGHT, ROGUE, MAGE, HEALER" />
+            <AttributeOverrides element-name="text-3" text="2026-11-17 10:44 · 600 HUB GOLD · 00:12:40" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 226px; top: 108px;">
+            <AttributeOverrides element-name="text-0" text="SYSTEM" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i" style="position: absolute; left: 40px; top: 216px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 1" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="EMPTY SLOT — NOTHING TO LOAD." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i-2" style="position: absolute; left: 40px; top: 340px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 2" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="EMPTY SLOT — NOTHING TO LOAD." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i-3" style="position: absolute; left: 660px; top: 92px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 3" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="EMPTY SLOT — NOTHING TO LOAD." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i-4" style="position: absolute; left: 660px; top: 216px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 4" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="EMPTY SLOT — NOTHING TO LOAD." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Default" class="panel-default__i-5" style="position: absolute; left: 660px; top: 340px; width: 580px; height: 260px;" />
+        <ui:Label text="SELECTED: AUTO SAVE" class="unity-label selected-auto-save-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 684px; top: 358px;" />
+        <ui:VisualElement class="rectangle-vars-63" style="width: 532px; height: 2px; position: absolute; left: 684px; top: 396px;" />
+        <ui:Label text="Campaign: Geistwald (Layer 1)&#10;Party: Knight, Rogue, Mage, Healer&#10;Gold: 600 Hub Gold" class="unity-label campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars" style="width: 520px; font-size: 20px; white-space: normal; position: absolute; left: 684px; top: 412px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 684px; top: 528px;">
+            <ui:Instance template="Button-Primary-Focus" class="button-primary-2__i" style="flex-shrink: 0; width: 240px;">
+                <AttributeOverrides element-name="text-0" text="▸" />
+                <AttributeOverrides element-name="text-1" text="LOAD CAMPAIGN" />
+            </ui:Instance>
+            <ui:Button text="BACK" class="button-slab unity-button" style="width: 240px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="width: 1280px; height: 92px; background-color: #0A0E18; position: absolute; left: 0px; top: 628px;" />
+        <ui:Label text="Loading restores your campaign and returns to the Sanctuary Hub." class="unity-label loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 46px; top: 654px;" />
+    </ui:VisualElement>
+</ui:UXML>

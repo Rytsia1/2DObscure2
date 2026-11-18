@@ -1,0 +1,26 @@
+.button-flat {
+    display: flex;
+    padding: 6px 20px 6px 12px;
+    align-items: center;
+    flex-direction: row;
+    background-color: var(--accent-focus-wash);
+}
+
+.button-flat:disabled {
+    opacity: 0.6;
+}
+
+.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-highlight);
+}
+
+.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2 {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-highlight);
+}
+

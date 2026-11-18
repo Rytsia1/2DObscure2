@@ -1,0 +1,196 @@
+.button-flat-2 {
+    display: flex;
+    padding: 6px 20px 6px 12px;
+    align-items: center;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.button-flat-2:disabled {
+    opacity: 0.6;
+    color: var(--text-muted);
+}
+
+.button-flat-2:focus {
+    background-color: var(--accent-focus-wash);
+    color: var(--text-highlight);
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.button-primary {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--accent-gold);
+    border-color: var(--border-focus);
+    color: var(--text-on-accent);
+}
+
+.button-primary:disabled {
+    opacity: 0.85;
+    background-color: var(--accent-gold-dim);
+    color: var(--text-muted);
+}
+
+.button-primary:focus {
+    background-color: var(--text-highlight);
+    border-color: var(--text-highlight);
+}
+
+._01-settings {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._01-settings {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._01-settings-vars._01-settings-vars._01-settings-vars._01-settings-vars._01-settings-vars._01-settings-vars {
+    background-color: var(--bg-ground);
+}
+
+.settings-vars.settings-vars.settings-vars.settings-vars.settings-vars.settings-vars {
+    color: var(--text-accent);
+}
+
+.master-volume-vars.master-volume-vars.master-volume-vars.master-volume-vars.master-volume-vars.master-volume-vars {
+    color: var(--text-primary);
+}
+
+.music-and-sound-effects-vars.music-and-sound-effects-vars.music-and-sound-effects-vars.music-and-sound-effects-vars.music-and-sound-effects-vars.music-and-sound-effects-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-48.rectangle-vars-48.rectangle-vars-48.rectangle-vars-48.rectangle-vars-48.rectangle-vars-48 {
+    background-color: var(--bg-void);
+}
+
+.rectangle-vars-49.rectangle-vars-49.rectangle-vars-49.rectangle-vars-49.rectangle-vars-49.rectangle-vars-49 {
+    background-color: var(--accent-gold);
+}
+
+.rectangle-vars-50.rectangle-vars-50.rectangle-vars-50.rectangle-vars-50.rectangle-vars-50.rectangle-vars-50 {
+    background-color: var(--text-highlight);
+}
+
+._30-vars._30-vars._30-vars._30-vars._30-vars._30-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-51.rectangle-vars-51.rectangle-vars-51.rectangle-vars-51.rectangle-vars-51.rectangle-vars-51 {
+    background-color: var(--border-line);
+}
+
+.music-volume-vars.music-volume-vars.music-volume-vars.music-volume-vars.music-volume-vars.music-volume-vars {
+    color: var(--text-primary);
+}
+
+.music-only-vars.music-only-vars.music-only-vars.music-only-vars.music-only-vars.music-only-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-52.rectangle-vars-52.rectangle-vars-52.rectangle-vars-52.rectangle-vars-52.rectangle-vars-52 {
+    background-color: var(--bg-void);
+}
+
+.rectangle-vars-53.rectangle-vars-53.rectangle-vars-53.rectangle-vars-53.rectangle-vars-53.rectangle-vars-53 {
+    background-color: var(--accent-gold);
+}
+
+.rectangle-vars-54.rectangle-vars-54.rectangle-vars-54.rectangle-vars-54.rectangle-vars-54.rectangle-vars-54 {
+    background-color: var(--text-highlight);
+}
+
+._40-vars._40-vars._40-vars._40-vars._40-vars._40-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-55.rectangle-vars-55.rectangle-vars-55.rectangle-vars-55.rectangle-vars-55.rectangle-vars-55 {
+    background-color: var(--border-line);
+}
+
+.mute-music-vars.mute-music-vars.mute-music-vars.mute-music-vars.mute-music-vars.mute-music-vars {
+    color: var(--text-primary);
+}
+
+.silence-the-soundtrack-vars.silence-the-soundtrack-vars.silence-the-soundtrack-vars.silence-the-soundtrack-vars.silence-the-soundtrack-vars.silence-the-soundtrack-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-56.rectangle-vars-56.rectangle-vars-56.rectangle-vars-56.rectangle-vars-56.rectangle-vars-56 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.rectangle-vars-57.rectangle-vars-57.rectangle-vars-57.rectangle-vars-57.rectangle-vars-57.rectangle-vars-57 {
+    background-color: var(--text-body);
+}
+
+.off-vars.off-vars.off-vars.off-vars.off-vars.off-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-58.rectangle-vars-58.rectangle-vars-58.rectangle-vars-58.rectangle-vars-58.rectangle-vars-58 {
+    background-color: var(--border-line);
+}
+
+.leaving-with-unsaved-changes-asks-apply-discard-vars.leaving-with-unsaved-changes-asks-apply-discard-vars.leaving-with-unsaved-changes-asks-apply-discard-vars.leaving-with-unsaved-changes-asks-apply-discard-vars.leaving-with-unsaved-changes-asks-apply-discard-vars.leaving-with-unsaved-changes-asks-apply-discard-vars {
+    color: var(--text-body);
+}
+
+.panel-default__i > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    height: 100%;
+}
+
+.button-flat__i-2 > .button-flat.button-flat.button-flat.button-flat.button-flat.button-flat.button-flat {
+    width: 100%;
+}
+
+.panel-default__i-2 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+

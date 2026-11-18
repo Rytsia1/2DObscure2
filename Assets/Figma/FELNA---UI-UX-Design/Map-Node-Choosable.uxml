@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Map-Node-Choosable.uss" />
+    <ui:VisualElement class="map-node-2">
+        <ui:Label name="text-0" text="VS" class="unity-label map-node-2__e" />
+    </ui:VisualElement>
+</ui:UXML>

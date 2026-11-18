@@ -1,0 +1,22 @@
+.status-badge-debuff {
+    display: flex;
+    padding: 3px 6px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #280E12;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    border-color: var(--status-error);
+    color: var(--status-error);
+}
+
+.status-badge-debuff__e.status-badge-debuff__e.status-badge-debuff__e.status-badge-debuff__e.status-badge-debuff__e.status-badge-debuff__e.status-badge-debuff__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--status-error);
+}
+

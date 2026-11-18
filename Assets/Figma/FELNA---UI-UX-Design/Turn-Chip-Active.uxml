@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Turn-Chip-Active.uss" />
+    <ui:VisualElement class="turn-chip-active">
+        <ui:Label name="text-0" text="ROG" class="unity-label turn-chip-active__e" />
+    </ui:VisualElement>
+</ui:UXML>

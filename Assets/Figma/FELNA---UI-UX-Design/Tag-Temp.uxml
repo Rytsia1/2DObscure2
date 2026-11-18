@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Tag-Temp.uss" />
+    <ui:VisualElement class="tag-temp">
+        <ui:Label name="text-0" text="TAG" class="unity-label tag-temp__e" />
+    </ui:VisualElement>
+</ui:UXML>

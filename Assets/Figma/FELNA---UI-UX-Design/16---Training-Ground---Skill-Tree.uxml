@@ -1,0 +1,211 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="16---Training-Ground---Skill-Tree.uss" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Map-Node-Current" src="Map-Node-Current.uxml" />
+    <Template name="Map-Node-Choosable" src="Map-Node-Choosable.uxml" />
+    <Template name="Map-Node-Locked" src="Map-Node-Locked.uxml" />
+    <Template name="Tag-Gold" src="Tag-Gold.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Element-Chip-PH" src="Element-Chip-PH.uxml" />
+    <Template name="Button-Slab-Focus" src="Button-Slab-Focus.uxml" />
+    <ui:VisualElement class="_16-training-ground-skill-tree _16-training-ground-skill-tree-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Training Ground" class="unity-label training-ground-vars-2" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 324px; top: 14px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="Q" />
+            </ui:Instance>
+            <ui:VisualElement class="frame-vars-22" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-knight" style="width: 25.6px; height: 32px; position: absolute; left: 3px; top: 0px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-ce6dfffa6f54f748ba72d1ffc02c9b04-3906.svg?fileID=7388822144124034973&amp;guid=aaf529039fe671e4fabb7911ab55361a&amp;type=3#img-ce6dfffa6f54f748ba72d1ffc02c9b04-3906&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="frame-vars-23" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-rogue" style="width: 25.6px; height: 32px; position: absolute; left: 3px; top: 0px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-bdc96b6e2366f867a1e952e020fe9a50-3966.svg?fileID=7388822144124034973&amp;guid=30cc4676c4b914a46bef297b2f630177&amp;type=3#img-bdc96b6e2366f867a1e952e020fe9a50-3966&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="frame-vars-24" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-mage" style="width: 25.6px; height: 30.4px; position: absolute; left: 3px; top: 1px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1622532527ada8ad1ff586587915c72f-3228.svg?fileID=7388822144124034973&amp;guid=e79fc5e53eaa9a34cb738713c6fdf3ea&amp;type=3#img-1622532527ada8ad1ff586587915c72f-3228&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="frame-vars-25" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-healer" style="width: 25.6px; height: 30.4px; position: absolute; left: 3px; top: 1px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-06e341aeb01b3c2aabc36489535b6d93-3433.svg?fileID=7388822144124034973&amp;guid=0e1281a58fe7df6468831c42a0c7afa2&amp;type=3#img-06e341aeb01b3c2aabc36489535b6d93-3433&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="E" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="Knight · Knight · Lv 1" class="unity-label knight-knight-lv-1-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 574px; top: 24px;" />
+        <ui:VisualElement class="frame-vars-26" style="width: 176px; height: 36px; border-width: 2px; overflow: hidden; background-color: #1D1608; position: absolute; left: 1080px; top: 16px;">
+            <ui:Label text="SKILL POINTS" class="unity-label skill-points-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 8px; top: 8px;" />
+            <ui:Label text="0" class="unity-label _0-vars-11" style="font-size: 20px; white-space: nowrap; position: absolute; left: 154px; top: 4px;" />
+        </ui:VisualElement>
+        <ui:Button text="Talents ›" class="button-slab unity-button" style="position: absolute; left: 934px; top: 18px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-27" style="position: absolute; left: 24px; top: 68px; width: 838px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-18" style="position: absolute; left: 40px; top: 84px; width: 806px;">
+            <AttributeOverrides element-name="text-0" text="Knight skill tree" />
+        </ui:Instance>
+        <ui:Label text="□ ACTIVE   ◇ PASSIVE" class="unity-label active-passive-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 660px; top: 92px;" />
+        <ui:Label text="TIER 1" class="unity-label tier-1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 94px; top: 132px;" />
+        <ui:Label text="LV 1" class="unity-label lv-1-vars-7" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 104px; top: 152px;" />
+        <ui:VisualElement class="rectangle-vars-119" style="width: 2px; height: 470px; position: absolute; left: 200px; top: 124px;" />
+        <ui:VisualElement style="width: 160px; height: 470px; background-color: #0F1529; position: absolute; left: 202px; top: 124px;" />
+        <ui:Label text="TIER 2" class="unity-label tier-2-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 255px; top: 132px;" />
+        <ui:Label text="LV 4 · LOCKED" class="unity-label lv-4-locked-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 229px; top: 152px;" />
+        <ui:VisualElement class="rectangle-vars-120" style="width: 2px; height: 470px; position: absolute; left: 362px; top: 124px;" />
+        <ui:VisualElement style="width: 160px; height: 470px; background-color: #0F1529; position: absolute; left: 364px; top: 124px;" />
+        <ui:Label text="TIER 3" class="unity-label tier-3-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 417px; top: 132px;" />
+        <ui:Label text="LV 7 · LOCKED" class="unity-label lv-7-locked-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 391px; top: 152px;" />
+        <ui:VisualElement class="rectangle-vars-121" style="width: 2px; height: 470px; position: absolute; left: 524px; top: 124px;" />
+        <ui:VisualElement style="width: 160px; height: 470px; background-color: #0F1529; position: absolute; left: 526px; top: 124px;" />
+        <ui:Label text="TIER 4" class="unity-label tier-4-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 579px; top: 132px;" />
+        <ui:Label text="LV 10 · LOCKED" class="unity-label lv-10-locked-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 549px; top: 152px;" />
+        <ui:VisualElement class="rectangle-vars-122" style="width: 2px; height: 470px; position: absolute; left: 686px; top: 124px;" />
+        <ui:VisualElement style="width: 160px; height: 470px; background-color: #0F1529; position: absolute; left: 688px; top: 124px;" />
+        <ui:Label text="TIER 5" class="unity-label tier-5-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 741px; top: 132px;" />
+        <ui:Label text="LV 13 · LOCKED" class="unity-label lv-13-locked-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 711px; top: 152px;" />
+        <ui:Instance template="Map-Node-Current" class="map-node__i" style="position: absolute; left: 88px; top: 190px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="SB" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 104px; top: 260px;">
+            <ui:VisualElement class="rectangle-vars-123" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-124" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-125" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Choosable" class="map-node-2__i" style="position: absolute; left: 88px; top: 286px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="FO" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 104px; top: 356px;">
+            <ui:VisualElement class="rectangle-vars-126" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-127" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-128" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Choosable" class="map-node-2__i-2" style="position: absolute; left: 88px; top: 382px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="IN" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 104px; top: 452px;">
+            <ui:VisualElement class="rectangle-vars-129" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-130" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-131" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i" style="position: absolute; left: 88px; top: 478px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="WP" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 104px; top: 548px;">
+            <ui:VisualElement class="rectangle-vars-132" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-133" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-134" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i-2" style="position: absolute; left: 250px; top: 190px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="PS" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 266px; top: 260px;">
+            <ui:VisualElement class="rectangle-vars-135" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-136" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-137" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i-3" style="position: absolute; left: 250px; top: 286px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="GS" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 266px; top: 356px;">
+            <ui:VisualElement class="rectangle-vars-138" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-139" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-140" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i-4" style="position: absolute; left: 412px; top: 190px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="CS" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 428px; top: 260px;">
+            <ui:VisualElement class="rectangle-vars-141" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-142" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-143" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i-5" style="position: absolute; left: 412px; top: 286px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="SW" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 428px; top: 356px;">
+            <ui:VisualElement class="rectangle-vars-144" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-145" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-146" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i-6" style="position: absolute; left: 574px; top: 190px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="AB" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 590px; top: 260px;">
+            <ui:VisualElement class="rectangle-vars-147" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-148" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-149" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Map-Node-Locked" class="map-node-3__i-7" style="position: absolute; left: 736px; top: 190px; width: 64px; height: 64px;">
+            <AttributeOverrides element-name="text-0" text="WW" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 752px; top: 260px;">
+            <ui:VisualElement class="rectangle-vars-150" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-151" style="width: 8px; height: 6px; flex-shrink: 0;" />
+            <ui:VisualElement class="rectangle-vars-152" style="width: 8px; height: 6px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="rectangle-vars-153" style="width: 830px; height: 2px; position: absolute; left: 28px; top: 604px;" />
+        <ui:Label text="LOADOUT" class="unity-label loadout-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 44px; top: 642px;" />
+        <ui:Label text="ACTIVE 3/3" class="unity-label active-3-3-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 148px; top: 642px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 260px; top: 636px;">
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="SB" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="FO" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="IN" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="PASSIVE 0/3   ◇ ◇ ◇" class="unity-label passive-0-3-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 430px; top: 642px;" />
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-12" style="position: absolute; left: 878px; top: 68px; width: 378px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-19" style="position: absolute; left: 894px; top: 84px; width: 346px;">
+            <AttributeOverrides element-name="text-0" text="Shield Bash" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 894px; top: 126px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ACTIVE" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="TIER 1" />
+            </ui:Instance>
+            <ui:Instance template="Element-Chip-PH" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="PH" />
+            </ui:Instance>
+            <ui:Label text="PHYSICAL" class="unity-label physical-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+        </ui:VisualElement>
+        <ui:Label text="STRIKE WITH SHIELD DEALING BREAK DAMAGE WITH A CHANCE TO STUN AND REDUCE DEFENSE." class="unity-label strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars" style="width: 346px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 894px; top: 162px;" />
+        <ui:Label text="MP COST" class="unity-label mp-cost-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 228px;" />
+        <ui:Label text="4" class="unity-label _4-vars-4" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1229px; top: 228px;" />
+        <ui:VisualElement class="rectangle-vars-154" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 250px;" />
+        <ui:Label text="TARGET" class="unity-label target-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 260px;" />
+        <ui:Label text="ENEMY" class="unity-label enemy-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1183px; top: 260px;" />
+        <ui:VisualElement class="rectangle-vars-155" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 282px;" />
+        <ui:Label text="POWER" class="unity-label power-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 292px;" />
+        <ui:Label text="1X" class="unity-label _1x-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1218px; top: 292px;" />
+        <ui:VisualElement class="rectangle-vars-156" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 314px;" />
+        <ui:Label text="COOLDOWN" class="unity-label cooldown-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 324px;" />
+        <ui:Label text="1 TURN" class="unity-label _1-turn-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1179px; top: 324px;" />
+        <ui:VisualElement class="rectangle-vars-157" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 346px;" />
+        <ui:Label text="RANK" class="unity-label rank-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 356px;" />
+        <ui:Label text="1 / 3" class="unity-label _1-3-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1195px; top: 356px;" />
+        <ui:VisualElement class="rectangle-vars-158" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 378px;" />
+        <ui:Label text="REQUIREMENTS" class="unity-label requirements-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 394px;" />
+        <ui:Label text="✓ LEVEL 1 · KNIGHT IS LV 1" class="unity-label level-1-knight-is-lv-1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 416px;" />
+        <ui:Button text="Respec SP" class="button-slab unity-button" style="position: absolute; left: 894px; top: 498px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 894px; top: 562px;">
+            <ui:Instance template="Button-Slab-Focus" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="▸" />
+                <AttributeOverrides element-name="text-1" text="1" />
+            </ui:Instance>
+            <ui:Button text="2" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Button text="3" class="button-slab unity-button" style="flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="rectangle-vars-159" style="width: 370px; height: 2px; position: absolute; left: 882px; top: 616px;" />
+        <ui:Label text="1 SP" class="unity-label _1-sp-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 894px; top: 640px;" />
+        <ui:Label text="NEED 1 MORE SP" class="unity-label need-1-more-sp-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 960px; top: 648px;" />
+        <ui:Button text="Upgrade" enabled="false" class="button-primary unity-button" style="width: 120px; position: absolute; left: 1122px; top: 634px;" />
+        <ui:Label text="EQUIPPED" class="unity-label equipped-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 540px;" />
+        <ui:Button text="Unequip" class="button-slab unity-button" style="position: absolute; left: 1126px; top: 498px;" />
+    </ui:VisualElement>
+</ui:UXML>

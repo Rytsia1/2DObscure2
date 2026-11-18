@@ -1,0 +1,64 @@
+.slot-card-2 {
+    display: flex;
+    width: 580px;
+    height: 112px;
+    padding: 14px 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    border-width: 2px;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.slot-card-2:checked {
+    border-color: var(--border-focus);
+}
+
+.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    align-self: stretch;
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.slot-card-2__e-2.slot-card-2__e-2.slot-card-2__e-2.slot-card-2__e-2.slot-card-2__e-2.slot-card-2__e-2.slot-card-2__e-2 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.slot-card-2__e-3.slot-card-2__e-3.slot-card-2__e-3.slot-card-2__e-3.slot-card-2__e-3.slot-card-2__e-3.slot-card-2__e-3 {
+    height: 1px;
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 0px;
+    overflow: hidden;
+}
+
+.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--status-ok);
+}
+
+.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.slot-card-2__e-6.slot-card-2__e-6.slot-card-2__e-6.slot-card-2__e-6.slot-card-2__e-6.slot-card-2__e-6.slot-card-2__e-6 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+

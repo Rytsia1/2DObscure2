@@ -1,0 +1,381 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-skeleton {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp-low {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-break {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+._22-combat-hud {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._22-combat-hud {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._22-combat-hud-vars._22-combat-hud-vars._22-combat-hud-vars._22-combat-hud-vars._22-combat-hud-vars._22-combat-hud-vars {
+    background-color: var(--bg-ground);
+}
+
+.rectangle-vars-169.rectangle-vars-169.rectangle-vars-169.rectangle-vars-169.rectangle-vars-169.rectangle-vars-169 {
+    background-color: var(--border-line);
+}
+
+.act-1-ashen-ruins-vars.act-1-ashen-ruins-vars.act-1-ashen-ruins-vars.act-1-ashen-ruins-vars.act-1-ashen-ruins-vars.act-1-ashen-ruins-vars {
+    color: var(--text-highlight);
+}
+
+.round-1-vars.round-1-vars.round-1-vars.round-1-vars.round-1-vars.round-1-vars {
+    color: var(--text-accent);
+}
+
+.node-vars-10.node-vars-10.node-vars-10.node-vars-10.node-vars-10.node-vars-10 {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-170.rectangle-vars-170.rectangle-vars-170.rectangle-vars-170.rectangle-vars-170.rectangle-vars-170 {
+    border-color: var(--border-focus);
+}
+
+.strike-enemy-with-weapon-vars.strike-enemy-with-weapon-vars.strike-enemy-with-weapon-vars.strike-enemy-with-weapon-vars.strike-enemy-with-weapon-vars.strike-enemy-with-weapon-vars {
+    color: var(--text-primary);
+}
+
+.node-vars-11.node-vars-11.node-vars-11.node-vars-11.node-vars-11.node-vars-11 {
+    color: var(--text-highlight);
+}
+
+.node-vars-12.node-vars-12.node-vars-12.node-vars-12.node-vars-12.node-vars-12 {
+    color: var(--status-error);
+}
+
+.squire-a-vars.squire-a-vars.squire-a-vars.squire-a-vars.squire-a-vars.squire-a-vars {
+    color: var(--text-primary);
+}
+
+.shield-100-vars.shield-100-vars.shield-100-vars.shield-100-vars.shield-100-vars.shield-100-vars {
+    color: var(--text-accent);
+}
+
+.fill-vars-46.fill-vars-46.fill-vars-46.fill-vars-46.fill-vars-46.fill-vars-46 {
+    background-color: var(--vital-hp-low);
+}
+
+.fill-vars-47.fill-vars-47.fill-vars-47.fill-vars-47.fill-vars-47.fill-vars-47 {
+    background-color: var(--accent-gold);
+}
+
+.weak-ho-fi-vars.weak-ho-fi-vars.weak-ho-fi-vars.weak-ho-fi-vars.weak-ho-fi-vars.weak-ho-fi-vars {
+    color: var(--text-muted);
+}
+
+.squire-b-vars.squire-b-vars.squire-b-vars.squire-b-vars.squire-b-vars.squire-b-vars {
+    color: var(--text-primary);
+}
+
+.shield-100-vars-2.shield-100-vars-2.shield-100-vars-2.shield-100-vars-2.shield-100-vars-2.shield-100-vars-2 {
+    color: var(--text-accent);
+}
+
+.fill-vars-48.fill-vars-48.fill-vars-48.fill-vars-48.fill-vars-48.fill-vars-48 {
+    background-color: var(--vital-hp-low);
+}
+
+.fill-vars-49.fill-vars-49.fill-vars-49.fill-vars-49.fill-vars-49.fill-vars-49 {
+    background-color: var(--accent-gold);
+}
+
+.weak-ho-fi-vars-2.weak-ho-fi-vars-2.weak-ho-fi-vars-2.weak-ho-fi-vars-2.weak-ho-fi-vars-2.weak-ho-fi-vars-2 {
+    color: var(--text-muted);
+}
+
+.intent-rusted-cleave-heavy-vars.intent-rusted-cleave-heavy-vars.intent-rusted-cleave-heavy-vars.intent-rusted-cleave-heavy-vars.intent-rusted-cleave-heavy-vars.intent-rusted-cleave-heavy-vars {
+    color: var(--status-error);
+}
+
+.vitals-knight-vars.vitals-knight-vars.vitals-knight-vars.vitals-knight-vars.vitals-knight-vars.vitals-knight-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.knight-vars-7.knight-vars-7.knight-vars-7.knight-vars-7.knight-vars-7.knight-vars-7 {
+    color: var(--text-primary);
+}
+
+.defender-vars.defender-vars.defender-vars.defender-vars.defender-vars.defender-vars {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-15.hp-vars-15.hp-vars-15.hp-vars-15.hp-vars-15.hp-vars-15 {
+    color: var(--vital-hp);
+}
+
+._125-125-vars-2._125-125-vars-2._125-125-vars-2._125-125-vars-2._125-125-vars-2._125-125-vars-2 {
+    color: var(--text-primary);
+}
+
+.fill-vars-50.fill-vars-50.fill-vars-50.fill-vars-50.fill-vars-50.fill-vars-50 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-14.mp-vars-14.mp-vars-14.mp-vars-14.mp-vars-14.mp-vars-14 {
+    color: var(--vital-mp);
+}
+
+._20-20-vars-2._20-20-vars-2._20-20-vars-2._20-20-vars-2._20-20-vars-2._20-20-vars-2 {
+    color: var(--text-primary);
+}
+
+.fill-vars-51.fill-vars-51.fill-vars-51.fill-vars-51.fill-vars-51.fill-vars-51 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-rogue-vars.vitals-rogue-vars.vitals-rogue-vars.vitals-rogue-vars.vitals-rogue-vars.vitals-rogue-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+}
+
+.rogue-vars-6.rogue-vars-6.rogue-vars-6.rogue-vars-6.rogue-vars-6.rogue-vars-6 {
+    color: var(--text-highlight);
+}
+
+.striker-vars.striker-vars.striker-vars.striker-vars.striker-vars.striker-vars {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-16.hp-vars-16.hp-vars-16.hp-vars-16.hp-vars-16.hp-vars-16 {
+    color: var(--vital-hp);
+}
+
+._85-85-vars._85-85-vars._85-85-vars._85-85-vars._85-85-vars._85-85-vars {
+    color: var(--text-primary);
+}
+
+.fill-vars-52.fill-vars-52.fill-vars-52.fill-vars-52.fill-vars-52.fill-vars-52 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-15.mp-vars-15.mp-vars-15.mp-vars-15.mp-vars-15.mp-vars-15 {
+    color: var(--vital-mp);
+}
+
+._25-25-vars._25-25-vars._25-25-vars._25-25-vars._25-25-vars._25-25-vars {
+    color: var(--text-primary);
+}
+
+.fill-vars-53.fill-vars-53.fill-vars-53.fill-vars-53.fill-vars-53.fill-vars-53 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-mage-vars.vitals-mage-vars.vitals-mage-vars.vitals-mage-vars.vitals-mage-vars.vitals-mage-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.mage-vars-6.mage-vars-6.mage-vars-6.mage-vars-6.mage-vars-6.mage-vars-6 {
+    color: var(--text-primary);
+}
+
+.caster-vars.caster-vars.caster-vars.caster-vars.caster-vars.caster-vars {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-17.hp-vars-17.hp-vars-17.hp-vars-17.hp-vars-17.hp-vars-17 {
+    color: var(--vital-hp);
+}
+
+._60-60-vars._60-60-vars._60-60-vars._60-60-vars._60-60-vars._60-60-vars {
+    color: var(--text-primary);
+}
+
+.fill-vars-54.fill-vars-54.fill-vars-54.fill-vars-54.fill-vars-54.fill-vars-54 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-16.mp-vars-16.mp-vars-16.mp-vars-16.mp-vars-16.mp-vars-16 {
+    color: var(--vital-mp);
+}
+
+._60-60-vars-2._60-60-vars-2._60-60-vars-2._60-60-vars-2._60-60-vars-2._60-60-vars-2 {
+    color: var(--text-primary);
+}
+
+.fill-vars-55.fill-vars-55.fill-vars-55.fill-vars-55.fill-vars-55.fill-vars-55 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-healer-vars.vitals-healer-vars.vitals-healer-vars.vitals-healer-vars.vitals-healer-vars.vitals-healer-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.healer-vars-7.healer-vars-7.healer-vars-7.healer-vars-7.healer-vars-7.healer-vars-7 {
+    color: var(--text-primary);
+}
+
+.support-vars.support-vars.support-vars.support-vars.support-vars.support-vars {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-18.hp-vars-18.hp-vars-18.hp-vars-18.hp-vars-18.hp-vars-18 {
+    color: var(--vital-hp);
+}
+
+._80-80-vars._80-80-vars._80-80-vars._80-80-vars._80-80-vars._80-80-vars {
+    color: var(--text-primary);
+}
+
+.fill-vars-56.fill-vars-56.fill-vars-56.fill-vars-56.fill-vars-56.fill-vars-56 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-17.mp-vars-17.mp-vars-17.mp-vars-17.mp-vars-17.mp-vars-17 {
+    color: var(--vital-mp);
+}
+
+._55-55-vars._55-55-vars._55-55-vars._55-55-vars._55-55-vars._55-55-vars {
+    color: var(--text-primary);
+}
+
+.fill-vars-57.fill-vars-57.fill-vars-57.fill-vars-57.fill-vars-57.fill-vars-57 {
+    background-color: var(--vital-mp);
+}
+
+.attack-vars.attack-vars.attack-vars.attack-vars.attack-vars.attack-vars {
+    color: var(--text-highlight);
+}
+
+.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars {
+    color: var(--text-primary);
+}
+
+.cost-type-physical-vars.cost-type-physical-vars.cost-type-physical-vars.cost-type-physical-vars.cost-type-physical-vars.cost-type-physical-vars {
+    color: var(--text-muted);
+}
+
+.target-enemy-vars.target-enemy-vars.target-enemy-vars.target-enemy-vars.target-enemy-vars.target-enemy-vars {
+    color: var(--text-muted);
+}
+
+.panel-default__i-34 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-35 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.button-slab-2__i-2 > .button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2 {
+    width: 100%;
+}
+
+.panel-raised__i > .panel-raised.panel-raised.panel-raised.panel-raised.panel-raised.panel-raised.panel-raised {
+    width: 100%;
+    height: 100%;
+}
+

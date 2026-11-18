@@ -1,0 +1,317 @@
+._23-dungeon-clear {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._23-dungeon-clear {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+.rectangle-vars-171.rectangle-vars-171.rectangle-vars-171.rectangle-vars-171.rectangle-vars-171.rectangle-vars-171 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-172.rectangle-vars-172.rectangle-vars-172.rectangle-vars-172.rectangle-vars-172.rectangle-vars-172 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-173.rectangle-vars-173.rectangle-vars-173.rectangle-vars-173.rectangle-vars-173.rectangle-vars-173 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-174.rectangle-vars-174.rectangle-vars-174.rectangle-vars-174.rectangle-vars-174.rectangle-vars-174 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-175.rectangle-vars-175.rectangle-vars-175.rectangle-vars-175.rectangle-vars-175.rectangle-vars-175 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-176.rectangle-vars-176.rectangle-vars-176.rectangle-vars-176.rectangle-vars-176.rectangle-vars-176 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-177.rectangle-vars-177.rectangle-vars-177.rectangle-vars-177.rectangle-vars-177.rectangle-vars-177 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-178.rectangle-vars-178.rectangle-vars-178.rectangle-vars-178.rectangle-vars-178.rectangle-vars-178 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-179.rectangle-vars-179.rectangle-vars-179.rectangle-vars-179.rectangle-vars-179.rectangle-vars-179 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-180.rectangle-vars-180.rectangle-vars-180.rectangle-vars-180.rectangle-vars-180.rectangle-vars-180 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-181.rectangle-vars-181.rectangle-vars-181.rectangle-vars-181.rectangle-vars-181.rectangle-vars-181 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-182.rectangle-vars-182.rectangle-vars-182.rectangle-vars-182.rectangle-vars-182.rectangle-vars-182 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-183.rectangle-vars-183.rectangle-vars-183.rectangle-vars-183.rectangle-vars-183.rectangle-vars-183 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-184.rectangle-vars-184.rectangle-vars-184.rectangle-vars-184.rectangle-vars-184.rectangle-vars-184 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-185.rectangle-vars-185.rectangle-vars-185.rectangle-vars-185.rectangle-vars-185.rectangle-vars-185 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-186.rectangle-vars-186.rectangle-vars-186.rectangle-vars-186.rectangle-vars-186.rectangle-vars-186 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-187.rectangle-vars-187.rectangle-vars-187.rectangle-vars-187.rectangle-vars-187.rectangle-vars-187 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-188.rectangle-vars-188.rectangle-vars-188.rectangle-vars-188.rectangle-vars-188.rectangle-vars-188 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-189.rectangle-vars-189.rectangle-vars-189.rectangle-vars-189.rectangle-vars-189.rectangle-vars-189 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-190.rectangle-vars-190.rectangle-vars-190.rectangle-vars-190.rectangle-vars-190.rectangle-vars-190 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-191.rectangle-vars-191.rectangle-vars-191.rectangle-vars-191.rectangle-vars-191.rectangle-vars-191 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-192.rectangle-vars-192.rectangle-vars-192.rectangle-vars-192.rectangle-vars-192.rectangle-vars-192 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-193.rectangle-vars-193.rectangle-vars-193.rectangle-vars-193.rectangle-vars-193.rectangle-vars-193 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-194.rectangle-vars-194.rectangle-vars-194.rectangle-vars-194.rectangle-vars-194.rectangle-vars-194 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-195.rectangle-vars-195.rectangle-vars-195.rectangle-vars-195.rectangle-vars-195.rectangle-vars-195 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-196.rectangle-vars-196.rectangle-vars-196.rectangle-vars-196.rectangle-vars-196.rectangle-vars-196 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-197.rectangle-vars-197.rectangle-vars-197.rectangle-vars-197.rectangle-vars-197.rectangle-vars-197 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-198.rectangle-vars-198.rectangle-vars-198.rectangle-vars-198.rectangle-vars-198.rectangle-vars-198 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-199.rectangle-vars-199.rectangle-vars-199.rectangle-vars-199.rectangle-vars-199.rectangle-vars-199 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-200.rectangle-vars-200.rectangle-vars-200.rectangle-vars-200.rectangle-vars-200.rectangle-vars-200 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-201.rectangle-vars-201.rectangle-vars-201.rectangle-vars-201.rectangle-vars-201.rectangle-vars-201 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-202.rectangle-vars-202.rectangle-vars-202.rectangle-vars-202.rectangle-vars-202.rectangle-vars-202 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-203.rectangle-vars-203.rectangle-vars-203.rectangle-vars-203.rectangle-vars-203.rectangle-vars-203 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-204.rectangle-vars-204.rectangle-vars-204.rectangle-vars-204.rectangle-vars-204.rectangle-vars-204 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-205.rectangle-vars-205.rectangle-vars-205.rectangle-vars-205.rectangle-vars-205.rectangle-vars-205 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-206.rectangle-vars-206.rectangle-vars-206.rectangle-vars-206.rectangle-vars-206.rectangle-vars-206 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-207.rectangle-vars-207.rectangle-vars-207.rectangle-vars-207.rectangle-vars-207.rectangle-vars-207 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-208.rectangle-vars-208.rectangle-vars-208.rectangle-vars-208.rectangle-vars-208.rectangle-vars-208 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-209.rectangle-vars-209.rectangle-vars-209.rectangle-vars-209.rectangle-vars-209.rectangle-vars-209 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-210.rectangle-vars-210.rectangle-vars-210.rectangle-vars-210.rectangle-vars-210.rectangle-vars-210 {
+    background-color: var(--text-primary);
+}
+
+.ellipse-vars.ellipse-vars.ellipse-vars.ellipse-vars.ellipse-vars.ellipse-vars {
+    background-color: var(--text-body);
+}
+
+.dungeon-1-of-8-vars-2.dungeon-1-of-8-vars-2.dungeon-1-of-8-vars-2.dungeon-1-of-8-vars-2.dungeon-1-of-8-vars-2.dungeon-1-of-8-vars-2 {
+    color: var(--text-accent);
+}
+
+.dungeon-clear-vars.dungeon-clear-vars.dungeon-clear-vars.dungeon-clear-vars.dungeon-clear-vars.dungeon-clear-vars {
+    color: var(--text-highlight);
+}
+
+.the-sunken-crypt-vars-3.the-sunken-crypt-vars-3.the-sunken-crypt-vars-3.the-sunken-crypt-vars-3.the-sunken-crypt-vars-3.the-sunken-crypt-vars-3 {
+    color: var(--text-primary);
+}
+
+.node-vars-13.node-vars-13.node-vars-13.node-vars-13.node-vars-13.node-vars-13 {
+    color: var(--accent-gold);
+}
+
+.rate-1-1-vars.rate-1-1-vars.rate-1-1-vars.rate-1-1-vars.rate-1-1-vars.rate-1-1-vars {
+    color: var(--text-primary);
+}
+
+.run-gold-cleared-vars.run-gold-cleared-vars.run-gold-cleared-vars.run-gold-cleared-vars.run-gold-cleared-vars.run-gold-cleared-vars {
+    color: var(--text-muted);
+}
+
+.run-gold-now-0-vars.run-gold-now-0-vars.run-gold-now-0-vars.run-gold-now-0-vars.run-gold-now-0-vars.run-gold-now-0-vars {
+    color: var(--text-body);
+}
+
+._1-1-vars-2._1-1-vars-2._1-1-vars-2._1-1-vars-2._1-1-vars-2._1-1-vars-2 {
+    color: var(--text-accent);
+}
+
+.hub-gold-gained-vars.hub-gold-gained-vars.hub-gold-gained-vars.hub-gold-gained-vars.hub-gold-gained-vars.hub-gold-gained-vars {
+    color: var(--text-muted);
+}
+
+.committed-kept-if-a-later-run-fails-vars.committed-kept-if-a-later-run-fails-vars.committed-kept-if-a-later-run-fails-vars.committed-kept-if-a-later-run-fails-vars.committed-kept-if-a-later-run-fails-vars.committed-kept-if-a-later-run-fails-vars {
+    color: var(--text-body);
+}
+
+.node-vars-14.node-vars-14.node-vars-14.node-vars-14.node-vars-14.node-vars-14 {
+    color: var(--text-body);
+}
+
+.new-hub-gold-total-vars.new-hub-gold-total-vars.new-hub-gold-total-vars.new-hub-gold-total-vars.new-hub-gold-total-vars.new-hub-gold-total-vars {
+    color: var(--text-muted);
+}
+
+._745-vars._745-vars._745-vars._745-vars._745-vars._745-vars {
+    color: var(--text-highlight);
+}
+
+.encounters-vars.encounters-vars.encounters-vars.encounters-vars.encounters-vars.encounters-vars {
+    color: var(--text-muted);
+}
+
+._6-vars-3._6-vars-3._6-vars-3._6-vars-3._6-vars-3._6-vars-3 {
+    color: var(--text-primary);
+}
+
+.cleared-vars.cleared-vars.cleared-vars.cleared-vars.cleared-vars.cleared-vars {
+    color: var(--text-body);
+}
+
+.elites-vars.elites-vars.elites-vars.elites-vars.elites-vars.elites-vars {
+    color: var(--text-muted);
+}
+
+._1-vars-9._1-vars-9._1-vars-9._1-vars-9._1-vars-9._1-vars-9 {
+    color: var(--text-primary);
+}
+
+.vanquished-vars.vanquished-vars.vanquished-vars.vanquished-vars.vanquished-vars.vanquished-vars {
+    color: var(--text-body);
+}
+
+.chambers-vars.chambers-vars.chambers-vars.chambers-vars.chambers-vars.chambers-vars {
+    color: var(--text-muted);
+}
+
+._11-vars-2._11-vars-2._11-vars-2._11-vars-2._11-vars-2._11-vars-2 {
+    color: var(--text-primary);
+}
+
+.visited-vars.visited-vars.visited-vars.visited-vars.visited-vars.visited-vars {
+    color: var(--text-body);
+}
+
+.relics-vars.relics-vars.relics-vars.relics-vars.relics-vars.relics-vars {
+    color: var(--text-muted);
+}
+
+._1-vars-10._1-vars-10._1-vars-10._1-vars-10._1-vars-10._1-vars-10 {
+    color: var(--text-primary);
+}
+
+.owned-kept-vars.owned-kept-vars.owned-kept-vars.owned-kept-vars.owned-kept-vars.owned-kept-vars {
+    color: var(--text-body);
+}
+
+.next-dungeon-2-of-8-unlocked-vars.next-dungeon-2-of-8-unlocked-vars.next-dungeon-2-of-8-unlocked-vars.next-dungeon-2-of-8-unlocked-vars.next-dungeon-2-of-8-unlocked-vars.next-dungeon-2-of-8-unlocked-vars {
+    color: var(--text-primary);
+}
+
+.panel-gold__i-17 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-26 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.panel-default__i-36 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-37 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-38 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-39 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.button-primary-2__i-9 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

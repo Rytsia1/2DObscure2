@@ -1,0 +1,133 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="09---Temple---Revive---Recovery.uss" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Sprite-Rogue" src="Sprite-Rogue.uxml" />
+    <Template name="Gauge-HP-Low" src="Gauge-HP-Low.uxml" />
+    <Template name="Gauge-MP" src="Gauge-MP.uxml" />
+    <Template name="Status-Badge-Debuff" src="Status-Badge-Debuff.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <ui:VisualElement class="_09-temple-revive-recovery _09-temple-revive-recovery-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Temple" class="unity-label temple-vars-2" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 216px; top: 26px;">
+            <AttributeOverrides element-name="text-0" text="REVIVE · RECOVERY · PAYS IN HUB GOLD" />
+        </ui:Instance>
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 1068px; top: 18px;">
+            <AttributeOverrides element-name="text-0" text="1,240 HUB GOLD" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Default" class="panel-default__i-17" style="position: absolute; left: 24px; top: 68px; width: 620px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-9" style="position: absolute; left: 40px; top: 84px; width: 588px;">
+            <AttributeOverrides element-name="text-0" text="Party condition" />
+        </ui:Instance>
+        <ui:VisualElement class="hero-knight-vars" style="width: 588px; height: 100px; border-width: 2px; overflow: hidden; position: absolute; left: 40px; top: 128px;">
+            <ui:VisualElement class="frame-vars-5" style="width: 72px; height: 84px; overflow: hidden; position: absolute; left: 6px; top: 6px;">
+                <ui:VisualElement class="sprite-knight" style="position: absolute; left: 4px; top: 2px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-001abf40f99d3a8a909e73fdfecbb0f5-2327.svg?fileID=7388822144124034973&amp;guid=e3c86600e3bf67a4ea96d6ae906600f1&amp;type=3#img-001abf40f99d3a8a909e73fdfecbb0f5-2327&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:Label text="Knight" class="unity-label knight-vars-2" style="font-size: 20px; white-space: nowrap; position: absolute; left: 94px; top: 8px;" />
+            <ui:Instance template="Tag-Cls" style="position: absolute; left: 94px; top: 40px;">
+                <AttributeOverrides element-name="text-0" text="KNIGHT" />
+            </ui:Instance>
+            <ui:Label text="HP" class="unity-label hp-vars-5" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 16px;" />
+            <ui:VisualElement class="gauge-hp" style="width: 220px; padding: 1px 84px 1px 1px; position: absolute; left: 278px; top: 20px;">
+                <ui:VisualElement class="fill-vars-17" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="MP" class="unity-label mp-vars-5" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 42px;" />
+            <ui:VisualElement class="gauge-mp" style="width: 220px; padding: 1px 45px 1px 1px; position: absolute; left: 278px; top: 46px;">
+                <ui:VisualElement class="fill-vars-18" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="hero-rogue-vars" style="width: 588px; height: 100px; border-width: 2px; overflow: hidden; background-color: #2B2210; position: absolute; left: 40px; top: 240px;">
+            <ui:VisualElement class="frame-vars-6" style="width: 72px; height: 84px; overflow: hidden; position: absolute; left: 6px; top: 6px;">
+                <ui:Instance template="Sprite-Rogue" class="sprite-rogue__i" style="position: absolute; left: 4px; top: 2px;" />
+            </ui:VisualElement>
+            <ui:Label text="Rogue" class="unity-label rogue-vars-2" style="font-size: 20px; white-space: nowrap; position: absolute; left: 94px; top: 8px;" />
+            <ui:Instance template="Tag-Cls" style="position: absolute; left: 94px; top: 40px;">
+                <AttributeOverrides element-name="text-0" text="ROGUE" />
+            </ui:Instance>
+            <ui:Label text="HP" class="unity-label hp-vars-6" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 16px;" />
+            <ui:Instance template="Gauge-HP-Low" class="gauge-hp-low__i" style="position: absolute; left: 278px; top: 20px; width: 220px;" />
+            <ui:Label text="MP" class="unity-label mp-vars-6" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 42px;" />
+            <ui:Instance template="Gauge-MP" class="gauge-mp__i" style="position: absolute; left: 278px; top: 46px; width: 220px;" />
+            <ui:Instance template="Status-Badge-Debuff" style="position: absolute; left: 248px; top: 66px;">
+                <AttributeOverrides element-name="text-0" text="▼ FALLEN" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:VisualElement class="hero-mage-vars" style="width: 588px; height: 100px; border-width: 2px; overflow: hidden; position: absolute; left: 40px; top: 352px;">
+            <ui:VisualElement class="frame-vars-7" style="width: 72px; height: 84px; overflow: hidden; position: absolute; left: 6px; top: 6px;">
+                <ui:VisualElement class="sprite-mage" style="position: absolute; left: 4px; top: 2px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-dceec2a57a5a44b5f97211f36bf14124-1798.svg?fileID=7388822144124034973&amp;guid=64aa63ff9b4ae6744a4e7cb28da79aba&amp;type=3#img-dceec2a57a5a44b5f97211f36bf14124-1798&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:Label text="Mage" class="unity-label mage-vars-2" style="font-size: 20px; white-space: nowrap; position: absolute; left: 94px; top: 8px;" />
+            <ui:Instance template="Tag-Cls" style="position: absolute; left: 94px; top: 40px;">
+                <AttributeOverrides element-name="text-0" text="MAGE" />
+            </ui:Instance>
+            <ui:Label text="HP" class="unity-label hp-vars-7" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 16px;" />
+            <ui:VisualElement class="gauge-hp" style="width: 220px; padding: 1px; position: absolute; left: 278px; top: 20px;">
+                <ui:VisualElement class="fill-vars-19" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="MP" class="unity-label mp-vars-7" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 42px;" />
+            <ui:VisualElement class="gauge-mp" style="width: 220px; padding: 1px 154px 1px 1px; position: absolute; left: 278px; top: 46px;">
+                <ui:VisualElement class="fill-vars-20" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Instance template="Status-Badge-Debuff" style="position: absolute; left: 248px; top: 66px;">
+                <AttributeOverrides element-name="text-0" text="▼ BURN 2T" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:VisualElement class="hero-healer-vars" style="width: 588px; height: 100px; border-width: 2px; overflow: hidden; position: absolute; left: 40px; top: 464px;">
+            <ui:VisualElement class="frame-vars-8" style="width: 72px; height: 84px; overflow: hidden; position: absolute; left: 6px; top: 6px;">
+                <ui:VisualElement class="sprite-healer" style="position: absolute; left: 4px; top: 2px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-b8c42314fc01e32a02ce993f9ee102ba-1952.svg?fileID=7388822144124034973&amp;guid=f4a5a4a827247864ca1181d7b0efac48&amp;type=3#img-b8c42314fc01e32a02ce993f9ee102ba-1952&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:Label text="Healer" class="unity-label healer-vars-2" style="font-size: 20px; white-space: nowrap; position: absolute; left: 94px; top: 8px;" />
+            <ui:Instance template="Tag-Cls" style="position: absolute; left: 94px; top: 40px;">
+                <AttributeOverrides element-name="text-0" text="HEALER" />
+            </ui:Instance>
+            <ui:Label text="HP" class="unity-label hp-vars-8" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 16px;" />
+            <ui:VisualElement class="gauge-hp" style="width: 220px; padding: 1px 23px 1px 1px; position: absolute; left: 278px; top: 20px;">
+                <ui:VisualElement class="fill-vars-21" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="MP" class="unity-label mp-vars-8" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 248px; top: 42px;" />
+            <ui:VisualElement class="gauge-mp" style="width: 220px; padding: 1px; position: absolute; left: 278px; top: 46px;">
+                <ui:VisualElement class="fill-vars-22" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-6" style="position: absolute; left: 660px; top: 68px; width: 596px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-10" style="position: absolute; left: 676px; top: 84px; width: 564px;">
+            <AttributeOverrides element-name="text-0" text="Revive Rogue" />
+        </ui:Instance>
+        <ui:Label text="REVIVE RETURNS A FALLEN HERO AT 50% HP. EXP, LEVEL AND EQUIPMENT ARE KEPT." class="unity-label revive-returns-a-fallen-hero-at-50-hp-exp-level-and-equipment-are-kept-vars" style="width: 560px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 676px; top: 128px;" />
+        <ui:Label text="REVIVE" class="unity-label revive-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 676px; top: 184px;" />
+        <ui:Label text="150 HUB GOLD" class="unity-label _150-hub-gold-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1118px; top: 184px;" />
+        <ui:VisualElement class="rectangle-vars-83" style="width: 564px; height: 2px; position: absolute; left: 676px; top: 206px;" />
+        <ui:Label text="FULL RECOVERY · PARTY" class="unity-label full-recovery-party-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 676px; top: 216px;" />
+        <ui:Label text="60 HUB GOLD" class="unity-label _60-hub-gold-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1127px; top: 216px;" />
+        <ui:VisualElement class="rectangle-vars-84" style="width: 564px; height: 2px; position: absolute; left: 676px; top: 238px;" />
+        <ui:Label text="CLEANSE DEBUFFS" class="unity-label cleanse-debuffs-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 676px; top: 248px;" />
+        <ui:Label text="INCLUDED" class="unity-label included-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1159px; top: 248px;" />
+        <ui:VisualElement class="rectangle-vars-85" style="width: 564px; height: 2px; position: absolute; left: 676px; top: 270px;" />
+        <ui:Label text="RECOVERY: FULL HP AND MP, AND CLEARS DEBUFFS AND NEGATIVE STATUSES. LIVING CHARACTERS ONLY." class="unity-label recovery-full-hp-and-mp-and-clears-debuffs-and-negative-statuses-living-characters-only-vars" style="width: 560px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 676px; top: 292px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 764px; top: 646px;">
+            <ui:Button text="Recover Party · 60" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Instance template="Button-Primary-Focus" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="▸" />
+                <AttributeOverrides element-name="text-1" text="Revive Rogue · 150" />
+            </ui:Instance>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

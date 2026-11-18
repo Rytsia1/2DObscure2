@@ -1,0 +1,28 @@
+.item-slot-2 {
+    display: flex;
+    width: 56px;
+    height: 56px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    background-color: var(--bg-void);
+    border-color: var(--rarity-rare);
+    color: var(--rarity-rare);
+}
+
+.item-slot-2:checked {
+    border-color: var(--border-accent);
+}
+
+.item-slot-2__e.item-slot-2__e.item-slot-2__e.item-slot-2__e.item-slot-2__e.item-slot-2__e.item-slot-2__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--rarity-rare);
+}
+

@@ -1,0 +1,107 @@
+._18-event-whispering-shrine {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._18-event-whispering-shrine {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._18-event-whispering-shrine-vars._18-event-whispering-shrine-vars._18-event-whispering-shrine-vars._18-event-whispering-shrine-vars._18-event-whispering-shrine-vars._18-event-whispering-shrine-vars {
+    background-color: var(--bg-ground);
+}
+
+.frame-vars-31.frame-vars-31.frame-vars-31.frame-vars-31.frame-vars-31.frame-vars-31 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.d1-vars.d1-vars.d1-vars.d1-vars.d1-vars.d1-vars {
+    color: var(--text-accent);
+}
+
+.the-sunken-crypt-vars-2.the-sunken-crypt-vars-2.the-sunken-crypt-vars-2.the-sunken-crypt-vars-2.the-sunken-crypt-vars-2.the-sunken-crypt-vars-2 {
+    color: var(--text-primary);
+}
+
+.node-4-event-vars.node-4-event-vars.node-4-event-vars.node-4-event-vars.node-4-event-vars.node-4-event-vars {
+    color: var(--text-body);
+}
+
+.rectangle-vars-163.rectangle-vars-163.rectangle-vars-163.rectangle-vars-163.rectangle-vars-163.rectangle-vars-163 {
+    background-color: var(--border-line);
+}
+
+.event-vars-2.event-vars-2.event-vars-2.event-vars-2.event-vars-2.event-vars-2 {
+    color: var(--text-accent);
+}
+
+.whispering-shrine-vars.whispering-shrine-vars.whispering-shrine-vars.whispering-shrine-vars.whispering-shrine-vars.whispering-shrine-vars {
+    color: var(--text-highlight);
+}
+
+.a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars.a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars.a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars.a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars.a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars.a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars {
+    color: var(--text-primary);
+}
+
+.choice-1-vars.choice-1-vars.choice-1-vars.choice-1-vars.choice-1-vars.choice-1-vars {
+    border-color: var(--border-default);
+}
+
+._1-vars-4._1-vars-4._1-vars-4._1-vars-4._1-vars-4._1-vars-4 {
+    color: var(--text-muted);
+}
+
+.offer-30-gold-vars.offer-30-gold-vars.offer-30-gold-vars.offer-30-gold-vars.offer-30-gold-vars.offer-30-gold-vars {
+    color: var(--text-muted);
+}
+
+.need-30-gold-vars.need-30-gold-vars.need-30-gold-vars.need-30-gold-vars.need-30-gold-vars.need-30-gold-vars {
+    color: var(--text-muted);
+}
+
+.choice-2-vars.choice-2-vars.choice-2-vars.choice-2-vars.choice-2-vars.choice-2-vars {
+    border-color: var(--border-focus);
+}
+
+._2-vars-4._2-vars-4._2-vars-4._2-vars-4._2-vars-4._2-vars-4 {
+    color: var(--text-accent);
+}
+
+.anoint-weapons-vars.anoint-weapons-vars.anoint-weapons-vars.anoint-weapons-vars.anoint-weapons-vars.anoint-weapons-vars {
+    color: var(--text-highlight);
+}
+
+.next-battle-attack-up-vars.next-battle-attack-up-vars.next-battle-attack-up-vars.next-battle-attack-up-vars.next-battle-attack-up-vars.next-battle-attack-up-vars {
+    color: var(--text-body);
+}
+
+.choice-3-vars.choice-3-vars.choice-3-vars.choice-3-vars.choice-3-vars.choice-3-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+._3-vars._3-vars._3-vars._3-vars._3-vars._3-vars {
+    color: var(--text-accent);
+}
+
+.pray-vars.pray-vars.pray-vars.pray-vars.pray-vars.pray-vars {
+    color: var(--text-primary);
+}
+
+.heal-25-hp-vars.heal-25-hp-vars.heal-25-hp-vars.heal-25-hp-vars.heal-25-hp-vars.heal-25-hp-vars {
+    color: var(--text-body);
+}
+
+.panel-gold__i-14 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+

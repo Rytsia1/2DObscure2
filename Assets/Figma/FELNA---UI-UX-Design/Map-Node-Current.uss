@@ -1,0 +1,24 @@
+.map-node {
+    display: flex;
+    width: 56px;
+    height: 56px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-primary);
+}
+
+.map-node__e.map-node__e.map-node__e.map-node__e.map-node__e.map-node__e.map-node__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+

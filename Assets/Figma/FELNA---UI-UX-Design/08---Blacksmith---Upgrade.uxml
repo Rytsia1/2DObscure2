@@ -1,0 +1,107 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="08---Blacksmith---Upgrade.uss" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Tag-Gold" src="Tag-Gold.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="List-Row-Focus" src="List-Row-Focus.uxml" />
+    <Template name="List-Row" src="List-Row.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Item-Slot-Selected" src="Item-Slot-Selected.uxml" />
+    <Template name="Toast-Info" src="Toast-Info.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <ui:VisualElement class="_08-blacksmith-upgrade _08-blacksmith-upgrade-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Blacksmith" class="unity-label blacksmith-vars-2" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Label text="UPGRADES RAISE BASE STATS ONLY." class="unity-label upgrades-raise-base-stats-only-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 264px; top: 32px;" />
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 1068px; top: 18px;">
+            <AttributeOverrides element-name="text-0" text="1,240 HUB GOLD" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Default" class="panel-default__i-15" style="position: absolute; left: 24px; top: 68px; width: 330px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-7" style="position: absolute; left: 40px; top: 84px; width: 298px;">
+            <AttributeOverrides element-name="text-0" text="Choose equipment" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 40px; top: 124px;">
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ALL" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="WEAPON" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ARMOR" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ACC." />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Instance template="List-Row-Focus" class="list-row__i-3" style="position: absolute; left: 36px; top: 160px; width: 306px;">
+            <AttributeOverrides element-name="text-0" text="Ironbound Longsword +1" />
+            <AttributeOverrides element-name="text-1" text="KNIGHT · MAIN HAND" />
+            <AttributeOverrides element-name="text-2" text="" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-8" style="position: absolute; left: 36px; top: 226px; width: 306px;">
+            <AttributeOverrides element-name="text-0" text="Tideglass Wand" />
+            <AttributeOverrides element-name="text-1" text="MAGE · MAIN HAND" />
+            <AttributeOverrides element-name="text-2" text="" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-9" style="position: absolute; left: 36px; top: 292px; width: 306px;">
+            <AttributeOverrides element-name="text-0" text="Pilgrim's Mace +2" />
+            <AttributeOverrides element-name="text-1" text="HEALER · MAIN HAND" />
+            <AttributeOverrides element-name="text-2" text="" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-10" style="position: absolute; left: 36px; top: 358px; width: 306px;">
+            <AttributeOverrides element-name="text-0" text="Duelist's Twin Daggers" />
+            <AttributeOverrides element-name="text-1" text="ROGUE · MAIN HAND" />
+            <AttributeOverrides element-name="text-2" text="" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-5" style="position: absolute; left: 370px; top: 68px; width: 520px; height: 632px;" />
+        <ui:Instance template="Item-Slot-Selected" class="item-slot__i" style="position: absolute; left: 574px; top: 110px; width: 112px; height: 112px;">
+            <AttributeOverrides element-name="text-0" text="R" />
+        </ui:Instance>
+        <ui:Label text="Ironbound Longsword" class="unity-label ironbound-longsword-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 516px; top: 240px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 572px; top: 280px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="+1" />
+            </ui:Instance>
+            <ui:Label text="›" class="unity-label node-vars-4" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="+2" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="ATK" class="unity-label atk-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 404px; top: 330px;" />
+        <ui:Label text="8 › 10" class="unity-label _8-10-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 802px; top: 330px;" />
+        <ui:VisualElement class="rectangle-vars-77" style="width: 452px; height: 2px; position: absolute; left: 404px; top: 352px;" />
+        <ui:Label text="CRT" class="unity-label crt-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 404px; top: 364px;" />
+        <ui:Label text="3% › 3%" class="unity-label _3-3-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 786px; top: 364px;" />
+        <ui:VisualElement class="rectangle-vars-78" style="width: 452px; height: 2px; position: absolute; left: 404px; top: 386px;" />
+        <ui:Label text="DURABILITY" class="unity-label durability-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 404px; top: 398px;" />
+        <ui:Label text="40 › 45" class="unity-label _40-45-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 789px; top: 398px;" />
+        <ui:VisualElement class="rectangle-vars-79" style="width: 452px; height: 2px; position: absolute; left: 404px; top: 420px;" />
+        <ui:Label text="BASE STATS ONLY. AFFIXES AND CURSES ARE NOT CHANGED BY UPGRADES." class="unity-label base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars" style="width: 452px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 404px; top: 444px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-16" style="position: absolute; left: 906px; top: 68px; width: 350px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-8" style="position: absolute; left: 922px; top: 84px; width: 318px;">
+            <AttributeOverrides element-name="text-0" text="Upgrade cost" />
+        </ui:Instance>
+        <ui:Label text="IRON SCRAP" class="unity-label iron-scrap-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 922px; top: 128px;" />
+        <ui:Label text="3 / 5" class="unity-label _3-5-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1194px; top: 128px;" />
+        <ui:VisualElement class="rectangle-vars-80" style="width: 318px; height: 2px; position: absolute; left: 922px; top: 150px;" />
+        <ui:Label text="EMBER CORE" class="unity-label ember-core-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 922px; top: 160px;" />
+        <ui:Label text="1 / 1" class="unity-label _1-1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1197px; top: 160px;" />
+        <ui:VisualElement class="rectangle-vars-81" style="width: 318px; height: 2px; position: absolute; left: 922px; top: 182px;" />
+        <ui:Label text="HUB GOLD" class="unity-label hub-gold-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 922px; top: 192px;" />
+        <ui:Label text="120" class="unity-label _120-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1209px; top: 192px;" />
+        <ui:VisualElement class="rectangle-vars-82" style="width: 318px; height: 2px; position: absolute; left: 922px; top: 214px;" />
+        <ui:Instance template="Toast-Info" class="toast-info__i" style="position: absolute; left: 922px; top: 236px; width: 318px;">
+            <AttributeOverrides element-name="text-0" text="!" />
+            <AttributeOverrides element-name="text-1" text="SPENDS 120 HUB GOLD. HUB GOLD AFTER: 1,120" />
+        </ui:Instance>
+        <ui:Instance template="Button-Primary-Focus" class="button-primary-2__i-3" style="position: absolute; left: 922px; top: 646px; width: 318px;">
+            <AttributeOverrides element-name="text-0" text="▸" />
+            <AttributeOverrides element-name="text-1" text="Upgrade to +2" />
+        </ui:Instance>
+        <ui:VisualElement class="sprite-iconbattle" style="width: 59.4px; height: 59.4px; position: absolute; left: 600px; top: 136px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-2e5dfee58d9ead458bc908d663c9b407-628.svg?fileID=7388822144124034973&amp;guid=b8aca10fbe0854843b56c8966f00733c&amp;type=3#img-2e5dfee58d9ead458bc908d663c9b407-628&quot;); -unity-background-scale-mode: scale-to-fit;" />
+    </ui:VisualElement>
+</ui:UXML>

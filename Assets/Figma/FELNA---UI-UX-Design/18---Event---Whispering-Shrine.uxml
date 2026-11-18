@@ -1,0 +1,54 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="18---Event---Whispering-Shrine.uss" />
+    <Template name="Currency-Tag-Run" src="Currency-Tag-Run.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Tag-Cond" src="Tag-Cond.uxml" />
+    <Template name="Key-Hint" src="Key-Hint.uxml" />
+    <ui:VisualElement class="_18-event-whispering-shrine _18-event-whispering-shrine-vars" style="overflow: hidden;">
+        <ui:VisualElement class="frame-vars-31" style="width: 470px; height: 36px; border-width: 2px; overflow: hidden; position: absolute; left: 20px; top: 18px;">
+            <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 10px; top: 2px;">
+                <ui:Label text="D1" class="unity-label d1-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="The Sunken Crypt" class="unity-label the-sunken-crypt-vars-2" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="· NODE 4 · EVENT" class="unity-label node-4-event-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Instance template="Currency-Tag-Run" style="position: absolute; left: 1098px; top: 18px;">
+            <AttributeOverrides element-name="text-0" text="45 RUN GOLD" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-14" style="position: absolute; left: 90px; top: 74px; width: 1100px; height: 590px;" />
+        <ui:VisualElement style="width: 424px; height: 582px; position: absolute; left: 94px; top: 78px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-b0206cf45ea75aafd11ace8b7f8bb416-2642.svg?fileID=7388822144124034973&amp;guid=f1690c0422203aa488ccfe374283aadd&amp;type=3#img-b0206cf45ea75aafd11ace8b7f8bb416-2642&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:VisualElement class="rectangle-vars-163" style="width: 2px; height: 582px; position: absolute; left: 518px; top: 78px;" />
+        <ui:Label text="EVENT" class="unity-label event-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 544px; top: 100px;" />
+        <ui:Label text="Whispering Shrine" class="unity-label whispering-shrine-vars" style="font-size: 32px; white-space: nowrap; position: absolute; left: 544px; top: 122px;" />
+        <ui:Label text="A CRACKED SHRINE HUMS. CANDLES RELIGHT AS YOU APPROACH, AND A VOICE ASKS WHAT YOU WILL GIVE." class="unity-label a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars" style="width: 610px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 544px; top: 176px;" />
+        <ui:VisualElement class="choice-1-vars" style="width: 590px; height: 56px; border-width: 2px; overflow: hidden; position: absolute; left: 570px; top: 452px;">
+            <ui:Label text="1" class="unity-label _1-vars-4" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 12px;" />
+            <ui:Label text="Offer 30 gold" class="unity-label offer-30-gold-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 44px; top: 2px;" />
+            <ui:Label text="NEED 30 GOLD" class="unity-label need-30-gold-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 44px; top: 30px;" />
+            <ui:Instance template="Tag-Cond" style="position: absolute; left: 432px; top: 12px;">
+                <AttributeOverrides element-name="text-0" text="NEED 30 GOLD" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:VisualElement class="choice-2-vars" style="width: 590px; height: 56px; border-width: 2px; overflow: hidden; background-color: #2B2210; position: absolute; left: 570px; top: 516px;">
+            <ui:Label text="2" class="unity-label _2-vars-4" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 12px;" />
+            <ui:Label text="Anoint weapons" class="unity-label anoint-weapons-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 44px; top: 2px;" />
+            <ui:Label text="NEXT BATTLE: ATTACK UP" class="unity-label next-battle-attack-up-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 44px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="choice-3-vars" style="width: 590px; height: 56px; border-width: 2px; overflow: hidden; position: absolute; left: 570px; top: 580px;">
+            <ui:Label text="3" class="unity-label _3-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 12px;" />
+            <ui:Label text="Pray" class="unity-label pray-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 44px; top: 2px;" />
+            <ui:Label text="HEAL 25% HP" class="unity-label heal-25-hp-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 44px; top: 30px;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 570px; top: 670px;">
+            <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="UP DN" />
+                <AttributeOverrides element-name="text-1" text="CHOOSE" />
+            </ui:Instance>
+            <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="Z" />
+                <AttributeOverrides element-name="text-1" text="CONFIRM" />
+            </ui:Instance>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

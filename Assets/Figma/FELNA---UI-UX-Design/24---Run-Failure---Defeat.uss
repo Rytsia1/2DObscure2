@@ -1,0 +1,117 @@
+._24-run-failure-defeat {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._24-run-failure-defeat {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+.the-party-has-fallen-this-run-has-ended-vars.the-party-has-fallen-this-run-has-ended-vars.the-party-has-fallen-this-run-has-ended-vars.the-party-has-fallen-this-run-has-ended-vars.the-party-has-fallen-this-run-has-ended-vars.the-party-has-fallen-this-run-has-ended-vars {
+    color: var(--text-primary);
+}
+
+.fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars.fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars.fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars.fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars.fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars.fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars {
+    color: var(--text-body);
+}
+
+.lost-panel-vars.lost-panel-vars.lost-panel-vars.lost-panel-vars.lost-panel-vars.lost-panel-vars {
+    border-color: var(--currency-run);
+}
+
+.gained-in-dungeon-1-vars.gained-in-dungeon-1-vars.gained-in-dungeon-1-vars.gained-in-dungeon-1-vars.gained-in-dungeon-1-vars.gained-in-dungeon-1-vars {
+    color: var(--text-primary);
+}
+
+.not-committed-vars.not-committed-vars.not-committed-vars.not-committed-vars.not-committed-vars.not-committed-vars {
+    color: var(--currency-run-text);
+}
+
+.rectangle-vars-211.rectangle-vars-211.rectangle-vars-211.rectangle-vars-211.rectangle-vars-211.rectangle-vars-211 {
+    background-color: var(--currency-run);
+}
+
+.strike-vars.strike-vars.strike-vars.strike-vars.strike-vars.strike-vars {
+    background-color: var(--currency-run-text);
+}
+
+.run-gold-held-in-dungeon-1-vars.run-gold-held-in-dungeon-1-vars.run-gold-held-in-dungeon-1-vars.run-gold-held-in-dungeon-1-vars.run-gold-held-in-dungeon-1-vars.run-gold-held-in-dungeon-1-vars {
+    color: var(--text-body);
+}
+
+.node-vars-15.node-vars-15.node-vars-15.node-vars-15.node-vars-15.node-vars-15 {
+    color: var(--currency-run);
+}
+
+.equipment-found-in-dungeon-1-vars.equipment-found-in-dungeon-1-vars.equipment-found-in-dungeon-1-vars.equipment-found-in-dungeon-1-vars.equipment-found-in-dungeon-1-vars.equipment-found-in-dungeon-1-vars {
+    color: var(--text-primary);
+}
+
+.node-vars-16.node-vars-16.node-vars-16.node-vars-16.node-vars-16.node-vars-16 {
+    color: var(--currency-run);
+}
+
+.exp-and-levels-gained-here-vars.exp-and-levels-gained-here-vars.exp-and-levels-gained-here-vars.exp-and-levels-gained-here-vars.exp-and-levels-gained-here-vars.exp-and-levels-gained-here-vars {
+    color: var(--text-primary);
+}
+
+.node-vars-17.node-vars-17.node-vars-17.node-vars-17.node-vars-17.node-vars-17 {
+    color: var(--currency-run);
+}
+
+.sp-gained-here-and-skills-bought-with-it-vars.sp-gained-here-and-skills-bought-with-it-vars.sp-gained-here-and-skills-bought-with-it-vars.sp-gained-here-and-skills-bought-with-it-vars.sp-gained-here-and-skills-bought-with-it-vars.sp-gained-here-and-skills-bought-with-it-vars {
+    color: var(--text-primary);
+}
+
+.node-vars-18.node-vars-18.node-vars-18.node-vars-18.node-vars-18.node-vars-18 {
+    color: var(--currency-run);
+}
+
+.consumables-materials-and-key-items-found-here-vars.consumables-materials-and-key-items-found-here-vars.consumables-materials-and-key-items-found-here-vars.consumables-materials-and-key-items-found-here-vars.consumables-materials-and-key-items-found-here-vars.consumables-materials-and-key-items-found-here-vars {
+    color: var(--text-primary);
+}
+
+.committed-progress-vars.committed-progress-vars.committed-progress-vars.committed-progress-vars.committed-progress-vars.committed-progress-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-212.rectangle-vars-212.rectangle-vars-212.rectangle-vars-212.rectangle-vars-212.rectangle-vars-212 {
+    background-color: var(--border-focus);
+}
+
+._0-8-cleared-vars-2._0-8-cleared-vars-2._0-8-cleared-vars-2._0-8-cleared-vars-2._0-8-cleared-vars-2._0-8-cleared-vars-2 {
+    color: var(--text-accent);
+}
+
+.dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars.dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars.dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars.dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars.dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars.dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars {
+    color: var(--text-body);
+}
+
+.levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars.levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars.levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars.levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars.levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars.levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars {
+    color: var(--text-primary);
+}
+
+.from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars.from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars.from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars.from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars.from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars.from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars {
+    color: var(--text-body);
+}
+
+.currency-tag-run__i > .currency-tag-run.currency-tag-run.currency-tag-run.currency-tag-run.currency-tag-run.currency-tag-run.currency-tag-run {
+    opacity: 0.6;
+}
+
+.panel-gold__i-18 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.button-primary-2__i-10 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

@@ -1,0 +1,65 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="11---Save-Game.uss" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Slot-Card" src="Slot-Card.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Slot-Card-Selected" src="Slot-Card-Selected.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <ui:VisualElement class="_11-save-game _11-save-game-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Save Game" class="unity-label save-game-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 252px; top: 26px;">
+            <AttributeOverrides element-name="text-0" text="HUB ONLY" />
+        </ui:Instance>
+        <ui:Label text="SAVES PROGRESS COMMITTED BY YOUR LAST DUNGEON CLEAR." class="unity-label saves-progress-committed-by-your-last-dungeon-clear-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 375px; top: 32px;" />
+        <ui:VisualElement class="rectangle-vars-88" style="width: 1232px; height: 2px; position: absolute; left: 24px; top: 66px;" />
+        <ui:Instance template="Slot-Card" style="position: absolute; left: 40px; top: 92px;">
+            <AttributeOverrides element-name="text-0" text="AUTO SAVE" />
+            <AttributeOverrides element-name="text-1" text="ACT 1 · GEISTWALD" />
+            <AttributeOverrides element-name="text-2" text="KNIGHT, ROGUE, MAGE, HEALER" />
+            <AttributeOverrides element-name="text-3" text="2026-11-17 10:44 · 600 HUB GOLD · 00:12:40" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 226px; top: 108px;">
+            <AttributeOverrides element-name="text-0" text="SYSTEM" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card-Selected" class="slot-card__i" style="position: absolute; left: 40px; top: 216px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 1" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="NO SAVED CAMPAIGN IN THIS SLOT." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i-5" style="position: absolute; left: 40px; top: 340px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 2" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="NO SAVED CAMPAIGN IN THIS SLOT." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i-6" style="position: absolute; left: 660px; top: 92px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 3" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="NO SAVED CAMPAIGN IN THIS SLOT." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Slot-Card" class="slot-card-2__i-7" style="position: absolute; left: 660px; top: 216px;">
+            <AttributeOverrides element-name="text-0" text="MANUAL SLOT 4" />
+            <AttributeOverrides element-name="text-1" text="EMPTY" />
+            <AttributeOverrides element-name="text-2" text="NO SAVED CAMPAIGN IN THIS SLOT." />
+            <AttributeOverrides element-name="text-3" text="" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Default" class="panel-default__i-20" style="position: absolute; left: 660px; top: 340px; width: 580px; height: 260px;" />
+        <ui:Label text="SELECTED: MANUAL SLOT 1" class="unity-label selected-manual-slot-1-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 684px; top: 358px;" />
+        <ui:VisualElement class="rectangle-vars-89" style="width: 532px; height: 2px; position: absolute; left: 684px; top: 396px;" />
+        <ui:Label text="This manual slot is empty.&#10;Save to record your current campaign." class="unity-label this-manual-slot-is-empty-save-to-record-your-current-campaign-vars" style="width: 520px; font-size: 20px; white-space: normal; position: absolute; left: 684px; top: 412px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 684px; top: 528px;">
+            <ui:Instance template="Button-Primary-Focus" class="button-primary-2__i-4" style="flex-shrink: 0; width: 240px;">
+                <AttributeOverrides element-name="text-0" text="▸" />
+                <AttributeOverrides element-name="text-1" text="SAVE GAME" />
+            </ui:Instance>
+            <ui:Button text="BACK" class="button-slab unity-button" style="width: 240px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="width: 1280px; height: 92px; background-color: #0A0E18; position: absolute; left: 0px; top: 628px;" />
+        <ui:Label text="Select a slot to save campaign progress." class="unity-label select-a-slot-to-save-campaign-progress-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 46px; top: 654px;" />
+    </ui:VisualElement>
+</ui:UXML>

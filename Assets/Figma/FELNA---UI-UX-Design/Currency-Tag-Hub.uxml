@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Currency-Tag-Hub.uss" />
+    <ui:VisualElement class="currency-tag-hub">
+        <ui:VisualElement class="currency-tag-hub__e">
+            <ui:VisualElement class="currency-tag-hub__e-2" />
+            <ui:VisualElement class="currency-tag-hub__e-3" />
+            <ui:VisualElement class="currency-tag-hub__e-4" />
+        </ui:VisualElement>
+        <ui:Label name="text-0" text="600 HUB GOLD" class="unity-label currency-tag-hub__e-5" />
+    </ui:VisualElement>
+</ui:UXML>

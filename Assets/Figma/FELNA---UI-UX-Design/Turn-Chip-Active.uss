@@ -1,0 +1,20 @@
+.turn-chip-active {
+    display: flex;
+    padding: 4px 8px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #2B2210;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.turn-chip-active__e.turn-chip-active__e.turn-chip-active__e.turn-chip-active__e.turn-chip-active__e.turn-chip-active__e.turn-chip-active__e {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-highlight);
+}
+

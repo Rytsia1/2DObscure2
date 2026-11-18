@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="List-Row-Focus.uss" />
+    <ui:VisualElement class="list-row">
+        <ui:VisualElement class="list-row__e" />
+        <ui:VisualElement class="list-row__e-2">
+            <ui:Label name="text-0" text="Draught" class="unity-label list-row__e-3" />
+            <ui:Label name="text-1" text="RESTORES 40 HP." class="unity-label list-row__e-4" />
+        </ui:VisualElement>
+        <ui:Label name="text-2" text="20" class="unity-label list-row__e-5" />
+    </ui:VisualElement>
+</ui:UXML>

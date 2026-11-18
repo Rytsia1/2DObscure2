@@ -1,0 +1,256 @@
+.button-flat-2 {
+    display: flex;
+    padding: 6px 20px 6px 12px;
+    align-items: center;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.button-flat-2:disabled {
+    opacity: 0.6;
+    color: var(--text-muted);
+}
+
+.button-flat-2:focus {
+    background-color: var(--accent-focus-wash);
+    color: var(--text-highlight);
+}
+
+._00-main-menu {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._00-main-menu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+.rectangle-vars.rectangle-vars.rectangle-vars.rectangle-vars.rectangle-vars.rectangle-vars {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-2.rectangle-vars-2.rectangle-vars-2.rectangle-vars-2.rectangle-vars-2.rectangle-vars-2 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-3.rectangle-vars-3.rectangle-vars-3.rectangle-vars-3.rectangle-vars-3.rectangle-vars-3 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-4.rectangle-vars-4.rectangle-vars-4.rectangle-vars-4.rectangle-vars-4.rectangle-vars-4 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-5.rectangle-vars-5.rectangle-vars-5.rectangle-vars-5.rectangle-vars-5.rectangle-vars-5 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-6.rectangle-vars-6.rectangle-vars-6.rectangle-vars-6.rectangle-vars-6.rectangle-vars-6 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-7.rectangle-vars-7.rectangle-vars-7.rectangle-vars-7.rectangle-vars-7.rectangle-vars-7 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-8.rectangle-vars-8.rectangle-vars-8.rectangle-vars-8.rectangle-vars-8.rectangle-vars-8 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-9.rectangle-vars-9.rectangle-vars-9.rectangle-vars-9.rectangle-vars-9.rectangle-vars-9 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-10.rectangle-vars-10.rectangle-vars-10.rectangle-vars-10.rectangle-vars-10.rectangle-vars-10 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-11.rectangle-vars-11.rectangle-vars-11.rectangle-vars-11.rectangle-vars-11.rectangle-vars-11 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-12.rectangle-vars-12.rectangle-vars-12.rectangle-vars-12.rectangle-vars-12.rectangle-vars-12 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-13.rectangle-vars-13.rectangle-vars-13.rectangle-vars-13.rectangle-vars-13.rectangle-vars-13 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-14.rectangle-vars-14.rectangle-vars-14.rectangle-vars-14.rectangle-vars-14.rectangle-vars-14 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-15.rectangle-vars-15.rectangle-vars-15.rectangle-vars-15.rectangle-vars-15.rectangle-vars-15 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-16.rectangle-vars-16.rectangle-vars-16.rectangle-vars-16.rectangle-vars-16.rectangle-vars-16 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-17.rectangle-vars-17.rectangle-vars-17.rectangle-vars-17.rectangle-vars-17.rectangle-vars-17 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-18.rectangle-vars-18.rectangle-vars-18.rectangle-vars-18.rectangle-vars-18.rectangle-vars-18 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-19.rectangle-vars-19.rectangle-vars-19.rectangle-vars-19.rectangle-vars-19.rectangle-vars-19 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-20.rectangle-vars-20.rectangle-vars-20.rectangle-vars-20.rectangle-vars-20.rectangle-vars-20 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-21.rectangle-vars-21.rectangle-vars-21.rectangle-vars-21.rectangle-vars-21.rectangle-vars-21 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-22.rectangle-vars-22.rectangle-vars-22.rectangle-vars-22.rectangle-vars-22.rectangle-vars-22 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-23.rectangle-vars-23.rectangle-vars-23.rectangle-vars-23.rectangle-vars-23.rectangle-vars-23 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-24.rectangle-vars-24.rectangle-vars-24.rectangle-vars-24.rectangle-vars-24.rectangle-vars-24 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-25.rectangle-vars-25.rectangle-vars-25.rectangle-vars-25.rectangle-vars-25.rectangle-vars-25 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-26.rectangle-vars-26.rectangle-vars-26.rectangle-vars-26.rectangle-vars-26.rectangle-vars-26 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-27.rectangle-vars-27.rectangle-vars-27.rectangle-vars-27.rectangle-vars-27.rectangle-vars-27 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-28.rectangle-vars-28.rectangle-vars-28.rectangle-vars-28.rectangle-vars-28.rectangle-vars-28 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-29.rectangle-vars-29.rectangle-vars-29.rectangle-vars-29.rectangle-vars-29.rectangle-vars-29 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-30.rectangle-vars-30.rectangle-vars-30.rectangle-vars-30.rectangle-vars-30.rectangle-vars-30 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-31.rectangle-vars-31.rectangle-vars-31.rectangle-vars-31.rectangle-vars-31.rectangle-vars-31 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-32.rectangle-vars-32.rectangle-vars-32.rectangle-vars-32.rectangle-vars-32.rectangle-vars-32 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-33.rectangle-vars-33.rectangle-vars-33.rectangle-vars-33.rectangle-vars-33.rectangle-vars-33 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-34.rectangle-vars-34.rectangle-vars-34.rectangle-vars-34.rectangle-vars-34.rectangle-vars-34 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-35.rectangle-vars-35.rectangle-vars-35.rectangle-vars-35.rectangle-vars-35.rectangle-vars-35 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-36.rectangle-vars-36.rectangle-vars-36.rectangle-vars-36.rectangle-vars-36.rectangle-vars-36 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-37.rectangle-vars-37.rectangle-vars-37.rectangle-vars-37.rectangle-vars-37.rectangle-vars-37 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-38.rectangle-vars-38.rectangle-vars-38.rectangle-vars-38.rectangle-vars-38.rectangle-vars-38 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-39.rectangle-vars-39.rectangle-vars-39.rectangle-vars-39.rectangle-vars-39.rectangle-vars-39 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-40.rectangle-vars-40.rectangle-vars-40.rectangle-vars-40.rectangle-vars-40.rectangle-vars-40 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-41.rectangle-vars-41.rectangle-vars-41.rectangle-vars-41.rectangle-vars-41.rectangle-vars-41 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-42.rectangle-vars-42.rectangle-vars-42.rectangle-vars-42.rectangle-vars-42.rectangle-vars-42 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-43.rectangle-vars-43.rectangle-vars-43.rectangle-vars-43.rectangle-vars-43.rectangle-vars-43 {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-44.rectangle-vars-44.rectangle-vars-44.rectangle-vars-44.rectangle-vars-44.rectangle-vars-44 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-45.rectangle-vars-45.rectangle-vars-45.rectangle-vars-45.rectangle-vars-45.rectangle-vars-45 {
+    background-color: var(--text-muted);
+}
+
+.rectangle-vars-46.rectangle-vars-46.rectangle-vars-46.rectangle-vars-46.rectangle-vars-46.rectangle-vars-46 {
+    background-color: var(--text-primary);
+}
+
+.moon-vars.moon-vars.moon-vars.moon-vars.moon-vars.moon-vars {
+    background-color: var(--text-primary);
+}
+
+.rectangle-vars-47.rectangle-vars-47.rectangle-vars-47.rectangle-vars-47.rectangle-vars-47.rectangle-vars-47 {
+    background-color: var(--accent-gold);
+}
+
+.rule-vars.rule-vars.rule-vars.rule-vars.rule-vars.rule-vars {
+    background-color: var(--accent-gold);
+}
+
+.felna-vars.felna-vars.felna-vars.felna-vars.felna-vars.felna-vars {
+    color: var(--text-highlight);
+}
+
+.node-vars.node-vars.node-vars.node-vars.node-vars.node-vars {
+    color: var(--accent-gold);
+}
+
+.the-world-s-between-eight-layers-down-vars.the-world-s-between-eight-layers-down-vars.the-world-s-between-eight-layers-down-vars.the-world-s-between-eight-layers-down-vars.the-world-s-between-eight-layers-down-vars.the-world-s-between-eight-layers-down-vars {
+    color: var(--text-primary);
+}
+
+.auto-save-geistwald-city-0-of-8-cleared-vars.auto-save-geistwald-city-0-of-8-cleared-vars.auto-save-geistwald-city-0-of-8-cleared-vars.auto-save-geistwald-city-0-of-8-cleared-vars.auto-save-geistwald-city-0-of-8-cleared-vars.auto-save-geistwald-city-0-of-8-cleared-vars {
+    color: var(--text-body);
+}
+
+.v1-0-vars.v1-0-vars.v1-0-vars.v1-0-vars.v1-0-vars.v1-0-vars {
+    color: var(--text-muted);
+}
+
+.button-flat__i > .button-flat.button-flat.button-flat.button-flat.button-flat.button-flat.button-flat {
+    width: 100%;
+}
+

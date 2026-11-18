@@ -1,0 +1,486 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.button-primary {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--accent-gold);
+    border-color: var(--border-focus);
+    color: var(--text-on-accent);
+}
+
+.button-primary:disabled {
+    opacity: 0.85;
+    background-color: var(--accent-gold-dim);
+    color: var(--text-muted);
+}
+
+.button-primary:focus {
+    background-color: var(--text-highlight);
+    border-color: var(--text-highlight);
+}
+
+._16-training-ground-skill-tree {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._16-training-ground-skill-tree {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._16-training-ground-skill-tree-vars._16-training-ground-skill-tree-vars._16-training-ground-skill-tree-vars._16-training-ground-skill-tree-vars._16-training-ground-skill-tree-vars._16-training-ground-skill-tree-vars {
+    background-color: var(--bg-ground);
+}
+
+.training-ground-vars-2.training-ground-vars-2.training-ground-vars-2.training-ground-vars-2.training-ground-vars-2.training-ground-vars-2 {
+    color: var(--text-accent);
+}
+
+.frame-vars-22.frame-vars-22.frame-vars-22.frame-vars-22.frame-vars-22.frame-vars-22 {
+    background-color: var(--bg-void);
+    border-color: var(--border-focus);
+}
+
+.frame-vars-23.frame-vars-23.frame-vars-23.frame-vars-23.frame-vars-23.frame-vars-23 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.frame-vars-24.frame-vars-24.frame-vars-24.frame-vars-24.frame-vars-24.frame-vars-24 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.frame-vars-25.frame-vars-25.frame-vars-25.frame-vars-25.frame-vars-25.frame-vars-25 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-knight-lv-1-vars.knight-knight-lv-1-vars.knight-knight-lv-1-vars.knight-knight-lv-1-vars.knight-knight-lv-1-vars.knight-knight-lv-1-vars {
+    color: var(--text-primary);
+}
+
+.frame-vars-26.frame-vars-26.frame-vars-26.frame-vars-26.frame-vars-26.frame-vars-26 {
+    border-color: var(--border-focus);
+}
+
+.skill-points-vars.skill-points-vars.skill-points-vars.skill-points-vars.skill-points-vars.skill-points-vars {
+    color: var(--text-accent);
+}
+
+._0-vars-11._0-vars-11._0-vars-11._0-vars-11._0-vars-11._0-vars-11 {
+    color: var(--text-highlight);
+}
+
+.active-passive-vars.active-passive-vars.active-passive-vars.active-passive-vars.active-passive-vars.active-passive-vars {
+    color: var(--text-body);
+}
+
+.tier-1-vars.tier-1-vars.tier-1-vars.tier-1-vars.tier-1-vars.tier-1-vars {
+    color: var(--text-accent);
+}
+
+.lv-1-vars-7.lv-1-vars-7.lv-1-vars-7.lv-1-vars-7.lv-1-vars-7.lv-1-vars-7 {
+    color: var(--text-accent);
+}
+
+.rectangle-vars-119.rectangle-vars-119.rectangle-vars-119.rectangle-vars-119.rectangle-vars-119.rectangle-vars-119 {
+    background-color: var(--border-line);
+}
+
+.tier-2-vars.tier-2-vars.tier-2-vars.tier-2-vars.tier-2-vars.tier-2-vars {
+    color: var(--text-muted);
+}
+
+.lv-4-locked-vars.lv-4-locked-vars.lv-4-locked-vars.lv-4-locked-vars.lv-4-locked-vars.lv-4-locked-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-120.rectangle-vars-120.rectangle-vars-120.rectangle-vars-120.rectangle-vars-120.rectangle-vars-120 {
+    background-color: var(--border-line);
+}
+
+.tier-3-vars.tier-3-vars.tier-3-vars.tier-3-vars.tier-3-vars.tier-3-vars {
+    color: var(--text-muted);
+}
+
+.lv-7-locked-vars.lv-7-locked-vars.lv-7-locked-vars.lv-7-locked-vars.lv-7-locked-vars.lv-7-locked-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-121.rectangle-vars-121.rectangle-vars-121.rectangle-vars-121.rectangle-vars-121.rectangle-vars-121 {
+    background-color: var(--border-line);
+}
+
+.tier-4-vars.tier-4-vars.tier-4-vars.tier-4-vars.tier-4-vars.tier-4-vars {
+    color: var(--text-muted);
+}
+
+.lv-10-locked-vars.lv-10-locked-vars.lv-10-locked-vars.lv-10-locked-vars.lv-10-locked-vars.lv-10-locked-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-122.rectangle-vars-122.rectangle-vars-122.rectangle-vars-122.rectangle-vars-122.rectangle-vars-122 {
+    background-color: var(--border-line);
+}
+
+.tier-5-vars.tier-5-vars.tier-5-vars.tier-5-vars.tier-5-vars.tier-5-vars {
+    color: var(--text-muted);
+}
+
+.lv-13-locked-vars.lv-13-locked-vars.lv-13-locked-vars.lv-13-locked-vars.lv-13-locked-vars.lv-13-locked-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-123.rectangle-vars-123.rectangle-vars-123.rectangle-vars-123.rectangle-vars-123.rectangle-vars-123 {
+    background-color: var(--accent-gold);
+}
+
+.rectangle-vars-124.rectangle-vars-124.rectangle-vars-124.rectangle-vars-124.rectangle-vars-124.rectangle-vars-124 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-125.rectangle-vars-125.rectangle-vars-125.rectangle-vars-125.rectangle-vars-125.rectangle-vars-125 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-126.rectangle-vars-126.rectangle-vars-126.rectangle-vars-126.rectangle-vars-126.rectangle-vars-126 {
+    background-color: var(--accent-gold);
+}
+
+.rectangle-vars-127.rectangle-vars-127.rectangle-vars-127.rectangle-vars-127.rectangle-vars-127.rectangle-vars-127 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-128.rectangle-vars-128.rectangle-vars-128.rectangle-vars-128.rectangle-vars-128.rectangle-vars-128 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-129.rectangle-vars-129.rectangle-vars-129.rectangle-vars-129.rectangle-vars-129.rectangle-vars-129 {
+    background-color: var(--accent-gold);
+}
+
+.rectangle-vars-130.rectangle-vars-130.rectangle-vars-130.rectangle-vars-130.rectangle-vars-130.rectangle-vars-130 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-131.rectangle-vars-131.rectangle-vars-131.rectangle-vars-131.rectangle-vars-131.rectangle-vars-131 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-132.rectangle-vars-132.rectangle-vars-132.rectangle-vars-132.rectangle-vars-132.rectangle-vars-132 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-133.rectangle-vars-133.rectangle-vars-133.rectangle-vars-133.rectangle-vars-133.rectangle-vars-133 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-134.rectangle-vars-134.rectangle-vars-134.rectangle-vars-134.rectangle-vars-134.rectangle-vars-134 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-135.rectangle-vars-135.rectangle-vars-135.rectangle-vars-135.rectangle-vars-135.rectangle-vars-135 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-136.rectangle-vars-136.rectangle-vars-136.rectangle-vars-136.rectangle-vars-136.rectangle-vars-136 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-137.rectangle-vars-137.rectangle-vars-137.rectangle-vars-137.rectangle-vars-137.rectangle-vars-137 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-138.rectangle-vars-138.rectangle-vars-138.rectangle-vars-138.rectangle-vars-138.rectangle-vars-138 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-139.rectangle-vars-139.rectangle-vars-139.rectangle-vars-139.rectangle-vars-139.rectangle-vars-139 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-140.rectangle-vars-140.rectangle-vars-140.rectangle-vars-140.rectangle-vars-140.rectangle-vars-140 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-141.rectangle-vars-141.rectangle-vars-141.rectangle-vars-141.rectangle-vars-141.rectangle-vars-141 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-142.rectangle-vars-142.rectangle-vars-142.rectangle-vars-142.rectangle-vars-142.rectangle-vars-142 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-143.rectangle-vars-143.rectangle-vars-143.rectangle-vars-143.rectangle-vars-143.rectangle-vars-143 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-144.rectangle-vars-144.rectangle-vars-144.rectangle-vars-144.rectangle-vars-144.rectangle-vars-144 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-145.rectangle-vars-145.rectangle-vars-145.rectangle-vars-145.rectangle-vars-145.rectangle-vars-145 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-146.rectangle-vars-146.rectangle-vars-146.rectangle-vars-146.rectangle-vars-146.rectangle-vars-146 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-147.rectangle-vars-147.rectangle-vars-147.rectangle-vars-147.rectangle-vars-147.rectangle-vars-147 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-148.rectangle-vars-148.rectangle-vars-148.rectangle-vars-148.rectangle-vars-148.rectangle-vars-148 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-149.rectangle-vars-149.rectangle-vars-149.rectangle-vars-149.rectangle-vars-149.rectangle-vars-149 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-150.rectangle-vars-150.rectangle-vars-150.rectangle-vars-150.rectangle-vars-150.rectangle-vars-150 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-151.rectangle-vars-151.rectangle-vars-151.rectangle-vars-151.rectangle-vars-151.rectangle-vars-151 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-152.rectangle-vars-152.rectangle-vars-152.rectangle-vars-152.rectangle-vars-152.rectangle-vars-152 {
+    background-color: var(--border-default);
+}
+
+.rectangle-vars-153.rectangle-vars-153.rectangle-vars-153.rectangle-vars-153.rectangle-vars-153.rectangle-vars-153 {
+    background-color: var(--border-line);
+}
+
+.loadout-vars.loadout-vars.loadout-vars.loadout-vars.loadout-vars.loadout-vars {
+    color: var(--text-muted);
+}
+
+.active-3-3-vars.active-3-3-vars.active-3-3-vars.active-3-3-vars.active-3-3-vars.active-3-3-vars {
+    color: var(--text-body);
+}
+
+.passive-0-3-vars.passive-0-3-vars.passive-0-3-vars.passive-0-3-vars.passive-0-3-vars.passive-0-3-vars {
+    color: var(--text-body);
+}
+
+.physical-vars.physical-vars.physical-vars.physical-vars.physical-vars.physical-vars {
+    color: var(--text-body);
+}
+
+.strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars.strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars.strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars.strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars.strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars.strike-with-shield-dealing-break-damage-with-a-chance-to-stun-and-reduce-defense-vars {
+    color: var(--text-primary);
+}
+
+.mp-cost-vars.mp-cost-vars.mp-cost-vars.mp-cost-vars.mp-cost-vars.mp-cost-vars {
+    color: var(--text-body);
+}
+
+._4-vars-4._4-vars-4._4-vars-4._4-vars-4._4-vars-4._4-vars-4 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-154.rectangle-vars-154.rectangle-vars-154.rectangle-vars-154.rectangle-vars-154.rectangle-vars-154 {
+    background-color: var(--border-line);
+}
+
+.target-vars.target-vars.target-vars.target-vars.target-vars.target-vars {
+    color: var(--text-body);
+}
+
+.enemy-vars.enemy-vars.enemy-vars.enemy-vars.enemy-vars.enemy-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-155.rectangle-vars-155.rectangle-vars-155.rectangle-vars-155.rectangle-vars-155.rectangle-vars-155 {
+    background-color: var(--border-line);
+}
+
+.power-vars.power-vars.power-vars.power-vars.power-vars.power-vars {
+    color: var(--text-body);
+}
+
+._1x-vars._1x-vars._1x-vars._1x-vars._1x-vars._1x-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-156.rectangle-vars-156.rectangle-vars-156.rectangle-vars-156.rectangle-vars-156.rectangle-vars-156 {
+    background-color: var(--border-line);
+}
+
+.cooldown-vars.cooldown-vars.cooldown-vars.cooldown-vars.cooldown-vars.cooldown-vars {
+    color: var(--text-body);
+}
+
+._1-turn-vars._1-turn-vars._1-turn-vars._1-turn-vars._1-turn-vars._1-turn-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-157.rectangle-vars-157.rectangle-vars-157.rectangle-vars-157.rectangle-vars-157.rectangle-vars-157 {
+    background-color: var(--border-line);
+}
+
+.rank-vars.rank-vars.rank-vars.rank-vars.rank-vars.rank-vars {
+    color: var(--text-body);
+}
+
+._1-3-vars._1-3-vars._1-3-vars._1-3-vars._1-3-vars._1-3-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-158.rectangle-vars-158.rectangle-vars-158.rectangle-vars-158.rectangle-vars-158.rectangle-vars-158 {
+    background-color: var(--border-line);
+}
+
+.requirements-vars.requirements-vars.requirements-vars.requirements-vars.requirements-vars.requirements-vars {
+    color: var(--text-muted);
+}
+
+.level-1-knight-is-lv-1-vars.level-1-knight-is-lv-1-vars.level-1-knight-is-lv-1-vars.level-1-knight-is-lv-1-vars.level-1-knight-is-lv-1-vars.level-1-knight-is-lv-1-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-159.rectangle-vars-159.rectangle-vars-159.rectangle-vars-159.rectangle-vars-159.rectangle-vars-159 {
+    background-color: var(--border-line);
+}
+
+._1-sp-vars._1-sp-vars._1-sp-vars._1-sp-vars._1-sp-vars._1-sp-vars {
+    color: var(--text-highlight);
+}
+
+.need-1-more-sp-vars.need-1-more-sp-vars.need-1-more-sp-vars.need-1-more-sp-vars.need-1-more-sp-vars.need-1-more-sp-vars {
+    color: var(--status-error);
+}
+
+.equipped-vars-2.equipped-vars-2.equipped-vars-2.equipped-vars-2.equipped-vars-2.equipped-vars-2 {
+    color: var(--text-body);
+}
+
+.panel-default__i-27 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-18 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.map-node__i > .map-node.map-node.map-node.map-node.map-node.map-node.map-node {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-2__i > .map-node-2.map-node-2.map-node-2.map-node-2.map-node-2.map-node-2.map-node-2 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-2__i-2 > .map-node-2.map-node-2.map-node-2.map-node-2.map-node-2.map-node-2.map-node-2 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-2 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-3 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-4 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-5 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-6 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-7 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-gold__i-12 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-19 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+

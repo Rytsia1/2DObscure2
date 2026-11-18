@@ -13,7 +13,6 @@ namespace Obscure.Tests
         string savedSettingsJson;
         string savedRunJson;
         float savedAudioVolume;
-        UnityEngine.InputSystem.Key savedQteKey;
 
         [OneTimeSetUp]
         public void Setup()
@@ -32,7 +31,6 @@ namespace Obscure.Tests
             savedSettingsJson = PlayerPrefs.HasKey(GameSettings.PrefKey) ? PlayerPrefs.GetString(GameSettings.PrefKey, null) : null;
             savedRunJson = PlayerPrefs.HasKey(GameSave.PrefKey) ? PlayerPrefs.GetString(GameSave.PrefKey, null) : null;
             savedAudioVolume = AudioListener.volume;
-            savedQteKey = Controls.QteKey;
         }
 
         [TearDown]
@@ -45,8 +43,8 @@ namespace Obscure.Tests
             else PlayerPrefs.SetString(GameSave.PrefKey, savedRunJson);
 
             PlayerPrefs.Save();
+            GameSettings.Load().Apply();
             AudioListener.volume = savedAudioVolume;
-            Controls.QteKey = savedQteKey;
         }
 
         static RunState CreateTestRun(int seed = 42, int act = 1)

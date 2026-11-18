@@ -1,0 +1,114 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+._03-load-game {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._03-load-game {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._03-load-game-vars._03-load-game-vars._03-load-game-vars._03-load-game-vars._03-load-game-vars._03-load-game-vars {
+    background-color: var(--bg-ground);
+}
+
+.load-game-vars.load-game-vars.load-game-vars.load-game-vars.load-game-vars.load-game-vars {
+    color: var(--text-accent);
+}
+
+.returns-you-to-the-sanctuary-hub-vars.returns-you-to-the-sanctuary-hub-vars.returns-you-to-the-sanctuary-hub-vars.returns-you-to-the-sanctuary-hub-vars.returns-you-to-the-sanctuary-hub-vars.returns-you-to-the-sanctuary-hub-vars {
+    color: var(--text-body);
+}
+
+.rectangle-vars-62.rectangle-vars-62.rectangle-vars-62.rectangle-vars-62.rectangle-vars-62.rectangle-vars-62 {
+    background-color: var(--border-line);
+}
+
+.selected-auto-save-vars.selected-auto-save-vars.selected-auto-save-vars.selected-auto-save-vars.selected-auto-save-vars.selected-auto-save-vars {
+    color: var(--text-highlight);
+}
+
+.rectangle-vars-63.rectangle-vars-63.rectangle-vars-63.rectangle-vars-63.rectangle-vars-63.rectangle-vars-63 {
+    background-color: var(--border-line);
+}
+
+.campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars.campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars.campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars.campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars.campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars.campaign-geistwald-layer-1-party-knight-rogue-mage-healer-gold-600-hub-gold-vars {
+    color: var(--text-primary);
+}
+
+.loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars.loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars.loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars.loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars.loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars.loading-restores-your-campaign-and-returns-to-the-sanctuary-hub-vars {
+    color: var(--text-primary);
+}
+
+.slot-card-2__i .slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i .slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i-2 .slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i-2 .slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i-3 .slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i-3 .slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i-4 .slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4.slot-card-2__e-4 {
+    color: var(--text-muted);
+}
+
+.slot-card-2__i-4 .slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5 {
+    color: var(--text-muted);
+}
+
+.panel-default__i-5 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.button-primary-2__i > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

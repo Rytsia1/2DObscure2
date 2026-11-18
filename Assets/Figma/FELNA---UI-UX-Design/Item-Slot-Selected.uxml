@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Item-Slot-Selected.uss" />
+    <ui:VisualElement class="item-slot">
+        <ui:Label name="text-0" text="R" class="unity-label item-slot__e" />
+    </ui:VisualElement>
+</ui:UXML>

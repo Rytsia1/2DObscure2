@@ -1,0 +1,279 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.frame-3 .unity-tab__header {
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0px;
+    min-height: auto;
+    display: flex;
+    padding: 6px 16px;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+    color: var(--text-body);
+}
+
+.frame-3 .unity-tab__header:checked {
+    background-color: var(--bg-panel);
+    border-color: var(--border-focus);
+    color: var(--text-accent);
+}
+
+.frame-3 .unity-tab__header:checked:hover {
+    color: var(--text-accent);
+}
+
+.frame-3 .unity-tab__header > .unity-tab__header-label {
+    margin: 0px;
+    padding: 0px;
+}
+
+.frame-3 .unity-tab__header-underline {
+    display: none;
+}
+
+._10-magic-shop-relics {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._10-magic-shop-relics {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._10-magic-shop-relics-vars._10-magic-shop-relics-vars._10-magic-shop-relics-vars._10-magic-shop-relics-vars._10-magic-shop-relics-vars._10-magic-shop-relics-vars {
+    background-color: var(--bg-ground);
+}
+
+.magic-shop-vars-2.magic-shop-vars-2.magic-shop-vars-2.magic-shop-vars-2.magic-shop-vars-2.magic-shop-vars-2 {
+    color: var(--text-accent);
+}
+
+.relic-vars.relic-vars.relic-vars.relic-vars.relic-vars.relic-vars {
+    color: var(--text-muted);
+}
+
+.category-vars.category-vars.category-vars.category-vars.category-vars.category-vars {
+    color: var(--text-muted);
+}
+
+.price-vars-3.price-vars-3.price-vars-3.price-vars-3.price-vars-3.price-vars-3 {
+    color: var(--text-muted);
+}
+
+.rare-offensive-vars.rare-offensive-vars.rare-offensive-vars.rare-offensive-vars.rare-offensive-vars.rare-offensive-vars {
+    color: var(--text-body);
+}
+
+.uncommon-defensive-vars.uncommon-defensive-vars.uncommon-defensive-vars.uncommon-defensive-vars.uncommon-defensive-vars.uncommon-defensive-vars {
+    color: var(--text-body);
+}
+
+.rare-exploration-vars.rare-exploration-vars.rare-exploration-vars.rare-exploration-vars.rare-exploration-vars.rare-exploration-vars {
+    color: var(--text-body);
+}
+
+.common-offensive-vars.common-offensive-vars.common-offensive-vars.common-offensive-vars.common-offensive-vars.common-offensive-vars {
+    color: var(--text-body);
+}
+
+.rare-hybrid-vars.rare-hybrid-vars.rare-hybrid-vars.rare-hybrid-vars.rare-hybrid-vars.rare-hybrid-vars {
+    color: var(--text-body);
+}
+
+.coffin-nail-vars.coffin-nail-vars.coffin-nail-vars.coffin-nail-vars.coffin-nail-vars.coffin-nail-vars {
+    color: var(--rarity-rare);
+}
+
+.party-deals-7-damage-to-enemies-that-are-currently-broken-vars.party-deals-7-damage-to-enemies-that-are-currently-broken-vars.party-deals-7-damage-to-enemies-that-are-currently-broken-vars.party-deals-7-damage-to-enemies-that-are-currently-broken-vars.party-deals-7-damage-to-enemies-that-are-currently-broken-vars.party-deals-7-damage-to-enemies-that-are-currently-broken-vars {
+    color: var(--text-body);
+}
+
+.passive-whole-party-permanent-once-bought-vars.passive-whole-party-permanent-once-bought-vars.passive-whole-party-permanent-once-bought-vars.passive-whole-party-permanent-once-bought-vars.passive-whole-party-permanent-once-bought-vars.passive-whole-party-permanent-once-bought-vars {
+    color: var(--text-muted);
+}
+
+.relic-slots-vars.relic-slots-vars.relic-slots-vars.relic-slots-vars.relic-slots-vars.relic-slots-vars {
+    color: var(--text-body);
+}
+
+._0-5-1-5-vars._0-5-1-5-vars._0-5-1-5-vars._0-5-1-5-vars._0-5-1-5-vars._0-5-1-5-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-86.rectangle-vars-86.rectangle-vars-86.rectangle-vars-86.rectangle-vars-86.rectangle-vars-86 {
+    background-color: var(--border-line);
+}
+
+.hub-gold-vars-2.hub-gold-vars-2.hub-gold-vars-2.hub-gold-vars-2.hub-gold-vars-2.hub-gold-vars-2 {
+    color: var(--text-body);
+}
+
+._0-1-900-vars._0-1-900-vars._0-1-900-vars._0-1-900-vars._0-1-900-vars._0-1-900-vars {
+    color: var(--status-error);
+}
+
+.rectangle-vars-87.rectangle-vars-87.rectangle-vars-87.rectangle-vars-87.rectangle-vars-87.rectangle-vars-87 {
+    background-color: var(--border-line);
+}
+
+.empty-relic-slot-vars.empty-relic-slot-vars.empty-relic-slot-vars.empty-relic-slot-vars.empty-relic-slot-vars.empty-relic-slot-vars {
+    border-color: var(--border-default);
+}
+
+.empty-slot-vars.empty-slot-vars.empty-slot-vars.empty-slot-vars.empty-slot-vars.empty-slot-vars {
+    color: var(--text-muted);
+}
+
+.buy-or-find-one-in-a-dungeon-vars.buy-or-find-one-in-a-dungeon-vars.buy-or-find-one-in-a-dungeon-vars.buy-or-find-one-in-a-dungeon-vars.buy-or-find-one-in-a-dungeon-vars.buy-or-find-one-in-a-dungeon-vars {
+    color: var(--text-muted);
+}
+
+.empty-relic-slot-vars-2.empty-relic-slot-vars-2.empty-relic-slot-vars-2.empty-relic-slot-vars-2.empty-relic-slot-vars-2.empty-relic-slot-vars-2 {
+    border-color: var(--border-default);
+}
+
+.empty-slot-vars-2.empty-slot-vars-2.empty-slot-vars-2.empty-slot-vars-2.empty-slot-vars-2.empty-slot-vars-2 {
+    color: var(--text-muted);
+}
+
+.buy-or-find-one-in-a-dungeon-vars-2.buy-or-find-one-in-a-dungeon-vars-2.buy-or-find-one-in-a-dungeon-vars-2.buy-or-find-one-in-a-dungeon-vars-2.buy-or-find-one-in-a-dungeon-vars-2.buy-or-find-one-in-a-dungeon-vars-2 {
+    color: var(--text-muted);
+}
+
+.empty-relic-slot-vars-3.empty-relic-slot-vars-3.empty-relic-slot-vars-3.empty-relic-slot-vars-3.empty-relic-slot-vars-3.empty-relic-slot-vars-3 {
+    border-color: var(--border-default);
+}
+
+.empty-slot-vars-3.empty-slot-vars-3.empty-slot-vars-3.empty-slot-vars-3.empty-slot-vars-3.empty-slot-vars-3 {
+    color: var(--text-muted);
+}
+
+.buy-or-find-one-in-a-dungeon-vars-3.buy-or-find-one-in-a-dungeon-vars-3.buy-or-find-one-in-a-dungeon-vars-3.buy-or-find-one-in-a-dungeon-vars-3.buy-or-find-one-in-a-dungeon-vars-3.buy-or-find-one-in-a-dungeon-vars-3 {
+    color: var(--text-muted);
+}
+
+.empty-relic-slot-vars-4.empty-relic-slot-vars-4.empty-relic-slot-vars-4.empty-relic-slot-vars-4.empty-relic-slot-vars-4.empty-relic-slot-vars-4 {
+    border-color: var(--border-default);
+}
+
+.empty-slot-vars-4.empty-slot-vars-4.empty-slot-vars-4.empty-slot-vars-4.empty-slot-vars-4.empty-slot-vars-4 {
+    color: var(--text-muted);
+}
+
+.buy-or-find-one-in-a-dungeon-vars-4.buy-or-find-one-in-a-dungeon-vars-4.buy-or-find-one-in-a-dungeon-vars-4.buy-or-find-one-in-a-dungeon-vars-4.buy-or-find-one-in-a-dungeon-vars-4.buy-or-find-one-in-a-dungeon-vars-4 {
+    color: var(--text-muted);
+}
+
+.empty-relic-slot-vars-5.empty-relic-slot-vars-5.empty-relic-slot-vars-5.empty-relic-slot-vars-5.empty-relic-slot-vars-5.empty-relic-slot-vars-5 {
+    border-color: var(--border-default);
+}
+
+.empty-slot-vars-5.empty-slot-vars-5.empty-slot-vars-5.empty-slot-vars-5.empty-slot-vars-5.empty-slot-vars-5 {
+    color: var(--text-muted);
+}
+
+.buy-or-find-one-in-a-dungeon-vars-5.buy-or-find-one-in-a-dungeon-vars-5.buy-or-find-one-in-a-dungeon-vars-5.buy-or-find-one-in-a-dungeon-vars-5.buy-or-find-one-in-a-dungeon-vars-5.buy-or-find-one-in-a-dungeon-vars-5 {
+    color: var(--text-muted);
+}
+
+.relics-can-only-be-sold-here-selling-frees-one-slot-no-duplicates-a-relic-you-own-is-greyed-out-in-stock-vars.relics-can-only-be-sold-here-selling-frees-one-slot-no-duplicates-a-relic-you-own-is-greyed-out-in-stock-vars.relics-can-only-be-sold-here-selling-frees-one-slot-no-duplicates-a-relic-you-own-is-greyed-out-in-stock-vars.relics-can-only-be-sold-here-selling-frees-one-slot-no-duplicates-a-relic-you-own-is-greyed-out-in-stock-vars.relics-can-only-be-sold-here-selling-frees-one-slot-no-duplicates-a-relic-you-own-is-greyed-out-in-stock-vars.relics-can-only-be-sold-here-selling-frees-one-slot-no-duplicates-a-relic-you-own-is-greyed-out-in-stock-vars {
+    color: var(--text-body);
+}
+
+.panel-default__i-18 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.list-row__i-4 > .list-row.list-row.list-row.list-row.list-row.list-row.list-row {
+    width: 100%;
+}
+
+.list-row__i-4 .list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3 {
+    color: var(--rarity-rare);
+}
+
+.list-row-2__i-11 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-11 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.list-row-2__i-12 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-12 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-rare);
+}
+
+.list-row-2__i-13 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-13 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-14 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-14 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-rare);
+}
+
+.panel-gold__i-7 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-19 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-11 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.toast-error__i-2 > .toast-error.toast-error.toast-error.toast-error.toast-error.toast-error.toast-error {
+    width: 100%;
+}
+

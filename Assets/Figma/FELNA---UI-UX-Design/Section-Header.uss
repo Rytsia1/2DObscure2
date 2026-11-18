@@ -1,0 +1,42 @@
+.section-header {
+    display: flex;
+    width: 320px;
+    height: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-accent);
+}
+
+.section-header__e.section-header__e.section-header__e.section-header__e.section-header__e.section-header__e.section-header__e {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2 {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    -unity-background-image-tint-color: #F2C25B;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-a6f28b75f9c44b1b85068ac7a5daf1ca-290.svg?fileID=7388822144124034973&guid=ddaee848b179db347ac280a0f348d2d7&type=3#img-a6f28b75f9c44b1b85068ac7a5daf1ca-290");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3.section-header__e-3 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-accent);
+}
+
+.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4 {
+    height: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+    background-color: var(--border-line);
+}
+

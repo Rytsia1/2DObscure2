@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Gauge-HP-Low.uss" />
+    <ui:VisualElement class="gauge-hp-low">
+        <ui:VisualElement class="gauge-hp-low__e">
+            <ui:VisualElement class="gauge-hp-low__e-2" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

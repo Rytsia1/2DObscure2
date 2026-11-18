@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Toast-Info.uss" />
+    <ui:VisualElement class="toast-info">
+        <ui:VisualElement class="toast-info__e">
+            <ui:Label name="text-0" text="!" class="unity-label toast-info__e-2" />
+        </ui:VisualElement>
+        <ui:Label name="text-1" text="NOT ENOUGH HUB GOLD — NEED 20 MORE." class="unity-label toast-info__e-3" />
+    </ui:VisualElement>
+</ui:UXML>

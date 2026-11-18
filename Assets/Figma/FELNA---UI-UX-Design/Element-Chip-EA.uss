@@ -1,0 +1,20 @@
+.element-chip-ea {
+    display: flex;
+    padding: 3px 5px;
+    align-items: center;
+    flex-direction: row;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    background-color: var(--element-earth);
+    color: var(--text-on-accent);
+}
+
+.element-chip-ea__e.element-chip-ea__e.element-chip-ea__e.element-chip-ea__e.element-chip-ea__e.element-chip-ea__e.element-chip-ea__e {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--text-on-accent);
+}
+

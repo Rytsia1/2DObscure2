@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Key-Hint.uss" />
+    <ui:VisualElement class="key-hint">
+        <ui:VisualElement class="key-hint__e">
+            <ui:Label name="text-0" text="ENTER" class="unity-label key-hint__e-2" />
+        </ui:VisualElement>
+        <ui:Label name="text-1" text="CONFIRM" class="unity-label key-hint__e-3" />
+    </ui:VisualElement>
+</ui:UXML>

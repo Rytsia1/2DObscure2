@@ -1,0 +1,215 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+._20-dungeon-shop-run-gold {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._20-dungeon-shop-run-gold {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._20-dungeon-shop-run-gold-vars._20-dungeon-shop-run-gold-vars._20-dungeon-shop-run-gold-vars._20-dungeon-shop-run-gold-vars._20-dungeon-shop-run-gold-vars._20-dungeon-shop-run-gold-vars {
+    background-color: var(--bg-ground);
+}
+
+.wandering-merchant-vars.wandering-merchant-vars.wandering-merchant-vars.wandering-merchant-vars.wandering-merchant-vars.wandering-merchant-vars {
+    color: var(--text-accent);
+}
+
+.item-vars-2.item-vars-2.item-vars-2.item-vars-2.item-vars-2.item-vars-2 {
+    color: var(--text-muted);
+}
+
+.stock-vars.stock-vars.stock-vars.stock-vars.stock-vars.stock-vars {
+    color: var(--text-muted);
+}
+
+.price-vars-4.price-vars-4.price-vars-4.price-vars-4.price-vars-4.price-vars-4 {
+    color: var(--text-muted);
+}
+
+._3-vars-2._3-vars-2._3-vars-2._3-vars-2._3-vars-2._3-vars-2 {
+    color: var(--text-body);
+}
+
+._2-vars-5._2-vars-5._2-vars-5._2-vars-5._2-vars-5._2-vars-5 {
+    color: var(--text-body);
+}
+
+._1-vars-5._1-vars-5._1-vars-5._1-vars-5._1-vars-5._1-vars-5 {
+    color: var(--text-body);
+}
+
+._1-vars-6._1-vars-6._1-vars-6._1-vars-6._1-vars-6._1-vars-6 {
+    color: var(--text-body);
+}
+
+._1-vars-7._1-vars-7._1-vars-7._1-vars-7._1-vars-7._1-vars-7 {
+    color: var(--text-body);
+}
+
+.run-gold-is-spent-here-and-lost-on-a-wipe-clear-the-dungeon-to-convert-leftovers-1-1-into-hub-gold-vars.run-gold-is-spent-here-and-lost-on-a-wipe-clear-the-dungeon-to-convert-leftovers-1-1-into-hub-gold-vars.run-gold-is-spent-here-and-lost-on-a-wipe-clear-the-dungeon-to-convert-leftovers-1-1-into-hub-gold-vars.run-gold-is-spent-here-and-lost-on-a-wipe-clear-the-dungeon-to-convert-leftovers-1-1-into-hub-gold-vars.run-gold-is-spent-here-and-lost-on-a-wipe-clear-the-dungeon-to-convert-leftovers-1-1-into-hub-gold-vars.run-gold-is-spent-here-and-lost-on-a-wipe-clear-the-dungeon-to-convert-leftovers-1-1-into-hub-gold-vars {
+    color: var(--text-muted);
+}
+
+.revives-a-fallen-hero-at-50-hp-during-battle-or-on-the-map-vars.revives-a-fallen-hero-at-50-hp-during-battle-or-on-the-map-vars.revives-a-fallen-hero-at-50-hp-during-battle-or-on-the-map-vars.revives-a-fallen-hero-at-50-hp-during-battle-or-on-the-map-vars.revives-a-fallen-hero-at-50-hp-during-battle-or-on-the-map-vars.revives-a-fallen-hero-at-50-hp-during-battle-or-on-the-map-vars {
+    color: var(--text-primary);
+}
+
+.in-stock-vars.in-stock-vars.in-stock-vars.in-stock-vars.in-stock-vars.in-stock-vars {
+    color: var(--text-body);
+}
+
+._1-vars-8._1-vars-8._1-vars-8._1-vars-8._1-vars-8._1-vars-8 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-164.rectangle-vars-164.rectangle-vars-164.rectangle-vars-164.rectangle-vars-164.rectangle-vars-164 {
+    background-color: var(--border-line);
+}
+
+.you-own-vars-2.you-own-vars-2.you-own-vars-2.you-own-vars-2.you-own-vars-2.you-own-vars-2 {
+    color: var(--text-body);
+}
+
+._0-vars-12._0-vars-12._0-vars-12._0-vars-12._0-vars-12._0-vars-12 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-165.rectangle-vars-165.rectangle-vars-165.rectangle-vars-165.rectangle-vars-165.rectangle-vars-165 {
+    background-color: var(--border-line);
+}
+
+.price-vars-5.price-vars-5.price-vars-5.price-vars-5.price-vars-5.price-vars-5 {
+    color: var(--text-body);
+}
+
+._90-run-gold-vars._90-run-gold-vars._90-run-gold-vars._90-run-gold-vars._90-run-gold-vars._90-run-gold-vars {
+    color: var(--currency-run-text);
+}
+
+.rectangle-vars-166.rectangle-vars-166.rectangle-vars-166.rectangle-vars-166.rectangle-vars-166.rectangle-vars-166 {
+    background-color: var(--border-line);
+}
+
+.run-gold-after-vars.run-gold-after-vars.run-gold-after-vars.run-gold-after-vars.run-gold-after-vars.run-gold-after-vars {
+    color: var(--text-body);
+}
+
+._145-55-vars._145-55-vars._145-55-vars._145-55-vars._145-55-vars._145-55-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-167.rectangle-vars-167.rectangle-vars-167.rectangle-vars-167.rectangle-vars-167.rectangle-vars-167 {
+    background-color: var(--border-line);
+}
+
+.panel-default__i-31 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.list-row-2__i-21 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-21 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-21 .list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5 {
+    color: var(--currency-run-text);
+}
+
+.list-row-2__i-22 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-22 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-22 .list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5 {
+    color: var(--currency-run-text);
+}
+
+.list-row__i-7 > .list-row.list-row.list-row.list-row.list-row.list-row.list-row {
+    width: 100%;
+}
+
+.list-row__i-7 .list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3 {
+    color: var(--rarity-rare);
+}
+
+.list-row__i-7 .list-row__e-5.list-row__e-5.list-row__e-5.list-row__e-5.list-row__e-5.list-row__e-5.list-row__e-5 {
+    color: var(--currency-run-text);
+}
+
+.list-row-2__i-23 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-23 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.list-row-2__i-23 .list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5 {
+    color: var(--currency-run-text);
+}
+
+.list-row-2__i-24 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-24 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.list-row-2__i-24 .list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5.list-row-2__e-5 {
+    color: var(--currency-run-text);
+}
+
+.panel-gold__i-16 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-23 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.button-primary-2__i-7 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

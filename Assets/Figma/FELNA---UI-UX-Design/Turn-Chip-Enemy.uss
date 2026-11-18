@@ -1,0 +1,20 @@
+.turn-chip-enemy {
+    display: flex;
+    padding: 4px 8px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #3A1418;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    border-color: var(--status-error);
+    color: var(--status-error);
+}
+
+.turn-chip-enemy__e.turn-chip-enemy__e.turn-chip-enemy__e.turn-chip-enemy__e.turn-chip-enemy__e.turn-chip-enemy__e.turn-chip-enemy__e {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--status-error);
+}
+

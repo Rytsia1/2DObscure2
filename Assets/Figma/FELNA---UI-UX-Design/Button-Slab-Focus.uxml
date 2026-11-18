@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Button-Slab-Focus.uss" />
+    <ui:VisualElement class="button-slab-2">
+        <ui:Label name="text-0" text="▸" class="unity-label button-slab-2__e" />
+        <ui:Label name="text-1" text="Button" class="unity-label button-slab-2__e-2" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,20 @@
+.turn-chip-hero {
+    display: flex;
+    padding: 4px 8px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #1A2443;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.turn-chip-hero__e.turn-chip-hero__e.turn-chip-hero__e.turn-chip-hero__e.turn-chip-hero__e.turn-chip-hero__e.turn-chip-hero__e {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+

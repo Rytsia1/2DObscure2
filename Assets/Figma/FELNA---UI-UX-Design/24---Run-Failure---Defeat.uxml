@@ -1,0 +1,57 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="24---Run-Failure---Defeat.uss" />
+    <Template name="Tag-Temp" src="Tag-Temp.uxml" />
+    <Template name="Currency-Tag-Run" src="Currency-Tag-Run.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <ui:VisualElement class="_24-run-failure-defeat" style="overflow: hidden;">
+        <ui:Label text="DEFEAT" class="unity-label" style="color: #FF8A7A; font-size: 72px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 513px; top: 22px;" />
+        <ui:Label text="The party has fallen. This run has ended." class="unity-label the-party-has-fallen-this-run-has-ended-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 394px; top: 110px;" />
+        <ui:Label text="FELL IN DUNGEON 1 OF 8 · NODE 4 · PROGRESS FROM EARLIER CLEARS IS SAFE" class="unity-label fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 303px; top: 146px;" />
+        <ui:VisualElement class="lost-panel-vars" style="width: 520px; height: 392px; border-width: 2px; overflow: hidden; background-color: #1C0F12; position: absolute; left: 110px; top: 176px;">
+            <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 14px; top: 12px;">
+                <ui:Instance template="Tag-Temp" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="LOST" />
+                </ui:Instance>
+                <ui:Label text="Gained in Dungeon 1" class="unity-label gained-in-dungeon-1-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="NOT COMMITTED" class="unity-label not-committed-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="rectangle-vars-211" style="width: 488px; height: 2px; position: absolute; left: 14px; top: 52px;" />
+            <ui:Instance template="Currency-Tag-Run" class="currency-tag-run__i" style="position: absolute; left: 14px; top: 70px;">
+                <AttributeOverrides element-name="text-0" text="145 RUN GOLD" />
+            </ui:Instance>
+            <ui:VisualElement class="strike-vars" style="width: 168px; height: 2px; position: absolute; left: 14px; top: 88px;" />
+            <ui:Label text="RUN GOLD HELD IN DUNGEON 1." class="unity-label run-gold-held-in-dungeon-1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 196px; top: 80px;" />
+            <ui:Label text="◆" class="unity-label node-vars-15" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 14px; top: 130px;" />
+            <ui:Label text="EQUIPMENT FOUND IN DUNGEON 1" class="unity-label equipment-found-in-dungeon-1-vars" style="width: 450px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 36px; top: 130px;" />
+            <ui:Label text="◆" class="unity-label node-vars-16" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 14px; top: 160px;" />
+            <ui:Label text="EXP AND LEVELS GAINED HERE" class="unity-label exp-and-levels-gained-here-vars" style="width: 450px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 36px; top: 160px;" />
+            <ui:Label text="◆" class="unity-label node-vars-17" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 14px; top: 190px;" />
+            <ui:Label text="SP GAINED HERE, AND SKILLS BOUGHT WITH IT" class="unity-label sp-gained-here-and-skills-bought-with-it-vars" style="width: 450px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 36px; top: 190px;" />
+            <ui:Label text="◆" class="unity-label node-vars-18" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 14px; top: 220px;" />
+            <ui:Label text="CONSUMABLES, MATERIALS AND KEY ITEMS FOUND HERE" class="unity-label consumables-materials-and-key-items-found-here-vars" style="width: 450px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 36px; top: 220px;" />
+        </ui:VisualElement>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-18" style="position: absolute; left: 650px; top: 176px; width: 520px; height: 392px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 666px; top: 190px;">
+            <ui:Instance template="Tag-Keep" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="KEPT" />
+            </ui:Instance>
+            <ui:Label text="Committed progress" class="unity-label committed-progress-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="rectangle-vars-212" style="width: 488px; height: 2px; position: absolute; left: 666px; top: 230px;" />
+        <ui:Label text="◇◇◇◇◇◇◇◇   0 / 8 CLEARED" class="unity-label _0-8-cleared-vars-2" style="font-size: 20px; white-space: nowrap; position: absolute; left: 666px; top: 246px;" />
+        <ui:Label text="DUNGEON PROGRESS STAYS. DUNGEON 1 IS YOUR NEXT DUNGEON AGAIN." class="unity-label dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars" style="width: 488px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 666px; top: 288px;" />
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 666px; top: 336px;">
+            <AttributeOverrides element-name="text-0" text="600 HUB GOLD" />
+        </ui:Instance>
+        <ui:Label text="LEVELS, SKILLS, EQUIPMENT AND ITEMS FROM EARLIER CLEARS, PLUS OWNED RELICS." class="unity-label levels-skills-equipment-and-items-from-earlier-clears-plus-owned-relics-vars" style="width: 488px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 666px; top: 392px;" />
+        <ui:Instance template="Button-Primary-Focus" class="button-primary-2__i-10" style="position: absolute; left: 480px; top: 596px; width: 320px;">
+            <AttributeOverrides element-name="text-0" text="▸" />
+            <AttributeOverrides element-name="text-1" text="Return to Main Menu" />
+        </ui:Instance>
+        <ui:Label text="FROM THE MAIN MENU, START A NEW EXPEDITION INTO DUNGEON 1 OR LOAD A SAVE." class="unity-label from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 278px; top: 662px;" />
+    </ui:VisualElement>
+</ui:UXML>

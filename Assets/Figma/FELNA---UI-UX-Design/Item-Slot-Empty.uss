@@ -1,0 +1,29 @@
+.item-slot-3 {
+    display: flex;
+    width: 56px;
+    height: 56px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+    color: var(--text-muted);
+}
+
+.item-slot-3:checked {
+    border-color: var(--border-accent);
+    color: var(--rarity-rare);
+}
+
+.item-slot-3__e.item-slot-3__e.item-slot-3__e.item-slot-3__e.item-slot-3__e.item-slot-3__e.item-slot-3__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+

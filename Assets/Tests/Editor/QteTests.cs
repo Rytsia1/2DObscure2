@@ -306,10 +306,13 @@ namespace Obscure.Tests
                 if (isDirectDamage)
                 {
                     Assert.IsNotNull(qte, $"Direct-damage skill '{skill.id}' ({skill.kind}) must trigger a QTE");
-                    if (skill.kind == SkillKind.Magic)
-                        Assert.IsInstanceOf<TypingQte>(qte, $"Direct-damage Magic skill '{skill.id}' should trigger TypingQte");
+                    if (skill.kind == SkillKind.Magic && !string.IsNullOrEmpty(skill.word))
+                        Assert.IsInstanceOf<TypingQte>(qte, $"Magic skill '{skill.id}' with word should trigger TypingQte");
                     else
-                        Assert.IsInstanceOf<TimingQte>(qte, $"Physical skill '{skill.id}' should trigger TimingQte");
+                        Assert.IsInstanceOf<TimingQte>(qte, $"Skill '{skill.id}' should trigger TimingQte");
+
+                    if (skill.kind == SkillKind.Magic && !string.IsNullOrEmpty(skill.classId))
+                        Assert.IsFalse(string.IsNullOrEmpty(skill.word), $"Playable class Magic skill '{skill.id}' should define a Typing QTE word");
                 }
                 else
                 {
@@ -333,7 +336,7 @@ namespace Obscure.Tests
             Assert.IsTrue(mageUnit.skillLoadout.TryEquipActive(0, "lightning_strike", out _));
             CollectionAssert.Contains(mageUnit.GetCombatActiveSkillIds(), "lightning_strike");
 
-            var b = new Battle(run.Party, new[] { Database.Enemies["skeleton"] }, run.Items, new Random(10), run);
+            var b = new Battle(run.Party, new[] { Database.Enemies["warden"] }, run.Items, new Random(10), run);
             var mage = AdvanceTo(b, c => c.name == "Mage");
             mage.unit.mp = 10;
             int mpBefore = mage.unit.mp;
@@ -343,6 +346,7 @@ namespace Obscure.Tests
             int cost = mage.GetEffectiveMpCost(firebolt, run);
             for (int i = 0; i < 3; i++)
             {
+                b.Enemies[0].unit.hp = b.Enemies[0].Stats.maxHp;
                 b.Perform(BattleAction.Skill(mage, firebolt, b.Enemies[0]), QteConfig.PerfectPower);
                 if (i < 2)
                 {
@@ -356,7 +360,7 @@ namespace Obscure.Tests
             var sk = AdvanceTo(b, c => c.IsEnemy);
             var knight = b.Party[0];
             int shieldBefore = knight.unit.shield;
-            b.Perform(BattleAction.Strike(sk, Move("skeleton", "Rusty Slash"), knight), 1f, new[] { QteResult.Perfect });
+            b.Perform(BattleAction.Strike(sk, Move("warden", "Crushing Grip"), knight), 1f, new[] { QteResult.Perfect });
             Assert.Greater(knight.unit.shield, shieldBefore, "Perfect Defensive QTE must trigger R019 shield");
 
             // Non-Halfling must not have Second Chance retries

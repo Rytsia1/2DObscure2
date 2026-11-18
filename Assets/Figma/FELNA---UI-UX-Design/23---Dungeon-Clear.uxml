@@ -1,0 +1,112 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="23---Dungeon-Clear.uss" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Currency-Tag-Run" src="Currency-Tag-Run.uxml" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Tag-Temp" src="Tag-Temp.uxml" />
+    <ui:VisualElement class="_23-dungeon-clear" style="overflow: hidden;">
+        <ui:VisualElement class="rectangle-vars-171" style="width: 2px; height: 2px; position: absolute; left: 826px; top: 390px;" />
+        <ui:VisualElement class="rectangle-vars-172" style="width: 2px; height: 2px; position: absolute; left: 389px; top: 54px;" />
+        <ui:VisualElement class="rectangle-vars-173" style="width: 2px; height: 2px; position: absolute; left: 303px; top: 329px;" />
+        <ui:VisualElement class="rectangle-vars-174" style="width: 2px; height: 2px; position: absolute; left: 262px; top: 148px;" />
+        <ui:VisualElement class="rectangle-vars-175" style="width: 2px; height: 2px; position: absolute; left: 1015px; top: 152px;" />
+        <ui:VisualElement class="rectangle-vars-176" style="width: 2px; height: 2px; position: absolute; left: 787px; top: 364px;" />
+        <ui:VisualElement class="rectangle-vars-177" style="width: 2px; height: 2px; position: absolute; left: 1201px; top: 228px;" />
+        <ui:VisualElement class="rectangle-vars-178" style="width: 2px; height: 2px; position: absolute; left: 389px; top: 200px;" />
+        <ui:VisualElement class="rectangle-vars-179" style="width: 2px; height: 2px; position: absolute; left: 571px; top: 255px;" />
+        <ui:VisualElement class="rectangle-vars-180" style="width: 2px; height: 2px; position: absolute; left: 339px; top: 351px;" />
+        <ui:VisualElement class="rectangle-vars-181" style="width: 2px; height: 2px; position: absolute; left: 166px; top: 338px;" />
+        <ui:VisualElement class="rectangle-vars-182" style="width: 2px; height: 2px; position: absolute; left: 68px; top: 143px;" />
+        <ui:VisualElement class="rectangle-vars-183" style="width: 2px; height: 2px; position: absolute; left: 567px; top: 237px;" />
+        <ui:VisualElement class="rectangle-vars-184" style="width: 2px; height: 2px; position: absolute; left: 757px; top: 285px;" />
+        <ui:VisualElement class="rectangle-vars-185" style="width: 2px; height: 2px; position: absolute; left: 932px; top: 166px;" />
+        <ui:VisualElement class="rectangle-vars-186" style="width: 2px; height: 2px; position: absolute; left: 1059px; top: 26px;" />
+        <ui:VisualElement class="rectangle-vars-187" style="width: 2px; height: 2px; position: absolute; left: 97px; top: 181px;" />
+        <ui:VisualElement class="rectangle-vars-188" style="width: 2px; height: 2px; position: absolute; left: 1094px; top: 45px;" />
+        <ui:VisualElement class="rectangle-vars-189" style="width: 2px; height: 2px; position: absolute; left: 988px; top: 278px;" />
+        <ui:VisualElement class="rectangle-vars-190" style="width: 2px; height: 2px; position: absolute; left: 1079px; top: 167px;" />
+        <ui:VisualElement class="rectangle-vars-191" style="width: 2px; height: 2px; position: absolute; left: 970px; top: 341px;" />
+        <ui:VisualElement class="rectangle-vars-192" style="width: 2px; height: 2px; position: absolute; left: 768px; top: 292px;" />
+        <ui:VisualElement class="rectangle-vars-193" style="width: 2px; height: 2px; position: absolute; left: 396px; top: 382px;" />
+        <ui:VisualElement class="rectangle-vars-194" style="width: 2px; height: 2px; position: absolute; left: 972px; top: 353px;" />
+        <ui:VisualElement class="rectangle-vars-195" style="width: 2px; height: 2px; position: absolute; left: 812px; top: 209px;" />
+        <ui:VisualElement class="rectangle-vars-196" style="width: 2px; height: 2px; position: absolute; left: 942px; top: 127px;" />
+        <ui:VisualElement class="rectangle-vars-197" style="width: 2px; height: 2px; position: absolute; left: 274px; top: 221px;" />
+        <ui:VisualElement class="rectangle-vars-198" style="width: 2px; height: 2px; position: absolute; left: 294px; top: 169px;" />
+        <ui:VisualElement class="rectangle-vars-199" style="width: 2px; height: 2px; position: absolute; left: 649px; top: 381px;" />
+        <ui:VisualElement class="rectangle-vars-200" style="width: 2px; height: 2px; position: absolute; left: 529px; top: 85px;" />
+        <ui:VisualElement class="rectangle-vars-201" style="width: 2px; height: 2px; position: absolute; left: 866px; top: 312px;" />
+        <ui:VisualElement class="rectangle-vars-202" style="width: 2px; height: 2px; position: absolute; left: 1172px; top: 25px;" />
+        <ui:VisualElement class="rectangle-vars-203" style="width: 2px; height: 2px; position: absolute; left: 910px; top: 85px;" />
+        <ui:VisualElement class="rectangle-vars-204" style="width: 2px; height: 2px; position: absolute; left: 463px; top: 357px;" />
+        <ui:VisualElement class="rectangle-vars-205" style="width: 2px; height: 2px; position: absolute; left: 443px; top: 38px;" />
+        <ui:VisualElement class="rectangle-vars-206" style="width: 2px; height: 2px; position: absolute; left: 591px; top: 361px;" />
+        <ui:VisualElement class="rectangle-vars-207" style="width: 2px; height: 2px; position: absolute; left: 737px; top: 25px;" />
+        <ui:VisualElement class="rectangle-vars-208" style="width: 2px; height: 2px; position: absolute; left: 116px; top: 140px;" />
+        <ui:VisualElement class="rectangle-vars-209" style="width: 2px; height: 2px; position: absolute; left: 1224px; top: 213px;" />
+        <ui:VisualElement class="rectangle-vars-210" style="width: 2px; height: 2px; position: absolute; left: 861px; top: 296px;" />
+        <ui:VisualElement class="ellipse-vars" style="width: 76px; height: 76px; border-radius: 76px; position: absolute; left: 990px; top: 14px;" />
+        <ui:VisualElement style="width: 64px; height: 64px; border-radius: 64px; background-color: #1A2147; position: absolute; left: 1012px; top: 18px;" />
+        <ui:VisualElement style="width: 1280px; height: 140px; background-color: #1A2347; position: absolute; left: 0px; top: 580px;" />
+        <ui:Label text="DUNGEON 1 OF 8" class="unity-label dungeon-1-of-8-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 569px; top: 30px;" />
+        <ui:Label text="DUNGEON CLEAR" class="unity-label dungeon-clear-vars" style="font-size: 72px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 372px; top: 48px;" />
+        <ui:Label text="The Sunken Crypt" class="unity-label the-sunken-crypt-vars-3" style="font-size: 24px; white-space: nowrap; position: absolute; left: 544px; top: 132px;" />
+        <ui:Label text="◆◇◇◇◇◇◇◇" class="unity-label node-vars-13" style="font-size: 24px; white-space: nowrap; position: absolute; left: 544px; top: 166px;" />
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-17" style="position: absolute; left: 190px; top: 222px; width: 900px; height: 196px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-26" style="position: absolute; left: 206px; top: 236px; width: 868px;">
+            <AttributeOverrides element-name="text-0" text="Run Gold transferred to Hub Gold" />
+        </ui:Instance>
+        <ui:Label text="RATE 1 : 1" class="unity-label rate-1-1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 990px; top: 244px;" />
+        <ui:Label text="RUN GOLD CLEARED" class="unity-label run-gold-cleared-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 216px; top: 286px;" />
+        <ui:Instance template="Currency-Tag-Run" style="position: absolute; left: 216px; top: 310px;">
+            <AttributeOverrides element-name="text-0" text="145 RUN GOLD" />
+        </ui:Instance>
+        <ui:Label text="RUN GOLD NOW 0" class="unity-label run-gold-now-0-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 216px; top: 362px;" />
+        <ui:Label text="➜ 1:1" class="unity-label _1-1-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 430px; top: 320px;" />
+        <ui:Label text="HUB GOLD GAINED" class="unity-label hub-gold-gained-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 500px; top: 286px;" />
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 500px; top: 310px;">
+            <AttributeOverrides element-name="text-0" text="145 HUB GOLD" />
+        </ui:Instance>
+        <ui:Label text="COMMITTED · KEPT IF A LATER RUN FAILS" class="unity-label committed-kept-if-a-later-run-fails-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 500px; top: 362px;" />
+        <ui:Label text="=" class="unity-label node-vars-14" style="font-size: 32px; white-space: nowrap; position: absolute; left: 830px; top: 312px;" />
+        <ui:Label text="NEW HUB GOLD TOTAL" class="unity-label new-hub-gold-total-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 870px; top: 286px;" />
+        <ui:Label text="745" class="unity-label _745-vars" style="font-size: 44px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 870px; top: 304px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-36" style="position: absolute; left: 190px; top: 446px; width: 216px; height: 104px;" />
+        <ui:Label text="ENCOUNTERS" class="unity-label encounters-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 204px; top: 458px;" />
+        <ui:Label text="6" class="unity-label _6-vars-3" style="font-size: 44px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 204px; top: 474px;" />
+        <ui:Label text="CLEARED" class="unity-label cleared-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 204px; top: 526px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-37" style="position: absolute; left: 418px; top: 446px; width: 216px; height: 104px;" />
+        <ui:Label text="ELITES" class="unity-label elites-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 432px; top: 458px;" />
+        <ui:Label text="1" class="unity-label _1-vars-9" style="font-size: 44px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 432px; top: 474px;" />
+        <ui:Label text="VANQUISHED" class="unity-label vanquished-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 432px; top: 526px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-38" style="position: absolute; left: 646px; top: 446px; width: 216px; height: 104px;" />
+        <ui:Label text="CHAMBERS" class="unity-label chambers-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 660px; top: 458px;" />
+        <ui:Label text="11" class="unity-label _11-vars-2" style="font-size: 44px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 660px; top: 474px;" />
+        <ui:Label text="VISITED" class="unity-label visited-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 660px; top: 526px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-39" style="position: absolute; left: 874px; top: 446px; width: 216px; height: 104px;" />
+        <ui:Label text="RELICS" class="unity-label relics-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 888px; top: 458px;" />
+        <ui:Label text="1" class="unity-label _1-vars-10" style="font-size: 44px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 888px; top: 474px;" />
+        <ui:Label text="OWNED · KEPT" class="unity-label owned-kept-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 888px; top: 526px;" />
+        <ui:Instance template="Button-Primary-Focus" class="button-primary-2__i-9" style="position: absolute; left: 190px; top: 590px; width: 240px;">
+            <AttributeOverrides element-name="text-0" text="▸" />
+            <AttributeOverrides element-name="text-1" text="Return to Hub" />
+        </ui:Instance>
+        <ui:Label text="NEXT: DUNGEON 2 OF 8 UNLOCKED" class="unity-label next-dungeon-2-of-8-unlocked-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 450px; top: 600px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 525px; top: 660px;">
+            <ui:Instance template="Tag-Keep" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="PROGRESS COMMITTED" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Temp" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="MODIFIERS END HERE" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Keep" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="1 RELIC STAYS" />
+            </ui:Instance>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

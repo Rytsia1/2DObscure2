@@ -1,0 +1,251 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.frame-2 .unity-tab__header {
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0px;
+    min-height: auto;
+    display: flex;
+    padding: 6px 16px;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+    color: var(--text-body);
+}
+
+.frame-2 .unity-tab__header:checked {
+    background-color: var(--bg-panel);
+    border-color: var(--border-focus);
+    color: var(--text-accent);
+}
+
+.frame-2 .unity-tab__header:checked:hover {
+    color: var(--text-accent);
+}
+
+.frame-2 .unity-tab__header > .unity-tab__header-label {
+    margin: 0px;
+    padding: 0px;
+}
+
+.frame-2 .unity-tab__header-underline {
+    display: none;
+}
+
+._07-armory-equipment {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._07-armory-equipment {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._07-armory-equipment-vars._07-armory-equipment-vars._07-armory-equipment-vars._07-armory-equipment-vars._07-armory-equipment-vars._07-armory-equipment-vars {
+    background-color: var(--bg-ground);
+}
+
+.armory-vars-2.armory-vars-2.armory-vars-2.armory-vars-2.armory-vars-2.armory-vars-2 {
+    color: var(--text-accent);
+}
+
+.shopping-for-vars.shopping-for-vars.shopping-for-vars.shopping-for-vars.shopping-for-vars.shopping-for-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars.frame-vars.frame-vars.frame-vars.frame-vars.frame-vars {
+    background-color: var(--bg-void);
+    border-color: var(--border-focus);
+}
+
+.frame-vars-2.frame-vars-2.frame-vars-2.frame-vars-2.frame-vars-2.frame-vars-2 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.frame-vars-3.frame-vars-3.frame-vars-3.frame-vars-3.frame-vars-3.frame-vars-3 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.frame-vars-4.frame-vars-4.frame-vars-4.frame-vars-4.frame-vars-4.frame-vars-4 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-can-use-this-knight-vars.knight-can-use-this-knight-vars.knight-can-use-this-knight-vars.knight-can-use-this-knight-vars.knight-can-use-this-knight-vars.knight-can-use-this-knight-vars {
+    color: var(--status-ok);
+}
+
+.vs-empty-slot-atk-vars.vs-empty-slot-atk-vars.vs-empty-slot-atk-vars.vs-empty-slot-atk-vars.vs-empty-slot-atk-vars.vs-empty-slot-atk-vars {
+    color: var(--text-body);
+}
+
+._14-vars._14-vars._14-vars._14-vars._14-vars._14-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-73.rectangle-vars-73.rectangle-vars-73.rectangle-vars-73.rectangle-vars-73.rectangle-vars-73 {
+    background-color: var(--border-line);
+}
+
+.vs-empty-slot-crt-vars.vs-empty-slot-crt-vars.vs-empty-slot-crt-vars.vs-empty-slot-crt-vars.vs-empty-slot-crt-vars.vs-empty-slot-crt-vars {
+    color: var(--text-body);
+}
+
+._2-vars-2._2-vars-2._2-vars-2._2-vars-2._2-vars-2._2-vars-2 {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-74.rectangle-vars-74.rectangle-vars-74.rectangle-vars-74.rectangle-vars-74.rectangle-vars-74 {
+    background-color: var(--border-line);
+}
+
+.vs-empty-slot-ini-vars.vs-empty-slot-ini-vars.vs-empty-slot-ini-vars.vs-empty-slot-ini-vars.vs-empty-slot-ini-vars.vs-empty-slot-ini-vars {
+    color: var(--text-body);
+}
+
+._1-vars._1-vars._1-vars._1-vars._1-vars._1-vars {
+    color: var(--status-error);
+}
+
+.rectangle-vars-75.rectangle-vars-75.rectangle-vars-75.rectangle-vars-75.rectangle-vars-75.rectangle-vars-75 {
+    background-color: var(--border-line);
+}
+
+.price-vars-2.price-vars-2.price-vars-2.price-vars-2.price-vars-2.price-vars-2 {
+    color: var(--text-body);
+}
+
+._640-hub-gold-vars._640-hub-gold-vars._640-hub-gold-vars._640-hub-gold-vars._640-hub-gold-vars._640-hub-gold-vars {
+    color: var(--text-accent);
+}
+
+.rectangle-vars-76.rectangle-vars-76.rectangle-vars-76.rectangle-vars-76.rectangle-vars-76.rectangle-vars-76 {
+    background-color: var(--border-line);
+}
+
+.hub-gold-1-240-600-to-the-bag-vars.hub-gold-1-240-600-to-the-bag-vars.hub-gold-1-240-600-to-the-bag-vars.hub-gold-1-240-600-to-the-bag-vars.hub-gold-1-240-600-to-the-bag-vars.hub-gold-1-240-600-to-the-bag-vars {
+    color: var(--text-body);
+}
+
+.panel-default__i-14 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.list-row-2__i-3 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-3 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-4 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-4 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.list-row__i-2 > .list-row.list-row.list-row.list-row.list-row.list-row.list-row {
+    width: 100%;
+}
+
+.list-row__i-2 .list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3 {
+    color: var(--rarity-rare);
+}
+
+.list-row-2__i-5 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-5 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.list-row-2__i-6 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-6 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-7 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    opacity: 0.55;
+    width: 100%;
+}
+
+.list-row-2__i-7 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.panel-gold__i-4 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-6 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.button-primary-2__i-2 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

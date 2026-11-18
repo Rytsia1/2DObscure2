@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Element-Chip-LI.uss" />
+    <ui:VisualElement class="element-chip-li">
+        <ui:Label name="text-0" text="LI" class="unity-label element-chip-li__e" />
+    </ui:VisualElement>
+</ui:UXML>

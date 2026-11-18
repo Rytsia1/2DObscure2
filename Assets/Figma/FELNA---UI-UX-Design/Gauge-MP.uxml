@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Gauge-MP.uss" />
+    <ui:VisualElement class="gauge-mp">
+        <ui:VisualElement class="gauge-mp__e">
+            <ui:VisualElement class="gauge-mp__e-2" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

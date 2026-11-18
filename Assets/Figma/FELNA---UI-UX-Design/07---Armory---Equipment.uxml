@@ -1,0 +1,126 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="07---Armory---Equipment.uss" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Tag-Gold" src="Tag-Gold.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="List-Row" src="List-Row.uxml" />
+    <Template name="List-Row-Focus" src="List-Row-Focus.uxml" />
+    <Template name="Tag-Cond" src="Tag-Cond.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Element-Chip-PH" src="Element-Chip-PH.uxml" />
+    <Template name="Button-Primary-Focus" src="Button-Primary-Focus.uxml" />
+    <ui:VisualElement class="_07-armory-equipment _07-armory-equipment-vars" style="overflow: hidden;">
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+        <ui:Label text="Armory" class="unity-label armory-vars-2" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 216px; top: 26px;">
+            <AttributeOverrides element-name="text-0" text="EQUIPMENT · PAYS IN HUB GOLD" />
+        </ui:Instance>
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 1068px; top: 18px;">
+            <AttributeOverrides element-name="text-0" text="1,240 HUB GOLD" />
+        </ui:Instance>
+        <ui:TabView class="unity-tab-view frame-2" style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 24px; top: 68px;">
+            <ui:Tab label="Buy" class="unity-tab" />
+            <ui:Tab label="Sell" class="unity-tab" />
+        </ui:TabView>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 260px; top: 64px;">
+            <ui:Label text="SHOPPING FOR" class="unity-label shopping-for-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            <ui:VisualElement class="frame-vars" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-knight" style="width: 25.6px; height: 32px; position: absolute; left: 0px; top: -1px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-54dc4206c57c949c3027b2459d6ebb55-3939.svg?fileID=7388822144124034973&amp;guid=e8a7915aab90fa145a935f650009ddbd&amp;type=3#img-54dc4206c57c949c3027b2459d6ebb55-3939&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="frame-vars-2" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-rogue" style="width: 25.6px; height: 32px; position: absolute; left: 0px; top: -1px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-71098f7b2e6fc74abaf5a7f9a8949c65-4101.svg?fileID=7388822144124034973&amp;guid=63dd579e9e7042545a5cdc4babea414b&amp;type=3#img-71098f7b2e6fc74abaf5a7f9a8949c65-4101&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="frame-vars-3" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-mage" style="width: 25.6px; height: 30.4px; position: absolute; left: 0px; top: -1px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-7c6f7bd1f6dd40eba90a5e1dd2b8dd32-3264.svg?fileID=7388822144124034973&amp;guid=f453b4b208a3518448b002fdc9bdee2f&amp;type=3#img-7c6f7bd1f6dd40eba90a5e1dd2b8dd32-3264&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="frame-vars-4" style="width: 36px; height: 36px; flex-shrink: 0; border-width: 2px; overflow: hidden;">
+                <ui:VisualElement class="sprite-healer" style="width: 25.6px; height: 30.4px; position: absolute; left: 0px; top: -1px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-6c4b2305ce03a00ae5b3ffa159a3d43a-3550.svg?fileID=7388822144124034973&amp;guid=ac15e46dfaf51fd46b9fc4288f4b0812&amp;type=3#img-6c4b2305ce03a00ae5b3ffa159a3d43a-3550&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Instance template="Panel-Default" class="panel-default__i-14" style="position: absolute; left: 24px; top: 106px; width: 838px; height: 594px;" />
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 44px; top: 122px;">
+            <ui:Instance template="Tag-Gold" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ALL" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="WEAPON" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ARMOR" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="ACCESSORY" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Instance template="List-Row" class="list-row-2__i-3" style="position: absolute; left: 44px; top: 160px; width: 802px;">
+            <AttributeOverrides element-name="text-0" text="Ironbound Longsword" />
+            <AttributeOverrides element-name="text-1" text="MAIN HAND · ATK +6" />
+            <AttributeOverrides element-name="text-2" text="180" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-4" style="position: absolute; left: 44px; top: 226px; width: 802px;">
+            <AttributeOverrides element-name="text-0" text="Pitfighter's Glaive" />
+            <AttributeOverrides element-name="text-1" text="MAIN HAND · ATK +9 · CRT +3%" />
+            <AttributeOverrides element-name="text-2" text="320" />
+        </ui:Instance>
+        <ui:Instance template="List-Row-Focus" class="list-row__i-2" style="position: absolute; left: 44px; top: 292px; width: 802px;">
+            <AttributeOverrides element-name="text-0" text="Gravewarden Greatsword" />
+            <AttributeOverrides element-name="text-1" text="MAIN HAND · ATK +14" />
+            <AttributeOverrides element-name="text-2" text="640" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-5" style="position: absolute; left: 44px; top: 358px; width: 802px;">
+            <AttributeOverrides element-name="text-0" text="Sunlit Warhammer" />
+            <AttributeOverrides element-name="text-1" text="MAIN HAND · ATK +11 · HOLY" />
+            <AttributeOverrides element-name="text-2" text="520" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-6" style="position: absolute; left: 44px; top: 424px; width: 802px;">
+            <AttributeOverrides element-name="text-0" text="Pilgrim's Mace" />
+            <AttributeOverrides element-name="text-1" text="MAIN HAND · ATK +7 · MAG +3" />
+            <AttributeOverrides element-name="text-2" text="240" />
+        </ui:Instance>
+        <ui:Instance template="List-Row" class="list-row-2__i-7" style="position: absolute; left: 44px; top: 490px; width: 802px;">
+            <AttributeOverrides element-name="text-0" text="Duelist's Twin Daggers" />
+            <AttributeOverrides element-name="text-1" text="ROGUE ONLY · ATK +8" />
+            <AttributeOverrides element-name="text-2" text="300" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 600px; top: 510px;">
+            <AttributeOverrides element-name="text-0" text="KNIGHT CAN'T USE" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-4" style="position: absolute; left: 878px; top: 68px; width: 378px; height: 632px;" />
+        <ui:Instance template="Section-Header" class="section-header__i-6" style="position: absolute; left: 894px; top: 84px; width: 346px;">
+            <AttributeOverrides element-name="text-0" text="Gravewarden Greatsword" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 894px; top: 126px;">
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="R · RARE" />
+            </ui:Instance>
+            <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="MAIN HAND" />
+            </ui:Instance>
+            <ui:Instance template="Element-Chip-PH" style="flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="PH" />
+            </ui:Instance>
+        </ui:VisualElement>
+        <ui:Label text="✓ KNIGHT CAN USE THIS (KNIGHT)" class="unity-label knight-can-use-this-knight-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 162px;" />
+        <ui:Label text="VS EMPTY SLOT · ATK" class="unity-label vs-empty-slot-atk-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 196px;" />
+        <ui:Label text="+14" class="unity-label _14-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1207px; top: 196px;" />
+        <ui:VisualElement class="rectangle-vars-73" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 218px;" />
+        <ui:Label text="VS EMPTY SLOT · CRT" class="unity-label vs-empty-slot-crt-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 228px;" />
+        <ui:Label text="+2%" class="unity-label _2-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1203px; top: 228px;" />
+        <ui:VisualElement class="rectangle-vars-74" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 250px;" />
+        <ui:Label text="VS EMPTY SLOT · INI" class="unity-label vs-empty-slot-ini-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 260px;" />
+        <ui:Label text="-1" class="unity-label _1-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1221px; top: 260px;" />
+        <ui:VisualElement class="rectangle-vars-75" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 282px;" />
+        <ui:Label text="PRICE" class="unity-label price-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 894px; top: 300px;" />
+        <ui:Label text="640 HUB GOLD" class="unity-label _640-hub-gold-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1116px; top: 300px;" />
+        <ui:VisualElement class="rectangle-vars-76" style="width: 346px; height: 2px; position: absolute; left: 894px; top: 322px;" />
+        <ui:Label text="HUB GOLD 1,240 › 600 · TO THE BAG" class="unity-label hub-gold-1-240-600-to-the-bag-vars" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 894px; top: 608px;" />
+        <ui:Instance template="Button-Primary-Focus" class="button-primary-2__i-2" style="position: absolute; left: 894px; top: 646px; width: 346px;">
+            <AttributeOverrides element-name="text-0" text="▸" />
+            <AttributeOverrides element-name="text-1" text="Buy · 640" />
+        </ui:Instance>
+    </ui:VisualElement>
+</ui:UXML>

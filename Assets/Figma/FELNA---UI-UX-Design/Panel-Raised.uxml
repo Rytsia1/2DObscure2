@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Panel-Raised.uss" />
+    <ui:VisualElement class="panel-raised">
+        <ui:VisualElement class="panel-raised__e" />
+        <ui:VisualElement class="panel-raised__e-2" />
+        <ui:VisualElement class="panel-raised__e-3" />
+        <ui:VisualElement class="panel-raised__e-4" />
+    </ui:VisualElement>
+</ui:UXML>

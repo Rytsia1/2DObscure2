@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Map-Node-Current.uss" />
+    <ui:VisualElement class="map-node">
+        <ui:Label name="text-0" text="VS" class="unity-label map-node__e" />
+    </ui:VisualElement>
+</ui:UXML>

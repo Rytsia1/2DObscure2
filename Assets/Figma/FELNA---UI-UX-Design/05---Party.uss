@@ -1,0 +1,329 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.button-primary {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--accent-gold);
+    border-color: var(--border-focus);
+    color: var(--text-on-accent);
+}
+
+.button-primary:disabled {
+    opacity: 0.85;
+    background-color: var(--accent-gold-dim);
+    color: var(--text-muted);
+}
+
+.button-primary:focus {
+    background-color: var(--text-highlight);
+    border-color: var(--text-highlight);
+}
+
+._05-party {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._05-party {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._05-party-vars._05-party-vars._05-party-vars._05-party-vars._05-party-vars._05-party-vars {
+    background-color: var(--bg-ground);
+}
+
+.party-vars.party-vars.party-vars.party-vars.party-vars.party-vars {
+    color: var(--text-accent);
+}
+
+.rectangle-vars-67.rectangle-vars-67.rectangle-vars-67.rectangle-vars-67.rectangle-vars-67.rectangle-vars-67 {
+    background-color: var(--bg-raised);
+}
+
+.i-vars.i-vars.i-vars.i-vars.i-vars.i-vars {
+    color: var(--text-muted);
+}
+
+.lv-1-vars-2.lv-1-vars-2.lv-1-vars-2.lv-1-vars-2.lv-1-vars-2.lv-1-vars-2 {
+    color: var(--text-accent);
+}
+
+.knight-vars.knight-vars.knight-vars.knight-vars.knight-vars.knight-vars {
+    color: var(--text-primary);
+}
+
+.hp-vars.hp-vars.hp-vars.hp-vars.hp-vars.hp-vars {
+    color: var(--text-muted);
+}
+
+.fill-vars-9.fill-vars-9.fill-vars-9.fill-vars-9.fill-vars-9.fill-vars-9 {
+    background-color: var(--vital-hp);
+}
+
+._125-vars._125-vars._125-vars._125-vars._125-vars._125-vars {
+    color: var(--text-primary);
+}
+
+.mp-vars.mp-vars.mp-vars.mp-vars.mp-vars.mp-vars {
+    color: var(--text-muted);
+}
+
+.fill-vars-10.fill-vars-10.fill-vars-10.fill-vars-10.fill-vars-10.fill-vars-10 {
+    background-color: var(--vital-mp);
+}
+
+._20-vars._20-vars._20-vars._20-vars._20-vars._20-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-68.rectangle-vars-68.rectangle-vars-68.rectangle-vars-68.rectangle-vars-68.rectangle-vars-68 {
+    background-color: var(--bg-raised);
+}
+
+.ii-vars.ii-vars.ii-vars.ii-vars.ii-vars.ii-vars {
+    color: var(--text-muted);
+}
+
+.lv-1-vars-3.lv-1-vars-3.lv-1-vars-3.lv-1-vars-3.lv-1-vars-3.lv-1-vars-3 {
+    color: var(--text-accent);
+}
+
+.rogue-vars.rogue-vars.rogue-vars.rogue-vars.rogue-vars.rogue-vars {
+    color: var(--text-primary);
+}
+
+.hp-vars-2.hp-vars-2.hp-vars-2.hp-vars-2.hp-vars-2.hp-vars-2 {
+    color: var(--text-muted);
+}
+
+.fill-vars-11.fill-vars-11.fill-vars-11.fill-vars-11.fill-vars-11.fill-vars-11 {
+    background-color: var(--vital-hp);
+}
+
+._85-vars._85-vars._85-vars._85-vars._85-vars._85-vars {
+    color: var(--text-primary);
+}
+
+.mp-vars-2.mp-vars-2.mp-vars-2.mp-vars-2.mp-vars-2.mp-vars-2 {
+    color: var(--text-muted);
+}
+
+.fill-vars-12.fill-vars-12.fill-vars-12.fill-vars-12.fill-vars-12.fill-vars-12 {
+    background-color: var(--vital-mp);
+}
+
+._25-vars._25-vars._25-vars._25-vars._25-vars._25-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-69.rectangle-vars-69.rectangle-vars-69.rectangle-vars-69.rectangle-vars-69.rectangle-vars-69 {
+    background-color: var(--bg-raised);
+}
+
+.iii-vars.iii-vars.iii-vars.iii-vars.iii-vars.iii-vars {
+    color: var(--text-muted);
+}
+
+.lv-1-vars-4.lv-1-vars-4.lv-1-vars-4.lv-1-vars-4.lv-1-vars-4.lv-1-vars-4 {
+    color: var(--text-accent);
+}
+
+.mage-vars.mage-vars.mage-vars.mage-vars.mage-vars.mage-vars {
+    color: var(--text-primary);
+}
+
+.hp-vars-3.hp-vars-3.hp-vars-3.hp-vars-3.hp-vars-3.hp-vars-3 {
+    color: var(--text-muted);
+}
+
+.fill-vars-13.fill-vars-13.fill-vars-13.fill-vars-13.fill-vars-13.fill-vars-13 {
+    background-color: var(--vital-hp);
+}
+
+._60-vars._60-vars._60-vars._60-vars._60-vars._60-vars {
+    color: var(--text-primary);
+}
+
+.mp-vars-3.mp-vars-3.mp-vars-3.mp-vars-3.mp-vars-3.mp-vars-3 {
+    color: var(--text-muted);
+}
+
+.fill-vars-14.fill-vars-14.fill-vars-14.fill-vars-14.fill-vars-14.fill-vars-14 {
+    background-color: var(--vital-mp);
+}
+
+._60-vars-2._60-vars-2._60-vars-2._60-vars-2._60-vars-2._60-vars-2 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-70.rectangle-vars-70.rectangle-vars-70.rectangle-vars-70.rectangle-vars-70.rectangle-vars-70 {
+    background-color: var(--bg-raised);
+}
+
+.iv-vars.iv-vars.iv-vars.iv-vars.iv-vars.iv-vars {
+    color: var(--text-muted);
+}
+
+.lv-1-vars-5.lv-1-vars-5.lv-1-vars-5.lv-1-vars-5.lv-1-vars-5.lv-1-vars-5 {
+    color: var(--text-accent);
+}
+
+.healer-vars.healer-vars.healer-vars.healer-vars.healer-vars.healer-vars {
+    color: var(--text-primary);
+}
+
+.hp-vars-4.hp-vars-4.hp-vars-4.hp-vars-4.hp-vars-4.hp-vars-4 {
+    color: var(--text-muted);
+}
+
+.fill-vars-15.fill-vars-15.fill-vars-15.fill-vars-15.fill-vars-15.fill-vars-15 {
+    background-color: var(--vital-hp);
+}
+
+._80-vars._80-vars._80-vars._80-vars._80-vars._80-vars {
+    color: var(--text-primary);
+}
+
+.mp-vars-4.mp-vars-4.mp-vars-4.mp-vars-4.mp-vars-4.mp-vars-4 {
+    color: var(--text-muted);
+}
+
+.fill-vars-16.fill-vars-16.fill-vars-16.fill-vars-16.fill-vars-16.fill-vars-16 {
+    background-color: var(--vital-mp);
+}
+
+._55-vars._55-vars._55-vars._55-vars._55-vars._55-vars {
+    color: var(--text-primary);
+}
+
+.node-vars-3.node-vars-3.node-vars-3.node-vars-3.node-vars-3.node-vars-3 {
+    color: var(--text-highlight);
+}
+
+.roles-covered-vars.roles-covered-vars.roles-covered-vars.roles-covered-vars.roles-covered-vars.roles-covered-vars {
+    color: var(--text-muted);
+}
+
+.damage-types-available-vars.damage-types-available-vars.damage-types-available-vars.damage-types-available-vars.damage-types-available-vars.damage-types-available-vars {
+    color: var(--text-muted);
+}
+
+.needs-attention-vars.needs-attention-vars.needs-attention-vars.needs-attention-vars.needs-attention-vars.needs-attention-vars {
+    color: var(--text-muted);
+}
+
+.all-members-ready-vars.all-members-ready-vars.all-members-ready-vars.all-members-ready-vars.all-members-ready-vars.all-members-ready-vars {
+    color: var(--status-ok);
+}
+
+.panel-gold__i-3 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-8 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-9 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-10 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-11 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-4 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+

@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Tag-Keep.uss" />
+    <ui:VisualElement class="tag-keep">
+        <ui:Label name="text-0" text="TAG" class="unity-label tag-keep__e" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,44 @@
+.panel-raised {
+    width: 240px;
+    height: 140px;
+    border-width: 2px;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.panel-raised__e.panel-raised__e.panel-raised__e.panel-raised__e.panel-raised__e.panel-raised__e.panel-raised__e {
+    width: 4px;
+    height: 4px;
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    background-color: var(--accent-gold);
+}
+
+.panel-raised__e-2.panel-raised__e-2.panel-raised__e-2.panel-raised__e-2.panel-raised__e-2.panel-raised__e-2.panel-raised__e-2 {
+    width: 4px;
+    height: 4px;
+    position: absolute;
+    right: -2px;
+    top: -2px;
+    background-color: var(--accent-gold);
+}
+
+.panel-raised__e-3.panel-raised__e-3.panel-raised__e-3.panel-raised__e-3.panel-raised__e-3.panel-raised__e-3.panel-raised__e-3 {
+    width: 4px;
+    height: 4px;
+    position: absolute;
+    left: -2px;
+    bottom: -2px;
+    background-color: var(--accent-gold);
+}
+
+.panel-raised__e-4.panel-raised__e-4.panel-raised__e-4.panel-raised__e-4.panel-raised__e-4.panel-raised__e-4.panel-raised__e-4 {
+    width: 4px;
+    height: 4px;
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    background-color: var(--accent-gold);
+}
+

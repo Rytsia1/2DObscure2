@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Section-Header.uss" />
+    <ui:VisualElement class="section-header">
+        <ui:VisualElement class="section-header__e">
+            <ui:VisualElement class="section-header__e-2" />
+            <ui:Label name="text-0" text="Section" class="unity-label section-header__e-3" />
+        </ui:VisualElement>
+        <ui:VisualElement class="section-header__e-4" />
+    </ui:VisualElement>
+</ui:UXML>

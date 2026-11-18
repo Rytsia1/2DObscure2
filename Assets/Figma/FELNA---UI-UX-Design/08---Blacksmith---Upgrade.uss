@@ -1,0 +1,210 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.sprite-iconbattle {
+    width: 27px;
+    height: 27px;
+}
+
+._08-blacksmith-upgrade {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._08-blacksmith-upgrade {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._08-blacksmith-upgrade-vars._08-blacksmith-upgrade-vars._08-blacksmith-upgrade-vars._08-blacksmith-upgrade-vars._08-blacksmith-upgrade-vars._08-blacksmith-upgrade-vars {
+    background-color: var(--bg-ground);
+}
+
+.blacksmith-vars-2.blacksmith-vars-2.blacksmith-vars-2.blacksmith-vars-2.blacksmith-vars-2.blacksmith-vars-2 {
+    color: var(--text-accent);
+}
+
+.upgrades-raise-base-stats-only-vars.upgrades-raise-base-stats-only-vars.upgrades-raise-base-stats-only-vars.upgrades-raise-base-stats-only-vars.upgrades-raise-base-stats-only-vars.upgrades-raise-base-stats-only-vars {
+    color: var(--text-body);
+}
+
+.ironbound-longsword-vars.ironbound-longsword-vars.ironbound-longsword-vars.ironbound-longsword-vars.ironbound-longsword-vars.ironbound-longsword-vars {
+    color: var(--rarity-common);
+}
+
+.node-vars-4.node-vars-4.node-vars-4.node-vars-4.node-vars-4.node-vars-4 {
+    color: var(--text-accent);
+}
+
+.atk-vars.atk-vars.atk-vars.atk-vars.atk-vars.atk-vars {
+    color: var(--text-body);
+}
+
+._8-10-vars._8-10-vars._8-10-vars._8-10-vars._8-10-vars._8-10-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-77.rectangle-vars-77.rectangle-vars-77.rectangle-vars-77.rectangle-vars-77.rectangle-vars-77 {
+    background-color: var(--border-line);
+}
+
+.crt-vars.crt-vars.crt-vars.crt-vars.crt-vars.crt-vars {
+    color: var(--text-body);
+}
+
+._3-3-vars._3-3-vars._3-3-vars._3-3-vars._3-3-vars._3-3-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-78.rectangle-vars-78.rectangle-vars-78.rectangle-vars-78.rectangle-vars-78.rectangle-vars-78 {
+    background-color: var(--border-line);
+}
+
+.durability-vars.durability-vars.durability-vars.durability-vars.durability-vars.durability-vars {
+    color: var(--text-body);
+}
+
+._40-45-vars._40-45-vars._40-45-vars._40-45-vars._40-45-vars._40-45-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-79.rectangle-vars-79.rectangle-vars-79.rectangle-vars-79.rectangle-vars-79.rectangle-vars-79 {
+    background-color: var(--border-line);
+}
+
+.base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars.base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars.base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars.base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars.base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars.base-stats-only-affixes-and-curses-are-not-changed-by-upgrades-vars {
+    color: var(--text-muted);
+}
+
+.iron-scrap-vars.iron-scrap-vars.iron-scrap-vars.iron-scrap-vars.iron-scrap-vars.iron-scrap-vars {
+    color: var(--text-body);
+}
+
+._3-5-vars._3-5-vars._3-5-vars._3-5-vars._3-5-vars._3-5-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-80.rectangle-vars-80.rectangle-vars-80.rectangle-vars-80.rectangle-vars-80.rectangle-vars-80 {
+    background-color: var(--border-line);
+}
+
+.ember-core-vars.ember-core-vars.ember-core-vars.ember-core-vars.ember-core-vars.ember-core-vars {
+    color: var(--text-body);
+}
+
+._1-1-vars._1-1-vars._1-1-vars._1-1-vars._1-1-vars._1-1-vars {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-81.rectangle-vars-81.rectangle-vars-81.rectangle-vars-81.rectangle-vars-81.rectangle-vars-81 {
+    background-color: var(--border-line);
+}
+
+.hub-gold-vars.hub-gold-vars.hub-gold-vars.hub-gold-vars.hub-gold-vars.hub-gold-vars {
+    color: var(--text-body);
+}
+
+._120-vars._120-vars._120-vars._120-vars._120-vars._120-vars {
+    color: var(--text-accent);
+}
+
+.rectangle-vars-82.rectangle-vars-82.rectangle-vars-82.rectangle-vars-82.rectangle-vars-82.rectangle-vars-82 {
+    background-color: var(--border-line);
+}
+
+.panel-default__i-15 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-7 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.list-row__i-3 > .list-row.list-row.list-row.list-row.list-row.list-row.list-row {
+    width: 100%;
+}
+
+.list-row__i-3 .list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3.list-row__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-8 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-8 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.list-row-2__i-9 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-9 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-common);
+}
+
+.list-row-2__i-10 > .list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2.list-row-2 {
+    width: 100%;
+}
+
+.list-row-2__i-10 .list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3.list-row-2__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.panel-gold__i-5 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.item-slot__i > .item-slot.item-slot.item-slot.item-slot.item-slot.item-slot.item-slot {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-16 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-8 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.toast-info__i > .toast-info.toast-info.toast-info.toast-info.toast-info.toast-info.toast-info {
+    width: 100%;
+}
+
+.button-primary-2__i-3 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

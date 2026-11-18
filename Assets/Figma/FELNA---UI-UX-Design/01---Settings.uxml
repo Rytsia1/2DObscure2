@@ -1,0 +1,51 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="01---Settings.uss" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Button-Flat-Focus" src="Button-Flat-Focus.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <ui:VisualElement class="_01-settings _01-settings-vars" style="overflow: hidden;">
+        <ui:Label text="Settings" class="unity-label settings-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 126px; top: 24px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i" style="position: absolute; left: 24px; top: 68px; height: 568px;" />
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; position: absolute; left: 44px; top: 84px;">
+            <ui:Instance template="Button-Flat-Focus" class="button-flat__i-2" style="flex-shrink: 0; width: 196px;">
+                <AttributeOverrides element-name="text-0" text="▸" />
+                <AttributeOverrides element-name="text-1" text="Audio" />
+            </ui:Instance>
+            <ui:Button text="Graphics" class="button-flat-2 unity-button" style="width: 196px; flex-shrink: 0;" />
+            <ui:Button text="Controls" class="button-flat-2 unity-button" style="width: 196px; flex-shrink: 0;" />
+            <ui:Button text="QTE  ›" class="button-flat-2 unity-button" style="width: 196px; flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Panel-Default" class="panel-default__i-2" style="position: absolute; left: 280px; top: 68px; width: 976px; height: 568px;" />
+        <ui:Instance template="Section-Header" class="section-header__i" style="position: absolute; left: 300px; top: 84px; width: 936px;">
+            <AttributeOverrides element-name="text-0" text="Audio" />
+        </ui:Instance>
+        <ui:Label text="Master volume" class="unity-label master-volume-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 322px; top: 124px;" />
+        <ui:Label text="MUSIC AND SOUND EFFECTS" class="unity-label music-and-sound-effects-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 322px; top: 152px;" />
+        <ui:VisualElement class="rectangle-vars-48" style="width: 280px; height: 12px; position: absolute; left: 782px; top: 138px;" />
+        <ui:VisualElement class="rectangle-vars-49" style="width: 83px; height: 8px; position: absolute; left: 784px; top: 140px;" />
+        <ui:VisualElement class="rectangle-vars-50" style="width: 10px; height: 28px; position: absolute; left: 862px; top: 130px;" />
+        <ui:Label text="30%" class="unity-label _30-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 1078px; top: 130px;" />
+        <ui:VisualElement class="rectangle-vars-51" style="width: 936px; height: 2px; position: absolute; left: 296px; top: 176px;" />
+        <ui:Label text="Music volume" class="unity-label music-volume-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 322px; top: 184px;" />
+        <ui:Label text="MUSIC ONLY" class="unity-label music-only-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 322px; top: 212px;" />
+        <ui:VisualElement class="rectangle-vars-52" style="width: 280px; height: 12px; position: absolute; left: 782px; top: 198px;" />
+        <ui:VisualElement class="rectangle-vars-53" style="width: 110px; height: 8px; position: absolute; left: 784px; top: 200px;" />
+        <ui:VisualElement class="rectangle-vars-54" style="width: 10px; height: 28px; position: absolute; left: 890px; top: 190px;" />
+        <ui:Label text="40%" class="unity-label _40-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 1078px; top: 190px;" />
+        <ui:VisualElement class="rectangle-vars-55" style="width: 936px; height: 2px; position: absolute; left: 296px; top: 236px;" />
+        <ui:Label text="Mute music" class="unity-label mute-music-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 322px; top: 244px;" />
+        <ui:Label text="SILENCE THE SOUNDTRACK" class="unity-label silence-the-soundtrack-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 322px; top: 272px;" />
+        <ui:VisualElement class="rectangle-vars-56" style="width: 50px; height: 26px; border-width: 2px; position: absolute; left: 780px; top: 250px;" />
+        <ui:VisualElement class="rectangle-vars-57" style="width: 14px; height: 14px; position: absolute; left: 788px; top: 256px;" />
+        <ui:Label text="OFF" class="unity-label off-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 1078px; top: 250px;" />
+        <ui:VisualElement class="rectangle-vars-58" style="width: 936px; height: 2px; position: absolute; left: 296px; top: 296px;" />
+        <ui:Label text="LEAVING WITH UNSAVED CHANGES ASKS: APPLY · DISCARD." class="unity-label leaving-with-unsaved-changes-asks-apply-discard-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 24px; top: 668px;" />
+        <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 860px; top: 656px;">
+            <ui:Button text="Reset to Default" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Button text="Revert" enabled="false" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Button text="Apply" enabled="false" class="button-primary unity-button" style="flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 24px; top: 18px;" />
+    </ui:VisualElement>
+</ui:UXML>

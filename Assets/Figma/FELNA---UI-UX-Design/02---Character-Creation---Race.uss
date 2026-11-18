@@ -1,0 +1,297 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.button-primary {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--accent-gold);
+    border-color: var(--border-focus);
+    color: var(--text-on-accent);
+}
+
+.button-primary:disabled {
+    opacity: 0.85;
+    background-color: var(--accent-gold-dim);
+    color: var(--text-muted);
+}
+
+.button-primary:focus {
+    background-color: var(--text-highlight);
+    border-color: var(--text-highlight);
+}
+
+._02-character-creation-race {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._02-character-creation-race {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._02-character-creation-race-vars._02-character-creation-race-vars._02-character-creation-race-vars._02-character-creation-race-vars._02-character-creation-race-vars._02-character-creation-race-vars {
+    background-color: var(--bg-ground);
+}
+
+.create-character-vars.create-character-vars.create-character-vars.create-character-vars.create-character-vars.create-character-vars {
+    color: var(--text-accent);
+}
+
+.rectangle-vars-59.rectangle-vars-59.rectangle-vars-59.rectangle-vars-59.rectangle-vars-59.rectangle-vars-59 {
+    background-color: var(--bg-raised);
+}
+
+.fighter-vars.fighter-vars.fighter-vars.fighter-vars.fighter-vars.fighter-vars {
+    color: var(--text-primary);
+}
+
+.lv-1-vars.lv-1-vars.lv-1-vars.lv-1-vars.lv-1-vars.lv-1-vars {
+    color: var(--text-muted);
+}
+
+.scores-after-racial-bonus-vars.scores-after-racial-bonus-vars.scores-after-racial-bonus-vars.scores-after-racial-bonus-vars.scores-after-racial-bonus-vars.scores-after-racial-bonus-vars {
+    color: var(--text-muted);
+}
+
+.cap-15-before-bonus-17-after-20-by-progression-vars.cap-15-before-bonus-17-after-20-by-progression-vars.cap-15-before-bonus-17-after-20-by-progression-vars.cap-15-before-bonus-17-after-20-by-progression-vars.cap-15-before-bonus-17-after-20-by-progression-vars.cap-15-before-bonus-17-after-20-by-progression-vars {
+    color: var(--text-muted);
+}
+
+.race-human-vars.race-human-vars.race-human-vars.race-human-vars.race-human-vars.race-human-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-focus);
+}
+
+.human-vars.human-vars.human-vars.human-vars.human-vars.human-vars {
+    color: var(--text-highlight);
+}
+
+._1-str-1-vit-vars._1-str-1-vit-vars._1-str-1-vit-vars._1-str-1-vit-vars._1-str-1-vit-vars._1-str-1-vit-vars {
+    color: var(--text-accent);
+}
+
+.adaptable-survivors-vars.adaptable-survivors-vars.adaptable-survivors-vars.adaptable-survivors-vars.adaptable-survivors-vars.adaptable-survivors-vars {
+    color: var(--text-body);
+}
+
+.race-elf-vars.race-elf-vars.race-elf-vars.race-elf-vars.race-elf-vars.race-elf-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.elf-vars.elf-vars.elf-vars.elf-vars.elf-vars.elf-vars {
+    color: var(--text-primary);
+}
+
+._2-dex-vars._2-dex-vars._2-dex-vars._2-dex-vars._2-dex-vars._2-dex-vars {
+    color: var(--text-accent);
+}
+
+.swift-hunters-attuned-vars.swift-hunters-attuned-vars.swift-hunters-attuned-vars.swift-hunters-attuned-vars.swift-hunters-attuned-vars.swift-hunters-attuned-vars {
+    color: var(--text-body);
+}
+
+.race-dwarf-vars.race-dwarf-vars.race-dwarf-vars.race-dwarf-vars.race-dwarf-vars.race-dwarf-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.dwarf-vars.dwarf-vars.dwarf-vars.dwarf-vars.dwarf-vars.dwarf-vars {
+    color: var(--text-primary);
+}
+
+._2-vit-vars._2-vit-vars._2-vit-vars._2-vit-vars._2-vit-vars._2-vit-vars {
+    color: var(--text-accent);
+}
+
+.stout-delve-folk-vars.stout-delve-folk-vars.stout-delve-folk-vars.stout-delve-folk-vars.stout-delve-folk-vars.stout-delve-folk-vars {
+    color: var(--text-body);
+}
+
+.race-halfling-vars.race-halfling-vars.race-halfling-vars.race-halfling-vars.race-halfling-vars.race-halfling-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.halfling-vars.halfling-vars.halfling-vars.halfling-vars.halfling-vars.halfling-vars {
+    color: var(--text-primary);
+}
+
+._2-dex-vars-2._2-dex-vars-2._2-dex-vars-2._2-dex-vars-2._2-dex-vars-2._2-dex-vars-2 {
+    color: var(--text-accent);
+}
+
+.nimble-and-fortunate-vars.nimble-and-fortunate-vars.nimble-and-fortunate-vars.nimble-and-fortunate-vars.nimble-and-fortunate-vars.nimble-and-fortunate-vars {
+    color: var(--text-body);
+}
+
+.race-dragonborn-vars.race-dragonborn-vars.race-dragonborn-vars.race-dragonborn-vars.race-dragonborn-vars.race-dragonborn-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.dragonborn-vars.dragonborn-vars.dragonborn-vars.dragonborn-vars.dragonborn-vars.dragonborn-vars {
+    color: var(--text-primary);
+}
+
+._2-str-vars._2-str-vars._2-str-vars._2-str-vars._2-str-vars._2-str-vars {
+    color: var(--text-accent);
+}
+
+.proud-warriors-vars.proud-warriors-vars.proud-warriors-vars.proud-warriors-vars.proud-warriors-vars.proud-warriors-vars {
+    color: var(--text-body);
+}
+
+.race-liichtian-vars.race-liichtian-vars.race-liichtian-vars.race-liichtian-vars.race-liichtian-vars.race-liichtian-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.liichtian-vars.liichtian-vars.liichtian-vars.liichtian-vars.liichtian-vars.liichtian-vars {
+    color: var(--text-primary);
+}
+
+._2-wis-vars._2-wis-vars._2-wis-vars._2-wis-vars._2-wis-vars._2-wis-vars {
+    color: var(--text-accent);
+}
+
+.mortals-of-celestial-line-vars.mortals-of-celestial-line-vars.mortals-of-celestial-line-vars.mortals-of-celestial-line-vars.mortals-of-celestial-line-vars.mortals-of-celestial-line-vars {
+    color: var(--text-body);
+}
+
+.race-merfolk-vars.race-merfolk-vars.race-merfolk-vars.race-merfolk-vars.race-merfolk-vars.race-merfolk-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.merfolk-vars.merfolk-vars.merfolk-vars.merfolk-vars.merfolk-vars.merfolk-vars {
+    color: var(--text-primary);
+}
+
+._2-wis-vars-2._2-wis-vars-2._2-wis-vars-2._2-wis-vars-2._2-wis-vars-2._2-wis-vars-2 {
+    color: var(--text-accent);
+}
+
+.denizens-of-the-sunken-sea-vars.denizens-of-the-sunken-sea-vars.denizens-of-the-sunken-sea-vars.denizens-of-the-sunken-sea-vars.denizens-of-the-sunken-sea-vars.denizens-of-the-sunken-sea-vars {
+    color: var(--text-body);
+}
+
+.node-vars-2.node-vars-2.node-vars-2.node-vars-2.node-vars-2.node-vars-2 {
+    color: var(--text-highlight);
+}
+
+.adaptable-survivors-of-the-surface-kingdoms-vars.adaptable-survivors-of-the-surface-kingdoms-vars.adaptable-survivors-of-the-surface-kingdoms-vars.adaptable-survivors-of-the-surface-kingdoms-vars.adaptable-survivors-of-the-surface-kingdoms-vars.adaptable-survivors-of-the-surface-kingdoms-vars {
+    color: var(--text-body);
+}
+
+.racial-ability-bonus-vars.racial-ability-bonus-vars.racial-ability-bonus-vars.racial-ability-bonus-vars.racial-ability-bonus-vars.racial-ability-bonus-vars {
+    color: var(--text-accent);
+}
+
+.bonus-vars.bonus-vars.bonus-vars.bonus-vars.bonus-vars.bonus-vars {
+    color: var(--text-body);
+}
+
+.applied-after-point-buy-vars.applied-after-point-buy-vars.applied-after-point-buy-vars.applied-after-point-buy-vars.applied-after-point-buy-vars.applied-after-point-buy-vars {
+    color: var(--text-body);
+}
+
+.rectangle-vars-60.rectangle-vars-60.rectangle-vars-60.rectangle-vars-60.rectangle-vars-60.rectangle-vars-60 {
+    background-color: var(--border-line);
+}
+
+.racial-feat-vars.racial-feat-vars.racial-feat-vars.racial-feat-vars.racial-feat-vars.racial-feat-vars {
+    color: var(--text-accent);
+}
+
+.determination-vars.determination-vars.determination-vars.determination-vars.determination-vars.determination-vars {
+    color: var(--text-primary);
+}
+
+.shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars.shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars.shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars.shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars.shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars.shield-20-max-hp-all-damage-bonus-15-for-2-turns-when-dropped-to-30-hp-1-battle-vars {
+    color: var(--text-body);
+}
+
+.rectangle-vars-61.rectangle-vars-61.rectangle-vars-61.rectangle-vars-61.rectangle-vars-61.rectangle-vars-61 {
+    background-color: var(--border-line);
+}
+
+.racial-utility-vars.racial-utility-vars.racial-utility-vars.racial-utility-vars.racial-utility-vars.racial-utility-vars {
+    color: var(--text-accent);
+}
+
+.adaptability-vars.adaptability-vars.adaptability-vars.adaptability-vars.adaptability-vars.adaptability-vars {
+    color: var(--text-primary);
+}
+
+.adaptable-across-varied-expedition-challenges-vars.adaptable-across-varied-expedition-challenges-vars.adaptable-across-varied-expedition-challenges-vars.adaptable-across-varied-expedition-challenges-vars.adaptable-across-varied-expedition-challenges-vars.adaptable-across-varied-expedition-challenges-vars {
+    color: var(--text-body);
+}
+
+.confirm-unlocks-on-review-vars.confirm-unlocks-on-review-vars.confirm-unlocks-on-review-vars.confirm-unlocks-on-review-vars.confirm-unlocks-on-review-vars.confirm-unlocks-on-review-vars {
+    color: var(--text-body);
+}
+
+.panel-default__i-3 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-4 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-2 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.panel-gold__i > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-3 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+

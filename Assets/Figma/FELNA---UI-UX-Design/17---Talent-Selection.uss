@@ -1,0 +1,341 @@
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.frame-6 .unity-tab__header {
+    background-color: rgba(0, 0, 0, 0);
+    padding: 0px;
+    min-height: auto;
+    display: flex;
+    padding: 6px 16px;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+    color: var(--text-body);
+}
+
+.frame-6 .unity-tab__header:checked {
+    background-color: var(--bg-panel);
+    border-color: var(--border-focus);
+    color: var(--text-accent);
+}
+
+.frame-6 .unity-tab__header:checked:hover {
+    color: var(--text-accent);
+}
+
+.frame-6 .unity-tab__header > .unity-tab__header-label {
+    margin: 0px;
+    padding: 0px;
+}
+
+.frame-6 .unity-tab__header-underline {
+    display: none;
+}
+
+._17-talent-selection {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._17-talent-selection {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._17-talent-selection-vars._17-talent-selection-vars._17-talent-selection-vars._17-talent-selection-vars._17-talent-selection-vars._17-talent-selection-vars {
+    background-color: var(--bg-ground);
+}
+
+.talents-vars.talents-vars.talents-vars.talents-vars.talents-vars.talents-vars {
+    color: var(--text-accent);
+}
+
+.frame-vars-27.frame-vars-27.frame-vars-27.frame-vars-27.frame-vars-27.frame-vars-27 {
+    background-color: var(--bg-void);
+    border-color: var(--border-focus);
+}
+
+.frame-vars-28.frame-vars-28.frame-vars-28.frame-vars-28.frame-vars-28.frame-vars-28 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.frame-vars-29.frame-vars-29.frame-vars-29.frame-vars-29.frame-vars-29.frame-vars-29 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.frame-vars-30.frame-vars-30.frame-vars-30.frame-vars-30.frame-vars-30.frame-vars-30 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.talent-slots-vars.talent-slots-vars.talent-slots-vars.talent-slots-vars.talent-slots-vars.talent-slots-vars {
+    color: var(--text-muted);
+}
+
+.lv-3-vars.lv-3-vars.lv-3-vars.lv-3-vars.lv-3-vars.lv-3-vars {
+    color: var(--text-accent);
+}
+
+.choosing-vars.choosing-vars.choosing-vars.choosing-vars.choosing-vars.choosing-vars {
+    color: var(--text-highlight);
+}
+
+.lv-6-vars.lv-6-vars.lv-6-vars.lv-6-vars.lv-6-vars.lv-6-vars {
+    color: var(--text-muted);
+}
+
+.locked-vars.locked-vars.locked-vars.locked-vars.locked-vars.locked-vars {
+    color: var(--text-muted);
+}
+
+.lv-9-vars.lv-9-vars.lv-9-vars.lv-9-vars.lv-9-vars.lv-9-vars {
+    color: var(--text-muted);
+}
+
+.locked-vars-2.locked-vars-2.locked-vars-2.locked-vars-2.locked-vars-2.locked-vars-2 {
+    color: var(--text-muted);
+}
+
+.lv-12-vars.lv-12-vars.lv-12-vars.lv-12-vars.lv-12-vars.lv-12-vars {
+    color: var(--text-muted);
+}
+
+.locked-vars-3.locked-vars-3.locked-vars-3.locked-vars-3.locked-vars-3.locked-vars-3 {
+    color: var(--text-muted);
+}
+
+.lv-15-vars.lv-15-vars.lv-15-vars.lv-15-vars.lv-15-vars.lv-15-vars {
+    color: var(--text-muted);
+}
+
+.locked-vars-4.locked-vars-4.locked-vars-4.locked-vars-4.locked-vars-4.locked-vars-4 {
+    color: var(--text-muted);
+}
+
+.talent-alert-vars.talent-alert-vars.talent-alert-vars.talent-alert-vars.talent-alert-vars.talent-alert-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.alert-vars.alert-vars.alert-vars.alert-vars.alert-vars.alert-vars {
+    color: var(--text-primary);
+}
+
+.reduces-enemy-critical-chance-by-10-points-vars.reduces-enemy-critical-chance-by-10-points-vars.reduces-enemy-critical-chance-by-10-points-vars.reduces-enemy-critical-chance-by-10-points-vars.reduces-enemy-critical-chance-by-10-points-vars.reduces-enemy-critical-chance-by-10-points-vars {
+    color: var(--text-body);
+}
+
+.talent-healer-vars.talent-healer-vars.talent-healer-vars.talent-healer-vars.talent-healer-vars.talent-healer-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.healer-vars-4.healer-vars-4.healer-vars-4.healer-vars-4.healer-vars-4.healer-vars-4 {
+    color: var(--text-primary);
+}
+
+._15-hp-restored-by-this-character-vars._15-hp-restored-by-this-character-vars._15-hp-restored-by-this-character-vars._15-hp-restored-by-this-character-vars._15-hp-restored-by-this-character-vars._15-hp-restored-by-this-character-vars {
+    color: var(--text-body);
+}
+
+.talent-durable-vars.talent-durable-vars.talent-durable-vars.talent-durable-vars.talent-durable-vars.talent-durable-vars {
+    border-color: var(--border-focus);
+}
+
+.durable-vars.durable-vars.durable-vars.durable-vars.durable-vars.durable-vars {
+    color: var(--text-highlight);
+}
+
+._10-max-hp-and-5-damage-reduction-vars._10-max-hp-and-5-damage-reduction-vars._10-max-hp-and-5-damage-reduction-vars._10-max-hp-and-5-damage-reduction-vars._10-max-hp-and-5-damage-reduction-vars._10-max-hp-and-5-damage-reduction-vars {
+    color: var(--text-body);
+}
+
+.talent-keen-mind-vars.talent-keen-mind-vars.talent-keen-mind-vars.talent-keen-mind-vars.talent-keen-mind-vars.talent-keen-mind-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.keen-mind-vars.keen-mind-vars.keen-mind-vars.keen-mind-vars.keen-mind-vars.keen-mind-vars {
+    color: var(--text-primary);
+}
+
+.skills-cost-10-less-mp-min-1-vars.skills-cost-10-less-mp-min-1-vars.skills-cost-10-less-mp-min-1-vars.skills-cost-10-less-mp-min-1-vars.skills-cost-10-less-mp-min-1-vars.skills-cost-10-less-mp-min-1-vars {
+    color: var(--text-body);
+}
+
+.talent-arcane-reserve-vars.talent-arcane-reserve-vars.talent-arcane-reserve-vars.talent-arcane-reserve-vars.talent-arcane-reserve-vars.talent-arcane-reserve-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.arcane-reserve-vars.arcane-reserve-vars.arcane-reserve-vars.arcane-reserve-vars.arcane-reserve-vars.arcane-reserve-vars {
+    color: var(--text-primary);
+}
+
+._15-max-mp-vars._15-max-mp-vars._15-max-mp-vars._15-max-mp-vars._15-max-mp-vars._15-max-mp-vars {
+    color: var(--text-body);
+}
+
+.talent-poisoner-vars.talent-poisoner-vars.talent-poisoner-vars.talent-poisoner-vars.talent-poisoner-vars.talent-poisoner-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.poisoner-vars.poisoner-vars.poisoner-vars.poisoner-vars.poisoner-vars.poisoner-vars {
+    color: var(--text-primary);
+}
+
+.poison-you-apply-deals-more-damage-vars.poison-you-apply-deals-more-damage-vars.poison-you-apply-deals-more-damage-vars.poison-you-apply-deals-more-damage-vars.poison-you-apply-deals-more-damage-vars.poison-you-apply-deals-more-damage-vars {
+    color: var(--text-body);
+}
+
+.pick-one-talent-for-the-lv-3-slot-talents-are-permanent-unless-reset-with-a-scroll-of-emptiness-vars.pick-one-talent-for-the-lv-3-slot-talents-are-permanent-unless-reset-with-a-scroll-of-emptiness-vars.pick-one-talent-for-the-lv-3-slot-talents-are-permanent-unless-reset-with-a-scroll-of-emptiness-vars.pick-one-talent-for-the-lv-3-slot-talents-are-permanent-unless-reset-with-a-scroll-of-emptiness-vars.pick-one-talent-for-the-lv-3-slot-talents-are-permanent-unless-reset-with-a-scroll-of-emptiness-vars.pick-one-talent-for-the-lv-3-slot-talents-are-permanent-unless-reset-with-a-scroll-of-emptiness-vars {
+    color: var(--text-muted);
+}
+
+.improves-survival-increases-max-hp-by-10-and-grants-5-damage-reduction-vars.improves-survival-increases-max-hp-by-10-and-grants-5-damage-reduction-vars.improves-survival-increases-max-hp-by-10-and-grants-5-damage-reduction-vars.improves-survival-increases-max-hp-by-10-and-grants-5-damage-reduction-vars.improves-survival-increases-max-hp-by-10-and-grants-5-damage-reduction-vars.improves-survival-increases-max-hp-by-10-and-grants-5-damage-reduction-vars {
+    color: var(--text-primary);
+}
+
+.max-hp-vars.max-hp-vars.max-hp-vars.max-hp-vars.max-hp-vars.max-hp-vars {
+    color: var(--text-body);
+}
+
+._125-137-vars._125-137-vars._125-137-vars._125-137-vars._125-137-vars._125-137-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-160.rectangle-vars-160.rectangle-vars-160.rectangle-vars-160.rectangle-vars-160.rectangle-vars-160 {
+    background-color: var(--border-line);
+}
+
+.damage-reduction-vars.damage-reduction-vars.damage-reduction-vars.damage-reduction-vars.damage-reduction-vars.damage-reduction-vars {
+    color: var(--text-body);
+}
+
+._0-5-vars._0-5-vars._0-5-vars._0-5-vars._0-5-vars._0-5-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-161.rectangle-vars-161.rectangle-vars-161.rectangle-vars-161.rectangle-vars-161.rectangle-vars-161 {
+    background-color: var(--border-line);
+}
+
+.slot-vars.slot-vars.slot-vars.slot-vars.slot-vars.slot-vars {
+    color: var(--text-body);
+}
+
+.lv-3-vars-2.lv-3-vars-2.lv-3-vars-2.lv-3-vars-2.lv-3-vars-2.lv-3-vars-2 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-162.rectangle-vars-162.rectangle-vars-162.rectangle-vars-162.rectangle-vars-162.rectangle-vars-162 {
+    background-color: var(--border-line);
+}
+
+.panel-default__i-28 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node__i-2 > .map-node.map-node.map-node.map-node.map-node.map-node.map-node {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-8 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-9 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-10 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.map-node-3__i-11 > .map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3.map-node-3 {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-29 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-gold__i-13 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-20 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.toast-info__i-3 > .toast-info.toast-info.toast-info.toast-info.toast-info.toast-info.toast-info {
+    width: 100%;
+}
+
+.button-primary-2__i-6 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

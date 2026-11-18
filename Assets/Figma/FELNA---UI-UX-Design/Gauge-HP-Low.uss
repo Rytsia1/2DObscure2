@@ -1,0 +1,31 @@
+.gauge-hp-low {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-hp-low__e.gauge-hp-low__e.gauge-hp-low__e.gauge-hp-low__e.gauge-hp-low__e.gauge-hp-low__e.gauge-hp-low__e {
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 0px;
+    align-self: stretch;
+    overflow: hidden;
+    background-color: var(--vital-hp-low);
+}
+
+.gauge-hp-low__e-2.gauge-hp-low__e-2.gauge-hp-low__e-2.gauge-hp-low__e-2.gauge-hp-low__e-2.gauge-hp-low__e-2.gauge-hp-low__e-2 {
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.30);
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+}
+

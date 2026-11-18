@@ -1,0 +1,249 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-xp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+._21-combat-victory-rewards {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._21-combat-victory-rewards {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._21-combat-victory-rewards-vars._21-combat-victory-rewards-vars._21-combat-victory-rewards-vars._21-combat-victory-rewards-vars._21-combat-victory-rewards-vars._21-combat-victory-rewards-vars {
+    background-color: var(--bg-ground);
+}
+
+.rectangle-vars-168.rectangle-vars-168.rectangle-vars-168.rectangle-vars-168.rectangle-vars-168.rectangle-vars-168 {
+    background-color: var(--accent-gold);
+}
+
+.node-vars-9.node-vars-9.node-vars-9.node-vars-9.node-vars-9.node-vars-9 {
+    color: var(--accent-gold);
+}
+
+.victory-vars.victory-vars.victory-vars.victory-vars.victory-vars.victory-vars {
+    color: var(--text-highlight);
+}
+
+.spoils-of-war-vars.spoils-of-war-vars.spoils-of-war-vars.spoils-of-war-vars.spoils-of-war-vars.spoils-of-war-vars {
+    color: var(--text-body);
+}
+
+.frame-vars-36.frame-vars-36.frame-vars-36.frame-vars-36.frame-vars-36.frame-vars-36 {
+    border-color: var(--currency-run);
+}
+
+._24-run-gold-vars._24-run-gold-vars._24-run-gold-vars._24-run-gold-vars._24-run-gold-vars._24-run-gold-vars {
+    color: var(--currency-run-text);
+}
+
+.run-gold-120-144-vars.run-gold-120-144-vars.run-gold-120-144-vars.run-gold-120-144-vars.run-gold-120-144-vars.run-gold-120-144-vars {
+    color: var(--currency-run-text);
+}
+
+.choose-one-prize-vars.choose-one-prize-vars.choose-one-prize-vars.choose-one-prize-vars.choose-one-prize-vars.choose-one-prize-vars {
+    color: var(--text-muted);
+}
+
+.prize-draught-2-vars.prize-draught-2-vars.prize-draught-2-vars.prize-draught-2-vars.prize-draught-2-vars.prize-draught-2-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.draught-2-vars.draught-2-vars.draught-2-vars.draught-2-vars.draught-2-vars.draught-2-vars {
+    color: var(--rarity-common);
+}
+
+.restores-40-hp-vars-2.restores-40-hp-vars-2.restores-40-hp-vars-2.restores-40-hp-vars-2.restores-40-hp-vars-2.restores-40-hp-vars-2 {
+    color: var(--text-body);
+}
+
+.prize-tideglass-wand-vars.prize-tideglass-wand-vars.prize-tideglass-wand-vars.prize-tideglass-wand-vars.prize-tideglass-wand-vars.prize-tideglass-wand-vars {
+    border-color: var(--border-focus);
+}
+
+.tideglass-wand-vars.tideglass-wand-vars.tideglass-wand-vars.tideglass-wand-vars.tideglass-wand-vars.tideglass-wand-vars {
+    color: var(--rarity-uncommon);
+}
+
+.main-hand-mag-7-vars.main-hand-mag-7-vars.main-hand-mag-7-vars.main-hand-mag-7-vars.main-hand-mag-7-vars.main-hand-mag-7-vars {
+    color: var(--text-body);
+}
+
+.prize-iron-scrap-3-vars.prize-iron-scrap-3-vars.prize-iron-scrap-3-vars.prize-iron-scrap-3-vars.prize-iron-scrap-3-vars.prize-iron-scrap-3-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.iron-scrap-3-vars.iron-scrap-3-vars.iron-scrap-3-vars.iron-scrap-3-vars.iron-scrap-3-vars.iron-scrap-3-vars {
+    color: var(--rarity-common);
+}
+
+.upgrade-material-vars.upgrade-material-vars.upgrade-material-vars.upgrade-material-vars.upgrade-material-vars.upgrade-material-vars {
+    color: var(--text-body);
+}
+
+.or-take-only-the-gold-and-continue-vars.or-take-only-the-gold-and-continue-vars.or-take-only-the-gold-and-continue-vars.or-take-only-the-gold-and-continue-vars.or-take-only-the-gold-and-continue-vars.or-take-only-the-gold-and-continue-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars-37.frame-vars-37.frame-vars-37.frame-vars-37.frame-vars-37.frame-vars-37 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-vars-6.knight-vars-6.knight-vars-6.knight-vars-6.knight-vars-6.knight-vars-6 {
+    color: var(--text-primary);
+}
+
+.lv-1-vars-8.lv-1-vars-8.lv-1-vars-8.lv-1-vars-8.lv-1-vars-8.lv-1-vars-8 {
+    color: var(--text-muted);
+}
+
+._32-exp-vars._32-exp-vars._32-exp-vars._32-exp-vars._32-exp-vars._32-exp-vars {
+    color: var(--status-ok);
+}
+
+.fill-vars-42.fill-vars-42.fill-vars-42.fill-vars-42.fill-vars-42.fill-vars-42 {
+    background-color: var(--vital-xp);
+}
+
+._62-100-exp-vars._62-100-exp-vars._62-100-exp-vars._62-100-exp-vars._62-100-exp-vars._62-100-exp-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars-38.frame-vars-38.frame-vars-38.frame-vars-38.frame-vars-38.frame-vars-38 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.rogue-vars-5.rogue-vars-5.rogue-vars-5.rogue-vars-5.rogue-vars-5.rogue-vars-5 {
+    color: var(--text-primary);
+}
+
+.lv-1-vars-9.lv-1-vars-9.lv-1-vars-9.lv-1-vars-9.lv-1-vars-9.lv-1-vars-9 {
+    color: var(--text-muted);
+}
+
+._32-exp-vars-2._32-exp-vars-2._32-exp-vars-2._32-exp-vars-2._32-exp-vars-2._32-exp-vars-2 {
+    color: var(--status-ok);
+}
+
+.fill-vars-43.fill-vars-43.fill-vars-43.fill-vars-43.fill-vars-43.fill-vars-43 {
+    background-color: var(--vital-xp);
+}
+
+._48-100-exp-vars._48-100-exp-vars._48-100-exp-vars._48-100-exp-vars._48-100-exp-vars._48-100-exp-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars-39.frame-vars-39.frame-vars-39.frame-vars-39.frame-vars-39.frame-vars-39 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.mage-vars-5.mage-vars-5.mage-vars-5.mage-vars-5.mage-vars-5.mage-vars-5 {
+    color: var(--text-primary);
+}
+
+.lv-1-vars-10.lv-1-vars-10.lv-1-vars-10.lv-1-vars-10.lv-1-vars-10.lv-1-vars-10 {
+    color: var(--text-muted);
+}
+
+._32-exp-vars-3._32-exp-vars-3._32-exp-vars-3._32-exp-vars-3._32-exp-vars-3._32-exp-vars-3 {
+    color: var(--status-ok);
+}
+
+.fill-vars-44.fill-vars-44.fill-vars-44.fill-vars-44.fill-vars-44.fill-vars-44 {
+    background-color: var(--vital-xp);
+}
+
+._55-100-exp-vars._55-100-exp-vars._55-100-exp-vars._55-100-exp-vars._55-100-exp-vars._55-100-exp-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars-40.frame-vars-40.frame-vars-40.frame-vars-40.frame-vars-40.frame-vars-40 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.healer-vars-6.healer-vars-6.healer-vars-6.healer-vars-6.healer-vars-6.healer-vars-6 {
+    color: var(--text-primary);
+}
+
+.lv-1-vars-11.lv-1-vars-11.lv-1-vars-11.lv-1-vars-11.lv-1-vars-11.lv-1-vars-11 {
+    color: var(--text-muted);
+}
+
+._32-exp-vars-4._32-exp-vars-4._32-exp-vars-4._32-exp-vars-4._32-exp-vars-4._32-exp-vars-4 {
+    color: var(--status-ok);
+}
+
+.fill-vars-45.fill-vars-45.fill-vars-45.fill-vars-45.fill-vars-45.fill-vars-45 {
+    background-color: var(--vital-xp);
+}
+
+._70-100-exp-vars._70-100-exp-vars._70-100-exp-vars._70-100-exp-vars._70-100-exp-vars._70-100-exp-vars {
+    color: var(--text-muted);
+}
+
+.panel-default__i-32 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-24 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.panel-default__i-33 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-25 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.button-primary-2__i-8 > .button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2.button-primary-2 {
+    width: 100%;
+}
+

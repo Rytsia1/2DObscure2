@@ -1,0 +1,22 @@
+.tag-cls {
+    display: flex;
+    padding: 4px 8px;
+    align-items: flex-start;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.tag-cls__e.tag-cls__e.tag-cls__e.tag-cls__e.tag-cls__e.tag-cls__e.tag-cls__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+

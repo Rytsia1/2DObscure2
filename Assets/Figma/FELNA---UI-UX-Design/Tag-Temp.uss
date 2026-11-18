@@ -1,0 +1,22 @@
+.tag-temp {
+    display: flex;
+    padding: 4px 8px;
+    align-items: flex-start;
+    border-width: 2px;
+    background-color: #22120A;
+    flex-direction: row;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    border-color: var(--currency-run);
+    color: var(--currency-run-text);
+}
+
+.tag-temp__e.tag-temp__e.tag-temp__e.tag-temp__e.tag-temp__e.tag-temp__e.tag-temp__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--currency-run-text);
+}
+

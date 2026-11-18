@@ -1,0 +1,49 @@
+.currency-tag-run {
+    display: flex;
+    padding: 6px 12px 6px 10px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #241008;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    border-color: var(--currency-run);
+    color: var(--currency-run-text);
+}
+
+.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.currency-tag-run__e-2.currency-tag-run__e-2.currency-tag-run__e-2.currency-tag-run__e-2.currency-tag-run__e-2.currency-tag-run__e-2.currency-tag-run__e-2 {
+    -unity-background-image-tint-color: #EF8A3C;
+    position: absolute;
+    left: 0%;
+    right: 0%;
+    top: 0%;
+    bottom: 0%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-19ff3c569f83d5d63d90450f2a75e77c-200.svg?fileID=7388822144124034973&guid=779c08d9fee7c784f90090bce42ac89c&type=3#img-19ff3c569f83d5d63d90450f2a75e77c-200");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.currency-tag-run__e-3.currency-tag-run__e-3.currency-tag-run__e-3.currency-tag-run__e-3.currency-tag-run__e-3.currency-tag-run__e-3.currency-tag-run__e-3 {
+    -unity-background-image-tint-color: #FFC196;
+    position: absolute;
+    left: 28.571%;
+    right: 28.571%;
+    top: 28.571%;
+    bottom: 28.571%;
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-eaa420f412f8c76f70e7288ccbd5f49a-154.svg?fileID=7388822144124034973&guid=46f0839627550184b98a6bfe60933744&type=3#img-eaa420f412f8c76f70e7288ccbd5f49a-154");
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.currency-tag-run__e-4.currency-tag-run__e-4.currency-tag-run__e-4.currency-tag-run__e-4.currency-tag-run__e-4.currency-tag-run__e-4.currency-tag-run__e-4 {
+    flex-shrink: 0;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--currency-run-text);
+}
+

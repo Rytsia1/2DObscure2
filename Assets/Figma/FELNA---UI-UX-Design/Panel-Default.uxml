@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Panel-Default.uss" />
+    <ui:VisualElement class="panel-default">
+        <ui:VisualElement class="panel-default__e" />
+        <ui:VisualElement class="panel-default__e-2" />
+        <ui:VisualElement class="panel-default__e-3" />
+        <ui:VisualElement class="panel-default__e-4" />
+    </ui:VisualElement>
+</ui:UXML>

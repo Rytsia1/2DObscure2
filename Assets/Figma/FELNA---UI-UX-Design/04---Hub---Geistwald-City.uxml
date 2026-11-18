@@ -1,0 +1,235 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="04---Hub---Geistwald-City.uss" />
+    <Template name="Tag-Keep" src="Tag-Keep.uxml" />
+    <Template name="Currency-Tag-Hub" src="Currency-Tag-Hub.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Button-Flat-Focus" src="Button-Flat-Focus.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Panel-Gold" src="Panel-Gold.uxml" />
+    <Template name="Tag-Cond" src="Tag-Cond.uxml" />
+    <ui:VisualElement class="_04-hub-geistwald-city" style="overflow: hidden;">
+        <ui:VisualElement class="star-vars" style="width: 2px; height: 2px; position: absolute; left: 430px; top: 178px;" />
+        <ui:VisualElement class="star-vars-2" style="width: 2px; height: 2px; position: absolute; left: 1177px; top: 238px;" />
+        <ui:VisualElement class="star-vars-3" style="width: 2px; height: 2px; position: absolute; left: 836px; top: 191px;" />
+        <ui:VisualElement class="star-vars-4" style="width: 2px; height: 2px; position: absolute; left: 1213px; top: 255px;" />
+        <ui:VisualElement class="star-vars-5" style="width: 2px; height: 2px; position: absolute; left: 487px; top: 274px;" />
+        <ui:VisualElement class="star-vars-6" style="width: 2px; height: 2px; position: absolute; left: 1198px; top: 359px;" />
+        <ui:VisualElement class="star-vars-7" style="width: 2px; height: 2px; position: absolute; left: 469px; top: 328px;" />
+        <ui:VisualElement class="star-vars-8" style="width: 2px; height: 2px; position: absolute; left: 887px; top: 106px;" />
+        <ui:VisualElement class="star-vars-9" style="width: 2px; height: 2px; position: absolute; left: 1135px; top: 364px;" />
+        <ui:VisualElement class="star-vars-10" style="width: 2px; height: 2px; position: absolute; left: 1091px; top: 158px;" />
+        <ui:VisualElement class="star-vars-11" style="width: 2px; height: 2px; position: absolute; left: 311px; top: 215px;" />
+        <ui:VisualElement class="star-vars-12" style="width: 2px; height: 2px; position: absolute; left: 1061px; top: 325px;" />
+        <ui:VisualElement class="star-vars-13" style="width: 2px; height: 2px; position: absolute; left: 1013px; top: 225px;" />
+        <ui:VisualElement class="star-vars-14" style="width: 2px; height: 2px; position: absolute; left: 413px; top: 361px;" />
+        <ui:VisualElement class="star-vars-15" style="width: 2px; height: 2px; position: absolute; left: 148px; top: 363px;" />
+        <ui:VisualElement class="star-vars-16" style="width: 2px; height: 2px; position: absolute; left: 648px; top: 288px;" />
+        <ui:VisualElement class="star-vars-17" style="width: 2px; height: 2px; position: absolute; left: 365px; top: 303px;" />
+        <ui:VisualElement class="star-vars-18" style="width: 2px; height: 2px; position: absolute; left: 51px; top: 237px;" />
+        <ui:VisualElement class="star-vars-19" style="width: 2px; height: 2px; position: absolute; left: 409px; top: 109px;" />
+        <ui:VisualElement class="star-vars-20" style="width: 2px; height: 2px; position: absolute; left: 582px; top: 162px;" />
+        <ui:VisualElement class="star-vars-21" style="width: 2px; height: 2px; position: absolute; left: 1182px; top: 428px;" />
+        <ui:VisualElement class="star-vars-22" style="width: 2px; height: 2px; position: absolute; left: 709px; top: 165px;" />
+        <ui:VisualElement class="star-vars-23" style="width: 2px; height: 2px; position: absolute; left: 236px; top: 418px;" />
+        <ui:VisualElement class="star-vars-24" style="width: 2px; height: 2px; position: absolute; left: 235px; top: 336px;" />
+        <ui:VisualElement class="star-vars-25" style="width: 2px; height: 2px; position: absolute; left: 723px; top: 219px;" />
+        <ui:VisualElement class="star-vars-26" style="width: 2px; height: 2px; position: absolute; left: 980px; top: 110px;" />
+        <ui:VisualElement class="star-vars-27" style="width: 2px; height: 2px; position: absolute; left: 103px; top: 441px;" />
+        <ui:VisualElement class="star-vars-28" style="width: 2px; height: 2px; position: absolute; left: 863px; top: 389px;" />
+        <ui:VisualElement class="star-vars-29" style="width: 2px; height: 2px; position: absolute; left: 749px; top: 439px;" />
+        <ui:VisualElement class="star-vars-30" style="width: 2px; height: 2px; position: absolute; left: 1200px; top: 142px;" />
+        <ui:VisualElement class="star-vars-31" style="width: 2px; height: 2px; position: absolute; left: 302px; top: 435px;" />
+        <ui:VisualElement class="star-vars-32" style="width: 2px; height: 2px; position: absolute; left: 1195px; top: 444px;" />
+        <ui:VisualElement class="star-vars-33" style="width: 2px; height: 2px; position: absolute; left: 218px; top: 280px;" />
+        <ui:VisualElement class="star-vars-34" style="width: 2px; height: 2px; position: absolute; left: 695px; top: 119px;" />
+        <ui:VisualElement class="star-vars-35" style="width: 2px; height: 2px; position: absolute; left: 252px; top: 247px;" />
+        <ui:VisualElement class="star-vars-36" style="width: 2px; height: 2px; position: absolute; left: 52px; top: 254px;" />
+        <ui:VisualElement class="star-vars-37" style="width: 2px; height: 2px; position: absolute; left: 1214px; top: 279px;" />
+        <ui:VisualElement class="star-vars-38" style="width: 2px; height: 2px; position: absolute; left: 813px; top: 326px;" />
+        <ui:VisualElement class="star-vars-39" style="width: 2px; height: 2px; position: absolute; left: 1114px; top: 185px;" />
+        <ui:VisualElement class="star-vars-40" style="width: 2px; height: 2px; position: absolute; left: 1032px; top: 316px;" />
+        <ui:VisualElement style="width: 700px; height: 300px; overflow: hidden; position: absolute; left: 400px; top: 180px;">
+            <ui:VisualElement style="width: 150px; height: 170px; background-color: #161D3C; position: absolute; left: 20px; top: 130px;" />
+            <ui:VisualElement style="width: 120px; height: 110px; background-color: #161D3C; position: absolute; left: 190px; top: 190px;" />
+            <ui:VisualElement style="width: 170px; height: 160px; background-color: #161D3C; position: absolute; left: 330px; top: 140px;" />
+            <ui:VisualElement style="width: 70px; height: 80px; background-color: #161D3C; position: absolute; left: 380px; top: 70px;" />
+            <ui:VisualElement style="width: 100px; height: 280px; background-color: #161D3C; position: absolute; left: 530px; top: 20px;" />
+            <ui:VisualElement class="rectangle-vars-64" style="width: 14px; height: 18px; position: absolute; left: 70px; top: 232px;" />
+            <ui:VisualElement class="rectangle-vars-65" style="width: 14px; height: 18px; position: absolute; left: 240px; top: 242px;" />
+            <ui:VisualElement style="width: 14px; height: 18px; background-color: #EF8A3C; position: absolute; left: 380px; top: 212px;" />
+            <ui:VisualElement style="width: 40px; height: 64px; background-color: #2A1A12; position: absolute; left: 560px; top: 236px;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="width: 1280px; height: 242px; background-color: #10152B; position: absolute; left: 0px; top: 478px;" />
+        <ui:VisualElement style="width: 1280px; height: 96px; background-color: #0A0E1C; position: absolute; left: 0px; top: 0px;" />
+        <ui:Label text="HUB · SAFE ZONE" class="unity-label hub-safe-zone-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 28px; top: 16px;" />
+        <ui:Label text="Geistwald City" class="unity-label geistwald-city-vars" style="font-size: 24px; white-space: nowrap; position: absolute; left: 28px; top: 36px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 462px; top: 28px;">
+            <AttributeOverrides element-name="text-0" text="AUTO SAVED · 10:35" />
+        </ui:Instance>
+        <ui:Instance template="Currency-Tag-Hub" style="position: absolute; left: 1108px; top: 22px;">
+            <AttributeOverrides element-name="text-0" text="0 HUB GOLD" />
+        </ui:Instance>
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 778px; top: 22px;">
+            <ui:Button text="Save" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Button text="Load" class="button-slab unity-button" style="flex-shrink: 0;" />
+            <ui:Button text="Main Menu" class="button-slab unity-button" style="flex-shrink: 0;" />
+        </ui:VisualElement>
+        <ui:Instance template="Panel-Default" class="panel-default__i-6" style="position: absolute; left: 28px; top: 96px; width: 330px; height: 448px;" />
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; position: absolute; left: 56px; top: 106px;">
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Character / Party" class="unity-label character-party-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Equipment" class="unity-label equipment-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Inventory" class="unity-label inventory-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Shop" class="unity-label shop-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="CONSUMABLES" class="unity-label consumables-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Armory" class="unity-label armory-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="EQUIPMENT" class="unity-label equipment-vars-2" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Blacksmith" class="unity-label blacksmith-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Training Ground" class="unity-label training-ground-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Temple" class="unity-label temple-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; width: 286px; height: 36px; justify-content: space-between; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                <ui:Label text="Magic Shop" class="unity-label magic-shop-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="RELICS 0/5" class="unity-label relics-0-5-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="rectangle-vars-66" style="width: 306px; height: 2px; position: absolute; left: 40px; top: 456px;" />
+        <ui:Instance template="Button-Flat-Focus" class="button-flat__i-3" style="position: absolute; left: 46px; top: 468px; width: 286px;">
+            <AttributeOverrides element-name="text-0" text="▸" />
+            <AttributeOverrides element-name="text-1" text="Dungeon Entrance" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 314px; top: 476px;">
+            <AttributeOverrides element-name="text-0" text="Z" />
+        </ui:Instance>
+        <ui:Instance template="Panel-Gold" class="panel-gold__i-2" style="position: absolute; left: 902px; top: 210px; width: 250px; height: 104px;" />
+        <ui:Label text="Dungeon Entrance" class="unity-label dungeon-entrance-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 914px; top: 220px;" />
+        <ui:Label text="BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 RUN GOLD." class="unity-label begin-dungeon-1-of-8-a-new-run-starts-with-0-run-gold-vars" style="width: 226px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 914px; top: 252px;" />
+        <ui:Instance template="Panel-Default" class="panel-default__i-7" style="position: absolute; left: 28px; top: 580px; width: 330px; height: 112px;" />
+        <ui:Label text="RUN PROGRESS" class="unity-label run-progress-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 42px; top: 594px;" />
+        <ui:Label text="0/8 CLEARED" class="unity-label _0-8-cleared-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 233px; top: 594px;" />
+        <ui:Instance template="Tag-Keep" style="position: absolute; left: 42px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="1" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 80px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="2" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 118px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="3" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 156px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="4" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 194px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="5" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 232px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="6" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 270px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="7" />
+        </ui:Instance>
+        <ui:Instance template="Tag-Cond" style="position: absolute; left: 308px; top: 618px;">
+            <AttributeOverrides element-name="text-0" text="8" />
+        </ui:Instance>
+        <ui:Label text="A WIPE RESETS RUN PROGRESS.&#10;EQUIPMENT IS ALWAYS KEPT." class="unity-label a-wipe-resets-run-progress-equipment-is-always-kept-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 42px; top: 652px;" />
+        <ui:VisualElement class="hero-card" style="width: 194px; position: absolute; left: 438px; top: 628px;">
+            <ui:VisualElement class="portrait-vars" style="display: flex; width: 44px; height: 48px; justify-content: center; align-items: center; flex-shrink: 0; border-width: 2px; overflow: hidden; flex-direction: row;">
+                <ui:VisualElement class="sprite-knight" style="width: 32px; height: 40px; flex-shrink: 0; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-3d73a1fd54ad39b20ccfde1b078c906d-2267.svg?fileID=7388822144124034973&amp;guid=bd67edfd537c16a49aff9bd0cfd6ff1d&amp;type=3#img-3d73a1fd54ad39b20ccfde1b078c906d-2267&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:VisualElement style="display: flex; align-items: flex-end; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                    <ui:Label text="Knight" class="unity-label name-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                    <ui:Label text="LV 1" class="unity-label level-vars" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-hp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-mp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-2" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="hero-card" style="width: 194px; position: absolute; left: 644px; top: 628px;">
+            <ui:VisualElement class="portrait-vars-2" style="display: flex; width: 44px; height: 48px; justify-content: center; align-items: center; flex-shrink: 0; border-width: 2px; overflow: hidden; flex-direction: row;">
+                <ui:VisualElement class="sprite-rogue" style="width: 32px; height: 40px; flex-shrink: 0; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-b10987e95387816ddeefeeabbf669cd1-2091.svg?fileID=7388822144124034973&amp;guid=32faad5c52ae6d64e8e35eef808feafa&amp;type=3#img-b10987e95387816ddeefeeabbf669cd1-2091&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:VisualElement style="display: flex; align-items: flex-end; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                    <ui:Label text="Rogue" class="unity-label name-vars-2" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                    <ui:Label text="LV 1" class="unity-label level-vars-2" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-hp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-3" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-mp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-4" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="hero-card" style="width: 194px; position: absolute; left: 850px; top: 628px;">
+            <ui:VisualElement class="portrait-vars-3" style="display: flex; width: 44px; height: 48px; justify-content: center; align-items: center; flex-shrink: 0; border-width: 2px; overflow: hidden; flex-direction: row;">
+                <ui:VisualElement class="sprite-mage" style="width: 32px; height: 40px; flex-shrink: 0; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-9c5697995f69f1580e6ecbcd97ed4866-2983.svg?fileID=7388822144124034973&amp;guid=a7fc6b1378fd74b41870d611ba9138cb&amp;type=3#img-9c5697995f69f1580e6ecbcd97ed4866-2983&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:VisualElement style="display: flex; align-items: flex-end; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                    <ui:Label text="Mage" class="unity-label name-vars-3" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                    <ui:Label text="LV 1" class="unity-label level-vars-3" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-hp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-5" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-mp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-6" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="hero-card" style="width: 194px; position: absolute; left: 1056px; top: 628px;">
+            <ui:VisualElement class="portrait-vars-4" style="display: flex; width: 44px; height: 48px; justify-content: center; align-items: center; flex-shrink: 0; border-width: 2px; overflow: hidden; flex-direction: row;">
+                <ui:VisualElement class="sprite-healer" style="width: 32px; height: 40px; flex-shrink: 0; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-94ed8f66198076c89c9d22a44bfe9a82-3247.svg?fileID=7388822144124034973&amp;guid=6db3f3932c6be8a4bbc771946a5a832a&amp;type=3#img-94ed8f66198076c89c9d22a44bfe9a82-3247&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:VisualElement style="display: flex; align-items: flex-end; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                    <ui:Label text="Healer" class="unity-label name-vars-4" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                    <ui:Label text="LV 1" class="unity-label level-vars-4" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-hp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-7" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="gauge-mp" style="width: 124px; height: 6px; padding: 1px; flex-shrink: 0;">
+                    <ui:VisualElement class="fill-vars-8" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
