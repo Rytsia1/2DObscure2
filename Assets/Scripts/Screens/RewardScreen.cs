@@ -72,7 +72,7 @@ namespace Obscure
                     card.style.display = DisplayStyle.None;
                     continue;
                 }
-                if (hasModifierOffers) card.style.height = 148;
+                if (hasModifierOffers) card.style.height = 134;
 
                 int choiceIdx = i;
                 var o = r.choices[i];
@@ -212,14 +212,16 @@ namespace Obscure
             var screen = UiRoot.Q<VisualElement>(className: "_21-combat-victory-rewards") ?? UiRoot;
             if (tipLbl != null)
             {
-                tipLbl.style.top = 564;
+                tipLbl.style.top = 560;
+                tipLbl.style.width = 508;
                 tipLbl.style.fontSize = 11;
+                tipLbl.style.whiteSpace = WhiteSpace.Normal;
             }
             var hdr = new UiLabel("BONUS MODIFIER (OPTIONAL · CLICK TO SELECT)")
             {
                 style =
                 {
-                    position = Position.Absolute, left = 96, top = 494,
+                    position = Position.Absolute, left = 96, top = 482,
                     fontSize = 11, color = Palette.Gold2, letterSpacing = 0.4f
                 }
             };
@@ -230,7 +232,7 @@ namespace Obscure
                 name = "ModifierOfferRow",
                 style =
                 {
-                    position = Position.Absolute, left = 96, top = 512, width = 508, height = 48,
+                    position = Position.Absolute, left = 96, top = 500, width = 508, height = 56,
                     flexDirection = FlexDirection.Row, justifyContent = Justify.FlexStart
                 }
             };
@@ -268,20 +270,21 @@ namespace Obscure
 
                 var box = new VisualElement();
                 box.style.width = 164;
-                box.style.height = 46;
+                box.style.height = 54;
                 box.style.marginRight = i < 2 ? 8 : 0;
                 box.style.paddingLeft = 6;
                 box.style.paddingRight = 6;
-                box.style.paddingTop = 4;
-                box.style.paddingBottom = 4;
+                box.style.paddingTop = 3;
+                box.style.paddingBottom = 3;
                 box.style.borderTopWidth = 2; box.style.borderBottomWidth = 2;
                 box.style.borderLeftWidth = 2; box.style.borderRightWidth = 2;
                 box.style.justifyContent = Justify.Center;
+                box.style.overflow = Overflow.Hidden;
 
                 var (mLabel, mDetail) = RewardGenerator.Describe(mOpt, Run?.ModifierManager);
                 var mTitle = new UiLabel(mLabel.ToUpperInvariant())
                 {
-                    style = { fontSize = 11, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                    style = { fontSize = 10, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal }
                 };
                 box.Add(mTitle);
                 row.Add(box);

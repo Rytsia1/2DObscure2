@@ -180,6 +180,15 @@ namespace Obscure
 
             backBtn = FigmaUi.FindButton(screenContainer, "Back");
             nextBtn = FigmaUi.FindButton(screenContainer, "Next: Class");
+            if (nextBtn != null)
+            {
+                nextBtn.style.width = StyleKeyword.Auto;
+                nextBtn.style.minWidth = 192;
+                nextBtn.style.left = StyleKeyword.Auto;
+                nextBtn.style.right = 28;
+                nextBtn.style.paddingLeft = 18;
+                nextBtn.style.paddingRight = 18;
+            }
             keyHintRow = FigmaUi.FindInstanceWithText(screenContainer, "text-0", "DN")?.parent;
         }
 
@@ -334,20 +343,42 @@ namespace Obscure
 
         void AddColumnHeader(VisualElement parent, string title, string rightNote = null)
         {
+            float colWidth = parent == rightBody ? 606f : 272f;
             var hdr = FigmaUi.InstantiateTemplate("Section-Header");
-            hdr.style.marginBottom = 10;
+            hdr.style.width = colWidth;
+            hdr.style.height = 36;
+            hdr.style.flexShrink = 0;
+            hdr.style.marginBottom = 6;
+
+            var innerHdr = hdr.Q<VisualElement>(className: "section-header") ?? hdr;
+            innerHdr.style.width = colWidth;
+            innerHdr.style.height = 36;
+            innerHdr.style.flexShrink = 0;
+
+            var topRow = hdr.Q<VisualElement>(className: "section-header__e") ?? innerHdr;
+            topRow.style.width = colWidth;
+            topRow.style.alignItems = UnityEngine.UIElements.Align.Center;
+
             FigmaUi.SetInstanceText(hdr, "text-0", title);
+            var titleLbl = hdr.Q<UiLabel>("text-0");
+            if (titleLbl != null)
+            {
+                titleLbl.style.marginLeft = 6;
+                titleLbl.style.flexGrow = 1;
+                titleLbl.style.flexShrink = 1;
+                titleLbl.style.overflow = Overflow.Hidden;
+            }
+
             if (!string.IsNullOrEmpty(rightNote))
             {
                 var note = new UiLabel(rightNote);
-                note.style.position = Position.Absolute;
-                note.style.right = 0;
-                note.style.top = 6;
-                note.style.maxWidth = 360;
-                note.style.overflow = Overflow.Hidden;
+                note.style.paddingLeft = 8;
+                note.style.flexShrink = 0;
                 note.style.fontSize = 12;
                 note.style.color = Palette.Mist2;
-                hdr.Add(note);
+                note.style.whiteSpace = WhiteSpace.NoWrap;
+                note.style.unityTextAlign = TextAnchor.MiddleRight;
+                topRow.Add(note);
             }
             parent.Add(hdr);
         }
@@ -356,14 +387,20 @@ namespace Obscure
         {
             var card = new VisualElement();
             card.AddToClassList("uitk-card");
+            card.style.paddingTop = 4;
+            card.style.paddingBottom = 4;
+            card.style.marginBottom = 4;
+            card.style.flexShrink = 0;
 
             var top = new VisualElement();
             top.style.flexDirection = FlexDirection.Row;
             top.style.justifyContent = Justify.SpaceBetween;
             top.style.alignItems = UnityEngine.UIElements.Align.Center;
+            top.style.flexShrink = 0;
 
             var titleLbl = new UiLabel(title);
             titleLbl.AddToClassList("uitk-card-title");
+            titleLbl.style.fontSize = 16;
             top.Add(titleLbl);
 
             if (!string.IsNullOrEmpty(rightText))
@@ -380,6 +417,8 @@ namespace Obscure
             {
                 var sub = new UiLabel(subText);
                 sub.AddToClassList("uitk-card-sub");
+                sub.style.fontSize = 11;
+                sub.style.flexShrink = 0;
                 card.Add(sub);
             }
 
@@ -444,7 +483,8 @@ namespace Obscure
             }
 
             var race = Session.Race;
-            AddColumnHeader(rightBody, race.name, FirstClause(race.description).ToUpperInvariant());
+            AddColumnHeader(rightBody, race.name, BonusText(race));
+            AddParagraph(rightBody, race.description);
 
             var bonusTitle = new UiLabel("RACIAL ABILITY BONUS");
             bonusTitle.style.fontSize = 14;
@@ -597,7 +637,26 @@ namespace Obscure
             for (int i = 0; i < BackgroundIds.Length; i++)
             {
                 var b = Database.Backgrounds[BackgroundIds[i]];
-                AddCard(middleBody, b.name, null, (b.narrativeIdentity ?? "").ToUpperInvariant(), b.id == Session.Background.id, () => SelectBackgroundById(b.id));
+                var item = AddCard(middleBody, b.name, null, (b.narrativeIdentity ?? "").ToUpperInvariant(), b.id == Session.Background.id, () => SelectBackgroundById(b.id));
+                if (item?.element != null)
+                {
+                    item.element.style.height = 42;
+                    item.element.style.paddingTop = 2;
+                    item.element.style.paddingBottom = 2;
+                    item.element.style.marginBottom = 3;
+                    item.element.style.justifyContent = Justify.Center;
+                    item.element.style.overflow = Overflow.Hidden;
+                    var tLbl = item.element.Q<UiLabel>(className: "uitk-card-title");
+                    if (tLbl != null) tLbl.style.fontSize = 13;
+                    var sLbl = item.element.Q<UiLabel>(className: "uitk-card-sub");
+                    if (sLbl != null)
+                    {
+                        sLbl.style.fontSize = 10;
+                        sLbl.style.marginTop = 0;
+                        sLbl.style.whiteSpace = WhiteSpace.NoWrap;
+                        sLbl.style.overflow = Overflow.Hidden;
+                    }
+                }
             }
 
             var bg = Session.Background;

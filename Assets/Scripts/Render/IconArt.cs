@@ -6,6 +6,7 @@ using UnityEngine.UIElements;
 //   Resources/Icons/Items/<id>.png    consumables, materials, key items (and the legacy Database.Items)
 //   Resources/Icons/Gear/<id>.png     every EquipmentDef in Database.Equipment and CatalogueEquipment
 //   Resources/Icons/Skills/<id>.png   active skills;  Resources/Icons/Passives/<id>.png  passive skills
+//   Resources/Icons/Status/<StatusId>.png  status effects (combat HUD)
 // Drawn at whole-number scales (3x = 48px in a 56px slot) so the pixels stay crisp.
 namespace Obscure
 {
@@ -20,6 +21,7 @@ namespace Obscure
         public static Texture2D Skill(string id) => Load("Skills", id);
         public static Texture2D Passive(string id) => Load("Passives", id);
         public static Texture2D SkillOrPassive(string id, bool passive) => passive ? Passive(id) : Skill(id);
+        public static Texture2D Status(StatusId id) => Load("Status", id.ToString());
 
         static Texture2D Load(string folder, string id)
         {
@@ -53,6 +55,89 @@ namespace Obscure
             el.style.flexShrink = 0;
             el.style.marginRight = marginRight;
             return el;
+        }
+
+        // Status effect icon with an optional compact turn/stack counter badge in the bottom-right corner.
+        public static VisualElement StatusBadge(StatusId id, int turns = 0, int stacks = 1, int scale = 2, float marginRight = 2f)
+        {
+            var tex = Status(id);
+            if (tex == null) return null;
+            var el = Inline(tex, scale, marginRight);
+            if (scale >= 2 && (turns > 0 || stacks > 1))
+            {
+                string badgeText = stacks > 1 ? $"×{stacks}" : $"{turns}";
+                var badge = new UnityEngine.UIElements.Label(badgeText)
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style =
+                    {
+                        position = Position.Absolute,
+                        right = 0,
+                        bottom = 0,
+                        paddingLeft = 2,
+                        paddingRight = 2,
+                        fontSize = 9,
+                        color = StatusInfo.IsBuff(id) ? Palette.Ok : Palette.WarmIvory,
+                        backgroundColor = new Color(0.04f, 0.05f, 0.08f, 0.88f),
+                        unityTextAlign = TextAnchor.MiddleRight
+                    }
+                };
+                el.Add(badge);
+            }
+            return el;
+        }
+
+        // Inline status effect pill with icon + text label (used in Dossier, Skill Tree, Character Status, Events).
+        public static VisualElement StatusChip(StatusId id, string labelText = null, int scale = 1, float marginRight = 6f)
+        {
+            bool buff = StatusInfo.IsBuff(id);
+            bool mental = StatusInfo.IsMental(id);
+            bool dot = StatusInfo.IsDoT(id);
+            Color borderCol = buff ? Palette.Ok : mental ? Palette.ArcaneViolet : dot ? Palette.Ember1 : Palette.Err;
+            Color bgCol = buff ? Palette.Hex(0x12241A) : mental ? Palette.Hex(0x1D142B) : dot ? Palette.Hex(0x2A1710) : Palette.Hex(0x280E12);
+            Color txtCol = buff ? Palette.Ok : mental ? Palette.Mist1 : dot ? Palette.Ember1 : Palette.Hex(0xFF9E92);
+
+            var chip = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    alignItems = UnityEngine.UIElements.Align.Center,
+                    flexShrink = 0,
+                    paddingTop = 2,
+                    paddingBottom = 2,
+                    paddingLeft = 5,
+                    paddingRight = 6,
+                    marginRight = marginRight,
+                    marginBottom = 3,
+                    backgroundColor = bgCol,
+                    borderTopWidth = 1,
+                    borderBottomWidth = 1,
+                    borderLeftWidth = 1,
+                    borderRightWidth = 1,
+                    borderTopColor = borderCol,
+                    borderBottomColor = borderCol,
+                    borderLeftColor = borderCol,
+                    borderRightColor = borderCol
+                }
+            };
+
+            var iconEl = Inline(Status(id), scale, 4f);
+            if (iconEl != null) chip.Add(iconEl);
+
+            var lbl = new UnityEngine.UIElements.Label((labelText ?? StatusInfo.Name(id)).ToUpperInvariant())
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    fontSize = 11,
+                    color = txtCol,
+                    whiteSpace = WhiteSpace.NoWrap
+                }
+            };
+            chip.Add(lbl);
+            return chip;
         }
 
         static VisualElement Make(Texture2D tex, int s)

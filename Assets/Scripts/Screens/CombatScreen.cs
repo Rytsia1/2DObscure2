@@ -50,6 +50,8 @@ namespace Obscure
             public Vector2 pos, size;
             public VisualElement spriteEl, enemyCard, vitalsCard, hpGauge, mpGauge, brkGauge, targetArrow;
             public UiLabel nameLbl, roleLbl, hpLbl, mpLbl, statusLbl, shieldLbl, weakLbl, intentLbl;
+            public VisualElement statusRow; // statusLbl (guard/phase text) followed by one icon per status
+            public string statusKey;
             public int phase = 1;
             public bool flashing;
             public Texture2D[] idle; // remodeled idle loop, null for row-art units
@@ -80,7 +82,7 @@ namespace Obscure
         readonly List<ActiveFx> activeFxs = new List<ActiveFx>();
         readonly List<ActivePopup> activePopups = new List<ActivePopup>();
 
-        VisualElement screenRoot, turnBar, stageHost, menuHost, dossierBox, qteHost, outcomeOverlay;
+        VisualElement screenRoot, turnBar, stageHost, menuHost, dossierBox, dossierStatusRow, qteHost, outcomeOverlay;
         UiLabel roundLabel, hintLabel, actBanner;
         UiLabel dossierTitle, dossierCostType, dossierTarget, dossierDesc;
         UiLabel activeMarker;
@@ -203,10 +205,23 @@ namespace Obscure
             dossierDesc = new UiLabel("") { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 8, display = DisplayStyle.None } };
             dossierCostType = new UiLabel("") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 2, display = DisplayStyle.None } };
             dossierTarget = new UiLabel("") { style = { fontSize = 12, color = Palette.Mist3, display = DisplayStyle.None } };
+            dossierStatusRow = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    flexWrap = Wrap.Wrap,
+                    alignItems = UnityEngine.UIElements.Align.Center,
+                    marginTop = 6,
+                    display = DisplayStyle.None
+                }
+            };
             dossierBox.Add(dossierTitle);
             dossierBox.Add(dossierDesc);
             dossierBox.Add(dossierCostType);
             dossierBox.Add(dossierTarget);
+            dossierBox.Add(dossierStatusRow);
 
             for (int i = 0; i < LogLines; i++)
             {
@@ -285,8 +300,10 @@ namespace Obscure
             string[] mpClasses = { "_20-20-vars-2", "_25-25-vars", "_60-60-vars-2", "_55-55-vars" };
 
             var card = idx < 4 ? UiRoot.Q<VisualElement>(className: cardClasses[idx]) : null;
-            var statusLbl = new UiLabel("") { style = { position = Position.Absolute, right = 10, top = 16, fontSize = 12, color = Palette.Frost } };
-            card?.Add(statusLbl);
+            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, right = 10, top = 10, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            var statusLbl = new UiLabel("") { style = { fontSize = 12, color = Palette.Frost, marginRight = 2 } };
+            statusRow.Add(statusLbl);
+            card?.Add(statusRow);
 
             var hud = new Hud
             {
@@ -304,6 +321,7 @@ namespace Obscure
                 hpGauge = card?.Q<VisualElement>(className: "gauge-hp"),
                 mpGauge = card?.Q<VisualElement>(className: "gauge-mp"),
                 statusLbl = statusLbl,
+                statusRow = statusRow,
             };
             if (hud.nameLbl != null) hud.nameLbl.text = c.name.ToUpperInvariant();
             if (hud.roleLbl != null) hud.roleLbl.text = (c.unit.role ?? "HERO").ToUpperInvariant();
@@ -347,14 +365,16 @@ namespace Obscure
             brkBarBg.Add(new VisualElement { style = { width = Length.Percent(100), height = Length.Percent(100), backgroundColor = Palette.Gold2 } });
 
             var weakLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Mist2, marginTop = 2, unityTextAlign = TextAnchor.MiddleCenter } };
-            var statusLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, unityTextAlign = TextAnchor.MiddleCenter } };
+            var statusLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, unityTextAlign = TextAnchor.MiddleCenter, marginRight = 2 } };
+            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center, alignItems = UnityEngine.UIElements.Align.Center } };
+            statusRow.Add(statusLbl);
 
             card.Add(nameLbl);
             card.Add(shieldLbl);
             card.Add(hpBarBg);
             card.Add(brkBarBg);
             card.Add(weakLbl);
-            card.Add(statusLbl);
+            card.Add(statusRow);
             RegisterStageTargetEvents(card, c);
             stageHost.Add(card);
 
@@ -380,8 +400,58 @@ namespace Obscure
                 brkGauge = brkBarBg,
                 weakLbl = weakLbl,
                 statusLbl = statusLbl,
+                statusRow = statusRow,
                 intentLbl = intentLbl,
             };
+        }
+
+        static List<(StatusId id, int turns, int stacks)> CollectActiveStatuses(Combatant c)
+        {
+            var result = new List<(StatusId id, int turns, int stacks)>();
+            if (c == null || !c.Alive) return result;
+
+            var seen = new HashSet<StatusId>();
+            foreach (var s in c.statuses)
+            {
+                if (!seen.Add(s.id)) continue;
+                int stacks = c.StatusController != null
+                    ? Math.Max(1, c.StatusController.ActiveInstances.Count(i => i.statusId == s.id && !i.IsExpired))
+                    : 1;
+                result.Add((s.id, s.turns, stacks));
+            }
+
+            if (c.StatusController != null)
+            {
+                foreach (var g in c.StatusController.ActiveInstances.Where(i => !i.IsExpired).GroupBy(i => i.statusId))
+                {
+                    if (!seen.Add(g.Key)) continue;
+                    result.Add((g.Key, g.Max(i => i.remainingTurns), g.Count()));
+                }
+            }
+
+            if (c.stunTurns > 0 && seen.Add(StatusId.Stun))
+                result.Add((StatusId.Stun, c.stunTurns, 1));
+
+            return result;
+        }
+
+        // Rebuilds the icon strip only when the set of statuses or remaining turns changes (Refresh runs often).
+        static void SyncStatusIcons(Hud h, Combatant c)
+        {
+            if (h.statusRow == null) return;
+            var active = CollectActiveStatuses(c);
+            string key = string.Join(",", active.Select(s => $"{(int)s.id}:{s.turns}:{s.stacks}"));
+            if (key == h.statusKey) return;
+            h.statusKey = key;
+            while (h.statusRow.childCount > 1) h.statusRow.RemoveAt(1); // child 0 is statusLbl
+            if (active.Count == 0) return;
+
+            int scale = active.Count > 2 && !c.IsEnemy ? 1 : 2;
+            foreach (var s in active)
+            {
+                var el = IconArt.StatusBadge(s.id, s.turns, s.stacks, scale, 2f);
+                if (el != null) h.statusRow.Add(el);
+            }
         }
 
         void Refresh()
@@ -420,7 +490,8 @@ namespace Obscure
 
                     if (h.statusLbl != null)
                     {
-                        h.statusLbl.text = (c.enemy.phase2At > 0 || c.enemy.nextPhase != null || c.phase > 1 ? $"PHASE {c.phase} " : "") + c.StatusTags;
+                        h.statusLbl.text = (c.enemy.phase2At > 0 || c.enemy.nextPhase != null || c.phase > 1 ? $"PHASE {c.phase} " : "") + (c.guarding ? "GD" : "");
+                        SyncStatusIcons(h, c);
                         h.statusLbl.style.color = c.phase > 1 ? Palette.CrimsonBright : c.HasDebuff ? Palette.Ember : Palette.Frost;
                     }
 
@@ -460,7 +531,8 @@ namespace Obscure
                 }
                 if (h.statusLbl != null)
                 {
-                    h.statusLbl.text = c.Alive ? c.StatusTags : "";
+                    h.statusLbl.text = c.Alive && c.guarding ? "GD" : "";
+                    SyncStatusIcons(h, c);
                     h.statusLbl.style.color = c.HasDebuff ? Palette.SpecCrimson : Palette.Frost;
                 }
 
@@ -575,7 +647,7 @@ namespace Obscure
                 logLabels[i].text = i < logLines.Count ? logLines[i] : "";
         }
 
-        void ShowDossier(string title, string costType, string target, string desc)
+        void ShowDossier(string title, string costType, string target, string desc, IEnumerable<(StatusId id, string label)> statusChips = null)
         {
             foreach (var l in logLabels) l.style.display = DisplayStyle.None;
             dossierTitle.style.display = DisplayStyle.Flex;
@@ -587,6 +659,20 @@ namespace Obscure
             dossierDesc.text = desc ?? "";
             dossierCostType.text = costType ?? "";
             dossierTarget.text = target ?? "";
+
+            if (dossierStatusRow != null)
+            {
+                dossierStatusRow.Clear();
+                if (statusChips != null)
+                {
+                    foreach (var sc in statusChips)
+                    {
+                        var chip = IconArt.StatusChip(sc.id, sc.label, 1, 5f);
+                        if (chip != null) dossierStatusRow.Add(chip);
+                    }
+                }
+                dossierStatusRow.style.display = dossierStatusRow.childCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            }
         }
 
         void HideDossier()
@@ -595,6 +681,11 @@ namespace Obscure
             dossierDesc.style.display = DisplayStyle.None;
             dossierCostType.style.display = DisplayStyle.None;
             dossierTarget.style.display = DisplayStyle.None;
+            if (dossierStatusRow != null)
+            {
+                dossierStatusRow.Clear();
+                dossierStatusRow.style.display = DisplayStyle.None;
+            }
             foreach (var l in logLabels) l.style.display = DisplayStyle.Flex;
         }
 
@@ -994,12 +1085,14 @@ namespace Obscure
             return currentMenu;
         }
 
-        void Option(UitkMenu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null, string rawTitle = null, Texture2D icon = null)
+        void Option(UitkMenu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null, string rawTitle = null, Texture2D icon = null, IEnumerable<(StatusId id, string label)> statusChips = null)
         {
             var btn = FigmaUi.CreateButton(text, "button-slab", 236f);
             btn.style.height = 46;
             btn.style.marginBottom = 6;
             btn.style.paddingLeft = icon != null ? 44 : 10;
+            btn.style.paddingRight = 8;
+            btn.style.overflow = Overflow.Hidden;
             var iconEl = IconArt.Inline(icon, 2, 0);
             if (iconEl != null)
             {
@@ -1007,11 +1100,21 @@ namespace Obscure
                 if (!enabled) iconEl.style.opacity = 0.45f;
                 btn.Add(iconEl);
             }
-            btn.style.paddingRight = 10;
-            btn.style.fontSize = 18;
+            var lbl = btn.Q<UiLabel>("uitkLabel");
+            if (lbl != null)
+            {
+                lbl.style.flexGrow = 1;
+                lbl.style.flexShrink = 1;
+                lbl.style.whiteSpace = WhiteSpace.Normal;
+                lbl.style.unityTextAlign = icon != null ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
+                lbl.style.fontSize = icon != null
+                    ? (text.Length > 18 ? 13 : text.Length > 14 ? 14 : 16)
+                    : 18;
+            }
             btn.SetEnabled(enabled);
             menuHost.Add(btn);
 
+            var chipsList = statusChips?.ToList();
             var item = m.Add(btn, rawTitle ?? text, onClick, interactable: enabled, tooltip: tooltip ?? "");
             item.visual = on =>
             {
@@ -1019,11 +1122,13 @@ namespace Obscure
                 var b = on ? Palette.Gold1 : Palette.Ink4;
                 btn.style.borderTopColor = b; btn.style.borderBottomColor = b;
                 btn.style.borderLeftColor = b; btn.style.borderRightColor = b;
-                btn.style.color = !enabled ? Palette.Mist3 : on ? Palette.Gold1 : Palette.Mist1;
+                var col = !enabled ? Palette.Mist3 : on ? Palette.Gold1 : Palette.Mist1;
+                btn.style.color = col;
+                if (lbl != null) lbl.style.color = col;
                 if (on)
                 {
                     Hint(!string.IsNullOrEmpty(tooltip) ? tooltip : turnText);
-                    if (!string.IsNullOrEmpty(tooltip)) ShowDossier(rawTitle ?? text, costType, target, tooltip);
+                    if (!string.IsNullOrEmpty(tooltip)) ShowDossier(rawTitle ?? text, costType, target, tooltip, chipsList);
                     else HideDossier();
                 }
             };
@@ -1045,7 +1150,8 @@ namespace Obscure
                 costType: "COST: 1 ITEM", target: "TARGET: ALLY", rawTitle: "ITEM");
             Option(m, "GUARD", () => Choose(BattleAction.Guard(c)),
                 tooltip: "HALVE INCOMING DAMAGE UNTIL NEXT TURN",
-                costType: "COST: —   DEFENSE UP", target: "TARGET: SELF", rawTitle: "GUARD");
+                costType: "COST: —   DEFENSE UP", target: "TARGET: SELF", rawTitle: "GUARD",
+                statusChips: new[] { (StatusId.DefenseUp, "DEFENSE UP · 1T") });
         }
 
         void ShowSkills(Combatant c)
@@ -1063,9 +1169,12 @@ namespace Obscure
                 string costText = cd > 0 ? $"CD {cd}" : $"{effCost} MP";
                 string typeText = $"{element}{sk.kind.ToString().ToUpperInvariant()}";
                 string targetText = $"TARGET: {sk.target.ToString().ToUpperInvariant()}";
+                var skChips = sk.apply != null && sk.apply.Length > 0
+                    ? sk.apply.Select(ap => (ap.id, $"{StatusInfo.Name(ap.id).ToUpperInvariant()} {Mathf.RoundToInt(ap.chance * 100)}% · {ap.turns}T"))
+                    : null;
                 Option(m, $"{sk.name.ToUpperInvariant()} {costText}", () => UseSkill(c, sk),
                     cd == 0 && c.unit.mp >= effCost && hasShield && hasWeapon, sk.description.ToUpperInvariant(),
-                    $"COST: {costText}   TYPE: {typeText}", targetText, sk.name.ToUpperInvariant(), IconArt.Skill(sk.id));
+                    $"COST: {costText}   TYPE: {typeText}", targetText, sk.name.ToUpperInvariant(), IconArt.Skill(sk.id), skChips);
             }
             Option(m, "BACK", () => ShowActions(c), rawTitle: "BACK");
             m.onBack = () => ShowActions(c);
@@ -1119,12 +1228,37 @@ namespace Obscure
                     : $"{cand.name.ToUpperInvariant()} - FALLEN (DEAD)";
 
                 // Add target row in command menu
+                var activeStatuses = CollectActiveStatuses(cand);
                 var btn = FigmaUi.CreateButton(cand.name.ToUpperInvariant(), "button-slab", 236f);
                 btn.style.height = 46;
                 btn.style.marginBottom = 6;
                 btn.style.fontSize = 16;
+                btn.style.overflow = Overflow.Hidden;
+                if (activeStatuses.Count > 0)
+                {
+                    var iconStrip = new VisualElement
+                    {
+                        pickingMode = PickingMode.Ignore,
+                        style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginLeft = 6 }
+                    };
+                    foreach (var s in activeStatuses.Take(3))
+                    {
+                        var stIcon = IconArt.Inline(IconArt.Status(s.id), 1, 2f);
+                        if (stIcon != null) iconStrip.Add(stIcon);
+                    }
+                    btn.Add(iconStrip);
+                }
                 btn.SetEnabled(valid);
                 menuHost.Add(btn);
+
+                var targetChips = activeStatuses
+                    .Select(s => (s.id, $"{StatusInfo.Name(s.id).ToUpperInvariant()} · {s.turns}T" + (s.stacks > 1 ? $" ×{s.stacks}" : "")))
+                    .ToList();
+                string dDesc = cand.Alive
+                    ? $"HP {cand.unit.hp}/{cand.Stats.maxHp}" + (cand.IsEnemy ? (cand.HasBreakGauge ? $"   SHIELD {cand.CurrentBreakGauge}/{cand.MaxBreakGauge}" : "") : $"   MP {cand.unit.mp}/{cand.Stats.maxMp}")
+                    : "FALLEN (KO)";
+                string dMeta = cand.IsEnemy ? cand.Affinities.Describe() : (cand.unit.role ?? "ALLY").ToUpperInvariant();
+                string dStatLine = activeStatuses.Count == 0 ? "STATUS: NONE" : $"ACTIVE STATUSES ({activeStatuses.Count})";
 
                 var actionToTake = make(cand);
                 var item = m.Add(btn, cand.name.ToUpperInvariant(), () => Choose(actionToTake), interactable: valid, tooltip: tip);
@@ -1140,7 +1274,11 @@ namespace Obscure
                         h.targetArrow.style.color = Palette.Gold1;
                         h.targetArrow.style.display = on ? DisplayStyle.Flex : DisplayStyle.None;
                     }
-                    if (on) Hint(tip);
+                    if (on)
+                    {
+                        Hint(tip);
+                        ShowDossier(cand.name.ToUpperInvariant(), dMeta, dStatLine, dDesc, targetChips);
+                    }
                 };
                 item.visual(false);
             }
@@ -1181,17 +1319,36 @@ namespace Obscure
             card.Add(title);
 
             var contBtn = FigmaUi.CreateButton("CONTINUE", "button-primary", 220f);
+            contBtn.style.height = 44;
+            var contLbl = contBtn.Q<UiLabel>("uitkLabel");
+            if (contLbl != null)
+            {
+                contLbl.style.color = Palette.Ink0;
+                contLbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            }
             card.Add(contBtn);
             outcomeOverlay.Add(card);
             screenRoot.Add(outcomeOverlay);
 
             var m = phaseGo.AddComponent<UitkMenu>();
             m.AttachRoot(outcomeOverlay);
-            FigmaUi.ApplyDefaultFocusVisual(m.Add(contBtn, "CONTINUE", () =>
+            var contItem = m.Add(contBtn, "CONTINUE", () =>
             {
                 if (won) { Game.I.Run.WinCombat(); Game.I.Go(GameState.Reward); }
                 else { Game.I.Run.LoseCombat(); Game.I.Go(GameState.GameOver); }
-            }));
+            });
+            contItem.visual = on =>
+            {
+                FigmaUi.ApplyDefaultFocusVisual(contBtn, on, contItem.selected, contItem.interactable);
+                contBtn.style.backgroundColor = on ? Palette.Gold1 : Palette.Gold2;
+                var border = on ? Palette.Gold1 : Palette.Gold3;
+                contBtn.style.borderTopColor = border;
+                contBtn.style.borderBottomColor = border;
+                contBtn.style.borderLeftColor = border;
+                contBtn.style.borderRightColor = border;
+                if (contLbl != null) contLbl.style.color = Palette.Ink0;
+            };
+            contItem.visual(false);
         }
     }
 

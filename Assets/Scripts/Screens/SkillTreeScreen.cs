@@ -383,6 +383,18 @@ namespace Obscure
             }
             host.Add(Line("RANK", learned ? $"{rank} / {maxRank}" : $"LOCKED · MAX {maxRank}"));
 
+            if (a?.apply != null && a.apply.Length > 0)
+            {
+                host.Add(new UiLabel("STATUS EFFECTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 8, marginBottom = 4 } });
+                var statusRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center } };
+                foreach (var ap in a.apply)
+                {
+                    var chip = IconArt.StatusChip(ap.id, $"{StatusInfo.Name(ap.id).ToUpperInvariant()} {Mathf.RoundToInt(ap.chance * 100)}% · {ap.turns}T", 1, 5f);
+                    if (chip != null) statusRow.Add(chip);
+                }
+                host.Add(statusRow);
+            }
+
             host.Add(new UiLabel("REQUIREMENTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 10, marginBottom = 4 } });
             int req = node?.requiredLevel ?? TierLevel[Mathf.Clamp(tier - 1, 0, 4)];
             bool lvOk = hero.level >= req;

@@ -200,6 +200,15 @@ namespace Obscure
                 inner.EnableInClassList("uitk-unfocused", !focused);
             else if (inner.ClassListContains("button-slab-2"))
                 inner.EnableInClassList("uitk-unfocused", !focused);
+            else if (inner.ClassListContains("button-primary") && !(inner is Button))
+            {
+                var bg = focused ? Palette.Gold1 : Palette.Gold2;
+                inner.style.backgroundColor = bg;
+                inner.style.borderTopColor = bg;
+                inner.style.borderBottomColor = bg;
+                inner.style.borderLeftColor = bg;
+                inner.style.borderRightColor = bg;
+            }
 
             var cursor = el.Q<VisualElement>("uitkCursor");
             if (cursor != null)
@@ -237,8 +246,27 @@ namespace Obscure
         {
             var btn = new VisualElement();
             btn.AddToClassList(styleClass);
+            btn.style.justifyContent = Justify.Center;
+            btn.style.alignItems = UnityEngine.UIElements.Align.Center;
             if (width.HasValue) btn.style.width = width.Value;
             var lbl = new UiLabel(text) { name = "uitkLabel" };
+            lbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            if (styleClass == "button-primary")
+            {
+                btn.style.backgroundColor = Palette.Gold2;
+                btn.style.borderTopWidth = 2;
+                btn.style.borderBottomWidth = 2;
+                btn.style.borderLeftWidth = 2;
+                btn.style.borderRightWidth = 2;
+                btn.style.borderTopColor = Palette.Gold2;
+                btn.style.borderBottomColor = Palette.Gold2;
+                btn.style.borderLeftColor = Palette.Gold2;
+                btn.style.borderRightColor = Palette.Gold2;
+                btn.style.paddingTop = 6;
+                btn.style.paddingBottom = 6;
+                lbl.style.color = Palette.Ink0;
+                lbl.style.fontSize = 20;
+            }
             btn.Add(lbl);
             return btn;
         }

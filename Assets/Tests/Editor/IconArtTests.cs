@@ -47,6 +47,27 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void EveryStatusEffectHasAnIconAndBadgesBuild()
+        {
+            foreach (StatusId id in System.Enum.GetValues(typeof(StatusId)))
+            {
+                var tex = IconArt.Status(id);
+                Assert.IsNotNull(tex, $"Missing status icon for {id}");
+                Assert.AreEqual(IconArt.Size, tex.width, id.ToString());
+                Assert.AreEqual(IconArt.Size, tex.height, id.ToString());
+                Assert.AreEqual(FilterMode.Point, tex.filterMode, id.ToString());
+
+                var badge = IconArt.StatusBadge(id, turns: 3, stacks: 2, scale: 2);
+                Assert.IsNotNull(badge);
+                Assert.AreEqual(1, badge.childCount);
+
+                var chip = IconArt.StatusChip(id, $"{StatusInfo.Name(id)} 3T");
+                Assert.IsNotNull(chip);
+                Assert.AreEqual(2, chip.childCount);
+            }
+        }
+
+        [Test]
         public void IconsAreCrispAndDistinct()
         {
             var a = IconArt.Skill("firebolt");

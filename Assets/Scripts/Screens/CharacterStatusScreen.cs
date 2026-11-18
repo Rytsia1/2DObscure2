@@ -445,6 +445,26 @@ namespace Obscure
             // Col 1 Bottom: Status Effects
             var stCol = ColumnBox(280, 28);
             stCol.Add(SectionTitle("Status Effects"));
+            if (Run != null && Run.BattleBuffs.Count > 0)
+            {
+                var buffRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 6 } };
+                foreach (var b in Run.BattleBuffs.Take(3))
+                {
+                    var chip = IconArt.StatusChip(b.id, $"{StatusInfo.Name(b.id).ToUpperInvariant()} ({b.turns}T)", 1, 4f);
+                    if (chip != null) buffRow.Add(chip);
+                }
+                stCol.Add(buffRow);
+            }
+            else
+            {
+                var sampleRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8 } };
+                foreach (var sid in new[] { StatusId.AttackUp, StatusId.DefenseUp, StatusId.Burn, StatusId.Poison, StatusId.Stun, StatusId.Silence })
+                {
+                    var sIcon = IconArt.Inline(IconArt.Status(sid), 2, 6f);
+                    if (sIcon != null) sampleRow.Add(sIcon);
+                }
+                stCol.Add(sampleRow);
+            }
             var activeSummaries = BuildActiveEffectsSummary(u);
             string ovStatus = activeSummaries.Count > 0
                 ? string.Join("\n", activeSummaries.Take(3).Select(x => "• " + x.title.ToUpperInvariant()))
@@ -559,25 +579,25 @@ namespace Obscure
             mainHost.Add(DetailPane(914, 140));
         }
 
-        List<(string title, string detail, Color col)> BuildActiveEffectsSummary(Unit u)
+        List<(string title, string detail, Color col, Texture2D icon)> BuildActiveEffectsSummary(Unit u)
         {
-            var list = new List<(string, string, Color)>();
+            var list = new List<(string, string, Color, Texture2D)>();
             if (Run != null && Run.BattleBuffs.Count > 0)
             {
                 foreach (var b in Run.BattleBuffs)
-                    list.Add(($"NEXT BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} TURNS", Palette.Ok));
+                    list.Add(($"NEXT BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} TURNS", StatusInfo.IsBuff(b.id) ? Palette.Ok : Palette.Err, IconArt.Status(b.id)));
             }
             if (u.background != null)
             {
                 var rank = u.background.GetRank(u.level);
-                list.Add(($"PERK: {rank?.perkName ?? u.background.perkName}", rank?.perkDescription ?? "", Palette.Gold1));
+                list.Add(($"PERK: {rank?.perkName ?? u.background.perkName}", rank?.perkDescription ?? "", Palette.Gold1, null));
             }
             if (Run != null && Run.Relics != null)
             {
                 foreach (var rid in Run.Relics)
                 {
                     if (Database.Relics.TryGetValue(rid, out var r))
-                        list.Add(($"RELIC: {r.name}", r.gameplayEffect ?? r.description ?? "", Ui.RelicColor(r)));
+                        list.Add(($"RELIC: {r.name}", r.gameplayEffect ?? r.description ?? "", Ui.RelicColor(r), null));
                 }
             }
             return list;
@@ -587,26 +607,75 @@ namespace Obscure
         {
             mainHost.Add(SectionTitle("Active Buffs, Perks & Relics"));
             var items = BuildActiveEffectsSummary(CurrentUnit);
-            if (items.Count == 0)
-            {
-                var lbl = new UiLabel("NO ACTIVE EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED HERE WITH THEIR REMAINING TURNS.");
-                lbl.style.fontSize = 14;
-                lbl.style.color = Palette.Mist3;
-                lbl.style.whiteSpace = WhiteSpace.Normal;
-                mainHost.Add(lbl);
-                return;
-            }
 
             var scroll = FigmaUi.CreateVerticalScrollView();
-            scroll.style.maxHeight = 440;
-            foreach (var (title, detail, col) in items)
+            scroll.style.maxHeight = 460;
+
+            if (items.Count == 0)
             {
-                var card = new VisualElement();
-                card.AddToClassList("uitk-card");
-                card.Add(new UiLabel(title.ToUpperInvariant()) { style = { fontSize = 16, color = col, marginBottom = 4 } });
-                card.Add(new UiLabel(detail.ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
-                scroll.Add(card);
+                var lbl = new UiLabel("NO ACTIVE RUN EFFECTS. BUFFS AND DEBUFFS APPLIED IN COMBAT ARE LISTED BELOW.");
+                lbl.style.fontSize = 13;
+                lbl.style.color = Palette.Mist3;
+                lbl.style.whiteSpace = WhiteSpace.Normal;
+                lbl.style.marginBottom = 10;
+                scroll.Add(lbl);
             }
+            else
+            {
+                foreach (var (title, detail, col, icon) in items)
+                {
+                    var card = new VisualElement();
+                    card.AddToClassList("uitk-card");
+                    card.style.flexDirection = FlexDirection.Row;
+                    card.style.alignItems = UnityEngine.UIElements.Align.Center;
+                    var iconEl = IconArt.Inline(icon, 2, 10f);
+                    if (iconEl != null) card.Add(iconEl);
+
+                    var textCol = new VisualElement { style = { flexGrow = 1, flexShrink = 1 } };
+                    textCol.Add(new UiLabel(title.ToUpperInvariant()) { style = { fontSize = 16, color = col, marginBottom = 4 } });
+                    textCol.Add(new UiLabel(detail.ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
+                    card.Add(textCol);
+                    scroll.Add(card);
+                }
+            }
+
+            var refHdr = SectionTitle("Combat Status Effects Reference");
+            refHdr.style.marginTop = 10;
+            scroll.Add(refHdr);
+
+            var grid = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row,
+                    flexWrap = Wrap.Wrap,
+                    justifyContent = Justify.SpaceBetween
+                }
+            };
+            foreach (StatusId sid in Enum.GetValues(typeof(StatusId)))
+            {
+                var def = StatusEffectDefs.Get(sid);
+                bool buff = StatusInfo.IsBuff(sid);
+                bool mental = StatusInfo.IsMental(sid);
+                bool dot = StatusInfo.IsDoT(sid);
+                Color titleCol = buff ? Palette.Ok : mental ? Palette.ArcaneViolet : dot ? Palette.Ember1 : Palette.Err;
+
+                var cell = new VisualElement();
+                cell.AddToClassList("uitk-card");
+                cell.style.width = 442;
+                cell.style.flexDirection = FlexDirection.Row;
+                cell.style.alignItems = UnityEngine.UIElements.Align.Center;
+
+                var sIcon = IconArt.Inline(IconArt.Status(sid), 2, 10f);
+                if (sIcon != null) cell.Add(sIcon);
+
+                var tCol = new VisualElement { style = { flexGrow = 1, flexShrink = 1 } };
+                tCol.Add(new UiLabel($"{StatusInfo.Name(sid).ToUpperInvariant()} [{StatusInfo.Tag(sid)}]") { style = { fontSize = 14, color = titleCol, marginBottom = 2 } });
+                tCol.Add(new UiLabel((def?.description ?? "").ToUpperInvariant()) { style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
+                cell.Add(tCol);
+                grid.Add(cell);
+            }
+            scroll.Add(grid);
             mainHost.Add(scroll);
         }
 

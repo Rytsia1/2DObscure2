@@ -464,4 +464,38 @@ const PASSIVES = {
   eternal_bloom: all(g("flower", { petal: "H", core: "W" }), goldStar()),
 };
 
-module.exports = { ITEMS, SKILLS, PASSIVES, gearIcon };
+// ---------------- status effects (keyed by StatusId in Combat/Status.cs) ----------------
+// Buffs/debuffs: the stat's glyph with a green up or red down arrow, like the passives. Ailments: one bold glyph.
+const shieldS = (o = {}) => I("shield", o, { x: -0.5, y: 0.5, s: 0.76 });
+const mshield = { rim: "e", face: "A", boss: "W" };
+const STATUS = {
+  DefenseUp: all(shieldS({ boss: "G" }), up()),
+  DefenseDown: all(shieldS({ boss: "G" }), down()),
+  AttackUp: all(sword({}, { s: 0.85, x: 6.5, y: 7.5 }), up()),
+  AttackDown: all(sword({}, { s: 0.85, x: 6.5, y: 7.5 }), down()),
+  MagicDefenseUp: all(shieldS(mshield), up()),
+  MagicDefenseDown: all(shieldS(mshield), down()),
+  ResistanceDown: all((c) => { c.arc(6, 7.5, 0, 5, -90, 30, "F"); c.arc(6, 7.5, 0, 5, 30, 150, "I"); c.arc(6, 7.5, 0, 5, 150, 270, "Y"); }, down()),
+  Slow: g("hourglass", { k: "q", sand: "z", frame: "w" }, { s: 1.05 }),
+  Poison: all(g("drop", { k: "O" }, { x: 6.5, y: 7.5, s: 1.2 }), g("skull", { k: "b" }, { x: 6.5, y: 9, s: 0.38 }), (c) => { c.ell(11.5, 3, 1.3, 1.3, "O"); c.ell(12, 6.2, 0.8, 0.8, "O"); }),
+  Guardian: all(I("shield", { rim: "G", face: "c" }), g("heart", { k: "K" }, { y: 6, s: 0.5 })),
+  Evasion: SKILLS.evasion,
+  Broken: all(I("shield", { face: "S" }), (c) => { for (const dx of [0, 1]) { c.line(7 + dx, 1, 6 + dx, 4.5, "k"); c.line(6 + dx, 4.5, 8 + dx, 7.5, "k"); c.line(8 + dx, 7.5, 6.5 + dx, 12, "k"); } }),
+  Exhausted: all(g("drop", { k: "j" }, { x: 6, y: 8, s: 1.1 }), g("drop", { k: "j" }, { x: 11.5, y: 3.5, s: 0.5 }), g("drop", { k: "j" }, { x: 12, y: 9, s: 0.4 })),
+  Burn: g("flame", { k: "F" }, { s: 1.2, y: 7.5 }),
+  Bleed: all(g("drop", { k: "K" }, { x: 6, y: 6.5, s: 1.1 }), g("drop", { k: "K" }, { x: 11, y: 10.5, s: 0.5 })),
+  Freeze: g("snow", {}, { s: 1.15 }),
+  Shock: g("bolt", {}, { s: 1.1 }),
+  Curse: g("skull", { k: "v", eye: "D" }, { s: 1.2, y: 7.5 }),
+  Stun: all(g("halo", { k: "G" }, { y: 10.5, s: 1.05 }), spark("H", 2.5, 6.5, 0.75), spark("H", 11.5, 6.5, 0.75), spark("H", 7, 3, 0.8)),
+  MindControl: all(g("hand", { k: "u", gap: "x" }, { y: 9, s: 0.75 }), (c) => { for (const x of [4, 7, 10]) c.line(x, 0, x, 4.5, "c"); }),
+  Confusion: (c) => { c.cap([[4, 4.5], [5, 2], [7.5, 1], [10, 2.2], [10, 4.8], [7.5, 6.5], [7, 8.8]], 1, 1, "Y"); c.ell(7, 12, 1.2, 1.2, "Y"); },
+  Fear: (c) => { c.ell(7, 6, 5, 5, "c"); c.rect(2, 6, 12, 11, "c"); for (const x of [2.5, 6.5, 10.5]) c.poly([[x - 0.5, 10.5], [x + 1.5, 10.5], [x + 0.5, 13.2]], "c"); c.ell(5, 5.5, 1, 1.4, "k"); c.ell(9, 5.5, 1, 1.4, "k"); c.ell(7, 9, 1, 1.3, "k"); },
+  Despair: all(g("cloud", { k: "v" }, { y: 5 }), (c) => { for (const [x, y] of [[3.5, 10], [7, 11.5], [10.5, 10]]) c.line(x, y, x - 0.6, y + 2, "j"); }),
+  Charm: all(g("heart", { k: "X" }, { s: 1.05, y: 8 }), spark("T", 11.5, 2.5, 0.6)),
+  Sleep: (c) => { const z = (x, y, s, k) => { c.line(x, y, x + s, y, k); c.line(x + s, y, x, y + s, k); c.line(x, y + s, x + s, y + s, k); }; z(1.5, 6.5, 6, "B"); z(1.5, 7.5, 6, "B"); z(9, 1.5, 3.5, "T"); },
+  Silence: all((c) => { c.ell(7, 6, 6, 4.8, "c"); c.poly([[3.5, 9], [6.5, 10], [2.5, 13]], "c"); }, g("xmark", { k: "K" }, { x: 7, y: 6, s: 0.5 })),
+  Madness: all(g("eye", { iris: "K", white: "c" }, { y: 7 }), (c) => { c.line(1.5, 7, 3.5, 6, "r"); c.line(12.5, 7, 10.5, 8, "r"); c.line(2.5, 8.5, 4, 8, "r"); }),
+};
+
+module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, gearIcon };

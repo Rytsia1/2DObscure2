@@ -642,7 +642,9 @@ function catalogue() {
   const gear = [...blocks(A, "EquipmentDef"), ...blocks(B, "EquipmentDef")].map((b) => row(f(b, "id"), f(b, "name"), S.gearIcon(f(b, "id"), f(b, "name"), e(b, "slot"), e(b, "weaponType")), "gear"));
   const skills = blocks(A, "SkillDef").map((b) => row(f(b, "id"), f(b, "name"), S.SKILLS[f(b, "id")], f(b, "classId") || "shared"));
   const passives = blocks(A, "PassiveDef").map((b) => row(f(b, "id"), f(b, "name"), S.PASSIVES[f(b, "id")], f(b, "classId")));
-  return { items, gear, skills, passives };
+  const enumSrc = fs.readFileSync(path.join(__dirname, "../../Assets/Scripts/Combat/Status.cs"), "utf8").match(/enum StatusId\s*\{([^}]*)\}/)[1];
+  const status = enumSrc.replace(/\/\/.*$/gm, "").split(",").map((x) => x.trim()).filter(Boolean).map((id) => row(id, id.replace(/([a-z])([A-Z])/g, "$1 $2"), S.STATUS[id], "status"));
+  return { items, gear, skills, passives, status };
 }
 module.exports.catalogue = catalogue;
 
@@ -685,12 +687,12 @@ if (require.main === module && process.argv.includes("--test")) {
   P.save(P.sheet(items.map((i) => ({ buf: i.buf, label: "", scale: 1 })), { cols: 10, gap: 4 }), out + "/icons_test_1x.png");
 }
 
-// node icons.js --export : Assets/Resources/Icons/<Items|Gear|Skills|Passives>/<id>.png (read by IconArt.cs).
+// node icons.js --export : Assets/Resources/Icons/<Items|Gear|Skills|Passives|Status>/<id>.png (read by IconArt.cs).
 // Import settings are copied from the FX sheets (point filter, no mips, uncompressed); an existing .meta keeps its guid.
 if (require.main === module && process.argv.includes("--export")) {
   const fs = require("fs"), path = require("path"), crypto = require("crypto");
   const assets = path.resolve(__dirname, "../../Assets"), meta = fs.readFileSync(path.join(assets, "Resources/Fx/hit.png.meta"), "utf8");
-  const folders = { items: "Items", gear: "Gear", skills: "Skills", passives: "Passives" };
+  const folders = { items: "Items", gear: "Gear", skills: "Skills", passives: "Passives", status: "Status" };
   for (const [group, rows] of Object.entries(catalogue())) {
     const dir = path.join(assets, "Resources/Icons", folders[group]), done = new Set();
     fs.mkdirSync(dir, { recursive: true });

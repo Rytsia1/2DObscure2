@@ -11,7 +11,6 @@ namespace Obscure
     public class EventScreen : GameScreen
     {
         VisualElement choiceHost;
-        ScrollView choiceScroll;
         UitkMenu menu;
         EventDef currentEvent;
 
@@ -60,14 +59,10 @@ namespace Obscure
             choiceHost = new VisualElement { name = "EventChoiceHost" };
             choiceHost.style.position = Position.Absolute;
             choiceHost.style.left = 544;
-            choiceHost.style.top = 342;
+            choiceHost.style.top = 334;
             choiceHost.style.width = 622;
-            choiceHost.style.height = 310;
+            choiceHost.style.height = 322;
             choiceHost.style.flexDirection = FlexDirection.Column;
-
-            choiceScroll = FigmaUi.CreateVerticalScrollView();
-            choiceScroll.style.flexGrow = 1;
-            choiceHost.Add(choiceScroll);
             screen.Add(choiceHost);
 
             ShowChoices();
@@ -187,7 +182,7 @@ namespace Obscure
                 if (Application.isPlaying) UnityEngine.Object.Destroy(menu);
                 else UnityEngine.Object.DestroyImmediate(menu);
             }
-            choiceScroll.Clear();
+            choiceHost.Clear();
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
         }
@@ -195,30 +190,36 @@ namespace Obscure
         void ShowChoices()
         {
             ResetMenu();
-            int displayNumber = 1;
+            var visible = new List<(int index, EventChoice choice, RunState.EventChoiceStatus status)>();
             for (int i = 0; i < currentEvent.choices.Length; i++)
             {
-                int index = i;
                 var c = currentEvent.choices[i];
                 var status = Run != null
-                    ? Run.GetEventChoiceStatus(index)
+                    ? Run.GetEventChoiceStatus(i)
                     : new RunState.EventChoiceStatus { isVisible = !c.isImprovise, effectScale = 1f };
+                if (status.isVisible)
+                    visible.Add((i, c, status));
+            }
 
-                if (!status.isVisible) continue;
-                AddChoiceCard(displayNumber++, c, index, status, () => Choose(index));
+            bool compact = visible.Count >= 5;
+            for (int vIdx = 0; vIdx < visible.Count; vIdx++)
+            {
+                var entry = visible[vIdx];
+                int index = entry.index;
+                AddChoiceCard(vIdx + 1, entry.choice, index, entry.status, compact, () => Choose(index));
             }
         }
 
-        void AddChoiceCard(int number, EventChoice c, int choiceIndex, RunState.EventChoiceStatus status, Action choose)
+        void AddChoiceCard(int number, EventChoice c, int choiceIndex, RunState.EventChoiceStatus status, bool compact, Action choose)
         {
             bool enabled = !status.isBlocked;
             var card = new VisualElement();
-            card.style.minHeight = 56;
-            card.style.marginBottom = 8;
+            card.style.minHeight = compact ? 46 : 56;
+            card.style.marginBottom = compact ? 5 : 8;
             card.style.paddingLeft = 14;
             card.style.paddingRight = 14;
-            card.style.paddingTop = 6;
-            card.style.paddingBottom = 6;
+            card.style.paddingTop = compact ? 4 : 6;
+            card.style.paddingBottom = compact ? 4 : 6;
             card.style.flexDirection = FlexDirection.Row;
             card.style.alignItems = UnityEngine.UIElements.Align.Center;
             card.style.borderTopWidth = 2;
@@ -227,29 +228,42 @@ namespace Obscure
             card.style.borderRightWidth = 2;
 
             var numLbl = new UiLabel(number.ToString());
-            numLbl.style.fontSize = 20;
+            numLbl.style.fontSize = compact ? 18 : 20;
             numLbl.style.width = 28;
             numLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
             card.Add(numLbl);
 
             var textCol = new VisualElement();
             textCol.style.flexGrow = 1;
+            textCol.style.flexShrink = 1;
+            textCol.style.flexBasis = 0;
+            textCol.style.marginRight = 10;
             textCol.style.flexDirection = FlexDirection.Column;
             textCol.style.justifyContent = Justify.Center;
 
             var titleLbl = new UiLabel(c.label);
-            titleLbl.style.fontSize = 18;
+            titleLbl.style.fontSize = compact ? 16 : 18;
             titleLbl.style.color = enabled ? Palette.Mist1 : Palette.Mist3;
             titleLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(titleLbl);
 
             string sub = enabled ? Consequences(c, choiceIndex, status) : status.blockedReason.ToUpperInvariant();
             var subLbl = new UiLabel(sub);
-            subLbl.style.fontSize = 12;
+            subLbl.style.fontSize = compact ? 11 : 12;
             subLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
             subLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(subLbl);
             card.Add(textCol);
+
+            if (c.battleBuff != null)
+            {
+                var buffIcon = IconArt.StatusBadge(c.battleBuff.id, c.battleBuff.turns, 1, 2, 8f);
+                if (buffIcon != null)
+                {
+                    if (!enabled) buffIcon.style.opacity = 0.45f;
+                    card.Add(buffIcon);
+                }
+            }
 
             string tagText = DetermineCardTag(c, choiceIndex, status);
             if (tagText != null)
@@ -257,12 +271,14 @@ namespace Obscure
                 var tag = FigmaUi.InstantiateTemplate(enabled ? "Tag-Temp" : "Tag-Cond");
                 if (tag != null)
                 {
+                    tag.style.flexShrink = 0;
+                    if (tag.childCount > 0) tag[0].style.flexShrink = 0;
                     FigmaUi.SetInstanceText(tag, "text-0", tagText);
                     card.Add(tag);
                 }
             }
 
-            choiceScroll.Add(card);
+            choiceHost.Add(card);
             var item = menu.Add(card, c.label, choose, interactable: enabled, tooltip: sub);
             item.visual = on =>
             {
@@ -392,8 +408,8 @@ namespace Obscure
 
             if (Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evMod))
             {
-                var (mLabel, mDetail) = RewardGenerator.Describe(evMod, Run.ModifierManager);
-                parts.Add($"+{mLabel.ToUpperInvariant()} ({mDetail.ToUpperInvariant()})");
+                var (mLabel, _) = RewardGenerator.Describe(evMod, Run.ModifierManager);
+                parts.Add($"+{mLabel.ToUpperInvariant()}");
             }
 
             bool revealCurse = Run == null || Run.RevealsCurses;
@@ -450,7 +466,7 @@ namespace Obscure
             var contBtn = FigmaUi.CreateButton("Continue", "button-primary", 180);
             btnRow.Add(contBtn);
             box.Add(btnRow);
-            choiceScroll.Add(box);
+            choiceHost.Add(box);
 
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(contBtn, "Continue", () => Game.Go(GameState.Map)), contBtn);
         }
