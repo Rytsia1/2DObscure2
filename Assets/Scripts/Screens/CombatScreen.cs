@@ -218,6 +218,7 @@ namespace Obscure
 
             battle.Logged += AddLog;
             battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
+            battle.StatusApplied += (_, _, isBuff) => Sfx.Play(isBuff ? Sound.Buff : Sound.Debuff);
             AddLog(encounter.tier == Tier.Boss ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
         }
@@ -619,6 +620,7 @@ namespace Obscure
             }
 
             if (retryTag == null) yield break;
+            Sfx.Play(Sound.QteRetry);
             Hint(retryTag);
             yield return new WaitForSeconds(0.4f);
             var retryQte = makeRetry();
@@ -632,7 +634,14 @@ namespace Obscure
             ClearPhase();
             Hint("");
             HideDossier();
-            foreach (var h in Battle.Perform(action, power, defense)) Feedback(h, action);
+            if (action.kind == ActionKind.Guard) Sfx.Play(Sound.Guard);
+            int idx = 0;
+            foreach (var h in Battle.Perform(action, power, defense))
+            {
+                var defGrade = defense != null && idx < defense.Count ? defense[idx] : (QteResult?)null;
+                Feedback(h, action, defGrade);
+                idx++;
+            }
             Refresh();
             if (pendingPhaseTransitionBoss != null)
             {
@@ -727,6 +736,7 @@ namespace Obscure
 
             menuHost.style.display = DisplayStyle.None;
             qteHost.style.display = DisplayStyle.Flex;
+            if (!(qte is AutoQte)) Sfx.Play(enemyAction != null ? Sound.QteTelegraph : Sound.QteStart);
             var panel = phaseGo.AddComponent<QtePanel>();
             panel.Init(qte, heading, qteHost);
             activeQte = qte;
@@ -746,12 +756,12 @@ namespace Obscure
 
         void OnDestroy() => activeQte?.Cancel();
 
-        void Feedback(Hit hit, BattleAction action)
+        void Feedback(Hit hit, BattleAction action, QteResult? defGrade = null)
         {
             if (!huds.TryGetValue(hit.target, out var h)) return;
             float cx = h.pos.x + h.size.x / 2f;
             bool immune = hit.effect == Effectiveness.Immune;
-            PlayHitFx(hit, action, h, cx);
+            PlayHitFx(hit, action, h, cx, defGrade);
 
             SpawnPopup(hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 10f,
                 hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : Palette.CrimsonBright, 20);
@@ -777,7 +787,7 @@ namespace Obscure
             activePopups.Add(new ActivePopup { lbl = lbl, startY = y });
         }
 
-        void PlayHitFx(Hit hit, BattleAction action, Hud h, float cx)
+        void PlayHitFx(Hit hit, BattleAction action, Hud h, float cx, QteResult? defGrade = null)
         {
             float cy = h.pos.y + h.size.y / 2f, feet = h.pos.y + h.size.y;
             bool flip = !hit.target.IsEnemy;
@@ -804,27 +814,32 @@ namespace Obscure
                 activeFxs.Add(new ActiveFx { el = fxEl, clip = clip });
             }
 
-            if (hit.blocked) Play("parry");
-            else if (hit.heal) Play("heal");
+            if (hit.blocked) { Play("parry"); Sfx.Play(Sound.Parry); }
+            else if (hit.effect == Effectiveness.Immune) { Sfx.Play(Sound.Immune); }
+            else if (hit.heal) { Play("heal"); Sfx.Play(Sound.Heal); }
             else if (hit.amount > 0)
             {
                 var element = action?.skill?.element ?? action?.attack?.element ?? Element.Physical;
-                Play(hit.critical ? "crit" : element switch
-                {
-                    Element.Fire => "fire",
-                    Element.Ice => "ice",
-                    Element.Lightning => "lightning",
-                    Element.Arcane => "arcane",
-                    Element.Holy => "holy",
-                    Element.Dark => "dark",
-                    Element.Earth => "earth",
-                    Element.Wind => "wind",
-                    Element.Water => "water",
-                    _ => "hit",
-                });
+                var (fxName, sfx) = hit.critical
+                    ? ("crit", Sound.Crit)
+                    : element switch
+                    {
+                        Element.Fire => ("fire", Sound.Fire),
+                        Element.Ice => ("ice", Sound.Ice),
+                        Element.Lightning => ("lightning", Sound.Lightning),
+                        Element.Arcane => ("arcane", Sound.Arcane),
+                        Element.Holy => ("holy", Sound.Holy),
+                        Element.Dark => ("dark", Sound.Dark),
+                        Element.Earth => ("earth", Sound.Earth),
+                        Element.Wind => ("wind", Sound.Wind),
+                        Element.Water => ("water", Sound.Water),
+                        _ => ("hit", Sound.Hit),
+                    };
+                Play(fxName);
+                Sfx.Play(defGrade == QteResult.Good ? Sound.Block : sfx);
             }
-            if (hit.brokeTarget) Play("break");
-            if (hit.killed) Play("death");
+            if (hit.brokeTarget) { Play("break"); Sfx.Play(Sound.Break); }
+            if (hit.killed) { Play("death"); Sfx.Play(Sound.Death); }
         }
 
         IEnumerator Flash(Hud h, Combatant c)
@@ -1017,6 +1032,7 @@ namespace Obscure
         void ShowOutcome()
         {
             bool won = Battle.Outcome == Outcome.Victory;
+            Sfx.Play(won ? Sound.VictoryStinger : Sound.DefeatStinger);
             ClearPhase();
             turnBar?.Clear();
             Hint("");

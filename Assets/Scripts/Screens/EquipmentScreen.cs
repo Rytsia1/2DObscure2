@@ -401,16 +401,28 @@ namespace Obscure
             {
                 candidateIndex = -1;
                 feedback = $"EQUIPPED {ItemName(candidate, candidate.Definition)}.";
+                Sfx.Play(Sound.Equip);
             }
-            else feedback = $"CANNOT EQUIP: {err}".ToUpperInvariant();
+            else
+            {
+                feedback = $"CANNOT EQUIP: {err}".ToUpperInvariant();
+                Sfx.Play(Sound.Deny);
+            }
             Refresh();
         }
 
         void OnUnequipClicked()
         {
-            feedback = EquipmentManager.UnequipToInventory(CurrentHero, SelectedSlot, inventory, out string err)
-                ? $"UNEQUIPPED {GetCoreSlotName(SelectedSlot)} TO THE BAG."
-                : $"CANNOT UNEQUIP: {err}".ToUpperInvariant();
+            if (EquipmentManager.UnequipToInventory(CurrentHero, SelectedSlot, inventory, out string err))
+            {
+                feedback = $"UNEQUIPPED {GetCoreSlotName(SelectedSlot)} TO THE BAG.";
+                Sfx.Play(Sound.Equip);
+            }
+            else
+            {
+                feedback = $"CANNOT UNEQUIP: {err}".ToUpperInvariant();
+                Sfx.Play(Sound.Deny);
+            }
             candidateIndex = -1;
             Refresh();
         }

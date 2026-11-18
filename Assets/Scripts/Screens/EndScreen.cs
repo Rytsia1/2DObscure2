@@ -20,6 +20,7 @@ namespace Obscure
 
         void BuildVictory()
         {
+            Sfx.Play(Sound.VictoryStinger);
             MountFigma("23---Dungeon-Clear");
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
@@ -87,6 +88,7 @@ namespace Obscure
 
         void BuildDefeat()
         {
+            Sfx.Play(Sound.DefeatStinger);
             MountFigma("24---Run-Failure---Defeat");
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);

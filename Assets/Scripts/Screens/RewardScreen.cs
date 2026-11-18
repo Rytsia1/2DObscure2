@@ -182,8 +182,10 @@ namespace Obscure
 
         static void Claim(int choice)
         {
+            int gainedGold = Run != null && Run.PendingReward != null ? Run.PendingReward.gold : 0;
             Run.ClaimReward(choice);
             if (choice >= 0) Sfx.Play(Sound.Success);
+            else if (gainedGold > 0) Sfx.Play(Sound.Coin);
             if (Run.Won)
             {
                 PersistenceCommitHandler.CommitDungeonClear(Run);
@@ -202,6 +204,7 @@ namespace Obscure
     {
         protected override void Build()
         {
+            Sfx.Play(Sound.VictoryStinger);
             MountFigma("23---Dungeon-Clear");
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);

@@ -406,11 +406,11 @@ namespace Obscure
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(actBtn, actLbl, !learned ? (Action)Learn : Upgrade, interactable: canAct));
         }
 
-        void Say(string text, bool bad) { feedback = text; feedbackBad = bad; Sfx.Play(bad ? Sound.Deny : Sound.Confirm); Rebuild(); }
+        void Say(string text, bool bad, Sound okSound = Sound.SkillUnlock) { feedback = text; feedbackBad = bad; Sfx.Play(bad ? Sound.Deny : okSound); Rebuild(); }
         void Learn() { var h = CurrentHero; if (h.skillLoadout.TryUnlockSkill(selectedSkillId, h.level, h.classDef, out string e)) Say($"LEARNED {NameOf(selectedSkillId, isSelectedPassive)}.", false); else Say(e ?? "CANNOT LEARN.", true); }
         void Upgrade() { var h = CurrentHero; if (h.skillLoadout.TryUpgradeRank(selectedSkillId, out string e)) Say($"UPGRADED TO RANK {h.skillLoadout.GetRank(selectedSkillId)}.", false); else Say(e ?? "CANNOT UPGRADE.", true); }
-        void Equip(int slot) { var lo = CurrentHero.skillLoadout; bool ok = isSelectedPassive ? lo.TryEquipPassive(slot, selectedSkillId, out var e) : lo.TryEquipActive(slot, selectedSkillId, out e); Say(ok ? $"EQUIPPED IN SLOT {slot + 1}." : e ?? "FAILED.", !ok); }
-        void Unequip() { var lo = CurrentHero.skillLoadout; var s = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots; for (int i = 0; i < s.Length; i++) if (s[i] == selectedSkillId) s[i] = null; Say("SKILL UNEQUIPPED.", false); }
-        void Respec() { if (!confirmRespecActive) { confirmRespecActive = true; Say("PRESS RESPEC AGAIN TO REFUND ALL SP.", false); return; } CurrentHero.skillLoadout.Respec(CurrentHero.classDef, CurrentHero.level); confirmRespecActive = false; selectedSkillId = null; Say("ALL SP REFUNDED AND THE TREE RESET.", false); }
+        void Equip(int slot) { var lo = CurrentHero.skillLoadout; bool ok = isSelectedPassive ? lo.TryEquipPassive(slot, selectedSkillId, out var e) : lo.TryEquipActive(slot, selectedSkillId, out e); Say(ok ? $"EQUIPPED IN SLOT {slot + 1}." : e ?? "FAILED.", !ok, Sound.Equip); }
+        void Unequip() { var lo = CurrentHero.skillLoadout; var s = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots; for (int i = 0; i < s.Length; i++) if (s[i] == selectedSkillId) s[i] = null; Say("SKILL UNEQUIPPED.", false, Sound.Equip); }
+        void Respec() { if (!confirmRespecActive) { confirmRespecActive = true; Say("PRESS RESPEC AGAIN TO REFUND ALL SP.", false, Sound.ModalOpen); return; } CurrentHero.skillLoadout.Respec(CurrentHero.classDef, CurrentHero.level); confirmRespecActive = false; selectedSkillId = null; Say("ALL SP REFUNDED AND THE TREE RESET.", false); }
     }
 }

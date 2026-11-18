@@ -321,6 +321,28 @@ namespace Obscure.Tests
             Assert.AreEqual(2, boss.phase);
         }
 
+        [Test]
+        public void AllCatalogedSfxAssets_LoadAndInitializeIntoSfxEnum()
+        {
+            var host = new GameObject("TestAllSfxHost");
+            try
+            {
+                Sfx.Init(host);
+                foreach (Sound s in System.Enum.GetValues(typeof(Sound)))
+                {
+                    var clip = Sfx.GetClip(s);
+                    Assert.IsNotNull(clip, $"Sfx clip for Sound.{s} is missing");
+                    Assert.AreEqual(1, clip.channels, $"Sound.{s} must be mono");
+                    Assert.AreEqual(44100, clip.frequency, $"Sound.{s} must be 44.1kHz");
+                    Assert.Greater(clip.length, 0.05f, $"Sound.{s} should have audible length");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+            }
+        }
+
         static float Rms(float[] s, float from, float to)
         {
             int a = (int)(from * Sfx.Rate), b = (int)(to * Sfx.Rate);

@@ -335,7 +335,7 @@ namespace Obscure
         void Take(TalentDef t)
         {
             var hero = CurrentHero;
-            if (hero.TrySelectTalent(t.id, out string error)) { feedback = $"{hero.name} LEARNED {t.name}."; feedbackBad = false; Sfx.Play(Sound.Success); }
+            if (hero.TrySelectTalent(t.id, out string error)) { feedback = $"{hero.name} LEARNED {t.name}."; feedbackBad = false; Sfx.Play(Sound.SkillUnlock); }
             else { feedback = error ?? "CANNOT TAKE THIS TALENT."; feedbackBad = true; Sfx.Play(Sound.Deny); }
             Rebuild();
         }
@@ -348,7 +348,7 @@ namespace Obscure
                 heroIndex = party.IndexOf(target);
                 respecOpen = false; selectedId = null;
                 feedback = $"{target.name}'S TALENTS WERE CLEARED. CHOOSE {target.EarnedTalentSlots} AGAIN.";
-                feedbackBad = false; Sfx.Play(Sound.Success);
+                feedbackBad = false; Sfx.Play(Sound.SkillUnlock);
             }
             else { feedback = "NO SCROLL OF EMPTINESS IN THE INVENTORY."; feedbackBad = true; Sfx.Play(Sound.Deny); }
             Rebuild();

@@ -12,7 +12,8 @@ namespace Obscure
         const float TrackW = 480f, TrackH = 26f, Impact = 0.82f;
 
         Qte qte;
-        int bornFrame, lastResolved = -1;
+        int bornFrame, lastResolved = -1, lastTypingIndex, lastMistakes;
+        bool defenseActiveStarted, heavyTelegraphed, resultSfxPlayed;
         Keyboard keyboard;
         UiLabel infoLbl, resultLbl;
         VisualElement host, timeFill;
@@ -26,6 +27,12 @@ namespace Obscure
             qte = q;
             host = qteHost;
             bornFrame = Time.frameCount;
+            lastResolved = -1;
+            lastTypingIndex = (q as TypingQte)?.Index ?? 0;
+            lastMistakes = (q as TypingQte)?.Mistakes ?? 0;
+            defenseActiveStarted = false;
+            heavyTelegraphed = false;
+            resultSfxPlayed = false;
 
             if (host != null)
             {
@@ -192,6 +199,11 @@ namespace Obscure
         {
             string key = Controls.QteKey.ToString().ToUpperInvariant();
             if (d.InTelegraph) infoLbl.text = "GET READY TO DEFEND...";
+            else if (!defenseActiveStarted)
+            {
+                defenseActiveStarted = true;
+                Sfx.Play(Sound.QteStart);
+            }
             int next = -1;
             for (int i = 0; i < d.Hits; i++)
             {
@@ -202,6 +214,11 @@ namespace Obscure
                     continue;
                 }
                 if (next < 0) next = i;
+                if (d.heavy[i] && !heavyTelegraphed)
+                {
+                    heavyTelegraphed = true;
+                    Sfx.Play(Sound.QteTelegraph);
+                }
                 bool holding = hold > 0 && e >= w / 2 && e < w / 2 + hold;
                 float p = holding ? Impact / 2 : (e >= w / 2 + hold ? e - hold : e) / w * Impact;
                 var c = holding ? (Mathf.Repeat(d.T, 0.2f) < 0.1f ? Palette.SpecCrimson : Palette.WarmIvory)
@@ -215,13 +232,23 @@ namespace Obscure
             for (int i = d.Hits - 1; i >= 0; i--)
                 if (d.HitResult(i) is QteResult r)
                 {
-                    if (i != lastResolved) { lastResolved = i; ShowResult(r, "PARRY!", "BLOCK", "HIT"); }
+                    if (i != lastResolved) { lastResolved = i; resultSfxPlayed = false; ShowResult(r, "PARRY!", "BLOCK", "HIT", true); }
                     break;
                 }
         }
 
         void RenderTyping(TypingQte t)
         {
+            if (t.Index > lastTypingIndex)
+            {
+                lastTypingIndex = t.Index;
+                Sfx.Play(Sound.RuneType);
+            }
+            if (t.Mistakes > lastMistakes)
+            {
+                lastMistakes = t.Mistakes;
+                Sfx.Play(Sound.RuneError);
+            }
             for (int i = 0; i < letters.Count; i++)
                 letters[i].style.color = i < t.Index ? Palette.Gold1 : i == t.Index ? Palette.WarmIvory : i >= t.wordLength ? Palette.ArcaneViolet : Palette.MutedGray;
             float left = Mathf.Clamp01(1f - t.T / t.timeLimit);
@@ -231,8 +258,15 @@ namespace Obscure
             if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
         }
 
-        void ShowResult(QteResult r, string perfect, string good, string miss)
+        void ShowResult(QteResult r, string perfect, string good, string miss, bool defense = false)
         {
+            if (!resultSfxPlayed)
+            {
+                resultSfxPlayed = true;
+                Sfx.Play(defense
+                    ? (r == QteResult.Perfect ? Sound.Parry : r == QteResult.Good ? Sound.Block : Sound.QteMiss)
+                    : (r == QteResult.Perfect ? Sound.QtePerfect : r == QteResult.Good ? Sound.QteGood : Sound.QteMiss));
+            }
             if (resultLbl == null) return;
             resultLbl.text = r == QteResult.Perfect ? perfect : r == QteResult.Good ? good : miss;
             resultLbl.style.color = r == QteResult.Perfect ? Palette.Gold1 : r == QteResult.Good ? Palette.Hex(0xB8D6FF) : Palette.Mist3;

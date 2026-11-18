@@ -404,8 +404,8 @@ namespace Obscure
             var eq = GetSelectedEquipment();
             if (eq == null || party == null || party.Count == 0) return;
             var targetHero = party.FirstOrDefault(u => EquipmentValidator.Validate(eq.Definition, eq.Definition.slot, u.classDef, u.race, u.level, u.FinalScores, u.id) == null) ?? party[0];
-            if (EquipmentManager.QuickEquip(targetHero, eq, inventory, out string err)) Say($"EQUIPPED {eq.Definition?.name} ON {targetHero.name}");
-            else Say($"CANNOT EQUIP: {err}");
+            if (EquipmentManager.QuickEquip(targetHero, eq, inventory, out string err)) { Sfx.Play(Sound.Equip); Say($"EQUIPPED {eq.Definition?.name} ON {targetHero.name}"); }
+            else { Sfx.Play(Sound.Deny); Say($"CANNOT EQUIP: {err}"); }
         }
 
         void OnUpgradeClicked()
@@ -413,12 +413,13 @@ namespace Obscure
             if (currentCategory != InventoryCategory.Equipment) return;
             var eq = GetSelectedEquipment(); if (eq == null) return;
             int goldCost = eq.GetUpgradeCostGold(), matCost = eq.GetUpgradeCostMaterials(), playerGold = Game.I?.Run?.Gold ?? 9999, playerMat = inventory.GetMaterialCount("iron_ingot");
-            if (!eq.CanUpgrade(out string reason)) { Say(reason); return; }
-            if (Game.I?.Run != null && Game.I.Run.Gold < goldCost) { Say($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)"); return; }
-            if (playerMat < matCost && inventory.materials.Count > 0) { Say($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})"); return; }
+            if (!eq.CanUpgrade(out string reason)) { Sfx.Play(Sound.Deny); Say(reason); return; }
+            if (Game.I?.Run != null && Game.I.Run.Gold < goldCost) { Sfx.Play(Sound.Deny); Say($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)"); return; }
+            if (playerMat < matCost && inventory.materials.Count > 0) { Sfx.Play(Sound.Deny); Say($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})"); return; }
             if (Game.I?.Run != null) Game.I.Run.Gold -= goldCost;
             inventory.RemoveMaterial("iron_ingot", matCost);
             eq.TryUpgrade(out _);
+            Sfx.Play(Sound.BlacksmithForge);
             Say($"UPGRADED {eq.Definition?.name} TO +{eq.upgradeLevel}!");
         }
 
@@ -426,10 +427,11 @@ namespace Obscure
         {
             if (currentCategory != InventoryCategory.Equipment) return;
             var eq = GetSelectedEquipment(); if (eq == null) return;
-            if (eq.isEquipped) { Say("CANNOT SELL EQUIPPED ITEM. UNEQUIP IT FIRST."); return; }
+            if (eq.isEquipped) { Sfx.Play(Sound.Deny); Say("CANNOT SELL EQUIPPED ITEM. UNEQUIP IT FIRST."); return; }
             if (EquipmentRarities.HasSpecialEffect(eq.rarity) && !confirmSellActive)
             {
                 confirmSellActive = true;
+                Sfx.Play(Sound.ModalOpen);
                 Say($"SELL {eq.rarity} ITEM? PRESS SELL AGAIN.");
                 return;
             }
@@ -437,6 +439,7 @@ namespace Obscure
             inventory.RemoveEquipment(eq.instanceId);
             if (Game.I?.Run != null) Game.I.Run.Gold += val;
             confirmSellActive = false;
+            Sfx.Play(Sound.Coin);
             Say($"SOLD {eq.Definition?.name} FOR {val} GOLD.");
         }
 
@@ -471,6 +474,7 @@ namespace Obscure
                 deadTarget.hp = Math.Max(1, (int)Math.Round(deadTarget.stats.maxHp * pct));
                 deadTarget.RecalculateStats();
                 inventory.RemoveConsumable(c.itemId, 1); Game.I?.Run?.Items?.Remove(c.itemId);
+                Sfx.Play(Sound.Heal);
                 Say($"REVIVED {deadTarget.name} WITH {deadTarget.hp} HP!");
                 return;
             }
@@ -478,6 +482,7 @@ namespace Obscure
             if (itemDef.heal > 0) target.Heal(itemDef.heal);
             if (itemDef.mana > 0) target.mp = Math.Min(target.stats.maxMp, target.mp + itemDef.mana);
             inventory.RemoveConsumable(c.itemId, 1); Game.I?.Run?.Items?.Remove(c.itemId);
+            Sfx.Play(Sound.Heal);
             Say($"USED {itemDef.name} ON {target.name}.");
         }
     }

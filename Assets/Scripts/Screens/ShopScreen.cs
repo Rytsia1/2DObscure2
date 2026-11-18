@@ -257,7 +257,7 @@ namespace Obscure
             if (Run == null) return;
             if (shopData.TryBuyConsumable(Run, c.itemId, out _, out string err))
             {
-                Sfx.Play(Sound.Success);
+                Sfx.Play(Sound.Coin);
                 feedback = $"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} GOLD!";
                 feedbackBad = false;
                 Rebuild();
@@ -270,7 +270,7 @@ namespace Obscure
             if (Run == null) return;
             if (shopData.TryBuyEquipment(Run, eqItem.shopItemId, out var bought, out string err))
             {
-                Sfx.Play(Sound.Success);
+                Sfx.Play(Sound.Coin);
                 feedback = $"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} GOLD!";
                 feedbackBad = false;
                 Rebuild();
@@ -283,7 +283,7 @@ namespace Obscure
             if (Run == null) return;
             if (shopData.TrySellEquipment(Run, eq.instanceId, out int goldGained, out string err))
             {
-                Sfx.Play(Sound.Success);
+                Sfx.Play(Sound.Coin);
                 feedback = $"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} GOLD!";
                 feedbackBad = false;
                 Rebuild();

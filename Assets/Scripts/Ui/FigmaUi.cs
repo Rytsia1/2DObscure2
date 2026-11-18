@@ -306,6 +306,7 @@ namespace Obscure
         public static void ShowConfirmationModal(VisualElement screenRoot, string title, string message, string confirmText, Action onConfirm, Action onCancel = null)
         {
             if (screenRoot == null) return;
+            Sfx.Play(Sound.ModalOpen);
             var backdrop = new VisualElement { name = "UitkConfirmationModal" };
             backdrop.AddToClassList("uitk-modal-backdrop");
             backdrop.pickingMode = PickingMode.Position;

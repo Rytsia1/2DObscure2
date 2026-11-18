@@ -423,6 +423,7 @@ namespace Obscure
         void OpenPause()
         {
             CloseModals();
+            Sfx.Play(Sound.ModalOpen);
             pauseOverlay = new VisualElement { name = "MapPauseOverlay" };
             pauseOverlay.style.position = Position.Absolute;
             pauseOverlay.style.left = 0;
@@ -572,6 +573,7 @@ namespace Obscure
 
         static void Enter(NodeDef n)
         {
+            Sfx.Play(Sound.MapStep);
             Run.Enter(n);
             Game.Go(Game.StateFor(n));
         }

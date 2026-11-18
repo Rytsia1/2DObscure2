@@ -208,7 +208,7 @@ namespace Obscure
 
         void Done(string text)
         {
-            Sfx.Play(Sound.Success);
+            Sfx.Play(Sound.RestCampfire);
             ShowParty();
             NewMenu();
             feedbackLbl.text = text;

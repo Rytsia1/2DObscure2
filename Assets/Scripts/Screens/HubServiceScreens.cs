@@ -69,11 +69,13 @@ namespace Obscure
             finally { rebuilding = false; }
         }
 
+        protected virtual Sound SuccessSound => Sound.Success;
+
         protected void Say(string text, bool bad)
         {
             feedback = text;
             feedbackBad = bad;
-            Sfx.Play(bad ? Sound.Deny : Sound.Success);
+            Sfx.Play(bad ? Sound.Deny : SuccessSound);
             Rebuild();
         }
 
@@ -241,6 +243,7 @@ namespace Obscure
         UitkMenu dialogMenu;
 
         protected override string FigmaScreenKey => "06---Shop---Consumables";
+        protected override Sound SuccessSound => Sound.Coin;
         protected override void Init() => catalog = HubEconomy.GenerateHubShopCatalog();
 
         protected override void AfterRebuild()
@@ -442,6 +445,7 @@ namespace Obscure
     // ===================================================================== H2 · Armory (equipment)
     public class ArmoryScreen : ServiceScreen
     {
+        protected override Sound SuccessSound => Sound.Coin;
         static ShopInventory stock;
         static int stockAct = -1;
         int heroIndex, selected;
@@ -623,6 +627,7 @@ namespace Obscure
     // ===================================================================== I · Blacksmith
     public class BlacksmithScreen : ServiceScreen
     {
+        protected override Sound SuccessSound => Sound.BlacksmithForge;
         int filter, selected;
         static readonly string[] Filters = { "All", "Weapon", "Armor", "Acc." };
 
@@ -792,6 +797,7 @@ namespace Obscure
     // ===================================================================== V1 · Temple (Revive & Recovery)
     public class TempleScreen : ServiceScreen
     {
+        protected override Sound SuccessSound => Sound.TempleBless;
         readonly HashSet<Unit> revive = new HashSet<Unit>();
         readonly HashSet<Unit> recover = new HashSet<Unit>();
 
@@ -928,6 +934,7 @@ namespace Obscure
     // ===================================================================== V2 · Magic Shop (relics)
     public class MagicShopScreen : ServiceScreen
     {
+        protected override Sound SuccessSound => Sound.Coin;
         List<RelicDef> stock;
         int selected;
 

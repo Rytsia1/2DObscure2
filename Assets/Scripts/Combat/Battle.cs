@@ -15,6 +15,7 @@ namespace Obscure
         public readonly List<string> Log = new List<string>();
         public event Action<string> Logged;
         public event Action<Combatant> BossPhaseTransitioning;
+        public event Action<Combatant, StatusId, bool> StatusApplied;
 
         public int Round { get; private set; }
         public readonly int Dungeon; // drives enemy stat scaling (Bab 10 §7)
@@ -587,6 +588,7 @@ namespace Obscure
             {
                 t.AddStatus(ap.id, inst.remainingTurns, inst.magnitude, source);
                 Say(StatusInfo.IsBuff(ap.id) ? $"{t.name} gains {StatusInfo.Name(ap.id)}." : $"{t.name} suffers {StatusInfo.Name(ap.id)}.");
+                StatusApplied?.Invoke(t, ap.id, StatusInfo.IsBuff(ap.id));
             }
             else
             {

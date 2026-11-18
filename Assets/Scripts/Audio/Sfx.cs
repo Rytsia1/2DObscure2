@@ -5,7 +5,14 @@ using UnityEngine;
 // Synthesized UI & combat sound effects, with optional Resources/Sfx/<name> audio asset override.
 namespace Obscure
 {
-    public enum Sound { Move, Confirm, Back, Deny, Success } // Success: progress made (hero added, prize claimed, rest taken)
+    public enum Sound
+    {
+        Move, Confirm, Back, Deny, Success, ModalOpen,
+        Hit, Crit, Parry, Block, Break, Death, Immune, Guard, Heal,
+        Fire, Ice, Lightning, Arcane, Holy, Dark, Earth, Wind, Water, Buff, Debuff,
+        QteTelegraph, QteStart, QtePerfect, QteGood, QteMiss, RuneType, RuneError, QteRetry,
+        Coin, Equip, BlacksmithForge, TempleBless, MapStep, RestCampfire, SkillUnlock, VictoryStinger, DefeatStinger
+    }
 
     public static class Sfx
     {
@@ -18,6 +25,50 @@ namespace Obscure
         public const string UiConfirmResourcePath = "Sfx/ui_confirm";
         public const float ZoroaPhaseTransitionDuration = 6.0f;
         public const string ZoroaTransitionResourcePath = "Sfx/zoroa_phase_transition";
+
+        static readonly (Sound sound, string path)[] ExtraResourcePaths =
+        {
+            (Sound.Back, "Sfx/ui_back"),
+            (Sound.Deny, "Sfx/ui_deny"),
+            (Sound.ModalOpen, "Sfx/ui_modal_open"),
+            (Sound.Hit, "Sfx/sfx_hit"),
+            (Sound.Crit, "Sfx/sfx_crit"),
+            (Sound.Parry, "Sfx/sfx_parry"),
+            (Sound.Block, "Sfx/sfx_block"),
+            (Sound.Break, "Sfx/sfx_break"),
+            (Sound.Death, "Sfx/sfx_death"),
+            (Sound.Immune, "Sfx/sfx_immune"),
+            (Sound.Guard, "Sfx/sfx_guard"),
+            (Sound.Heal, "Sfx/sfx_heal"),
+            (Sound.Fire, "Sfx/sfx_fire"),
+            (Sound.Ice, "Sfx/sfx_ice"),
+            (Sound.Lightning, "Sfx/sfx_lightning"),
+            (Sound.Arcane, "Sfx/sfx_arcane"),
+            (Sound.Holy, "Sfx/sfx_holy"),
+            (Sound.Dark, "Sfx/sfx_dark"),
+            (Sound.Earth, "Sfx/sfx_earth"),
+            (Sound.Wind, "Sfx/sfx_wind"),
+            (Sound.Water, "Sfx/sfx_water"),
+            (Sound.Buff, "Sfx/sfx_buff"),
+            (Sound.Debuff, "Sfx/sfx_debuff"),
+            (Sound.QteTelegraph, "Sfx/sfx_qte_telegraph"),
+            (Sound.QteStart, "Sfx/sfx_qte_start"),
+            (Sound.QtePerfect, "Sfx/sfx_qte_perfect"),
+            (Sound.QteGood, "Sfx/sfx_qte_good"),
+            (Sound.QteMiss, "Sfx/sfx_qte_miss"),
+            (Sound.RuneType, "Sfx/sfx_rune_type"),
+            (Sound.RuneError, "Sfx/sfx_rune_error"),
+            (Sound.QteRetry, "Sfx/sfx_qte_retry"),
+            (Sound.Coin, "Sfx/sfx_coin"),
+            (Sound.Equip, "Sfx/sfx_equip"),
+            (Sound.BlacksmithForge, "Sfx/sfx_blacksmith_forge"),
+            (Sound.TempleBless, "Sfx/sfx_temple_bless"),
+            (Sound.MapStep, "Sfx/sfx_map_step"),
+            (Sound.RestCampfire, "Sfx/sfx_rest_campfire"),
+            (Sound.SkillUnlock, "Sfx/sfx_skill_unlock"),
+            (Sound.VictoryStinger, "Sfx/sfx_victory_stinger"),
+            (Sound.DefeatStinger, "Sfx/sfx_defeat_stinger"),
+        };
 
         static AudioSource source;
         static readonly Dictionary<Sound, AudioClip> Clips = new Dictionary<Sound, AudioClip>();
@@ -35,8 +86,14 @@ namespace Obscure
             Clips[Sound.Confirm] = clickAsset != null ? clickAsset : SynthesizeUiClick();
             var confirmAsset = Resources.Load<AudioClip>(UiConfirmResourcePath);
             Clips[Sound.Success] = confirmAsset != null ? confirmAsset : SynthesizeUiConfirm();
-            Clips[Sound.Back] = Tone((440, 0.05f), (294, 0.08f));
-            Clips[Sound.Deny] = Tone((110, 0.14f));
+
+            foreach (var (s, path) in ExtraResourcePaths)
+            {
+                var clip = Resources.Load<AudioClip>(path);
+                if (clip != null) Clips[s] = clip;
+            }
+            if (!Clips.ContainsKey(Sound.Back)) Clips[Sound.Back] = Tone((440, 0.05f), (294, 0.08f));
+            if (!Clips.ContainsKey(Sound.Deny)) Clips[Sound.Deny] = Tone((110, 0.14f));
         }
 
         public static AudioClip GetClip(Sound s) =>
@@ -44,8 +101,18 @@ namespace Obscure
 
         public static void Play(Sound s)
         {
-            if (source != null && Clips.TryGetValue(s, out var clip))
-                source.PlayOneShot(clip, s == Sound.Move ? 0.32f : s == Sound.Confirm ? 0.4f : s == Sound.Success ? 0.45f : 0.25f);
+            if (source == null || !Clips.TryGetValue(s, out var clip) || clip == null) return;
+            float vol = s switch
+            {
+                Sound.Move => 0.32f,
+                Sound.RuneType => 0.28f,
+                Sound.Back or Sound.Deny or Sound.ModalOpen => 0.35f,
+                Sound.Confirm => 0.40f,
+                Sound.Success or Sound.QteGood or Sound.QteMiss or Sound.MapStep or Sound.Equip or Sound.Coin => 0.45f,
+                Sound.Crit or Sound.Break or Sound.Death or Sound.VictoryStinger or Sound.DefeatStinger => 0.56f,
+                _ => 0.50f,
+            };
+            source.PlayOneShot(clip, vol);
         }
 
         // Subtle and elegant 0.25s UI hover sound effect for a dark fantasy anime JRPG:
