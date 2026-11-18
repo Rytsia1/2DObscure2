@@ -67,7 +67,9 @@ namespace Obscure
                 var slot = FigmaUi.InstantiateTemplate("Item-Slot-Filled");
                 if (slot != null)
                 {
-                    FigmaUi.SetInstanceText(slot, "text-0", PrizeSymbol(o));
+                    var prizeIcon = o.kind == RewardKind.Item ? IconArt.Item(o.id) : o.kind == RewardKind.Equipment ? IconArt.Gear(o.id) : null;
+                    FigmaUi.SetInstanceText(slot, "text-0", prizeIcon != null ? "" : PrizeSymbol(o));
+                    IconArt.Overlay(slot, prizeIcon);
                     slot.style.marginBottom = 8;
                     topGroup.Add(slot);
                 }

@@ -961,12 +961,19 @@ namespace Obscure
             return currentMenu;
         }
 
-        void Option(UitkMenu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null, string rawTitle = null)
+        void Option(UitkMenu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null, string rawTitle = null, Texture2D icon = null)
         {
             var btn = FigmaUi.CreateButton(text, "button-slab", 236f);
             btn.style.height = 46;
             btn.style.marginBottom = 6;
-            btn.style.paddingLeft = 10;
+            btn.style.paddingLeft = icon != null ? 44 : 10;
+            var iconEl = IconArt.Inline(icon, 2, 0);
+            if (iconEl != null)
+            {
+                iconEl.style.position = Position.Absolute; iconEl.style.left = 6; iconEl.style.top = 5;
+                if (!enabled) iconEl.style.opacity = 0.45f;
+                btn.Add(iconEl);
+            }
             btn.style.paddingRight = 10;
             btn.style.fontSize = 18;
             btn.SetEnabled(enabled);
@@ -1025,7 +1032,7 @@ namespace Obscure
                 string targetText = $"TARGET: {sk.target.ToString().ToUpperInvariant()}";
                 Option(m, $"{sk.name.ToUpperInvariant()} {costText}", () => UseSkill(c, sk),
                     cd == 0 && c.unit.mp >= effCost && hasShield && hasWeapon, sk.description.ToUpperInvariant(),
-                    $"COST: {costText}   TYPE: {typeText}", targetText, sk.name.ToUpperInvariant());
+                    $"COST: {costText}   TYPE: {typeText}", targetText, sk.name.ToUpperInvariant(), IconArt.Skill(sk.id));
             }
             Option(m, "BACK", () => ShowActions(c), rawTitle: "BACK");
             m.onBack = () => ShowActions(c);
@@ -1054,7 +1061,7 @@ namespace Obscure
                         var candidates = item.isRevive ? Battle.Allies(c).Where(a => !a.Alive) : Battle.Allies(c).Where(a => a.Alive);
                         ChooseTarget(candidates, t => BattleAction.Item(c, item, t), () => ShowItems(c));
                     },
-                    tooltip: item.description.ToUpperInvariant(), costType: "CONSUMABLE", target: item.isRevive ? "FALLEN ALLY" : "LIVING ALLY", rawTitle: item.name.ToUpperInvariant());
+                    tooltip: item.description.ToUpperInvariant(), costType: "CONSUMABLE", target: item.isRevive ? "FALLEN ALLY" : "LIVING ALLY", rawTitle: item.name.ToUpperInvariant(), icon: IconArt.Item(item.id));
             }
             Option(m, "BACK", () => ShowActions(c), rawTitle: "BACK");
             m.onBack = () => ShowActions(c);

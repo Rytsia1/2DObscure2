@@ -245,6 +245,7 @@ namespace Obscure
                 var lbl = box.Q<UiLabel>("text-0");
                 if (lbl != null) lbl.style.color = EquipmentRarities.GetColor(r.Value);
             }
+            IconArt.Overlay(box, IconArt.Gear(def));
             wrap.Add(box);
             wrap.Add(new UiLabel(GetCoreSlotName(slot)) { style = { fontSize = 11, color = sel ? Palette.Gold1 : Palette.Mist3, marginTop = 2 } });
 
@@ -306,6 +307,8 @@ namespace Obscure
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                     }
                 };
+                var icon = IconArt.Inline(IconArt.Gear(d.def), 3);
+                if (icon != null) { if (d.lockReason != null) icon.style.opacity = 0.5f; row.Add(icon); }
                 var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
                 col.Add(new UiLabel(ItemName(d.item, d.def)) { style = { fontSize = 16, color = d.lockReason != null ? Color.Lerp(rc, Palette.Mist3, 0.5f) : rc } });
                 col.Add(new UiLabel(sub) { style = { fontSize = 11, color = d.lockReason != null ? Down : Palette.Mist3 } });

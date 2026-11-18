@@ -167,6 +167,7 @@ namespace Obscure
                     var lbl = cell.Q<UiLabel>("text-0");
                     if (lbl != null) lbl.style.color = info.tint.Value;
                 }
+                IconArt.Overlay(cell, info.icon);
                 grid.Add(cell);
                 if (has)
                 {
@@ -202,7 +203,7 @@ namespace Obscure
             BuildDetailPanel(screen, pageIndex * ItemsPerPage + selectedIndex);
         }
 
-        (bool has, string badge, Color? tint, string title) CellContent(int itemIdx)
+        (bool has, string badge, Color? tint, string title, Texture2D icon) CellContent(int itemIdx)
         {
             switch (currentCategory)
             {
@@ -212,26 +213,26 @@ namespace Obscure
                     if (itemIdx >= list.Count) break;
                     var eq = list[itemIdx];
                     string b = eq.upgradeLevel > 0 ? $"+{eq.upgradeLevel}" : Palette.RarityBadge(eq.rarity);
-                    return (true, b, EquipmentRarities.GetColor(eq.rarity), eq.Definition?.name ?? "Gear");
+                    return (true, b, EquipmentRarities.GetColor(eq.rarity), eq.Definition?.name ?? "Gear", IconArt.Gear(eq.Definition));
                 }
                 case InventoryCategory.Consumables:
                     if (itemIdx >= inventory.consumables.Count) break;
                     var c = inventory.consumables[itemIdx];
-                    return (true, c.count.ToString(), Palette.Gold1, c.Definition?.name ?? c.itemId);
+                    return (true, c.count.ToString(), Palette.Gold1, c.Definition?.name ?? c.itemId, IconArt.Item(c.itemId));
                 case InventoryCategory.Materials:
                 {
                     var mats = inventory.materials.ToList();
                     if (itemIdx >= mats.Count) break;
-                    return (true, mats[itemIdx].Value.ToString(), Palette.ElementIce, mats[itemIdx].Key);
+                    return (true, mats[itemIdx].Value.ToString(), Palette.ElementIce, mats[itemIdx].Key, IconArt.Item(mats[itemIdx].Key));
                 }
                 default:
                 {
                     var keys = inventory.keyItems.ToList();
                     if (itemIdx >= keys.Count) break;
-                    return (true, "K", Palette.Gold2, keys[itemIdx]);
+                    return (true, "K", Palette.Gold2, keys[itemIdx], IconArt.Item(keys[itemIdx]));
                 }
             }
-            return (false, "", null, "");
+            return (false, "", null, "", null);
         }
 
         void BuildDetailPanel(VisualElement screen, int selIdx)

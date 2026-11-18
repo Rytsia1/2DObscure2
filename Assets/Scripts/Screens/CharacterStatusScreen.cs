@@ -453,7 +453,9 @@ namespace Obscure
                 var tile = FigmaUi.InstantiateTemplate(eq != null ? "Item-Slot-Filled" : "Item-Slot-Empty");
                 if (tile != null)
                 {
-                    FigmaUi.SetInstanceText(tile, "text-0", eq != null ? InitialsFromName(eq.name) : "");
+                    var gearIcon = IconArt.Gear(eq);
+                    FigmaUi.SetInstanceText(tile, "text-0", eq != null && gearIcon == null ? InitialsFromName(eq.name) : "");
+                    IconArt.Overlay(tile, gearIcon, 2);
                     tile.style.width = 44;
                     tile.style.height = 44;
                     tile.style.marginRight = 8;
@@ -477,6 +479,8 @@ namespace Obscure
             for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
             {
                 string id = u.skillLoadout.ActiveSlots[i];
+                var skIcon = IconArt.Inline(IconArt.Skill(id), 2, 6);
+                if (skIcon != null) { actRow.Add(skIcon); continue; }
                 var tag = FigmaUi.InstantiateTemplate("Tag-Gold");
                 if (tag != null)
                 {
@@ -490,12 +494,13 @@ namespace Obscure
 
             var pasRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
             pasRow.Add(new UiLabel("PASSIVE") { style = { fontSize = 13, color = Palette.Mist3, width = 76 } });
-            string pIcons = string.Join(" ", Enumerable.Range(0, SkillLoadout.PassiveSlotCount).Select(i =>
+            for (int i = 0; i < SkillLoadout.PassiveSlotCount; i++)
             {
                 string id = u.skillLoadout.PassiveSlots[i];
-                return string.IsNullOrEmpty(id) ? "◇" : $"◆{Initials(id)}";
-            }));
-            pasRow.Add(new UiLabel(pIcons) { style = { fontSize = 18, color = Palette.Gold2 } });
+                var pIcon = IconArt.Inline(IconArt.Passive(id), 2, 6);
+                if (pIcon != null) pasRow.Add(pIcon);
+                else pasRow.Add(new UiLabel(string.IsNullOrEmpty(id) ? "◇ " : $"◆{Initials(id)} ") { style = { fontSize = 18, color = Palette.Gold2 } });
+            }
             skCol.Add(pasRow);
             botRow.Add(skCol);
         }

@@ -273,7 +273,9 @@ namespace Obscure
                 el.style.borderTopLeftRadius = 24; el.style.borderTopRightRadius = 24;
                 el.style.borderBottomLeftRadius = 24; el.style.borderBottomRightRadius = 24;
             }
-            FigmaUi.SetInstanceText(el, "text-0", Initials(NameOf(n.id, n.passive)));
+            var nodeIcon = IconArt.SkillOrPassive(n.id, n.passive);
+            FigmaUi.SetInstanceText(el, "text-0", nodeIcon != null ? "" : Initials(NameOf(n.id, n.passive)));
+            IconArt.Overlay(el, nodeIcon, 3, learned || avail ? 1f : 0.45f);
             canvas.Add(el);
 
             if (learned)

@@ -99,7 +99,7 @@ namespace Obscure
                     el.style.display = DisplayStyle.None;
         }
 
-        protected VisualElement CreateListRow(string title, string sub, string mid, string right, string subRight, Color? titleCol, Color? rightCol, bool chosen, bool locked, Action onSelect)
+        protected VisualElement CreateListRow(string title, string sub, string mid, string right, string subRight, Color? titleCol, Color? rightCol, bool chosen, bool locked, Action onSelect, Texture2D icon = null)
         {
             var row = new VisualElement();
             row.style.height = 56;
@@ -115,6 +115,8 @@ namespace Obscure
 
             var ptr = new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2 } };
             row.Add(ptr);
+            var iconEl = IconArt.Inline(icon, 3);
+            if (iconEl != null) { if (locked) iconEl.style.opacity = 0.5f; row.Add(iconEl); }
 
             var mainCol = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, justifyContent = Justify.Center, overflow = Overflow.Hidden } };
             mainCol.Add(new UiLabel(title) { style = { fontSize = 18, color = titleCol ?? Palette.Mist1 } });
@@ -317,7 +319,7 @@ namespace Obscure
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
                     else if (!sellTab) { qty = 1; dialogOpen = true; Rebuild(); }
-                });
+                }, IconArt.Item(r.id));
                 listHost.Add(row);
             }
 
@@ -550,7 +552,7 @@ namespace Obscure
                 listHost.Add(CreateListRow(def.name, $"{s.item.rarity} · LV {s.item.level}".ToUpperInvariant(), mid, s.isSold ? "-" : Money(s.cost), null, usable ? rc : Color.Lerp(rc, Palette.Mist3, 0.5f), usable && Gold >= s.cost ? Palette.Gold1 : Palette.Mist3, i == selected, !usable && !s.isSold, () =>
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
-                }));
+                }, IconArt.Gear(def)));
             }
             if (items.Count == 0)
                 listHost.Add(new UiLabel("NOTHING IN STOCK FOR THIS SLOT.") { style = { fontSize = 15, color = Palette.Mist3, alignSelf = UnityEngine.UIElements.Align.Center, marginTop = 80 } });
@@ -699,7 +701,7 @@ namespace Obscure
                 leftHost.Add(CreateListRow(Name(e), Owner(e), null, $"+{e.upgradeLevel}", null, EquipmentRarities.GetColor(e.rarity), Palette.Mist2, i == selected, false, () =>
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
-                }));
+                }, IconArt.Gear(e.Definition)));
             }
             if (gear.Count == 0) leftHost.Add(new UiLabel("NO EQUIPMENT TO UPGRADE.") { style = { fontSize = 14, color = Palette.Mist3, marginTop = 24 } });
 
@@ -722,6 +724,7 @@ namespace Obscure
             {
                 FigmaUi.SetInstanceText(slot, "text-0", Palette.RarityBadge(e.rarity));
                 slot.style.width = 92; slot.style.height = 92; slot.style.marginBottom = 12;
+                IconArt.Overlay(slot, IconArt.Gear(def), 5);
                 top.Add(slot);
             }
             top.Add(new UiLabel(def.name) { style = { fontSize = 24, color = EquipmentRarities.GetColor(e.rarity), marginBottom = 8 } });

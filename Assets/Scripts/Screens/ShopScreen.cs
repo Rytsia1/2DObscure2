@@ -103,6 +103,8 @@ namespace Obscure
                     }
                 };
                 row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2 } });
+                var icon = IconArt.Inline(e.icon, 3);
+                if (icon != null) { if (e.dim) icon.style.opacity = 0.5f; row.Add(icon); }
                 var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
                 col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : Palette.Mist1 } });
                 col.Add(new UiLabel(e.sub) { style = { fontSize = 12, color = Palette.Mist3 } });
@@ -139,6 +141,7 @@ namespace Obscure
         class Entry
         {
             public string title, sub, desc, stock, priceText, btnText, tagText;
+            public Texture2D icon;
             public int owned, price;
             public bool dim, canAct;
             public Action action;
@@ -157,6 +160,7 @@ namespace Obscure
                     list.Add(new Entry
                     {
                         title = item.name,
+                        icon = IconArt.Item(item.itemId),
                         sub = item.description.ToUpperInvariant(),
                         desc = item.description.ToUpperInvariant(),
                         stock = item.isUnlimitedStock ? "UNLIMITED" : $"× {item.stockCount}",
@@ -180,6 +184,7 @@ namespace Obscure
                     list.Add(new Entry
                     {
                         title = name,
+                        icon = IconArt.Gear(item.item?.Definition),
                         sub = item.item?.Definition != null ? EquipmentSlots.DisplayName(item.item.Definition.slot).ToUpperInvariant() : "GEAR",
                         desc = item.item?.Definition?.description?.ToUpperInvariant() ?? "",
                         stock = item.isSold ? "SOLD OUT" : "× 1",
@@ -204,6 +209,7 @@ namespace Obscure
                     list.Add(new Entry
                     {
                         title = item.Definition?.name ?? "Equipment",
+                        icon = IconArt.Gear(item.Definition),
                         sub = item.Definition != null ? EquipmentSlots.DisplayName(item.Definition.slot).ToUpperInvariant() : "GEAR",
                         desc = $"SELL FOR {val} RUN GOLD.",
                         stock = "OWNED",
