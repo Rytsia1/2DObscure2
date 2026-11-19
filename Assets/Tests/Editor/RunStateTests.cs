@@ -462,8 +462,7 @@ namespace Obscure.Tests
 
             var anoint = AtEvent("shrine");
             anoint.ChooseEvent(1);
-            Assert.AreEqual(1, anoint.TakeBattleBuffs().Count);
-            Assert.AreEqual(0, anoint.TakeBattleBuffs().Count, "the blessing lasts one battle");
+            Assert.AreEqual(1, anoint.BattleBuffs.Count, "the blessing lasts until dungeon exit");
 
             var pray = AtEvent("shrine");
             pray.Party[0].hp = 10;
@@ -594,6 +593,58 @@ namespace Obscure.Tests
             Assert.IsTrue(Database.Relics.ContainsKey(Database.BossRelic));
             Assert.IsTrue(Database.Encounters.Values.Any(e => e.tier == Tier.Normal && e.minFloor == 0));
             Assert.IsTrue(Database.Encounters.Values.Any(e => e.tier == Tier.Elite && e.minFloor <= 2));
+        }
+
+        // ---- EXP & levelling ----
+
+        [Test]
+        public void ExpCurveLevelsUpCarriesRemainderAndCapsAtFifteen()
+        {
+            Assert.AreEqual(100, RunConfig.ExpToNext(1));
+            Assert.AreEqual(125, RunConfig.ExpToNext(2));
+            Assert.AreEqual(425, RunConfig.ExpToNext(14));
+
+            var u = new Unit(Party.First());
+            int sp = u.skillLoadout.SkillPoints;
+            Assert.AreEqual(2, u.GainExp(300), "100 + 125 = two levels");
+            Assert.AreEqual(3, u.level);
+            Assert.AreEqual(75, u.exp, "remainder carries over");
+            Assert.AreEqual(sp + 4, u.skillLoadout.SkillPoints, "+2 SP per level");
+
+            u.GainExp(100000);
+            Assert.AreEqual(RunConfig.MaxLevel, u.level);
+            Assert.AreEqual(0, u.exp, "no EXP banked at the cap");
+            Assert.AreEqual(0, u.GainExp(500));
+            u.LevelUp();
+            Assert.AreEqual(RunConfig.MaxLevel, u.level, "LevelUp is a no-op at the cap");
+        }
+
+        [Test]
+        public void WinningGivesExpToStandingHeroesOnly()
+        {
+            var run = LineRun(NodeType.Battle, NodeType.Boss);
+            run.Enter(run.Map.Get("n0"));
+            run.Party[1].hp = 0; // KO'd when the battle ends
+
+            run.WinCombat();
+            var offer = run.PendingReward;
+            Assert.AreEqual(run.Party.Count, offer.expGained.Length);
+            Assert.AreEqual(RunConfig.BattleExp, offer.expGained[0]);
+            Assert.AreEqual(RunConfig.BattleExp, run.Party[0].exp);
+            Assert.AreEqual(0, offer.expGained[1]);
+            Assert.AreEqual(0, run.Party[1].exp);
+            Assert.IsTrue(run.Party[1].Alive, "fallen heroes still rise at 1 HP after a normal battle");
+            CollectionAssert.AreEqual(new int[run.Party.Count], offer.levelsGained, "35 EXP is not a level");
+        }
+
+        [Test]
+        public void PilgrimsBurdenRaisesBattleExp()
+        {
+            var run = LineRun(NodeType.Battle, NodeType.Boss);
+            run.AddRelic("R031"); // EXP +15%
+            run.Enter(run.Map.Get("n0"));
+            run.WinCombat();
+            Assert.AreEqual(40, run.PendingReward.expGained[0], "35 x 1.15 = 40.25, rounded");
         }
     }
 }

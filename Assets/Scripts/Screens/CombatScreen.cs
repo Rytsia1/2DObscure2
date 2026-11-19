@@ -22,7 +22,7 @@ namespace Obscure
             var battle = new Battle(party, enc.enemies.Select(id => Database.Enemies[id]), items, rng, Run);
             if (Run != null)
             {
-                foreach (var buff in Run.TakeBattleBuffs())
+                foreach (var buff in Run.BattleBuffs)
                     foreach (var p in battle.Party.Where(p => p.Alive)) p.AddStatus(buff.id, buff.turns, buff.magnitude, p);
             }
             Root.gameObject.AddComponent<CombatView>().Init(battle, enc, UiRoot);
@@ -484,6 +484,12 @@ namespace Obscure
             statusRow.Add(statusLbl);
             card?.Add(statusRow);
 
+            // Poise (player Break) bar: the Figma party card has no slot, so pin a thin bar to the card's bottom edge,
+            // spanning the HP..MP gauge columns so it clears the role label on the left.
+            var poiseBar = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, left = Length.Percent(26.8f), right = Length.Percent(15.7f), bottom = 3, height = 4, backgroundColor = Palette.Ink0 } };
+            poiseBar.Add(new VisualElement { style = { width = Length.Percent(100), height = Length.Percent(100), backgroundColor = Palette.Gold2 } });
+            card?.Add(poiseBar);
+
             var hud = new Hud
             {
                 pos = pos,
@@ -499,6 +505,7 @@ namespace Obscure
                 mpLbl = idx < 4 ? card?.Q<UiLabel>(className: mpClasses[idx]) : null,
                 hpGauge = card?.Q<VisualElement>(className: "gauge-hp"),
                 mpGauge = card?.Q<VisualElement>(className: "gauge-mp"),
+                brkGauge = card != null ? poiseBar : null,
                 statusLbl = statusLbl,
                 statusRow = statusRow,
                 stageStatusRow = stageStatusRow,
@@ -859,6 +866,11 @@ namespace Obscure
                 float hpRatio = c.Alive ? (float)c.unit.hp / Mathf.Max(1, c.Stats.maxHp) : 0f;
                 FigmaUi.SetGaugeFill(h.hpGauge, hpRatio, hpRatio <= 0.25f ? Palette.HpLow : Palette.Hp);
                 FigmaUi.SetGaugeFill(h.mpGauge, (float)c.unit.mp / Mathf.Max(1, c.Stats.maxMp), Palette.Mp);
+                if (h.brkGauge != null)
+                {
+                    h.brkGauge.style.display = c.Alive && c.HasBreakGauge ? DisplayStyle.Flex : DisplayStyle.None;
+                    FigmaUi.SetGaugeFill(h.brkGauge, c.IsBroken ? 1f : (float)c.CurrentBreakGauge / Mathf.Max(1, c.MaxBreakGauge), c.IsBroken ? Palette.SpecCrimson : Palette.Gold2);
+                }
             }
 
             if (activeMarker != null)
@@ -1150,7 +1162,7 @@ namespace Obscure
                     yield return new WaitForSeconds(EnemyThink);
                     var act = EnemyAI.Choose(Battle, c);
                     if (act == null) continue;
-                    var qte = QteFactory.Defense(act, Assist);
+                    var qte = QteFactory.Defense(act, Assist, null, qteRng);
                     if (qte == null)
                     {
                         Telegraph(act);
@@ -1161,9 +1173,14 @@ namespace Obscure
                     yield return RunQte(qte, Telegraph(act), act);
                     if (qte.Cancelled) break;
                     var defender = act.target;
-                    yield return TryRetryQte(defender, qte, () => QteFactory.Defense(act, Assist), Telegraph(act), act, retried => qte = retried);
+                    yield return TryRetryQte(defender, qte, () => QteFactory.Defense(act, Assist, null, qteRng), Telegraph(act), act, retried => qte = retried);
                     if (qte.Cancelled) break;
-                    yield return Resolve(act, 1f, qte is DefenseQte d ? d.Results : ((AutoQte)qte).Results);
+                    yield return Resolve(act, 1f, qte switch
+                    {
+                        DefenseQte d => d.Results,
+                        WardQte w => w.Results,
+                        _ => ((AutoQte)qte).Results,
+                    });
                 }
                 else
                 {
@@ -1179,7 +1196,9 @@ namespace Obscure
                         if (qte.Cancelled) break;
                         yield return TryRetryQte(c, qte, () => QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng), OffenseHeading(chosen), null, retried => qte = retried);
                         if (qte.Cancelled) break;
-                        power = Battle.QtePower(chosen, qte.Result);
+                        power = qte is ComboQte combo
+                            ? combo.AveragePower(r => Battle.QtePower(chosen, r))
+                            : Battle.QtePower(chosen, qte.Result);
                     }
                     yield return Resolve(chosen, power);
                 }

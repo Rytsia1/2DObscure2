@@ -107,6 +107,7 @@ namespace Obscure
             };
             screen.Add(row1SubLbl);
 
+            var leveled = new List<Unit>();
             for (int i = 0; i < 4; i++)
             {
                 var frame = UiRoot.Q<VisualElement>(className: frameClasses[i]);
@@ -129,16 +130,28 @@ namespace Obscure
                 var u = currentParty[i];
                 if (fig != null && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "rw_" + (u.classDef?.id ?? u.name)));
-                if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = u.Alive ? Palette.Mist1 : Palette.Mist3; }
+                // EXP was already applied in RunState.WinCombat; the offer says how much and whether it levelled.
+                int gained = i < currentOffer.expGained.Length ? currentOffer.expGained[i] : 0;
+                int levels = i < currentOffer.levelsGained.Length ? currentOffer.levelsGained[i] : 0;
+                // KO'd heroes earn nothing (they may already have risen at 1 HP). No EXP data = preview offer, not a KO.
+                bool fell = i < currentOffer.expGained.Length && gained == 0 && !u.IsMaxLevel;
+                if (levels > 0) leveled.Add(u);
+
+                if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = fell ? Palette.Mist3 : Palette.Mist1; }
                 if (dLbl != null)
                 {
-                    dLbl.text = $"LV {u.level} · {(u.Alive ? "OK" : "KO")}";
-                    dLbl.style.color = u.Alive ? Palette.Ok : Palette.HpLow;
+                    dLbl.text = fell ? "KO · +0 EXP" : u.IsMaxLevel && gained == 0 ? "MAX LEVEL" : $"+{gained} EXP";
+                    dLbl.style.color = fell ? Palette.HpLow : Palette.Xp;
                     dLbl.style.left = 292;
                 }
-                float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
-                FigmaUi.SetGaugeFill(g, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
-                if (bLbl != null) bLbl.text = $"HP {u.hp}/{u.stats.maxHp} · MP {u.mp}/{u.stats.maxMp}";
+                FigmaUi.SetGaugeFill(g, u.IsMaxLevel ? 1f : (float)u.exp / Mathf.Max(1, u.ExpToNext), Palette.Xp);
+                if (bLbl != null)
+                {
+                    bLbl.text = levels > 0 ? $"★ LEVEL UP · LV {u.level}"
+                        : u.IsMaxLevel ? $"LV {u.level} · MAX"
+                        : $"LV {u.level} · {u.exp} / {u.ExpToNext} EXP";
+                    bLbl.style.color = levels > 0 ? Palette.Gold1 : Palette.Mist2;
+                }
             }
 
             var noteTop = UiRoot.Q<UiLabel>(className: "_1-sp-for-the-rogue-level-up-vars");
@@ -167,7 +180,19 @@ namespace Obscure
             }
 
             var noteBottom = UiRoot.Q<UiLabel>(className: "spend-sp-at-a-rest-site-or-in-the-hub-vars");
-            if (noteBottom != null) noteBottom.style.display = DisplayStyle.None;
+            if (noteBottom != null)
+            {
+                if (leveled.Count == 0) noteBottom.style.display = DisplayStyle.None;
+                else
+                {
+                    string who = string.Join(", ", leveled.Select(u => $"{u.name} LV {u.level}")).ToUpperInvariant();
+                    string talent = leveled.Any(u => u.AvailableTalentSelections > 0) ? " · NEW TALENT" : "";
+                    noteBottom.text = $"LEVEL UP: {who} · +SP{talent}. SPEND AT A REST SITE OR IN THE HUB.";
+                    noteBottom.style.color = Palette.Gold2;
+                    noteBottom.style.width = 340;
+                    noteBottom.style.whiteSpace = WhiteSpace.Normal;
+                }
+            }
 
             // Right header
             var rewardHdr = UiRoot.Q<VisualElement>(className: "section-header__i-32");

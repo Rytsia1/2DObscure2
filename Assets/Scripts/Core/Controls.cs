@@ -35,6 +35,10 @@ namespace Obscure
         // Timing/defense QTE button: one remappable key (Settings) plus gamepad south.
         public static Key QteKey = Key.Space;
         public static bool QtePress => Pressed(QteKey) || Pad(p => p.buttonSouth);
+        // Charge QTE: letting go of the QTE button.
+        public static bool QteReleased =>
+            (!Locked && !SuppressKeyboardNavigation && Keyboard.current != null && Keyboard.current[QteKey].wasReleasedThisFrame)
+            || (!Locked && Gamepad.current != null && Gamepad.current.buttonSouth.wasReleasedThisFrame);
 
         public static bool Click => !Locked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
 

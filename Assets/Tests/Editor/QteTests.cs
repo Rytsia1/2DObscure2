@@ -308,8 +308,16 @@ namespace Obscure.Tests
                     Assert.IsNotNull(qte, $"Direct-damage skill '{skill.id}' ({skill.kind}) must trigger a QTE");
                     if (skill.kind == SkillKind.Magic && !string.IsNullOrEmpty(skill.word))
                         Assert.IsInstanceOf<TypingQte>(qte, $"Magic skill '{skill.id}' with word should trigger TypingQte");
-                    else
-                        Assert.IsInstanceOf<TimingQte>(qte, $"Skill '{skill.id}' should trigger TimingQte");
+                    var kind = QteFactory.KindFor(BattleAction.Skill(actor, skill, target));
+                    Type expected = kind switch
+                    {
+                        OffenseQteKind.Typing => typeof(TypingQte),
+                        OffenseQteKind.Charge => typeof(ChargeQte),
+                        OffenseQteKind.MovingTarget => typeof(MovingTargetQte),
+                        OffenseQteKind.Combo => typeof(ComboQte),
+                        _ => typeof(TimingQte),
+                    };
+                    Assert.IsInstanceOf(expected, qte, $"Skill '{skill.id}' should trigger {expected.Name}");
 
                     if (skill.kind == SkillKind.Magic && !string.IsNullOrEmpty(skill.classId))
                         Assert.IsFalse(string.IsNullOrEmpty(skill.word), $"Playable class Magic skill '{skill.id}' should define a Typing QTE word");
@@ -365,6 +373,207 @@ namespace Obscure.Tests
 
             // Non-Halfling must not have Second Chance retries
             Assert.IsFalse(knight.CanUseSecondChanceRetry, "Human Knight must not trigger Halfling Second Chance");
+        }
+
+        // --- Offensive QTE variety ---
+
+        [Test]
+        public void PhysicalSkillsRouteToQteStylesByTrait()
+        {
+            var b = NewBattle(1, "skeleton");
+            var actor = b.Party[0];
+            var target = b.Enemies[0];
+            OffenseQteKind K(SkillDef s) => QteFactory.KindFor(BattleAction.Skill(actor, s, target));
+            var phys = Database.Skills.Values.Where(s => s.kind == SkillKind.Physical).ToList();
+
+            foreach (var s in phys.Where(s => s.isRanged))
+                Assert.AreEqual(OffenseQteKind.MovingTarget, K(s), s.id);
+            foreach (var s in phys.Where(s => !s.isRanged && s.power >= QteConfig.ChargePowerThreshold))
+                Assert.AreEqual(OffenseQteKind.Charge, K(s), s.id);
+            foreach (var s in phys.Where(s => !s.isRanged && s.power < QteConfig.ChargePowerThreshold && (s.target == TargetType.AllEnemies || s.hits > 1)))
+                Assert.AreEqual(OffenseQteKind.Combo, K(s), s.id);
+
+            Assert.AreEqual(OffenseQteKind.Timing, QteFactory.KindFor(BattleAction.Attack(actor, target)), "basic attack keeps the sweep bar");
+            foreach (var kind in new[] { OffenseQteKind.MovingTarget, OffenseQteKind.Charge, OffenseQteKind.Combo, OffenseQteKind.Timing })
+                Assert.IsTrue(phys.Any(s => K(s) == kind), $"at least one physical skill uses {kind}");
+        }
+
+        [Test]
+        public void ChargeJudgesTheReleaseAgainstTheGoldZone()
+        {
+            QteResult HoldFor(float seconds)
+            {
+                var q = new ChargeQte(N, 0.7f);
+                Wait(q, 0.2f);
+                q.Press();
+                Wait(q, seconds);
+                q.Release();
+                return q.Result;
+            }
+            float target = N.sweep * 0.7f;
+            Assert.AreEqual(QteResult.Perfect, HoldFor(target));
+            Assert.AreEqual(QteResult.Good, HoldFor(target + 0.10f));
+            Assert.AreEqual(QteResult.Miss, HoldFor(target - 0.4f), "released too early");
+
+            var over = new ChargeQte(N, 0.7f);
+            over.Press();
+            Wait(over, N.sweep + 0.02f);
+            Assert.IsTrue(over.Done, "a full gauge overcharges");
+            Assert.AreEqual(QteResult.Miss, over.Result);
+
+            var stray = new ChargeQte(N, 0.7f);
+            stray.Release();
+            Assert.IsFalse(stray.Done, "releasing a key held from before the QTE does nothing");
+            Wait(stray, N.sweep * QteConfig.ChargeIdleTimeout + 0.02f);
+            Assert.IsTrue(stray.Done, "never charging times out");
+            Assert.AreEqual(QteResult.Miss, stray.Result);
+        }
+
+        [Test]
+        public void MovingTargetRewardsPressingWhenTheMarkMeetsTheZone()
+        {
+            // Find when the mark crosses the drifting zone, then press there and far from there.
+            float CrossTime(float phase)
+            {
+                var probe = new MovingTargetQte(N, phase);
+                float best = 0f, bestGap = float.MaxValue;
+                for (int i = 0; i < 280 && !probe.Done; i++)
+                {
+                    probe.Tick(0.005f);
+                    float gap = Math.Abs(probe.MarkFraction - probe.ZoneFraction);
+                    if (gap < bestGap) { bestGap = gap; best = probe.T; }
+                }
+                return best;
+            }
+            foreach (float phase in new[] { 0f, 1.5f, 3f, 4.5f })
+            {
+                float cross = CrossTime(phase);
+                var hit = new MovingTargetQte(N, phase);
+                Wait(hit, cross);
+                hit.Press();
+                Assert.AreEqual(QteResult.Perfect, hit.Result, $"phase {phase}");
+
+                var early = new MovingTargetQte(N, phase);
+                Wait(early, 0.05f);
+                early.Press();
+                Assert.AreEqual(QteResult.Miss, early.Result, $"phase {phase}: mark nowhere near the zone");
+            }
+
+            var idle = new MovingTargetQte(N, 0f);
+            Wait(idle, N.sweep + 0.02f);
+            Assert.IsTrue(idle.Done);
+            Assert.AreEqual(QteResult.Miss, idle.Result);
+        }
+
+        [Test]
+        public void ComboAveragesEachZoneAndPunishesMashing()
+        {
+            var perfect = new ComboQte(N, 3, new Random(1));
+            for (int i = 0; i < 3; i++)
+            {
+                Wait(perfect, perfect.zoneTimes[i] - perfect.T);
+                perfect.Press();
+            }
+            Assert.IsTrue(perfect.Done);
+            Assert.AreEqual(QteResult.Perfect, perfect.Result);
+            Assert.AreEqual(QteConfig.PerfectPower, perfect.AveragePower(QteConfig.Offense), 1e-4f);
+
+            var skipped = new ComboQte(N, 3, new Random(1));
+            Wait(skipped, skipped.zoneTimes[0] - skipped.T); skipped.Press();
+            Wait(skipped, skipped.zoneTimes[2] - skipped.T); skipped.Press(); // zone 2 already lapsed, so this lands on zone 3
+            Assert.IsTrue(skipped.Done);
+            Assert.AreEqual(QteResult.Miss, skipped.ZoneResult(1));
+            Assert.AreEqual((1.5f + 0.5f + 1.5f) / 3f, skipped.AveragePower(QteConfig.Offense), 1e-4f);
+
+            var masher = new ComboQte(N, 3, new Random(1));
+            Wait(masher, 0.05f);
+            masher.Press(); masher.Press(); masher.Press();
+            Assert.IsTrue(masher.Done, "early presses spend the zones");
+            Assert.AreEqual(QteResult.Miss, masher.Result);
+        }
+
+        // --- Defensive QTE variety ---
+
+        [Test]
+        public void DodgeArrowMustMatchTheCue()
+        {
+            float impact = N.telegraph + N.windup;
+            DefenseQte Q() => new DefenseQte(N, 1, cues: new[] { DodgeDir.Left });
+
+            var right = Q(); Wait(right, impact); right.PressDirection(DodgeDir.Left);
+            Assert.AreEqual(QteResult.Perfect, right.Result);
+            var key = Q(); Wait(key, impact); key.Press();
+            Assert.AreEqual(QteResult.Miss, key.Result, "the QTE key on an arrow cue is the wrong input");
+            var wrong = Q(); Wait(wrong, impact); wrong.PressDirection(DodgeDir.Up);
+            Assert.AreEqual(QteResult.Miss, wrong.Result, "wrong arrow");
+            var tap = new DefenseQte(N, 1); Wait(tap, impact); tap.PressDirection(DodgeDir.Left);
+            Assert.AreEqual(QteResult.Miss, tap.Result, "an arrow on a key cue is the wrong input");
+        }
+
+        [Test]
+        public void FeintPushesTheRealHitBackAndPunishesBitingOnIt()
+        {
+            var plain = new DefenseQte(E, 2);
+            var feinted = new DefenseQte(E, 2, feints: new[] { true, false });
+            Assert.AreEqual(plain.impacts[0] + feinted.FeintTime, feinted.impacts[0], 1e-5);
+            Assert.AreEqual(plain.impacts[1] + feinted.FeintTime, feinted.impacts[1], 1e-5, "later hits shift too");
+            Assert.AreEqual(E.telegraph, feinted.FeintStart(0), 1e-5, "the fake shows up when the real cue would have");
+            Assert.IsFalse(feinted.IsFeint(1));
+
+            var bit = new DefenseQte(E, 1, feints: new[] { true });
+            Wait(bit, bit.FeintStart(0) + E.windup * QteConfig.FeintStop);
+            bit.Press();
+            Assert.AreEqual(QteResult.Miss, bit.Result, "pressing on the fake spends the hit");
+
+            var patient = new DefenseQte(E, 1, feints: new[] { true });
+            Wait(patient, patient.impacts[0]);
+            patient.Press();
+            Assert.AreEqual(QteResult.Perfect, patient.Result);
+        }
+
+        [Test]
+        public void WardIsTypedBeforeTheSpellLands()
+        {
+            WardQte W() => new WardQte("KLM", 3 * N.letterTime, 2);
+
+            var fast = W(); Wait(fast, 0.3f); foreach (var c in "klm") fast.Type(c);
+            Assert.AreEqual(QteResult.Perfect, fast.Result);
+            CollectionAssert.AreEqual(new[] { QteResult.Perfect, QteResult.Perfect }, fast.Results, "one result per hit");
+
+            var slow = W(); Wait(slow, slow.timeLimit * 0.8f); foreach (var c in "klm") slow.Type(c);
+            Assert.AreEqual(QteResult.Good, slow.Result);
+
+            var late = W(); Wait(late, late.timeLimit + 0.02f);
+            Assert.IsTrue(late.Done);
+            Assert.AreEqual(QteResult.Miss, late.Result);
+
+            var fumbled = W(); foreach (var c in "xxx") fumbled.Type(c);
+            Assert.AreEqual(QteResult.Miss, fumbled.Result, "three mistakes");
+        }
+
+        [Test]
+        public void EnemyMovesRouteToDefenseStyles()
+        {
+            Qte D(string enemy, string move, int seed = 1)
+            {
+                var b = NewBattle(1, enemy);
+                return QteFactory.Defense(BattleAction.Strike(b.Enemies[0], Move(enemy, move), b.Party[0]), QteAssist.Standard, null, new Random(seed));
+            }
+
+            var lance = D("zoroa_p1", "Soul Lance");
+            Assert.IsInstanceOf<WardQte>(lance, "magic is warded");
+            Assert.AreEqual(QteConfig.WardBaseLetters + B.runeLetters, ((WardQte)lance).sequence.Length, "boss wards are longer");
+            Assert.IsInstanceOf<WardQte>(D("cinder_wisp", "Ember Bolt"));
+
+            var cleave = (DefenseQte)D("hollow_squire", "Rusty Cleave");
+            Assert.AreNotEqual(DodgeDir.None, cleave.cues[0], "a single physical hit carries an arrow");
+            Assert.IsTrue(((DefenseQte)D("soul_reaper", "Accelerating Rend")).cues.All(c => c == DodgeDir.None), "multi-hit stays on the QTE key");
+            Assert.IsTrue(((DefenseQte)D("zoroa_p1", "Final Reaping")).cues.All(c => c == DodgeDir.None));
+            Assert.AreEqual(DodgeDir.None, ((DefenseQte)D("royal_ossuary_knight", "Graveward Charge")).cues[0], "Heavy stays on the QTE key");
+
+            int Feints(string enemy, string move) => Enumerable.Range(0, 60).Count(s => ((DefenseQte)D(enemy, move, s)).IsFeint(0));
+            Assert.AreEqual(0, Feints("hollow_squire", "Rusty Cleave"), "Normal enemies never feint");
+            Assert.That(Feints("soul_reaper", "Harvesting Arc"), Is.InRange(5, 40), "Elite enemies feint sometimes");
         }
     }
 }

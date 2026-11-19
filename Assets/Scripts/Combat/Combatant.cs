@@ -37,6 +37,13 @@ namespace Obscure
         public int BreakStunTurns = 1;
         public float BreakDamageMultiplier = 1.5f;
 
+        // Player Poise (party-side Break) tuning knobs.
+        public const int PlayerPoiseGauge = 60;
+        public const float PlayerBrokenDamageMultiplier = 1.25f;
+        public const float PlayerPoiseMitigatedMult = 0.5f;  // Good defensive QTE or Guarding
+        public const float PlayerPoiseHeavyMult = 1.5f;
+        public const int PlayerPoiseRecovery = 20;           // per turn, only if not hit since last turn
+
         // Racial Feat per-battle state (GDD Bab 6 & Bab 12)
         public bool DeterminationUsed;
         public int DeterminationTurns;
@@ -153,6 +160,14 @@ namespace Obscure
                 BreakStunTurns = Math.Max(0, enemy.breakStunTurns);
                 BreakDamageMultiplier = Math.Max(1f, enemy.breakDamageMultiplier);
                 ResetMoveCooldowns();
+            }
+            else if (side == Side.Party)
+            {
+                MaxBreakGauge = CurrentBreakGauge = PlayerPoiseGauge;
+                BreakResistance = 0; // players use StaggerRes as a % reduction instead (ApplyBreakDamage)
+                BreakDuration = 1;
+                BreakStunTurns = 1;
+                BreakDamageMultiplier = PlayerBrokenDamageMultiplier;
             }
         }
 
@@ -567,7 +582,7 @@ namespace Obscure
             }
         }
 
-        // Reduces the Break Gauge on an enemy. Returns true if this hit caused the enemy to enter the Broken state.
+        // Reduces the Break Gauge (enemy) or Poise (player). Returns true if this hit caused the Broken state.
         public bool ApplyBreakDamage(int rawBreakPower, Combatant source, out int gaugeReduced)
         {
             gaugeReduced = 0;
@@ -576,8 +591,10 @@ namespace Obscure
             if (IronResolveActive)
                 rawBreakPower = Math.Max(1, (int)Math.Round(rawBreakPower * 0.5f)); // Dwarf Iron Resolve: Break Power received -50%
 
-            int resist = Math.Max(0, BreakResistance);
-            int netBreak = Math.Max(1, rawBreakPower - resist);
+            // Players: StaggerRes is a % reduction (flat would floor every enemy hit to 1). Enemies: flat BreakResistance.
+            int netBreak = IsPlayer
+                ? Math.Max(1, (int)Math.Round(rawBreakPower * 100f / (100f + Math.Max(0, StaggerRes))))
+                : Math.Max(1, rawBreakPower - Math.Max(0, BreakResistance));
             int before = CurrentBreakGauge;
             CurrentBreakGauge = Math.Max(0, CurrentBreakGauge - netBreak);
             gaugeReduced = before - CurrentBreakGauge;

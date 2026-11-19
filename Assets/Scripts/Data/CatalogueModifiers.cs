@@ -24,7 +24,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Shrine",
-                description = "Physical Damage +5% per stack (2 battles, max 3 stacks)."
+                description = "Physical Damage +5% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -42,7 +42,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Shrine",
-                description = "Elemental Damage +5% per stack (2 battles, max 3 stacks)."
+                description = "Elemental Damage +5% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -60,7 +60,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Event",
-                description = "Attacks ignore 5% target Physical Defense per stack (2 battles, max 3 stacks)."
+                description = "Attacks ignore 5% target Physical Defense per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -78,7 +78,7 @@ namespace Obscure
                 categoryCapGroup = "qte_window_cap",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Shrine",
-                description = "Offensive QTE timing window +10% per stack (2 battles, shared +25% cap)."
+                description = "Offensive QTE timing window +10% per stack (shared +25% cap)."
             },
             new DungeonModifierDef
             {
@@ -96,7 +96,7 @@ namespace Obscure
                 categoryCapGroup = "qte_window_cap",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Shrine",
-                description = "Defensive QTE timing window +10% per stack (2 battles, shared +25% cap)."
+                description = "Defensive QTE timing window +10% per stack (shared +25% cap)."
             },
             new DungeonModifierDef
             {
@@ -114,7 +114,7 @@ namespace Obscure
                 categoryCapGroup = "damage_reduction_cap",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Event",
-                description = "Party Damage Reduction +5% per stack (2 battles, max 3 stacks, total DR <= 25%)."
+                description = "Party Damage Reduction +5% per stack (max 3 stacks, total DR <= 25%)."
             },
             new DungeonModifierDef
             {
@@ -132,7 +132,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Camp",
-                description = "Healing received +10% per stack (2 battles, max 3 stacks)."
+                description = "Healing received +10% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -150,7 +150,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Shrine",
-                description = "Active Skill MP Cost -5% per stack, min 1 MP (2 battles, max 3 stacks)."
+                description = "Active Skill MP Cost -5% per stack, min 1 MP (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -168,7 +168,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Run,
                 sourceNodes = "Event / Treasure",
-                description = "Next Gold reward +15% per stack (max 3 stacks, consumed on next Gold reward)."
+                description = "Gold rewards +15% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -186,7 +186,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Run,
                 sourceNodes = "Event / Treasure",
-                description = "Increases chance to find an extra consumable on the next reward roll (max 3 stacks)."
+                description = "Increases chance to find an extra consumable on each reward roll (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -240,7 +240,7 @@ namespace Obscure
                 categoryCapGroup = "damage_reduction_cap",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Shrine",
-                description = "All Damage Taken -8% per stack for the next battle (max 3 stacks, total DR <= 25%)."
+                description = "All Damage Taken -8% per stack (max 3 stacks, total DR <= 25%)."
             },
             new DungeonModifierDef
             {
@@ -260,7 +260,7 @@ namespace Obscure
                 isElementSpecific = true,
                 isPlayerElementChoice = false,
                 sourceNodes = "Reward / Event",
-                description = "Damage taken from the rolled element -15% per stack for the next battle (max 2 per element)."
+                description = "Damage taken from the rolled element -15% per stack (max 2 per element)."
             },
             new DungeonModifierDef
             {
@@ -278,7 +278,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Run,
                 sourceNodes = "Reward / Event",
-                description = "Gain +12 bonus Run Gold per stack upon winning the next battle (max 3 stacks)."
+                description = "Gain +12 bonus Run Gold per stack upon winning each battle (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -297,7 +297,7 @@ namespace Obscure
                 categoryCapGroup = "drawback_stack_2",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Cursed Shrine",
-                description = "Physical & Elemental Damage +12% per stack for 2 battles (max 2 stacks).",
+                description = "Physical & Elemental Damage +12% per stack (max 2 stacks).",
                 drawbackDescription = "Healing received -10% per stack."
             },
             new DungeonModifierDef
@@ -317,7 +317,7 @@ namespace Obscure
                 categoryCapGroup = "drawback_stack_2",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Cursed Shrine",
-                description = "All Damage +15% per stack for the next battle (max 2 stacks).",
+                description = "All Damage +15% per stack (max 2 stacks).",
                 drawbackDescription = "All Damage Taken +10% per stack."
             },
             new DungeonModifierDef
@@ -336,7 +336,7 @@ namespace Obscure
                 categoryCapGroup = "qte_window_cap",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Cursed Node",
-                description = "Offensive QTE timing window -10% per stack for the next battle (max 3 stacks, W_P >= 66 ms)."
+                description = "Offensive QTE timing window -10% per stack (max 3 stacks, W_P >= 66 ms)."
             },
             new DungeonModifierDef
             {
@@ -354,7 +354,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Cursed Node",
-                description = "Healing received -15% per stack for 2 battles (max 3 stacks)."
+                description = "Healing received -15% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -372,7 +372,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Cursed Node",
-                description = "Party Speed -5% per stack for the next battle (max 3 stacks)."
+                description = "Party Speed -5% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -390,7 +390,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Cursed Node",
-                description = "Active Skill MP Cost +1 MP per stack for the next battle (max 3 stacks)."
+                description = "Active Skill MP Cost +1 MP per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -408,7 +408,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Party,
                 sourceNodes = "Reward / Event",
-                description = "Damage against Broken enemies +10% per stack (2 battles, max 3 stacks)."
+                description = "Damage against Broken enemies +10% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -426,7 +426,7 @@ namespace Obscure
                 categoryCapGroup = "damage_reduction_cap",
                 target = ModifierTargetScope.LastActiveMember,
                 sourceNodes = "Reward / Shrine",
-                description = "When only 1 hero remains active, that hero gains +10% Damage Reduction per stack (next battle, max 2 stacks, total DR <= 25%)."
+                description = "When only 1 hero remains active, that hero gains +10% Damage Reduction per stack (max 2 stacks, total DR <= 25%)."
             },
             new DungeonModifierDef
             {
@@ -446,7 +446,7 @@ namespace Obscure
                 isElementSpecific = true,
                 isPlayerElementChoice = true,
                 sourceNodes = "Reward / Shrine",
-                description = "Chosen element gains +12% Damage per stack for 2 battles (max 2 stacks per element; multiple elements allowed)."
+                description = "Chosen element gains +12% Damage per stack (max 2 stacks per element; multiple elements allowed)."
             }
         }, m => m.modifierId);
     }

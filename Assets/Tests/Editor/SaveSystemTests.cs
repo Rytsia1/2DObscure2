@@ -387,6 +387,51 @@ namespace Obscure.Tests
                 UnityEngine.Object.DestroyImmediate(hostGo);
             }
         }
+
+        // An unlocked skill that can reach rank 3 (a few skills cap lower).
+        static string RankableSkill(Unit hero) => hero.skillLoadout.SkillRanks.Keys.First(k =>
+            (Database.Skills.TryGetValue(k, out var s) ? s.maxRank : Database.Passives.TryGetValue(k, out var p) ? p.maxRank : 0) >= 3);
+
+        [Test]
+        public void ExpSkillPointsAndRanks_RollBackToCommittedSnapshot_OnAbandon()
+        {
+            var run = CreateTestRun(seed: 77, act: 1);
+            var hero = run.Party[0];
+            hero.GainExp(150); // Lv 2 with 50 EXP, +2 SP
+            string skill = RankableSkill(hero);
+            Assert.IsTrue(hero.skillLoadout.TryUpgradeRank(skill, out var err), err); // rank 2
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(run));
+            int committedSp = hero.skillLoadout.SkillPoints;
+
+            // Uncommitted progress in the current dungeon, then the party walks out.
+            hero.GainExp(500);
+            hero.skillLoadout.TryUpgradeRank(skill, out _);
+            run.AbandonExpedition();
+
+            hero = run.Party[0];
+            Assert.AreEqual(2, hero.level);
+            Assert.AreEqual(50, hero.exp);
+            Assert.AreEqual(committedSp, hero.skillLoadout.SkillPoints, "SP earned in the abandoned dungeon is lost");
+            Assert.AreEqual(2, hero.skillLoadout.GetRank(skill), "ranks bought before the commit survive");
+        }
+
+        [Test]
+        public void SavedCharacterData_RoundTripsExpSkillPointsAndRanks()
+        {
+            var run = CreateTestRun();
+            var hero = run.Party[0];
+            hero.GainExp(150);
+            string skill = RankableSkill(hero);
+            hero.skillLoadout.TryUpgradeRank(skill, out _);
+
+            var json = JsonUtility.ToJson(PersistenceCommitHandler.CreateCommittedSnapshot(run));
+            var loaded = JsonUtility.FromJson<CampaignSaveData>(json).party[0];
+            Assert.AreEqual(50, loaded.exp);
+            Assert.AreEqual(hero.skillLoadout.SkillPoints, loaded.skillPoints);
+            int idx = Array.IndexOf(loaded.skillRankIds, skill);
+            Assert.GreaterOrEqual(idx, 0);
+            Assert.AreEqual(2, loaded.skillRankValues[idx]);
+        }
     }
 
     [TestFixture]

@@ -11,6 +11,12 @@ namespace Obscure
         public static readonly (int min, int max) BattleGold = (10, 18), EliteGold = (30, 42), TreasureGold = (20, 35);
         public const int BossGold = 100;
         public const int RelicFallbackGold = 30;           // when every relic is owned
+
+        // EXP (GDD: level cap 15; curve and rewards TBD, these are placeholders).
+        public const int MaxLevel = 15;
+        public const int BattleExp = 35, EliteExp = 80, BossExp = 175;
+        public static int ExpToNext(int level) => 100 + 25 * (Math.Max(1, level) - 1);
+        public static int ExpFor(Tier tier) => tier == Tier.Boss ? BossExp : tier == Tier.Elite ? EliteExp : BattleExp;
     }
 
     // Builds reward offers from pools. Generation only: RunState applies, RewardScreen presents.

@@ -18,6 +18,9 @@ namespace Obscure
         public BackgroundDef background;
         public string starterPassiveId;
         public int level = 1;
+        public int exp; // progress toward the next level; 0 at the cap
+        public bool IsMaxLevel => level >= RunConfig.MaxLevel;
+        public int ExpToNext => RunConfig.ExpToNext(level);
         public int unspentAsiPoints;
         public readonly List<string> selectedTalentIds = new List<string>();
         public bool HasTalent(string talentId) => !string.IsNullOrEmpty(talentId) && selectedTalentIds.Contains(talentId);
@@ -555,12 +558,28 @@ namespace Obscure
         // Advances character level and grants Ability Score Improvement points when reaching configured levels.
         public void LevelUp(AbilityScoreImprovementConfig asiConfig = null)
         {
+            if (IsMaxLevel) return;
             var cfg = asiConfig ?? Database.AsiConfig;
             level++;
             skillLoadout.SyncLevelUnlocks(classDef, level);
             if (cfg.GrantsAtLevel(level))
                 unspentAsiPoints += cfg.pointsGranted;
             RecalculateStats();
+        }
+
+        // Adds EXP, levelling up as many times as it covers (remainder carries over). Returns levels gained.
+        public int GainExp(int amount)
+        {
+            if (amount <= 0 || IsMaxLevel) return 0;
+            int before = level;
+            exp += amount;
+            while (!IsMaxLevel && exp >= ExpToNext)
+            {
+                exp -= ExpToNext;
+                LevelUp();
+            }
+            if (IsMaxLevel) exp = 0;
+            return level - before;
         }
 
         // Spends an ASI point to permanently raise an Ability Score (up to MaxAbilityScore, default 20).
@@ -656,6 +675,7 @@ namespace Obscure
         public readonly DungeonModifierManager ModifierManager = new DungeonModifierManager();
         public readonly Random Rng; // combat randomness
         public readonly RunStats Stats = new RunStats();
+        // Event blessings: applied to the party at the start of every battle until dungeon exit.
         public readonly List<StatusApply> BattleBuffs = new List<StatusApply>();
         public readonly DateTime StartedUtc = DateTime.UtcNow;
         public DateTime? EndedUtc { get; private set; }
@@ -841,6 +861,21 @@ namespace Obscure
 
         // ---- combat ----
 
+        // Same EXP to every standing hero (R031/R032 adjust it); results go on the offer for the reward screen.
+        void AwardBattleExp(Tier tier, bool[] standing)
+        {
+            int amount = RunConfig.ExpFor(tier);
+            RelicManager.ModifyExpReward(ref amount);
+            PendingReward.expGained = new int[Party.Count];
+            PendingReward.levelsGained = new int[Party.Count];
+            for (int i = 0; i < Party.Count; i++)
+            {
+                if (!standing[i] || Party[i].IsMaxLevel) continue;
+                PendingReward.expGained[i] = amount;
+                PendingReward.levelsGained[i] = Party[i].GainExp(amount);
+            }
+        }
+
         public void WinCombat()
         {
             var enc = CurrentEncounter;
@@ -848,6 +883,7 @@ namespace Obscure
                 throw new InvalidOperationException("No combat to win");
             bool isFinalBoss = IsAtFinalDungeonBoss;
             bool isStageBoss = IsAtStageBoss;
+            var standing = Party.Select(u => u.Alive).ToArray(); // only heroes standing at the end earn EXP
             Stats.battlesWon++;
             if (enc.tier == Tier.Elite) Stats.elitesWon++;
             if (isFinalBoss)
@@ -883,6 +919,7 @@ namespace Obscure
 
             int fortuneBonus = ModifierManager.ConsumeBattleVictoryBonusGold();
             PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics);
+            AwardBattleExp(enc.tier, standing);
             if (isStageBoss)
             {
                 PendingReward.title = $"Stage {Stage} Cleared";
@@ -898,9 +935,6 @@ namespace Obscure
                 PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(Current, 3), count: 3);
             }
             PendingReward.bonusItemId = ModifierManager.TryRollScavengerBonusConsumable(NodeRng(Current, 4));
-
-            // Decrement battle-duration modifiers after victory and expire completed stacks (Bab 15 §3.1, §4.1)
-            ModifierManager.OnBattleWon(this);
         }
 
         public void LoseCombat()
@@ -937,13 +971,6 @@ namespace Obscure
             Status = RunStatus.Active;
         }
 
-        // Battle-start buffs from events, consumed by the next battle only.
-        public List<StatusApply> TakeBattleBuffs()
-        {
-            var buffs = BattleBuffs.ToList();
-            BattleBuffs.Clear();
-            return buffs;
-        }
 
         // ---- rewards ----
 
@@ -1493,6 +1520,10 @@ namespace Obscure
                     if (!string.IsNullOrEmpty(cid)) Cleared.Add(cid);
             }
             ModifierManager.RestoreFromSave(data.dungeonModifiers);
+            BattleBuffs.Clear();
+            if (data.battleBuffs != null)
+                foreach (var b in data.battleBuffs)
+                    if (b != null) BattleBuffs.Add(new StatusApply { id = b.id, turns = b.turns, magnitude = b.magnitude });
             if (!string.IsNullOrEmpty(data.currentNodeId) && Map.nodes.Any(n => n.id == data.currentNodeId))
                 Current = Map.Get(data.currentNodeId);
 
@@ -1533,6 +1564,7 @@ namespace Obscure
         {
             if (u == null || sc == null) return;
             u.level = Math.Max(1, sc.level);
+            u.exp = u.IsMaxLevel ? 0 : Math.Max(0, sc.exp);
             u.selectedTalentIds.Clear();
             if (sc.selectedTalents != null)
             {
@@ -1552,6 +1584,14 @@ namespace Obscure
                     if (Database.Passives.ContainsKey(sid)) u.skillLoadout.UnlockPassive(sid);
                 }
             }
+            // Ranks and SP: InitializeForClass resets ranks to 1 and leaves SP untouched, so both come from the save.
+            if (sc.skillRankIds != null && sc.skillRankValues != null)
+            {
+                for (int j = 0; j < Math.Min(sc.skillRankIds.Length, sc.skillRankValues.Length); j++)
+                    if (!string.IsNullOrEmpty(sc.skillRankIds[j]) && sc.skillRankValues[j] > 0)
+                        u.skillLoadout.SkillRanks[sc.skillRankIds[j]] = sc.skillRankValues[j];
+            }
+            u.skillLoadout.SkillPoints = Math.Max(0, sc.skillPoints);
             if (sc.activeSkillLoadout != null && sc.activeSkillLoadout.Length > 0)
             {
                 for (int j = 0; j < Math.Min(SkillLoadout.ActiveSlotCount, sc.activeSkillLoadout.Length); j++)

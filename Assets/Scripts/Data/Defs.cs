@@ -340,6 +340,8 @@ namespace Obscure
         public int gold;
         public int bonusGoldFromModifier;
         public string bonusItemId; // rolled by Scavenger's Eye (MOD-010)
+        public int[] expGained = Array.Empty<int>();    // per party index; 0 for KO'd or max-level heroes
+        public int[] levelsGained = Array.Empty<int>(); // per party index
         public List<RewardOption> choices = new List<RewardOption>();
         public List<RewardOption> modifierChoices = new List<RewardOption>();
     }
@@ -394,7 +396,7 @@ namespace Obscure
         public int hurtPercent;     // of max HP, never below 1 HP
         public string item;
         public bool relic;          // grants the relic rolled for this event
-        public StatusApply battleBuff; // applied to the party at the start of the next battle
+        public StatusApply battleBuff; // applied to the party at the start of every battle until dungeon exit
         public string modifierId;   // grants a specific dungeon modifier
         public ElementType modifierElement = ElementType.None;
         public bool randomModifier; // grants a modifier rolled on entering the event

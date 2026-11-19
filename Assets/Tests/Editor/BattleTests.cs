@@ -213,5 +213,78 @@ namespace Obscure.Tests
             Assert.AreEqual(Outcome.Defeat, b.Outcome);
             Assert.IsNotNull(b.Validate(BattleAction.Guard(b.Enemies[0])), "actions refused after defeat");
         }
+
+        // --- Player Poise (party-side Break) ---
+
+        [Test]
+        public void PartyMembersHavePoiseGaugeThatStunsOnBreak()
+        {
+            var b = NewBattle("skeleton");
+            foreach (var p in b.Party)
+            {
+                Assert.AreEqual(Combatant.PlayerPoiseGauge, p.MaxBreakGauge, p.name);
+                Assert.AreEqual(p.MaxBreakGauge, p.CurrentBreakGauge, p.name);
+                Assert.AreEqual(1, p.BreakStunTurns, p.name);
+                Assert.AreEqual(Combatant.PlayerBrokenDamageMultiplier, p.BreakDamageMultiplier, p.name);
+            }
+        }
+
+        [Test]
+        public void StaggerResistanceReducesPoiseDamageByPercent()
+        {
+            var b = NewBattle("warden");
+            var knight = P(b, "Knight");
+            Assert.Greater(knight.StaggerRes, 0);
+            int expected = (int)Math.Round(30 * 100f / (100f + knight.StaggerRes));
+            knight.ApplyBreakDamage(30, b.Enemies[0], out int reduced);
+            Assert.AreEqual(expected, reduced);
+            Assert.Less(reduced, 30);
+        }
+
+        [Test]
+        public void IronResolveHalvesPoiseDamage()
+        {
+            var b = NewBattle("warden");
+            var knight = P(b, "Knight");
+            knight.IronResolveActive = true;
+            int expected = (int)Math.Round(15 * 100f / (100f + knight.StaggerRes));
+            knight.ApplyBreakDamage(30, b.Enemies[0], out int reduced);
+            Assert.AreEqual(expected, reduced);
+        }
+
+        [Test]
+        public void BrokenPlayerSkipsExactlyOneTurnThenActsWithFullPoise()
+        {
+            var b = NewBattle("skeleton");
+            var knight = P(b, "Knight");
+            knight.CurrentBreakGauge = 1;
+            Assert.IsTrue(knight.ApplyBreakDamage(5, b.Enemies[0], out _));
+            Assert.IsTrue(knight.IsBroken);
+            Assert.AreEqual(1, knight.stunTurns);
+
+            AdvanceTo(b, knight);
+            Assert.AreEqual(1, b.Log.Count(l => l.Contains($"{knight.name} is stunned")), "exactly one skipped turn");
+            Assert.IsFalse(knight.IsBroken);
+            Assert.AreEqual(knight.MaxBreakGauge, knight.CurrentBreakGauge, "poise refills after Broken ends");
+        }
+
+        [Test]
+        public void GoodDefensiveQteHalvesPoiseDamageAndPerfectParryDealsNone()
+        {
+            int PoiseLost(QteResult r)
+            {
+                var b = NewBattle("warden");
+                var knight = P(b, "Knight");
+                knight.MaxBreakGauge = knight.CurrentBreakGauge = 10000; // never breaks, so the whole amount shows
+                var warden = b.Enemies[0];
+                AdvanceTo(b, warden);
+                b.Perform(BattleAction.Attack(warden, knight), 1f, new[] { r });
+                return 10000 - knight.CurrentBreakGauge;
+            }
+            int poor = PoiseLost(QteResult.Poor), good = PoiseLost(QteResult.Good), perfect = PoiseLost(QteResult.Perfect);
+            Assert.Greater(poor, 1);
+            Assert.AreEqual(poor / 2f, good, 1f);
+            Assert.AreEqual(0, perfect);
+        }
     }
 }

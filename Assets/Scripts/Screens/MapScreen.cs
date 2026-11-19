@@ -573,7 +573,6 @@ namespace Obscure
             {
                 foreach (var g in Run.ModifierManager.GetGroupSummaries())
                 {
-                    string dur = DungeonModifierManager.FormatShortDuration(g.def.durationUnit, g.shortestRemainingDuration);
                     string tpl = g.def.polarity switch
                     {
                         ModifierPolarity.Debuff => "Effect-Chip-Debuff",
@@ -586,7 +585,7 @@ namespace Obscure
                         ModifierPolarity.BuffWithDrawback => "◆",
                         _ => "▲"
                     };
-                    string meta = g.effectiveStacks > 1 ? $"×{g.effectiveStacks} · {dur}" : dur;
+                    string meta = g.effectiveStacks > 1 ? $"×{g.effectiveStacks}" : "DUNGEON";
                     list.Add((tpl, glyph, g.def.displayName, meta));
                 }
             }
@@ -603,10 +602,13 @@ namespace Obscure
             if (Run.BattleBuffs != null)
             {
                 foreach (var b in Run.BattleBuffs)
-                    list.Add(("Effect-Chip-Event", "✦", StatusInfo.Name(b.id), "NEXT"));
+                    list.Add((EventChipTemplate(b.id), "✦", StatusInfo.Name(b.id), "DUNGEON"));
             }
             return list;
         }
+
+        // Event blessings use the event chip; event afflictions (debuff statuses) use the debuff chip.
+        static string EventChipTemplate(StatusId id) => StatusInfo.IsBuff(id) ? "Effect-Chip-Event" : "Effect-Chip-Debuff";
 
         static VisualElement InstantiateEffectChip(string templateKey, string glyph, string name, string meta)
         {
@@ -743,15 +745,14 @@ namespace Obscure
                 foreach (var g in mods)
                 {
                     totalCount++;
-                    string dur = DungeonModifierManager.FormatShortDuration(g.def.durationUnit, g.shortestRemainingDuration);
                     string tpl = g.def.polarity == ModifierPolarity.Debuff ? "Effect-Chip-Debuff"
                         : g.def.polarity == ModifierPolarity.BuffWithDrawback ? "Effect-Chip-Drawback" : "Effect-Chip-Buff";
                     string glyph = g.def.polarity == ModifierPolarity.Debuff ? "▼"
                         : g.def.polarity == ModifierPolarity.BuffWithDrawback ? "◆" : "▲";
-                    string meta = g.effectiveStacks > 1 ? $"×{g.effectiveStacks} · {dur}" : dur;
+                    string meta = g.effectiveStacks > 1 ? $"×{g.effectiveStacks}" : "DUNGEON";
                     string right = g.effectiveStacks > 1
-                        ? $"{g.effectiveStacks} STACKS · {dur} LEFT"
-                        : $"{dur} LEFT";
+                        ? $"{g.effectiveStacks} STACKS · {DungeonModifierManager.UntilDungeonExit}"
+                        : DungeonModifierManager.UntilDungeonExit;
                     AddEffectCard(InstantiateEffectChip(tpl, glyph, g.def.displayName, meta), right, g.def.description);
                 }
             }
@@ -770,18 +771,18 @@ namespace Obscure
 
             if (Run?.BattleBuffs != null && Run.BattleBuffs.Count > 0)
             {
-                AddSectionLabel("EVENT BLESSINGS");
+                AddSectionLabel("EVENT EFFECTS");
                 foreach (var b in Run.BattleBuffs)
                 {
                     totalCount++;
-                    AddEffectCard(InstantiateEffectChip("Effect-Chip-Event", "✦", StatusInfo.Name(b.id), "NEXT"),
-                        "ENDS AFTER 1 BATTLE", $"NEXT BATTLE: PARTY {StatusInfo.Name(b.id)} ({b.turns} TURNS).", b.id);
+                    AddEffectCard(InstantiateEffectChip(EventChipTemplate(b.id), "✦", StatusInfo.Name(b.id), "DUNGEON"),
+                        DungeonModifierManager.UntilDungeonExit, $"EACH BATTLE: PARTY {StatusInfo.Name(b.id)} ({b.turns} TURNS).", b.id);
                 }
             }
 
             if (totalCount == 0)
             {
-                scroll.Add(new UiLabel("NO ACTIVE MODIFIERS, RELICS, OR EVENT BLESSINGS IN THIS RUN YET.")
+                scroll.Add(new UiLabel("NO ACTIVE MODIFIERS, RELICS, OR EVENT EFFECTS IN THIS RUN YET.")
                 {
                     style = { fontSize = 14, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginTop = 12 }
                 });

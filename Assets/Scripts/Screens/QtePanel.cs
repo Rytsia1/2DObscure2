@@ -16,8 +16,10 @@ namespace Obscure
         bool defenseActiveStarted, heavyTelegraphed, resultSfxPlayed;
         Keyboard keyboard;
         UiLabel infoLbl, resultLbl;
-        VisualElement host, timeFill;
+        VisualElement host, timeFill, chargeFill;
         readonly List<VisualElement> markers = new List<VisualElement>();
+        readonly List<(VisualElement good, VisualElement perfect)> zoneEls = new List<(VisualElement, VisualElement)>();
+        float zoneGw, zonePw;
         readonly List<UiLabel> letters = new List<UiLabel>();
 
         public Qte Qte => qte;
@@ -51,14 +53,41 @@ namespace Obscure
                 switch (q)
                 {
                     case TimingQte t:
-                        infoLbl.text = $"PRESS [{Controls.QteKey.ToString().ToUpperInvariant()}] IN THE GOLD ZONE";
-                        BuildTrack(t.target / t.Sweep, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
+                        infoLbl.text = $"PRESS [{Key}] IN THE GOLD ZONE";
+                        BuildTrack(new[] { t.target / t.Sweep }, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
+                        break;
+                    case ChargeQte ch:
+                        infoLbl.text = $"HOLD [{Key}] - RELEASE IN THE GOLD ZONE";
+                        var chTrack = BuildTrack(new[] { ch.ZoneFraction }, ch.EffectiveGood / ch.profile.sweep, ch.EffectivePerfect / ch.profile.sweep, 1);
+                        chargeFill = new VisualElement { style = { position = Position.Absolute, left = 0, top = 0, bottom = 0, width = 0, backgroundColor = new Color(Palette.WarmIvory.r, Palette.WarmIvory.g, Palette.WarmIvory.b, 0.3f) } };
+                        chTrack.Insert(0, chargeFill); // zones draw over the fill
+                        break;
+                    case MovingTargetQte mv:
+                        infoLbl.text = $"PRESS [{Key}] WHEN THE MARK HITS GOLD";
+                        BuildTrack(new[] { mv.ZoneFraction }, mv.EffectiveGood / mv.profile.sweep, mv.EffectivePerfect / mv.profile.sweep, 1);
+                        break;
+                    case ComboQte co:
+                        infoLbl.text = $"PRESS [{Key}] ON EACH ZONE ({co.Zones} HITS)";
+                        var zones = new float[co.Zones];
+                        for (int i = 0; i < zones.Length; i++) zones[i] = co.ZoneFraction(i);
+                        BuildTrack(zones, QteConfig.ScaleGood(co.profile, co.TimingBonusFraction) / co.duration,
+                            QteConfig.ScalePerfect(co.profile, co.TimingBonusFraction) / co.duration, 1);
                         break;
                     case DefenseQte d:
                         float speed = Impact / d.profile.windup;
                         float goodScaled = QteConfig.ScaleGood(d.profile, d.TimingBonusFraction);
                         float perfScaled = QteConfig.ScalePerfect(d.profile, d.TimingBonusFraction);
-                        BuildTrack(Impact, goodScaled * speed, perfScaled * speed, d.Hits);
+                        BuildTrack(new[] { Impact }, goodScaled * speed, perfScaled * speed, d.Hits);
+                        for (int i = 0; i < d.Hits && i < markers.Count; i++)
+                            if (d.cues[i] != DodgeDir.None)
+                                markers[i].Add(new UiLabel(Arrow(d.cues[i]))
+                                {
+                                    // rides just below the track, clear of the instruction text above it
+                                    style = { position = Position.Absolute, left = -11, top = TrackH + 14, width = 28, fontSize = 22, color = Palette.Gold1, unityTextAlign = TextAnchor.MiddleCenter }
+                                });
+                        break;
+                    case WardQte w:
+                        BuildTyping(w);
                         break;
                     case TypingQte ty:
                         BuildTyping(ty);
@@ -99,11 +128,27 @@ namespace Obscure
             {
                 qte.Tick(Time.unscaledDeltaTime);
                 if (Controls.QtePress) qte.Press();
+                if (Controls.QteReleased) qte.Release();
+                if (Controls.Up) qte.PressDirection(DodgeDir.Up);
+                else if (Controls.Down) qte.PressDirection(DodgeDir.Down);
+                else if (Controls.Left) qte.PressDirection(DodgeDir.Left);
+                else if (Controls.Right) qte.PressDirection(DodgeDir.Right);
             }
             Render();
         }
 
-        void BuildTrack(float zone, float goodHalf, float perfectHalf, int markerCount)
+        static string Key => Controls.QteKey.ToString().ToUpperInvariant();
+
+        static string Arrow(DodgeDir d) => d switch
+        {
+            DodgeDir.Up => "▲",
+            DodgeDir.Down => "▼",
+            DodgeDir.Left => "◀",
+            DodgeDir.Right => "▶",
+            _ => "",
+        };
+
+        VisualElement BuildTrack(float[] zones, float goodHalf, float perfectHalf, int markerCount)
         {
             var track = new VisualElement
             {
@@ -118,18 +163,24 @@ namespace Obscure
                 }
             };
 
-            float cx = zone * TrackW;
-            float gw = Mathf.Max(12f, goodHalf * 2f * TrackW);
-            float pw = Mathf.Max(4f, perfectHalf * 2f * TrackW);
-
-            track.Add(new VisualElement
+            zoneGw = Mathf.Max(12f, goodHalf * 2f * TrackW);
+            zonePw = Mathf.Max(4f, perfectHalf * 2f * TrackW);
+            zoneEls.Clear();
+            foreach (float zone in zones)
             {
-                style = { position = Position.Absolute, left = cx - gw / 2f, top = 0, width = gw, bottom = 0, backgroundColor = Palette.Hex(0x2C5A8F) }
-            });
-            track.Add(new VisualElement
-            {
-                style = { position = Position.Absolute, left = cx - pw / 2f, top = 0, width = pw, bottom = 0, backgroundColor = Palette.Gold2 }
-            });
+                float cx = zone * TrackW;
+                var good = new VisualElement
+                {
+                    style = { position = Position.Absolute, left = cx - zoneGw / 2f, top = 0, width = zoneGw, bottom = 0, backgroundColor = Palette.Hex(0x2C5A8F) }
+                };
+                var perfect = new VisualElement
+                {
+                    style = { position = Position.Absolute, left = cx - zonePw / 2f, top = 0, width = zonePw, bottom = 0, backgroundColor = Palette.Gold2 }
+                };
+                track.Add(good);
+                track.Add(perfect);
+                zoneEls.Add((good, perfect));
+            }
 
             markers.Clear();
             for (int i = 0; i < markerCount; i++)
@@ -142,6 +193,15 @@ namespace Obscure
                 track.Add(m);
             }
             host.Add(track);
+            return track;
+        }
+
+        void MoveZone(int i, float fraction)
+        {
+            if (i < 0 || i >= zoneEls.Count) return;
+            float cx = fraction * TrackW;
+            zoneEls[i].good.style.left = cx - zoneGw / 2f;
+            zoneEls[i].perfect.style.left = cx - zonePw / 2f;
         }
 
         void BuildTyping(TypingQte t)
@@ -177,6 +237,9 @@ namespace Obscure
             switch (qte)
             {
                 case TimingQte t: RenderTiming(t); break;
+                case ChargeQte ch: RenderCharge(ch); break;
+                case MovingTargetQte mv: RenderMoving(mv); break;
+                case ComboQte co: RenderCombo(co); break;
                 case DefenseQte d: RenderDefense(d); break;
                 case TypingQte ty: RenderTyping(ty); break;
             }
@@ -196,6 +259,45 @@ namespace Obscure
             if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
         }
 
+        void RenderCharge(ChargeQte c)
+        {
+            if (chargeFill != null)
+            {
+                chargeFill.style.width = c.Fill * TrackW;
+                bool overcharging = c.Hold > c.target + c.EffectiveGood; // past the zone: about to overcharge
+                chargeFill.style.backgroundColor = overcharging
+                    ? new Color(Palette.SpecCrimson.r, Palette.SpecCrimson.g, Palette.SpecCrimson.b, 0.45f)
+                    : new Color(Palette.WarmIvory.r, Palette.WarmIvory.g, Palette.WarmIvory.b, 0.3f);
+            }
+            SetMarker(0, c.Fill, c.Charging ? Palette.WarmIvory : Palette.MutedGray);
+            if (c.Done && !c.Cancelled) ShowResult(c.Result, "PERFECT!", "GOOD", c.Fill >= 1f ? "OVERCHARGED" : "POOR");
+        }
+
+        void RenderMoving(MovingTargetQte m)
+        {
+            if (!m.Done) MoveZone(0, m.ZoneFraction); // freeze where it was pressed
+            SetMarker(0, m.MarkFraction, Palette.WarmIvory);
+            if (m.Done && !m.Cancelled) ShowResult(m.Result, "PERFECT!", "GOOD", "POOR");
+        }
+
+        void RenderCombo(ComboQte c)
+        {
+            SetMarker(0, c.MarkFraction, Palette.WarmIvory);
+            for (int i = 0; i < c.Zones && i < zoneEls.Count; i++)
+            {
+                if (!(c.ZoneResult(i) is QteResult r)) continue;
+                var tint = r == QteResult.Perfect ? Palette.Gold1 : r == QteResult.Good ? Palette.Hex(0xB8D6FF) : Palette.MutedGray;
+                zoneEls[i].good.style.backgroundColor = tint;
+                zoneEls[i].perfect.style.backgroundColor = tint;
+            }
+            for (int i = c.Zones - 1; i >= 0; i--)
+                if (c.ZoneResult(i) is QteResult r)
+                {
+                    if (i != lastResolved) { lastResolved = i; resultSfxPlayed = false; ShowResult(r, "PERFECT!", "GOOD", "POOR"); }
+                    break;
+                }
+        }
+
         void RenderDefense(DefenseQte d)
         {
             string key = Controls.QteKey.ToString().ToUpperInvariant();
@@ -208,6 +310,25 @@ namespace Obscure
             int next = -1;
             for (int i = 0; i < d.Hits; i++)
             {
+                // Feint: the fake cue runs in like a real one, stops short, then slides back before the real cue comes.
+                if (d.IsFeint(i) && d.HitResult(i) == null)
+                {
+                    float fe = d.T - d.FeintStart(i), stop = d.profile.windup * QteConfig.FeintStop;
+                    if (fe >= 0f && fe < d.FeintTime)
+                    {
+                        if (next < 0) next = i;
+                        float fp = fe < stop
+                            ? fe / d.profile.windup * Impact
+                            : Impact * QteConfig.FeintStop * (1f - (fe - stop) / QteConfig.FeintRecoil);
+                        SetMarker(i, fp, Palette.WarmIvory);
+                        if (fe >= stop && resultLbl != null && resultLbl.text != "FEINT!")
+                        {
+                            resultLbl.text = "FEINT!";
+                            resultLbl.style.color = Palette.SpecCrimson;
+                        }
+                        continue;
+                    }
+                }
                 float e = d.T - d.SpawnTime(i), w = d.profile.windup, hold = d.delays[i];
                 if (e < 0 || d.HitResult(i) != null)
                 {
@@ -228,7 +349,9 @@ namespace Obscure
                 SetMarker(i, p, c);
             }
             if (!d.InTelegraph)
-                infoLbl.text = (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : "");
+                infoLbl.text = System.Array.Exists(d.cues, c => c != DodgeDir.None)
+                    ? "PRESS THE ARROW AS IT LANDS"
+                    : (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : "");
 
             for (int i = d.Hits - 1; i >= 0; i--)
                 if (d.HitResult(i) is QteResult r)
@@ -254,9 +377,15 @@ namespace Obscure
                 letters[i].style.color = i < t.Index ? Palette.Gold1 : i == t.Index ? Palette.WarmIvory : i >= t.wordLength ? Palette.ArcaneViolet : Palette.MutedGray;
             float left = Mathf.Clamp01(1f - t.T / t.timeLimit);
             if (timeFill != null) timeFill.style.width = left * TrackW;
-            infoLbl.text = t.Mistakes > 0 ? $"MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}" : "RECITE THE ANCIENT WORDS";
+            bool ward = t is WardQte;
+            infoLbl.text = t.Mistakes > 0 ? $"MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}"
+                : ward ? "TYPE THE WARD BEFORE IT LANDS" : "RECITE THE ANCIENT WORDS";
             infoLbl.style.color = t.Mistakes > 0 ? Palette.SpecCrimson : Palette.Mist2;
-            if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
+            if (t.Done && !t.Cancelled)
+            {
+                if (ward) ShowResult(t.Result, "WARDED!", "DEFLECT", "HIT", true);
+                else ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
+            }
         }
 
         void ShowResult(QteResult r, string perfect, string good, string miss, bool defense = false)

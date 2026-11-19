@@ -12,7 +12,6 @@ namespace Obscure
         public int effectiveStacks;
         public int stackCap;
         public bool isAtCap;
-        public int shortestRemainingDuration;
         public List<DungeonModifierInstance> instances;
 
         public string DisplayTitle => def.isElementSpecific && element.IsValidElement()
@@ -21,7 +20,8 @@ namespace Obscure
     }
 
     // Manages active Dungeon Modifiers within a single dungeon layer (GDD Bab 15).
-    // Temporary per dungeon run: cleared on dungeon clear (after boss reward) and run failure.
+    // Every modifier lasts until the party leaves the dungeon: cleared on dungeon clear (after boss reward),
+    // run failure, abandon, and next dungeon. Kept across stages of the same dungeon.
     public class DungeonModifierManager
     {
         public const float MaxAllDamageReduction = 0.25f; // Bab 15 §4.2
@@ -94,7 +94,6 @@ namespace Obscure
                         effectiveStacks = eff,
                         stackCap = def.stackCap,
                         isAtCap = def.stackCap > 0 && total >= def.stackCap,
-                        shortestRemainingDuration = list.Min(x => x.remainingDuration),
                         instances = list
                     };
                 })
@@ -106,8 +105,8 @@ namespace Obscure
             return groups;
         }
 
-        // Acquires a modifier: OneShot effects apply immediately; duration-based modifiers add a new stack
-        // with its own independent remaining duration (never refreshing older stacks per Bab 15 §4.1).
+        // Acquires a modifier: OneShot effects apply immediately; others add a stack that lasts until dungeon exit.
+        // A pick at the stack cap adds nothing (the offer is labelled MAX).
         public bool AddModifier(string modifierId, RunState run = null, ElementType element = ElementType.None, Random rng = null)
         {
             if (string.IsNullOrEmpty(modifierId) || !Database.DungeonModifiers.TryGetValue(modifierId, out var def))
@@ -129,6 +128,8 @@ namespace Obscure
                 else
                     resolvedElement = ElementType.Fire;
             }
+
+            if (IsAtCap(modifierId, resolvedElement)) return true;
 
             var instance = new DungeonModifierInstance(def, def.duration, resolvedElement, nextAcquiredOrder++);
             activeModifiers.Add(instance);
@@ -167,24 +168,7 @@ namespace Obscure
             return stacks > 0 ? stacks * FortuneFavorGoldPerStack : 0;
         }
 
-        // Called when a battle is won: decrements Battles-based stacks independently and prunes expired ones.
-        // Older stacks expire on schedule; any overflow stacks waiting behind the cap automatically take effect.
-        public void OnBattleWon(RunState run = null)
-        {
-            for (int i = activeModifiers.Count - 1; i >= 0; i--)
-            {
-                var inst = activeModifiers[i];
-                var def = inst.Definition;
-                if (def == null || def.durationUnit == ModifierDurationUnit.Battles)
-                {
-                    inst.remainingDuration--;
-                    if (inst.remainingDuration <= 0)
-                        activeModifiers.RemoveAt(i);
-                }
-            }
-        }
-
-        // Consumes MOD-009 Treasure Sense when any positive Gold reward is received.
+        // MOD-009 Treasure Sense: boosts every positive Gold reward while in the dungeon.
         public void ModifyGoldReward(ref int gold)
         {
             if (gold <= 0) return;
@@ -194,17 +178,13 @@ namespace Obscure
             var def = Database.DungeonModifiers["MOD-009"];
             float mult = 1f + def.valuePerStack * stacks;
             gold = Math.Max(1, (int)Math.Round(gold * mult));
-
-            activeModifiers.RemoveAll(m => m.modifierId == "MOD-009");
         }
 
-        // Consumes MOD-010 Scavenger's Eye when rolling a reward offer. Returns a bonus consumable id or null.
+        // MOD-010 Scavenger's Eye: rolls on every reward offer while in the dungeon. Returns a bonus consumable id or null.
         public string TryRollScavengerBonusConsumable(Random rng)
         {
             int stacks = GetEffectiveStackCount("MOD-010");
             if (stacks <= 0) return null;
-
-            activeModifiers.RemoveAll(m => m.modifierId == "MOD-010");
 
             float chance = Math.Clamp(stacks * ScavengerEyeChancePerStack, 0f, 0.75f);
             var rand = rng ?? new Random();
@@ -447,34 +427,11 @@ namespace Obscure
             lines.Add($"{g.DisplayTitle.ToUpperInvariant()} [{polarity}] ({capStr})");
             lines.Add(FormatCurrentTotalEffect(g));
 
-            if (g.isAtCap && g.totalStacks > g.stackCap)
-                lines.Add($"OVERFLOW STACKS RECORDED: {g.totalStacks} (CAPPED AT {g.stackCap})");
-
-            for (int i = 0; i < g.instances.Count; i++)
-            {
-                var inst = g.instances[i];
-                string dur = FormatDuration(g.def.durationUnit, inst.remainingDuration);
-                string status = (g.stackCap > 0 && i >= g.stackCap) ? " [QUEUED BEHIND CAP]" : "";
-                lines.Add($"• STACK {i + 1}: {dur}{status}");
-            }
+            lines.Add(UntilDungeonExit);
             return string.Join("\n", lines);
         }
 
-        public static string FormatShortDuration(ModifierDurationUnit unit, int remaining) => unit switch
-        {
-            ModifierDurationUnit.Battles => $"{remaining}B",
-            ModifierDurationUnit.NextGoldReward => "1G",
-            ModifierDurationUnit.NextRewardRoll => "1R",
-            _ => "1X"
-        };
-
-        public static string FormatDuration(ModifierDurationUnit unit, int remaining) => unit switch
-        {
-            ModifierDurationUnit.Battles => remaining == 1 ? "1 BATTLE LEFT" : $"{remaining} BATTLES LEFT",
-            ModifierDurationUnit.NextGoldReward => "UNTIL NEXT GOLD REWARD",
-            ModifierDurationUnit.NextRewardRoll => "NEXT REWARD ROLL",
-            _ => "IMMEDIATE"
-        };
+        public const string UntilDungeonExit = "UNTIL DUNGEON EXIT";
 
         public static string FormatCurrentTotalEffect(DungeonModifierGroupSummary g)
         {
@@ -496,7 +453,7 @@ namespace Obscure
                     ? $"TOTAL: HEALING RECEIVED +{Math.Round(d.valuePerStack * s * 100)}%"
                     : $"TOTAL: HEALING RECEIVED {Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.SkillMpCostPercent => $"TOTAL: SKILL MP COST -{Math.Round(d.valuePerStack * s * 100)}% (MIN 1)",
-                ModifierEffectType.GoldRewardBonus => $"TOTAL: NEXT GOLD REWARD +{Math.Round(d.valuePerStack * s * 100)}%",
+                ModifierEffectType.GoldRewardBonus => $"TOTAL: GOLD REWARDS +{Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.ConsumableDropChance => $"TOTAL: BONUS CONSUMABLE CHANCE +{Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.ElementalDamageTakenReduction => $"TOTAL: {g.element.ToString().ToUpperInvariant()} DMG TAKEN -{Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.BattleVictoryBonusGold => $"TOTAL: +{Math.Round(d.valuePerStack * s)} BONUS GOLD AFTER WIN",

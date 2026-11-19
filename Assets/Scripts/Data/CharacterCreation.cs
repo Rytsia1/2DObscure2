@@ -1770,6 +1770,11 @@ namespace Obscure
         public int hp;
         public int mp;
         public int unspentAsiPoints;
+        public int exp;
+        public int skillPoints;
+        // SkillLoadout.SkillRanks as parallel arrays (JsonUtility can't serialize a Dictionary).
+        public string[] skillRankIds = Array.Empty<string>();
+        public int[] skillRankValues = Array.Empty<int>();
 
         public static SavedCharacterData FromCharacterDef(CharacterDef d, Unit runtimeUnit = null)
         {
@@ -1803,6 +1808,10 @@ namespace Obscure
                 hp = runtimeUnit != null ? runtimeUnit.hp : 0,
                 mp = runtimeUnit != null ? runtimeUnit.mp : 0,
                 unspentAsiPoints = runtimeUnit != null ? runtimeUnit.unspentAsiPoints : 0,
+                exp = runtimeUnit != null ? runtimeUnit.exp : 0,
+                skillPoints = runtimeUnit != null ? runtimeUnit.skillLoadout.SkillPoints : 0,
+                skillRankIds = runtimeUnit != null ? runtimeUnit.skillLoadout.SkillRanks.Keys.ToArray() : Array.Empty<string>(),
+                skillRankValues = runtimeUnit != null ? runtimeUnit.skillLoadout.SkillRanks.Values.ToArray() : Array.Empty<int>(),
             };
         }
 
@@ -1858,6 +1867,15 @@ namespace Obscure
         }
     }
 
+    // Event blessing that lasts until dungeon exit (StatusApply itself isn't JsonUtility-serializable).
+    [Serializable]
+    public class BattleBuffSaveData
+    {
+        public StatusId id;
+        public int turns;
+        public float magnitude;
+    }
+
     [Serializable]
     public class GameSaveData
     {
@@ -1875,6 +1893,7 @@ namespace Obscure
         public string[] relics = Array.Empty<string>();
         public RelicInstanceSaveData[] relicInstances = Array.Empty<RelicInstanceSaveData>();
         public DungeonModifierSaveData[] dungeonModifiers = Array.Empty<DungeonModifierSaveData>();
+        public BattleBuffSaveData[] battleBuffs = Array.Empty<BattleBuffSaveData>();
         public SavedCharacterData[] party = Array.Empty<SavedCharacterData>();
 
         // Inventory & Equipment persistence (GDD Section 10 & 16)
@@ -1981,6 +2000,8 @@ namespace Obscure
                 relics = run.Relics.ToArray(),
                 relicInstances = run.RelicManager != null ? run.RelicManager.ToSaveData() : Array.Empty<RelicInstanceSaveData>(),
                 dungeonModifiers = (!isDefeated && run.ModifierManager != null) ? run.ModifierManager.ToSaveData() : Array.Empty<DungeonModifierSaveData>(),
+                battleBuffs = isDefeated ? Array.Empty<BattleBuffSaveData>()
+                    : run.BattleBuffs.Select(b => new BattleBuffSaveData { id = b.id, turns = b.turns, magnitude = b.magnitude }).ToArray(),
                 party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
                 inventoryEquipment = invData.equipment ?? Array.Empty<EquipmentInstanceSaveData>(),
                 inventoryConsumables = invData.consumables ?? Array.Empty<ConsumableStackSaveData>(),

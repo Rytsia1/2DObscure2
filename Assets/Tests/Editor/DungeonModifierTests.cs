@@ -59,41 +59,55 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void Stacking_IndependentDurations_AndOverflowBehindCapBecomesActiveOnExpiry()
+        public void Stacking_PersistsAcrossBattles_AndPickAtCapAddsNothing()
         {
-            var run = NewRun();
+            var run = NewRun(Line(null, NodeType.Battle, NodeType.Battle, NodeType.Battle, NodeType.Boss));
             var mgr = run.ModifierManager;
 
-            // Acquire MOD-001 (duration 2, cap 3) -> stack 1 (2 battles left)
             Assert.IsTrue(mgr.AddModifier("MOD-001", run));
-            Assert.AreEqual(1, mgr.GetTotalStackCount("MOD-001"));
             Assert.AreEqual(1, mgr.GetEffectiveStackCount("MOD-001"));
 
-            // Win 1 battle: stack 1 drops to 1 battle left (does not expire yet)
-            mgr.OnBattleWon(run);
-            Assert.AreEqual(1, mgr.ActiveModifiers[0].remainingDuration);
+            // Stacks never expire from battles while inside the dungeon
+            for (int i = 0; i < 3; i++)
+            {
+                run.Enter(run.Map.Get("n" + i));
+                run.WinCombat();
+                run.ClaimReward(-1);
+            }
+            Assert.AreEqual(1, mgr.GetEffectiveStackCount("MOD-001"), "Modifier survives 3 battles");
 
-            // Acquire 3 more stacks (total 4 stacks: one at 1 battle, three at 2 battles)
             mgr.AddModifier("MOD-001", run);
             mgr.AddModifier("MOD-001", run);
-            mgr.AddModifier("MOD-001", run);
-
-            Assert.AreEqual(4, mgr.GetTotalStackCount("MOD-001"), "Overflow stack must still be recorded");
-            Assert.AreEqual(3, mgr.GetEffectiveStackCount("MOD-001"), "Effective stack capped at 3 (+15%)");
-            Assert.AreEqual(1, mgr.ActiveModifiers[0].remainingDuration, "Old stack duration must NOT be refreshed");
             Assert.IsTrue(mgr.IsAtCap("MOD-001"));
-            Assert.AreEqual("Battle Focus ×4 (MAX)", mgr.FormatOfferHeading("MOD-001"));
+            Assert.AreEqual("Battle Focus ×3 (MAX)", mgr.FormatOfferHeading("MOD-001"));
 
-            // Win 1 battle: oldest stack (1 -> 0) expires, leaving 3 stacks with 1 battle left -> effective stays 3!
-            mgr.OnBattleWon(run);
-            Assert.AreEqual(3, mgr.GetTotalStackCount("MOD-001"));
-            Assert.AreEqual(3, mgr.GetEffectiveStackCount("MOD-001"), "Queued stack behind cap activates when older stack expires");
-            Assert.IsTrue(mgr.ActiveModifiers.All(m => m.remainingDuration == 1));
+            Assert.IsTrue(mgr.AddModifier("MOD-001", run), "Pick at cap is accepted");
+            Assert.AreEqual(3, mgr.GetTotalStackCount("MOD-001"), "...but adds no stack");
+        }
 
-            // Win 1 more battle: all remaining stacks expire
-            mgr.OnBattleWon(run);
-            Assert.AreEqual(0, mgr.GetTotalStackCount("MOD-001"));
-            Assert.AreEqual(0, mgr.GetEffectiveStackCount("MOD-001"));
+        [Test]
+        public void EventBlessing_PersistsAcrossBattlesAndSave_ClearsOnDungeonExit()
+        {
+            var run = NewRun(Line(null, NodeType.Battle, NodeType.Battle, NodeType.Boss));
+            run.BattleBuffs.Add(new StatusApply { id = StatusId.AttackUp, turns = 3, magnitude = 0.25f });
+
+            for (int i = 0; i < 2; i++)
+            {
+                run.Enter(run.Map.Get("n" + i));
+                run.WinCombat();
+                run.ClaimReward(-1);
+            }
+            Assert.AreEqual(1, run.BattleBuffs.Count, "Blessing survives battles");
+
+            var restored = NewRun();
+            restored.RestoreFromSave(GameSave.SaveRunState(run));
+            Assert.AreEqual(1, restored.BattleBuffs.Count, "Blessing survives save/load");
+            Assert.AreEqual(StatusId.AttackUp, restored.BattleBuffs[0].id);
+            Assert.AreEqual(3, restored.BattleBuffs[0].turns);
+            Assert.AreEqual(0.25f, restored.BattleBuffs[0].magnitude, 1e-4f);
+
+            run.AdvanceToNextDungeon(MapGenerator.Generate(2, 2));
+            Assert.AreEqual(0, run.BattleBuffs.Count, "Blessing cleared on leaving the dungeon");
         }
 
         [Test]
@@ -101,8 +115,8 @@ namespace Obscure.Tests
         {
             // 1. Cleared after Boss reward claimed
             var run = NewRun(Line(null, NodeType.Battle, NodeType.Boss));
-            run.ModifierManager.AddModifier("MOD-001", run); // 2 battles
-            run.ModifierManager.AddModifier("MOD-002", run); // 2 battles
+            run.ModifierManager.AddModifier("MOD-001", run);
+            run.ModifierManager.AddModifier("MOD-002", run);
 
             run.Enter(run.Map.Get("n0"));
             run.WinCombat();
@@ -116,7 +130,7 @@ namespace Obscure.Tests
             Assert.AreEqual(RunStatus.Victory, run.Status);
             Assert.AreEqual(0, run.ModifierManager.Count, "All modifiers cleared after boss reward");
 
-            // 2. Cleared on AdvanceToNextDungeon even if remainingDuration > 0
+            // 2. Cleared on AdvanceToNextDungeon
             var run2 = NewRun();
             run2.ModifierManager.AddModifier("MOD-001", run2);
             run2.AdvanceToNextDungeon(MapGenerator.Generate(2, 2));
@@ -397,12 +411,12 @@ namespace Obscure.Tests
             run.WinCombat();
             int offerGold = run.PendingReward.gold;
             Assert.AreEqual(24, run.PendingReward.bonusGoldFromModifier);
-            Assert.AreEqual(0, run.ModifierManager.GetEffectiveStackCount("MOD-015"), "Fortune's Favor expired after battle");
+            Assert.AreEqual(2, run.ModifierManager.GetEffectiveStackCount("MOD-015"), "Fortune's Favor stays until dungeon exit");
 
             run.ClaimReward(-1);
             int expectedGold = (int)Math.Round(offerGold * 1.30f);
             Assert.AreEqual(expectedGold, run.Gold);
-            Assert.AreEqual(0, run.ModifierManager.GetEffectiveStackCount("MOD-009"), "All Treasure Sense stacks consumed on Gold reward");
+            Assert.AreEqual(2, run.ModifierManager.GetEffectiveStackCount("MOD-009"), "Treasure Sense stays after a Gold reward");
 
             // MOD-010 Scavenger's Eye: 3 stacks = 60% chance; test consumption across seeded runs
             bool anyBonusFound = false;
@@ -411,7 +425,7 @@ namespace Obscure.Tests
                 var r2 = NewRun(Line(null, NodeType.Treasure, NodeType.Boss), seed);
                 for (int k = 0; k < 3; k++) r2.ModifierManager.AddModifier("MOD-010", r2);
                 r2.Enter(r2.Map.Get("n0"));
-                Assert.AreEqual(0, r2.ModifierManager.GetEffectiveStackCount("MOD-010"), "Scavenger's Eye consumed on reward roll");
+                Assert.AreEqual(3, r2.ModifierManager.GetEffectiveStackCount("MOD-010"), "Scavenger's Eye stays after a reward roll");
                 if (!string.IsNullOrEmpty(r2.PendingReward.bonusItemId))
                 {
                     anyBonusFound = true;

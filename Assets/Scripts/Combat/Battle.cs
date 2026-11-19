@@ -134,6 +134,7 @@ namespace Obscure
         void StartTurn(Combatant c)
         {
             c.hasActedInBattle = true;
+            bool wasHitSinceLastTurn = c.tookDamageSinceLastTurn;
             c.tookDamageSinceLastTurn = false;
             run?.RelicManager?.OnTurnStart(c);
             c.ResetTurnBackgroundPerks();
@@ -221,10 +222,11 @@ namespace Obscure
                 c.AttackedThisTurn = false;
             }
 
-            // Break gauge recovers 20 at start of owner's turn (Bab 10 §5.3)
-            if (c.HasBreakGauge && !c.IsBroken && c.CurrentBreakGauge < c.MaxBreakGauge)
+            // Break gauge recovers 20 at start of owner's turn (Bab 10 §5.3); player Poise only if not hit since last turn
+            if (c.HasBreakGauge && !c.IsBroken && c.CurrentBreakGauge < c.MaxBreakGauge && !(c.IsPlayer && wasHitSinceLastTurn))
             {
-                c.CurrentBreakGauge = Math.Min(c.MaxBreakGauge, c.CurrentBreakGauge + 20);
+                int recover = c.IsPlayer ? Combatant.PlayerPoiseRecovery : 20;
+                c.CurrentBreakGauge = Math.Min(c.MaxBreakGauge, c.CurrentBreakGauge + recover);
             }
         }
 
@@ -808,6 +810,13 @@ namespace Obscure
                         Say("[Relic: Executioner's Bell] First strike of battle gains +15% Break Power!");
                     }
                 }
+                if (t.IsPlayer)
+                {
+                    float poiseMult = 1f;
+                    if (reaction == QteResult.Good || t.guarding) poiseMult *= Combatant.PlayerPoiseMitigatedMult;
+                    if (isHeavy) poiseMult *= Combatant.PlayerPoiseHeavyMult;
+                    rawBreak = Math.Max(1, (int)Math.Round(rawBreak * poiseMult));
+                }
                 BreakHit(t, rawBreak, attacker, ref hit);
             }
 
@@ -821,7 +830,7 @@ namespace Obscure
             hit.brokeTarget = t.ApplyBreakDamage(rawBreak, attacker, out int reduced);
             hit.breakAmount = reduced;
             if (!hit.brokeTarget) return;
-            Say($"{t.name}'s guard shatters! (BROKEN)");
+            Say(t.IsPlayer ? $"{t.name} is staggered! (BROKEN)" : $"{t.name}'s guard shatters! (BROKEN)");
             if (charging) Say($"{t.name}'s charge is interrupted!");
         }
 

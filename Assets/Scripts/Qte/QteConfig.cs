@@ -73,6 +73,18 @@ namespace Obscure
         // Attack bar: target zone center lands somewhere in this fraction range.
         public const float ZoneMin = 0.55f, ZoneMax = 0.85f;
 
+        // Offensive QTE variety (physical skills). Same result multipliers as the sweep bar.
+        public const float ChargePowerThreshold = 1.8f;   // skill power at or above this -> Charge (hold + release)
+        public const float ChargeIdleTimeout = 1.5f;      // x sweep: never starting the charge is a Poor
+        public const float MovingZoneCenter = 0.6f, MovingZoneAmplitude = 0.15f; // ranged: drifting zone range
+        public const int ComboZones = 3;                  // AoE skills; multi-hit skills use their hit count (2-4)
+        public const float ComboSweepScale = 1.4f, ComboFirst = 0.25f, ComboLast = 0.9f, ComboJitter = 0.04f;
+
+        // Defensive QTE variety (enemy -> player). Same damage-taken multipliers as the tap reaction.
+        public const int WardBaseLetters = 3;             // magic: rune ward length = this + tier runeLetters (3/4/5)
+        public const float FeintChance = 0.35f;           // Elite/Boss single physical hits
+        public const float FeintStop = 0.7f, FeintRecoil = 0.25f; // fake cue stops at 70% of its run, then slides back
+
         public static QteProfile For(Tier tier, QteAssist assist) =>
             assist == QteAssist.Relaxed ? Profiles[tier].Scaled(RelaxedWindow, RelaxedTime) : Profiles[tier];
 

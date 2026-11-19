@@ -303,14 +303,24 @@ namespace Obscure.Tests
         }
 
         // Press the QTE key just before the ideal moment; the press lands on the next frame.
-        IEnumerator PressAt(Qte q, System.Func<float> ideal)
+        IEnumerator PressAt(Qte q, System.Func<float> ideal, Key key = Key.Space)
         {
             yield return WaitFor(() => q.T >= ideal() - 0.02f || q.Done, "the QTE window");
-            Press(kb[Key.Space], queueEventOnly: true);
+            Press(kb[key], queueEventOnly: true);
             yield return null;
-            Release(kb[Key.Space], queueEventOnly: true);
+            Release(kb[key], queueEventOnly: true);
             yield return null;
         }
+
+        // Single physical enemy hits carry a dodge arrow instead of the QTE key.
+        static Key KeyFor(DodgeDir d) => d switch
+        {
+            DodgeDir.Up => Key.UpArrow,
+            DodgeDir.Down => Key.DownArrow,
+            DodgeDir.Left => Key.LeftArrow,
+            DodgeDir.Right => Key.RightArrow,
+            _ => Key.Space,
+        };
 
         [UnityTest]
         public IEnumerator AttackTimingQteWithRealInput()
@@ -345,7 +355,7 @@ namespace Obscure.Tests
             yield return GuardUntil(b, () => Panel != null && Panel.Qte is DefenseQte); // no Guard needed for the reaction itself
             var q = (DefenseQte)Panel.Qte;
             int logCount = b.Log.Count;
-            yield return PressAt(q, () => q.impacts[0]);
+            yield return PressAt(q, () => q.impacts[0], KeyFor(q.cues[0]));
             yield return WaitFor(() => q.Done, "the reaction result");
             Assert.AreNotEqual(QteResult.Miss, q.HitResult(0), "pressed as the hit landed");
             yield return WaitFor(() => b.Log.Count > logCount, "the attack to resolve");

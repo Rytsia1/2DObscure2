@@ -173,7 +173,7 @@ namespace Obscure
             StatusId.Evasion => "Increased chance to evade incoming strikes.",
             StatusId.MagicDefenseUp => "Magic defense increased.",
             StatusId.MagicDefenseDown => "Magic defense reduced.",
-            StatusId.Broken => "Staggered — takes +50% damage and skips turn.",
+            StatusId.Broken => "Staggered — takes extra damage (+50% foes, +25% heroes) and skips turn.",
             StatusId.Exhausted => "Skills cost more MP and output is reduced.",
             StatusId.Burn => "Takes fire damage at turn start.",
             StatusId.Bleed => "Takes bleed damage over time.",

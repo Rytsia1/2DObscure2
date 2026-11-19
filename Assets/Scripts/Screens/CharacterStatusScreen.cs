@@ -449,7 +449,7 @@ namespace Obscure
             if (Run != null && Run.BattleBuffs.Count > 0)
             {
                 var buffRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 6 } };
-                foreach (var b in Run.BattleBuffs.Take(3))
+                foreach (var b in Run.BattleBuffs)
                 {
                     var chip = IconArt.StatusChip(b.id, $"{StatusInfo.Name(b.id).ToUpperInvariant()} ({b.turns}T)", 1, 4f);
                     if (chip != null) buffRow.Add(chip);
@@ -586,7 +586,7 @@ namespace Obscure
             if (Run != null && Run.BattleBuffs.Count > 0)
             {
                 foreach (var b in Run.BattleBuffs)
-                    list.Add(($"NEXT BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} TURNS", StatusInfo.IsBuff(b.id) ? Palette.Ok : Palette.Err, IconArt.Status(b.id)));
+                    list.Add(($"EACH BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} TURNS · {DungeonModifierManager.UntilDungeonExit}", StatusInfo.IsBuff(b.id) ? Palette.Ok : Palette.Err, IconArt.Status(b.id)));
             }
             if (u.background != null)
             {
