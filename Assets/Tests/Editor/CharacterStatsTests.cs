@@ -1337,5 +1337,121 @@ namespace Obscure.Tests
             Assert.IsFalse(result.FirstHit.anyComponentCriticalHit);
             Assert.AreEqual(0, result.criticalHitCount);
         }
+
+        // =====================================================================
+        // Class-Based Stat Assistance QoL (Character Creation)
+        // =====================================================================
+
+        [Test]
+        public void ClassStatGuidance_CoversAllPlayableClasses_WithValid27PointSpreads()
+        {
+            var cfg = PointBuyConfig.Standard;
+            foreach (var classId in Database.PlayableClassIds)
+            {
+                var cls = Database.Classes[classId];
+                var guide = ClassStatGuidance.ForClass(cls);
+
+                Assert.IsNotNull(guide, classId);
+                Assert.AreEqual(classId, guide.classId, $"Dedicated stat guide expected for {classId}");
+                Assert.IsNotEmpty(guide.primaryAbilities, $"{classId} must have at least one Primary ability");
+                Assert.IsNotEmpty(guide.secondaryAbilities, $"{classId} must have at least one Secondary ability");
+                Assert.IsEmpty(guide.primaryAbilities.Intersect(guide.secondaryAbilities), $"{classId} Primary & Secondary must not overlap");
+                Assert.IsFalse(string.IsNullOrWhiteSpace(guide.summary), $"{classId} must have a stat summary");
+
+                Assert.IsNull(cfg.Validate(guide.recommendedBaseScores), $"{classId} recommended spread must be valid Point Buy");
+                Assert.AreEqual(cfg.budget, cfg.TotalCost(guide.recommendedBaseScores), $"{classId} recommended spread must spend all 27 points");
+
+                foreach (var pri in guide.primaryAbilities)
+                {
+                    Assert.AreEqual(AbilityPriority.Primary, guide.GetPriority(pri), $"{classId} {pri}");
+                    Assert.GreaterOrEqual(guide.recommendedBaseScores[pri], 14, $"{classId} primary stat {pri} should be >= 14 in recommended spread");
+                }
+                foreach (var sec in guide.secondaryAbilities)
+                    Assert.AreEqual(AbilityPriority.Secondary, guide.GetPriority(sec), $"{classId} {sec}");
+
+                foreach (var ab in AbilityScores.AllAbilities)
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(guide.GetReason(ab, cls.name)), $"{classId} reason missing for {ab}");
+            }
+        }
+
+        [Test]
+        public void Session_ApplyRecommendedPointBuy_IsOptIn_AndSelectClassDoesNotOverwriteManualScores()
+        {
+            var session = new CharacterCreationSession();
+            session.SelectRace("elf");
+            session.SelectClass("wizard");
+
+            // Remains manual (base 8, 27 points left) upon selecting a class
+            Assert.AreEqual(AbilityScores.DefaultBase, session.BaseScores);
+            Assert.AreEqual(PointBuyConfig.DefaultBudget, session.PointBuy.RemainingPoints);
+
+            // Manual unconventional allocation is NOT overwritten when switching classes
+            var manualBuild = new AbilityScores(15, 10, 12, 8, 12, 12); // 9+2+4+0+4+4 = 23
+            session.PointBuy.SetAllOrThrow(manualBuild);
+            session.SelectClass("cleric");
+            Assert.AreEqual(manualBuild, session.BaseScores, "Changing class must never overwrite manual Point Buy");
+            Assert.AreEqual(AbilityPriority.Primary, session.GetAbilityPriorityForClass(Ability.WIS));
+            Assert.AreEqual(AbilityPriority.Secondary, session.GetAbilityPriorityForClass(Ability.VIT));
+            Assert.AreEqual(AbilityPriority.Optional, session.GetAbilityPriorityForClass(Ability.STR));
+
+            // Opt-in ApplyRecommendedPointBuy fills 27/27 for Cleric without changing Race/Class/Background
+            string raceBefore = session.Race.id;
+            string bgBefore = session.Background.id;
+            Assert.IsTrue(session.ApplyRecommendedPointBuy(out string feedback));
+            Assert.AreEqual(0, session.PointBuy.RemainingPoints);
+            Assert.AreEqual(ClassStatGuidance.ForClassId("cleric").recommendedBaseScores, session.BaseScores);
+            Assert.AreEqual(raceBefore, session.Race.id);
+            Assert.AreEqual("cleric", session.Class.id);
+            Assert.AreEqual(bgBefore, session.Background.id);
+            StringAssert.Contains("CLERIC", feedback);
+        }
+
+        [Test]
+        public void CharacterCreationScreen_ClassAndAbilitiesPages_RenderClassStatBadgesAndGuide()
+        {
+            var host = new GameObject("StatQolTestHost");
+            try
+            {
+                var session = new CharacterCreationSession();
+                var screen = new CharacterCreationScreen(session);
+                screen.Open(host.transform);
+                session.SelectClass("wizard");
+
+                // Step 2: Class page renders KEY ABILITIES badges for Wizard (INT primary, WIS & VIT secondary)
+                screen.GoToPage(CharacterCreationScreen.Page.Class);
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "ClassKeyAbilitiesSection"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "ClassKeyBadge_INT"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "ClassKeyBadge_WIS"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "ClassKeyBadge_VIT"));
+                Assert.IsNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "ClassKeyBadge_STR"));
+
+                // Step 3: Abilities page renders priority badges, left key stats summary, and right ClassStatGuideBox
+                screen.GoToPage(CharacterCreationScreen.Page.Abilities);
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilitiesClassKeyStats"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_INT"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_WIS"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_VIT"));
+                Assert.IsNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_STR"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "ClassStatGuideBox"));
+
+                var heading = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(screen.UiRoot, "ClassStatGuideHeading");
+                Assert.IsNotNull(heading);
+                StringAssert.Contains("WIZARD", heading.text);
+
+                // Switching class to Fighter updates badges to STR/VIT primary & DEX/CHA secondary
+                session.SelectClass("fighter");
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_STR"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_VIT"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_DEX"));
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_CHA"));
+                Assert.IsNull(UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "AbilityPriorityBadge_INT"));
+
+                screen.Close();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
     }
 }

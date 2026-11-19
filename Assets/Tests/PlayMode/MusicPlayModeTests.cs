@@ -91,11 +91,22 @@ namespace Obscure.Tests
         }
 
         [UnityTest]
-        public IEnumerator NewGameFadesMenuMusicOutAndTitleBringsItBack()
+        public IEnumerator CharacterCreationKeepsMenuMusicPlayingAndOpeningSequenceSilencesIt()
         {
+            var clip = Music.Source.clip;
+            yield return new WaitForSecondsRealtime(0.2f);
+            int before = Music.Source.timeSamples;
+
             Game.I.StartNewGame();
             yield return Until(() => Game.I.State == GameState.CharacterCreation && !Controls.Locked);
-            Assert.IsNull(Music.CurrentId, "character creation is silent");
+            Assert.AreEqual(MusicIds.MainMenu, Music.CurrentId, "character creation uses main menu soundtrack");
+            Assert.IsFalse(Music.Fading, "menu soundtrack continues seamlessly into character creation");
+            Assert.AreSame(clip, Music.Source.clip);
+            Assert.IsTrue(Music.Source.isPlaying);
+            Assert.GreaterOrEqual(Music.Source.timeSamples, before, "playback position kept advancing");
+
+            yield return GoTo(GameState.OpeningSequence);
+            Assert.IsNull(Music.CurrentId, "opening sequence is silent");
             yield return Until(() => !Music.Fading);
             Assert.IsFalse(Music.Source.isPlaying);
 

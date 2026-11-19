@@ -79,7 +79,7 @@ MonoBehaviour:
     lowPassCutoff: 22000
   menuMusic: main_menu
   hubMusic: hub
-  creationMusic: 
+  creationMusic: main_menu
   explorationMusic: map
   defaultBattleMusic: battle_1
   randomBattleMusic: 0

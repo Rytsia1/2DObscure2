@@ -173,7 +173,7 @@ namespace Obscure
             };
             screenContainer.Add(abilitiesHost);
 
-            // 02b Left panel COST PER SCORE table (replaces score tags on Page.Abilities)
+            // 02b Left panel COST PER SCORE table + Class Key Stats (replaces score tags on Page.Abilities)
             costTableHost = new VisualElement
             {
                 name = "CostPerScoreHost",
@@ -183,7 +183,7 @@ namespace Obscure
                     left = 44,
                     top = 404,
                     width = 218,
-                    height = 200,
+                    height = 224,
                     flexDirection = FlexDirection.Column,
                     display = DisplayStyle.None
                 }
@@ -613,8 +613,46 @@ namespace Obscure
             }
 
             var cls = Session.Class;
+            var guide = Session.GetStatGuide();
             AddColumnHeader(rightBody, cls.name, (cls.role ?? "").ToUpperInvariant());
             AddParagraph(rightBody, cls.description);
+
+            var keySection = new VisualElement { name = "ClassKeyAbilitiesSection", style = { flexDirection = FlexDirection.Column, marginBottom = 8 } };
+            keySection.Add(new UiLabel("KEY ABILITIES FOR THIS CLASS")
+            {
+                style = { fontSize = 14, color = Palette.Gold2, marginBottom = 5 }
+            });
+
+            var keyBadgeRow = new VisualElement
+            {
+                style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 5 }
+            };
+            foreach (var ab in guide.primaryAbilities ?? Array.Empty<Ability>())
+            {
+                var badge = MakePriorityBadge($"★ PRIMARY · {ab}", AbilityPriority.Primary, large: true);
+                badge.name = $"ClassKeyBadge_{ab}";
+                badge.style.marginRight = 6;
+                badge.style.marginBottom = 4;
+                keyBadgeRow.Add(badge);
+            }
+            foreach (var ab in guide.secondaryAbilities ?? Array.Empty<Ability>())
+            {
+                var badge = MakePriorityBadge($"◆ SECONDARY · {ab}", AbilityPriority.Secondary, large: true);
+                badge.name = $"ClassKeyBadge_{ab}";
+                badge.style.marginRight = 6;
+                badge.style.marginBottom = 4;
+                keyBadgeRow.Add(badge);
+            }
+            keySection.Add(keyBadgeRow);
+
+            if (!string.IsNullOrEmpty(guide.summary))
+            {
+                keySection.Add(new UiLabel(guide.summary.ToUpperInvariant())
+                {
+                    style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                });
+            }
+            rightBody.Add(keySection);
 
             var dsHead = new UiLabel("DERIVED STATS WITH THIS CLASS");
             dsHead.style.fontSize = 14;
@@ -646,6 +684,45 @@ namespace Obscure
                 skillWrap.Add(chip);
             }
             rightBody.Add(skillWrap);
+        }
+
+        static VisualElement MakePriorityBadge(string text, AbilityPriority priority, bool large = false)
+        {
+            bool isPri = priority == AbilityPriority.Primary;
+            Color borderCol = isPri ? Palette.Gold2 : Palette.Mp;
+            Color textCol = isPri ? Palette.Gold1 : Palette.Shield;
+            Color bgCol = isPri ? Palette.Hex(0x2B2210) : Palette.Hex(0x142238);
+
+            var badge = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    paddingLeft = large ? 7 : 5,
+                    paddingRight = large ? 7 : 5,
+                    paddingTop = large ? 2 : 1,
+                    paddingBottom = large ? 2 : 1,
+                    backgroundColor = bgCol,
+                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                    borderTopColor = borderCol, borderBottomColor = borderCol,
+                    borderLeftColor = borderCol, borderRightColor = borderCol,
+                    flexShrink = 0,
+                    justifyContent = Justify.Center,
+                    alignItems = UnityEngine.UIElements.Align.Center
+                }
+            };
+            badge.Add(new UiLabel(text)
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    fontSize = large ? 11 : 10,
+                    letterSpacing = 0.4f,
+                    color = textCol,
+                    whiteSpace = WhiteSpace.NoWrap
+                }
+            });
+            return badge;
         }
 
         static string AbilityFullName(Ability a) => a switch
@@ -681,19 +758,21 @@ namespace Obscure
         void BuildAbilitiesPage()
         {
             var pb = Session.PointBuy;
+            var guide = Session.GetStatGuide();
+            string clsUpper = (Session.Class?.name ?? "CLASS").ToUpperInvariant();
             int rem = pb.RemainingPoints;
             int budget = pb.Config.budget;
             int minScore = pb.Config.minScore;
             int maxScore = pb.Config.maxScoreBeforeRacial;
 
-            // Left panel: COST PER SCORE 2x4 table (02b design)
+            // Left panel: COST PER SCORE 2x4 table (02b design) + Class Key Stats summary
             costTableHost.Add(new UiLabel("COST PER SCORE")
             {
                 style = { fontSize = 12, letterSpacing = 0.48f, color = Palette.Mist3, marginBottom = 6 }
             });
             var costGrid = new VisualElement
             {
-                style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 224, marginBottom = 8 }
+                style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 224, marginBottom = 6 }
             };
             for (int sc = minScore; sc <= maxScore; sc++)
             {
@@ -719,8 +798,31 @@ namespace Obscure
             costTableHost.Add(costGrid);
             costTableHost.Add(new UiLabel("14 AND 15 COST MORE: SPREAD POINTS OR SPECIALISE.")
             {
-                style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal }
+                style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginBottom = 8 }
             });
+
+            var keyStatsBlock = new VisualElement { name = "AbilitiesClassKeyStats", style = { flexDirection = FlexDirection.Column } };
+            keyStatsBlock.Add(new UiLabel($"{clsUpper} KEY STATS")
+            {
+                style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Gold2, marginBottom = 4 }
+            });
+            var keyChips = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
+            foreach (var ab in guide.primaryAbilities ?? Array.Empty<Ability>())
+            {
+                var chip = MakePriorityBadge($"★ {ab}", AbilityPriority.Primary);
+                chip.style.marginRight = 5;
+                chip.style.marginBottom = 4;
+                keyChips.Add(chip);
+            }
+            foreach (var ab in guide.secondaryAbilities ?? Array.Empty<Ability>())
+            {
+                var chip = MakePriorityBadge($"◆ {ab}", AbilityPriority.Secondary);
+                chip.style.marginRight = 5;
+                chip.style.marginBottom = 4;
+                keyChips.Add(chip);
+            }
+            keyStatsBlock.Add(keyChips);
+            costTableHost.Add(keyStatsBlock);
 
             // Top Header inside Gold Panel
             var hdr = FigmaUi.CreateSectionHeader("Ability Scores · Point Buy", 560f);
@@ -806,6 +908,7 @@ namespace Obscure
             for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
             {
                 var ab = AbilityScores.AllAbilities[i];
+                var priority = guide.GetPriority(ab);
                 int baseVal = bases[ab];
                 int rBonus = race[ab];
                 int finVal = fin[ab];
@@ -829,24 +932,56 @@ namespace Obscure
                     }
                 };
 
+                if (priority != AbilityPriority.Optional)
+                {
+                    row.Add(new VisualElement
+                    {
+                        pickingMode = PickingMode.Ignore,
+                        style =
+                        {
+                            position = Position.Absolute, left = 0, top = 4, bottom = 4, width = 3,
+                            backgroundColor = priority == AbilityPriority.Primary ? Palette.Gold2 : Palette.Mp
+                        }
+                    });
+                }
+
                 var cursorLbl = new UiLabel("▸")
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { position = Position.Absolute, left = 4, top = 16, fontSize = 18, color = Palette.Gold1, visibility = Visibility.Hidden }
+                    style = { position = Position.Absolute, left = 5, top = 16, fontSize = 18, color = Palette.Gold1, visibility = Visibility.Hidden }
                 };
                 row.Add(cursorLbl);
 
+                var titleRow = new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style =
+                    {
+                        position = Position.Absolute, left = 20, top = 5, width = 208,
+                        flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center
+                    }
+                };
+                Color defaultTitleCol = priority == AbilityPriority.Primary ? Palette.Gold1 : Palette.Mist1;
                 var abTitle = new UiLabel(AbilityFullName(ab))
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { position = Position.Absolute, left = 20, top = 4, fontSize = 18, color = Palette.Mist1 }
+                    style = { fontSize = 15, color = defaultTitleCol, flexShrink = 1, overflow = Overflow.Hidden }
                 };
-                row.Add(abTitle);
+                titleRow.Add(abTitle);
+
+                if (priority != AbilityPriority.Optional)
+                {
+                    var pBadge = MakePriorityBadge(priority == AbilityPriority.Primary ? "★ PRI" : "◆ SEC", priority);
+                    pBadge.name = $"AbilityPriorityBadge_{ab}";
+                    pBadge.style.marginLeft = 4;
+                    titleRow.Add(pBadge);
+                }
+                row.Add(titleRow);
 
                 row.Add(new UiLabel(AbilitySubtitle(ab))
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { position = Position.Absolute, left = 20, top = 30, width = 204, fontSize = 11, letterSpacing = 0.42f, color = Palette.Mist3 }
+                    style = { position = Position.Absolute, left = 20, top = 30, width = 208, fontSize = 11, letterSpacing = 0.42f, color = Palette.Mist3 }
                 });
 
                 string stepperTpl = atMax ? "Stat-Stepper-At-Max"
@@ -941,7 +1076,7 @@ namespace Obscure
                     row.style.borderTopColor = b; row.style.borderBottomColor = b;
                     row.style.borderLeftColor = b; row.style.borderRightColor = b;
                     cursorLbl.style.visibility = on ? Visibility.Visible : Visibility.Hidden;
-                    abTitle.style.color = on ? Palette.Gold1 : Palette.Mist1;
+                    abTitle.style.color = on ? Palette.Gold1 : defaultTitleCol;
                     if (on)
                     {
                         focusedAbility = ab;
@@ -988,28 +1123,18 @@ namespace Obscure
             if (recLbl != null) recLbl.style.fontSize = 15;
             abilitiesHost.Add(recBtn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(recBtn, "Use Recommended", ApplyRecommendedPointBuy,
-                tooltip: "APPLY RECOMMENDED POINT BUY SPREAD FOR THIS CLASS"), recBtn);
+                tooltip: $"APPLY RECOMMENDED {clsUpper} SPREAD ({guide.FormatSpreadSummary()})"), recBtn);
 
             UpdateNextPointPreview();
         }
 
         void ApplyRecommendedPointBuy()
         {
-            var match = Database.Templates.Values.FirstOrDefault(t => string.Equals(t.classId, Session.Class?.id, StringComparison.OrdinalIgnoreCase));
-            if (match != null)
-            {
-                Session.PointBuy.Reset();
-                var targetScores = match.baseScores;
-                foreach (var ab in AbilityScores.AllAbilities)
-                {
-                    while (Session.BaseScores[ab] < targetScores[ab] && Session.PointBuy.TryIncrease(ab)) { }
-                }
-                SetHint($"APPLIED RECOMMENDED SPREAD FOR {Session.Class?.name.ToUpperInvariant()}.");
-                Sfx.Play(Sound.Confirm);
-                Refresh();
-                return;
-            }
-            OnRandomOrRerollSelected();
+            EnsureEditingMode();
+            Session.ApplyRecommendedPointBuy(out var msg);
+            SetHint(msg);
+            Sfx.Play(Sound.Confirm);
+            Refresh();
         }
 
         void UpdateNextPointPreview()
@@ -1018,6 +1143,10 @@ namespace Obscure
             nextPreviewHost.Clear();
 
             var pb = Session.PointBuy;
+            var guide = Session.GetStatGuide();
+            var priority = guide.GetPriority(focusedAbility);
+            string clsName = Session.Class?.name ?? "Class";
+            string clsUpper = clsName.ToUpperInvariant();
             int rem = pb.RemainingPoints;
             int cur = Session.BaseScores[focusedAbility];
             int max = pb.Config.maxScoreBeforeRacial;
@@ -1025,9 +1154,44 @@ namespace Obscure
             bool atMax = cur >= max;
             bool canAfford = !atMax && nextCost > 0 && nextCost <= rem;
 
+            // Class-aware stat guidance box for the focused ability
+            Color guideBorder = priority == AbilityPriority.Primary ? Palette.Gold2
+                : priority == AbilityPriority.Secondary ? Palette.Mp : Palette.Ink4;
+            Color guideTitleCol = priority == AbilityPriority.Primary ? Palette.Gold1
+                : priority == AbilityPriority.Secondary ? Palette.Shield : Palette.Mist3;
+            string guideHeading = priority == AbilityPriority.Primary ? $"★ PRIMARY FOR {clsUpper}"
+                : priority == AbilityPriority.Secondary ? $"◆ SECONDARY FOR {clsUpper}"
+                : $"OPTIONAL FOR {clsUpper}";
+
+            var guideBox = new VisualElement
+            {
+                name = "ClassStatGuideBox",
+                style =
+                {
+                    paddingLeft = 8, paddingRight = 8, paddingTop = 6, paddingBottom = 6,
+                    marginBottom = 10,
+                    backgroundColor = Palette.Ink1,
+                    borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    borderTopColor = guideBorder, borderBottomColor = guideBorder,
+                    borderLeftColor = guideBorder, borderRightColor = guideBorder,
+                    flexDirection = FlexDirection.Column
+                }
+            };
+            guideBox.Add(new UiLabel(guideHeading)
+            {
+                name = "ClassStatGuideHeading",
+                style = { fontSize = 12, letterSpacing = 0.48f, color = guideTitleCol, marginBottom = 3 }
+            });
+            guideBox.Add(new UiLabel(guide.GetReason(focusedAbility, clsName).ToUpperInvariant())
+            {
+                name = "ClassStatGuideBody",
+                style = { fontSize = 11, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+            });
+            nextPreviewHost.Add(guideBox);
+
             nextPreviewHost.Add(new UiLabel("NEXT POINT PREVIEW")
             {
-                style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Gold2, marginBottom = 6 }
+                style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Gold2, marginBottom = 4 }
             });
 
             string subLine = atMax
@@ -1035,7 +1199,7 @@ namespace Obscure
                 : $"{focusedAbility} {cur} › {cur + 1}  ·  COSTS {nextCost} {(nextCost == 1 ? "POINT" : "POINTS")}";
             nextPreviewHost.Add(new UiLabel(subLine)
             {
-                style = { fontSize = 13, letterSpacing = 0.48f, color = atMax ? Palette.Mist3 : canAfford ? Palette.Mist1 : Palette.Ember1, marginBottom = 12 }
+                style = { fontSize = 13, letterSpacing = 0.48f, color = atMax ? Palette.Mist3 : canAfford ? Palette.Mist1 : Palette.Ember1, marginBottom = 8 }
             });
 
             var nowDerived = Session.PreviewDerivedStats;
@@ -1304,7 +1468,13 @@ namespace Obscure
             if (p < Page.Race) p = Page.Race;
             if (p > Page.Review) p = Page.Review;
             CurrentPage = p;
-            focusIndex = 0;
+            focusIndex = p switch
+            {
+                Page.Race => Math.Max(0, Array.IndexOf(RaceIds, Session.Race.id)),
+                Page.Class => Math.Max(0, Array.IndexOf(ClassIds, Session.Class.id)),
+                Page.Background => Math.Max(0, Array.IndexOf(BackgroundIds, Session.Background.id)),
+                _ => 0,
+            };
             var step = p switch
             {
                 Page.Race => CreationStep.SelectRace,

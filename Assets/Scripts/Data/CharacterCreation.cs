@@ -938,6 +938,36 @@ namespace Obscure
             LastFeedbackMessage = "ABILITY SCORES RESET TO 8.";
         }
 
+        public ClassStatGuide GetStatGuide() => ClassStatGuidance.ForClass(Class);
+
+        public AbilityPriority GetAbilityPriorityForClass(Ability ability) => GetStatGuide().GetPriority(ability);
+
+        // Opt-in QoL: applies the curated 27-point recommended Ability Score spread for the currently selected Class.
+        // Never alters Race, Class, Background, or Gear (and is never called automatically by SelectClass).
+        public bool ApplyRecommendedPointBuy(out string feedback)
+        {
+            var guide = GetStatGuide();
+            var target = guide.recommendedBaseScores;
+            if (PointBuy.Config.Validate(target) == null && PointBuy.Config.TotalCost(target) <= PointBuy.Config.budget)
+            {
+                PointBuy.SetAllOrThrow(target);
+            }
+            else
+            {
+                PointBuy.Reset();
+                foreach (var ab in AbilityScores.AllAbilities)
+                {
+                    while (BaseScores[ab] < target[ab] && PointBuy.TryIncrease(ab)) { }
+                }
+            }
+            RemoveInvalidEquippedItems();
+            string clsName = (Class?.name ?? "CLASS").ToUpperInvariant();
+            feedback = $"APPLIED RECOMMENDED SPREAD FOR {clsName} ({guide.FormatSpreadSummary()}).";
+            LastFeedbackMessage = feedback;
+            Changed?.Invoke();
+            return true;
+        }
+
         // Attempts to equip an item in one of the 8 Equipment Slots during character creation.
         // Enforces Strict Weapon Compatibility and item restrictions.
         public bool TryEquip(EquipmentSlot slot, string equipmentId, out string error)

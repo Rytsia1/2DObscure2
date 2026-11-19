@@ -349,5 +349,56 @@ namespace Obscure.Tests
             Assert.AreEqual(1, run.DragonbornShopDiscountUsesRemaining);
             Assert.AreEqual(1, run.ElfWeaknessRevealUsesRemaining);
         }
+
+        [Test]
+        public void EventScreen_HidesChoiceOutputsBeforeSelection_WhileKeepingCostsAndBlockedReasons()
+        {
+            var gameGo = new UnityEngine.GameObject("EventScreenTestGame");
+            var hostGo = new UnityEngine.GameObject("EventScreenTestHost");
+            try
+            {
+                var game = gameGo.AddComponent<Game>();
+                Game.SetInstance(game);
+                var run = AtD1Event("D1_EVT_001", gold: 50, "elf", "dwarf", "halfling", "dragonborn");
+                game.ApplyLoadedCampaign(new CharacterRoster(startWithEmptyParty: true), run);
+
+                var screen = new EventScreen();
+                screen.Open(hostGo.transform);
+
+                var choiceHost = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(screen.UiRoot, "EventChoiceHost");
+                Assert.IsNotNull(choiceHost);
+
+                var allTexts = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.Label>(choiceHost)
+                    .ToList()
+                    .Select(l => l.text ?? "")
+                    .ToList();
+                string joined = string.Join(" | ", allTexts).ToUpperInvariant();
+
+                // Choice labels remain visible
+                StringAssert.Contains("PRAY FOR A BLESSING", joined);
+                StringAssert.Contains("INVESTIGATE THE ALTAR", joined);
+                StringAssert.Contains("LEAVE THE CHAPEL", joined);
+
+                // Upfront costs & blocked requirements remain visible
+                StringAssert.Contains("20 GOLD", joined);
+                StringAssert.Contains("REQUIRES LIICHTIAN", joined);
+
+                // Outputs / rewards / consequences are strictly hidden before choosing
+                Assert.IsFalse(joined.Contains("+30 GOLD"), "Gold gain must be hidden before selection: " + joined);
+                Assert.IsFalse(joined.Contains("HEAL"), "Heal output must be hidden before selection: " + joined);
+                Assert.IsFalse(joined.Contains("NEXT BATTLE"), "Battle buff output must be hidden before selection: " + joined);
+                Assert.IsFalse(joined.Contains("ARCANE CURRENT"), "Modifier reward must be hidden before selection: " + joined);
+                Assert.IsFalse(joined.Contains("RISK"), "Risk spoiler must be hidden before selection: " + joined);
+                Assert.IsFalse(joined.Contains("NOTHING HAPPENS"), "No-op outcome spoiler must be hidden before selection: " + joined);
+
+                screen.Close();
+            }
+            finally
+            {
+                Game.SetInstance(null);
+                UnityEngine.Object.DestroyImmediate(hostGo);
+                UnityEngine.Object.DestroyImmediate(gameGo);
+            }
+        }
     }
 }

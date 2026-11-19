@@ -80,8 +80,8 @@ namespace Obscure.Tests
             Assert.IsNull(lib.MusicFor(GameState.CharacterStatus, null, rng));
             foreach (var hubService in new[] { GameState.Party, GameState.HubShop, GameState.Armory, GameState.Blacksmith, GameState.Temple, GameState.MagicShop })
                 Assert.IsNull(lib.MusicFor(hubService, null, rng), "hub services keep the hub track");
-            foreach (var quiet in new[] { GameState.CharacterCreation, GameState.OpeningSequence })
-                Assert.AreEqual("", lib.MusicFor(quiet, null, rng), quiet.ToString());
+            Assert.AreEqual(MusicIds.MainMenu, lib.MusicFor(GameState.CharacterCreation, null, rng), "character creation uses main menu soundtrack");
+            Assert.AreEqual("", lib.MusicFor(GameState.OpeningSequence, null, rng), GameState.OpeningSequence.ToString());
             foreach (var exploring in new[] { GameState.Map, GameState.Reward, GameState.Rest, GameState.Event, GameState.GameOver, GameState.Victory })
                 Assert.AreEqual(MusicIds.Map, lib.MusicFor(exploring, null, rng), exploring.ToString());
 

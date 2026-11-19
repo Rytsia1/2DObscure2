@@ -139,14 +139,8 @@ namespace Obscure
             if (Run.RevealsSupernaturalSource(currentEvent) && !string.IsNullOrEmpty(currentEvent.supernaturalSourceClue))
                 list.Add($"[LUMINESCENT INSIGHT] {currentEvent.supernaturalSourceClue.ToUpperInvariant()}");
 
-            if (Run.RevealsLiquidOutcomes(currentEvent))
-                list.Add("[OCEAN'S GIFT] ALL LIQUID OUTCOMES ARE REVEALED BELOW.");
-
             if (Run.HasHalflingHazardReduction && currentEvent.HasTag(EventTags.Hazard))
                 list.Add("[SMALL AND NIMBLE] HALFLING REDUCES PARTY HAZARD DAMAGE BY 50%.");
-
-            if (Run.RevealsRelicEffects && (currentEvent.HasTag(EventTags.Relic) || currentEvent.HasTag(EventTags.Dragon)))
-                list.Add("[DRACONIC PRESENCE] RELIC REWARD DETAILS ARE REVEALED.");
 
             if (Run.HasRace("human"))
             {
@@ -206,11 +200,11 @@ namespace Obscure
             {
                 var entry = visible[vIdx];
                 int index = entry.index;
-                AddChoiceCard(vIdx + 1, entry.choice, index, entry.status, compact, () => Choose(index));
+                AddChoiceCard(vIdx + 1, entry.choice, entry.status, compact, () => Choose(index));
             }
         }
 
-        void AddChoiceCard(int number, EventChoice c, int choiceIndex, RunState.EventChoiceStatus status, bool compact, Action choose)
+        void AddChoiceCard(int number, EventChoice c, RunState.EventChoiceStatus status, bool compact, Action choose)
         {
             bool enabled = !status.isBlocked;
             var card = new VisualElement();
@@ -247,25 +241,18 @@ namespace Obscure
             titleLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(titleLbl);
 
-            string sub = enabled ? Consequences(c, choiceIndex, status) : status.blockedReason.ToUpperInvariant();
-            var subLbl = new UiLabel(sub);
-            subLbl.style.fontSize = compact ? 11 : 12;
-            subLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
-            subLbl.style.whiteSpace = WhiteSpace.Normal;
-            textCol.Add(subLbl);
+            string sub = enabled ? ChoiceCostSubtitle(c) : status.blockedReason.ToUpperInvariant();
+            if (!string.IsNullOrEmpty(sub))
+            {
+                var subLbl = new UiLabel(sub);
+                subLbl.style.fontSize = compact ? 11 : 12;
+                subLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
+                subLbl.style.whiteSpace = WhiteSpace.Normal;
+                textCol.Add(subLbl);
+            }
             card.Add(textCol);
 
-            if (c.battleBuff != null)
-            {
-                var buffIcon = IconArt.StatusBadge(c.battleBuff.id, c.battleBuff.turns, 1, 2, 8f);
-                if (buffIcon != null)
-                {
-                    if (!enabled) buffIcon.style.opacity = 0.45f;
-                    card.Add(buffIcon);
-                }
-            }
-
-            string tagText = DetermineCardTag(c, choiceIndex, status);
+            string tagText = DetermineCardTag(c, status);
             if (tagText != null)
             {
                 var tag = FigmaUi.InstantiateTemplate(enabled ? "Tag-Temp" : "Tag-Cond");
@@ -293,7 +280,7 @@ namespace Obscure
             item.visual(false);
         }
 
-        string DetermineCardTag(EventChoice c, int choiceIndex, RunState.EventChoiceStatus status)
+        static string DetermineCardTag(EventChoice c, RunState.EventChoiceStatus status)
         {
             if (status.isBlocked) return status.blockedReason.ToUpperInvariant();
             if (status.usesAdaptabilityBorrow) return "ADAPTABILITY 75%";
@@ -302,129 +289,30 @@ namespace Obscure
             if (c.goldCost > 0) return $"-{c.goldCost} RUN GOLD";
             if (!string.IsNullOrEmpty(c.requiredItem) && Database.Items.TryGetValue(c.requiredItem, out var reqItm))
                 return $"USE {reqItm.name.ToUpperInvariant()}";
-
-            bool revealCurse = Run == null || Run.RevealsCurses || (Run.RelicManager != null && Run.RelicManager.HasRelic("R018"));
-            bool hasDrawbackMod = Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evModOpt)
-                && Database.DungeonModifiers.TryGetValue(evModOpt.id, out var evModDef) && (evModDef.HasDrawback || evModDef.IsDebuff);
-            bool hasKnownCurse = (!c.hasHiddenCurse || revealCurse)
-                && (hasDrawbackMod || (Run != null && Run.EventCurseModifiers.ContainsKey(choiceIndex)));
-
-            if (hasKnownCurse) return "CURSED";
-            if (c.riskChancePercent > 0 && !(c.hasHiddenOutcome && Run != null && Run.RevealsLiquidOutcomes(currentEvent)))
-                return "RISK";
+            if (!string.IsNullOrEmpty(c.requiredMaterialId))
+            {
+                string matName = Database.Materials.TryGetValue(c.requiredMaterialId, out var mat) ? mat.name : c.requiredMaterialId;
+                return $"-{Math.Max(1, c.requiredMaterialAmount)} {matName.ToUpperInvariant()}";
+            }
             return null;
         }
 
-        string Consequences(EventChoice c, int choiceIndex, RunState.EventChoiceStatus status)
+        // Only upfront costs/requirements are shown before choosing; all outputs/rewards/consequences stay hidden until chosen.
+        static string ChoiceCostSubtitle(EventChoice c)
         {
-            float scale = status.effectScale;
-            int ScaleVal(int v) => v <= 0 ? 0 : (scale >= 0.999f ? v : Math.Max(1, (int)Math.Round(v * scale)));
-
-            bool revealsLiquid = Run != null && Run.RevealsLiquidOutcomes(currentEvent);
-            bool riskFailed = Run != null && Run.EventChoiceRiskFailed.TryGetValue(choiceIndex, out var rf) && rf;
-
-            if (c.hasHiddenOutcome && !revealsLiquid)
-            {
-                return "OUTCOME UNKNOWN (UNCERTAIN LIQUID)";
-            }
-
-            if (c.hasHiddenOutcome && revealsLiquid)
-            {
-                if (riskFailed)
-                {
-                    var fParts = new List<string> { "TAINTED" };
-                    if (c.riskFailHurtPercent > 0) fParts.Add($"LOSE {c.riskFailHurtPercent}% MAX HP");
-                    if (Run.EventRiskFailModifiers.TryGetValue(choiceIndex, out var failMod) && Database.DungeonModifiers.TryGetValue(failMod.id, out var fmd))
-                        fParts.Add(fmd.displayName.ToUpperInvariant());
-                    return string.Join(", ", fParts);
-                }
-                else
-                {
-                    var sParts = new List<string> { "PURE SPRING" };
-                    if (c.healPercent > 0) sParts.Add($"HEAL {ScaleVal(c.healPercent)}% HP");
-                    if (c.mpRestorePercent > 0) sParts.Add($"+{ScaleVal(c.mpRestorePercent)}% MP");
-                    return string.Join(", ", sParts);
-                }
-            }
-
             var parts = new List<string>();
-            if (c.goldCost > 0) parts.Add($"-{c.goldCost} GOLD");
+            if (c.goldCost > 0) parts.Add($"COST: {c.goldCost} GOLD");
             if (!string.IsNullOrEmpty(c.requiredItem))
             {
                 string itemName = Database.Items.TryGetValue(c.requiredItem, out var itm) ? itm.name : c.requiredItem;
-                parts.Add($"USE {itemName.ToUpperInvariant()}");
+                parts.Add($"REQUIRES {itemName.ToUpperInvariant()}");
             }
             if (!string.IsNullOrEmpty(c.requiredMaterialId))
             {
                 string matName = Database.Materials.TryGetValue(c.requiredMaterialId, out var mat) ? mat.name : c.requiredMaterialId;
-                parts.Add($"-{Math.Max(1, c.requiredMaterialAmount)} {matName.ToUpperInvariant()}");
+                parts.Add($"COST: {Math.Max(1, c.requiredMaterialAmount)} {matName.ToUpperInvariant()}");
             }
-
-            int goldGain = ScaleVal(c.gold);
-            if (goldGain > 0) parts.Add($"+{goldGain} GOLD");
-
-            int healPct = ScaleVal(c.healPercent);
-            if (healPct > 0) parts.Add($"HEAL {healPct}% HP");
-
-            int mpPct = ScaleVal(c.mpRestorePercent);
-            if (mpPct > 0) parts.Add($"+{mpPct}% MP");
-
-            if (c.hurtPercent > 0) parts.Add($"LOSE {c.hurtPercent}% MAX HP");
-
-            if (c.hazardDamagePercent > 0)
-            {
-                int shownDmg = (Run != null && Run.HasHalflingHazardReduction)
-                    ? Math.Max(1, (int)Math.Round(c.hazardDamagePercent * 0.5f))
-                    : c.hazardDamagePercent;
-                parts.Add($"HAZARD {shownDmg}% HP" + (Run != null && Run.HasHalflingHazardReduction ? " (HALFLING -50%)" : ""));
-            }
-
-            if (c.item != null && Database.Items.TryGetValue(c.item, out var gainItm))
-                parts.Add("+" + gainItm.name.ToUpperInvariant());
-
-            if (!string.IsNullOrEmpty(c.materialId))
-            {
-                int matAmt = ScaleVal(Math.Max(1, c.materialAmount));
-                if (currentEvent.HasTag(EventTags.Mineral) && Run != null && Run.HasRace("dwarf"))
-                    matAmt += 1;
-                string matName = Database.Materials.TryGetValue(c.materialId, out var matDef) ? matDef.name : c.materialId;
-                parts.Add($"+{matAmt} {matName.ToUpperInvariant()}");
-            }
-
-            if (c.randomEquipment || !string.IsNullOrEmpty(c.equipmentId))
-            {
-                string eqId = !string.IsNullOrEmpty(c.equipmentId) ? c.equipmentId : Run?.EventEquipment;
-                string eqName = !string.IsNullOrEmpty(eqId) && Database.Equipment.TryGetValue(eqId, out var eqDef) ? eqDef.name : "EQUIPMENT";
-                parts.Add("+" + eqName.ToUpperInvariant());
-            }
-
-            if (c.relic && Run?.EventRelic != null)
-            {
-                bool revealRelic = Run.RevealsRelicEffects || currentEvent.dungeonAct == 0;
-                parts.Add(revealRelic ? "+" + Database.Relics[Run.EventRelic].name.ToUpperInvariant() : "+MYSTERY RELIC");
-            }
-
-            if (c.battleBuff != null) parts.Add("NEXT BATTLE: " + StatusInfo.Name(c.battleBuff.id).ToUpperInvariant());
-
-            if (Run != null && Run.EventModifiers.TryGetValue(choiceIndex, out var evMod))
-            {
-                var (mLabel, _) = RewardGenerator.Describe(evMod, Run.ModifierManager);
-                parts.Add($"+{mLabel.ToUpperInvariant()}");
-            }
-
-            bool revealCurse = Run == null || Run.RevealsCurses;
-            if ((!c.hasHiddenCurse || revealCurse) && Run != null && Run.EventCurseModifiers.TryGetValue(choiceIndex, out var cMod)
-                && Database.DungeonModifiers.TryGetValue(cMod.id, out var cmd))
-            {
-                parts.Add($"CURSE: {cmd.displayName.ToUpperInvariant()}");
-            }
-
-            if (c.riskChancePercent > 0)
-            {
-                parts.Add($"{c.riskChancePercent}% RISK");
-            }
-
-            return parts.Count == 0 ? "NOTHING HAPPENS" : string.Join(", ", parts);
+            return parts.Count == 0 ? "" : string.Join(" · ", parts);
         }
 
         void Choose(int index)
