@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Reward-Card-Selected.uss" />
+    <ui:VisualElement class="reward-card-2">
+        <ui:VisualElement class="reward-card-2__e">
+            <ui:Label name="text-0" text="EQUIPMENT" class="unity-label reward-card-2__e-2" />
+            <ui:Label name="text-1" text="RARE" class="unity-label reward-card-2__e-3" />
+        </ui:VisualElement>
+        <ui:VisualElement class="reward-card-2__e-4" />
+        <ui:Label name="text-2" text="Tideglass Wand" class="unity-label reward-card-2__e-5" />
+        <ui:Label name="text-3" text="MAIN HAND · MAG +7 · WATER SPELLS +10%." class="unity-label reward-card-2__e-6" />
+        <ui:VisualElement class="reward-card-2__e-7" />
+        <ui:Label name="text-4" text="VS MAGE'S APPRENTICE STAFF: MAG +3" class="unity-label reward-card-2__e-8" />
+        <ui:VisualElement class="reward-card-2__e-9" />
+        <ui:VisualElement class="reward-card-2__e-10">
+            <ui:Label name="text-5" text="✓ SELECTED" class="unity-label reward-card-2__e-11" />
+            <ui:VisualElement class="reward-card-2__e-12">
+                <ui:Label name="text-6" text="KEPT" class="unity-label reward-card-2__e-13" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="reward-card-2__e-14">
+            <ui:Label name="text-7" text="✓" class="unity-label reward-card-2__e-15" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

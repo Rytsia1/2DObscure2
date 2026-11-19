@@ -1,0 +1,38 @@
+.effect-chip-overflow {
+    display: flex;
+    padding: 4px 8px 4px 4px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #121A31;
+    flex-direction: row;
+    border-color: var(--text-body);
+}
+
+.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e {
+    display: flex;
+    width: 20px;
+    height: 20px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--text-body);
+}
+
+.effect-chip-overflow__e-2.effect-chip-overflow__e-2.effect-chip-overflow__e-2.effect-chip-overflow__e-2.effect-chip-overflow__e-2.effect-chip-overflow__e-2.effect-chip-overflow__e-2 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-on-accent);
+}
+
+.effect-chip-overflow__e-3.effect-chip-overflow__e-3.effect-chip-overflow__e-3.effect-chip-overflow__e-3.effect-chip-overflow__e-3.effect-chip-overflow__e-3.effect-chip-overflow__e-3 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+

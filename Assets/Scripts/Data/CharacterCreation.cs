@@ -1033,6 +1033,15 @@ namespace Obscure
         public DerivedStats PreviewDerivedStats =>
             StatCalculator.Calculate(BuildAbilitySheet(), Class, 1, Equipped.Values, CollectCreationModifiers(), default, CollectEquippedPassives());
 
+        public DerivedStats PreviewDerivedStatsWithDelta(Ability a, int delta)
+        {
+            var sheet = BuildAbilitySheet();
+            var scores = sheet.baseScores;
+            scores[a] = Math.Clamp(scores[a] + delta, PointBuy.Config.minScore, PointBuy.Config.maxScoreBeforeRacial);
+            sheet.baseScores = scores;
+            return StatCalculator.Calculate(sheet, Class, 1, Equipped.Values, CollectCreationModifiers(), default, CollectEquippedPassives());
+        }
+
         public string Validate()
         {
             if (Race == null) return "Race must be selected.";

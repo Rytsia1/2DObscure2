@@ -44,7 +44,11 @@ Label,
 .training-ground-vars-2,
 .talents-vars,
 .wandering-merchant-vars,
-.the-sunken-crypt-vars-3 {
+.the-sunken-crypt-vars-3,
+.the-sunken-crypt-vars-4,
+.create-character-vars-2,
+.victory-vars-2,
+.zoroa-harvester-of-souls-vars {
     -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaDisplayFont.asset");
 }
 

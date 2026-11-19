@@ -8,13 +8,14 @@ using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // 2DObscure — Battle UI migrated to Figma 22---Combat-HUD.uxml (1280x720 UI Toolkit).
+    // 2DObscure — Battle UI migrated to Figma 22b---Combat-HUD---Target-Statuses & 22c---Boss-Combat-HUD---Zoroa (1280x720 UI Toolkit).
     public class CombatScreen : GameScreen
     {
         protected override void Build()
         {
-            MountFigma("22---Combat-HUD");
             var enc = Run?.CurrentEncounter ?? Database.Encounters.Values.First();
+            bool isBossHud = enc.tier == Tier.Boss;
+            MountFigma(isBossHud ? "22c---Boss-Combat-HUD---Zoroa" : "22b---Combat-HUD---Target-Statuses");
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             var items = Run?.Items ?? new List<string>(Database.StartingItems);
             var rng = Run?.Rng ?? new System.Random(1);
@@ -42,6 +43,15 @@ namespace Obscure
             new Vector2(180, 246)
         };
 
+        // Lower staging positions for 22c Boss Combat HUD so party sits below the 840px top boss bar
+        static readonly Vector2[] PartySlotsBoss =
+        {
+            new Vector2(260, 134),
+            new Vector2(310, 238),
+            new Vector2(130, 166),
+            new Vector2(180, 272)
+        };
+
         public Battle Battle { get; private set; }
         public VisualElement UiRoot { get; private set; }
 
@@ -50,9 +60,11 @@ namespace Obscure
             public Vector2 pos, size;
             public VisualElement spriteEl, enemyCard, vitalsCard, hpGauge, mpGauge, brkGauge, targetArrow;
             public UiLabel nameLbl, roleLbl, hpLbl, mpLbl, statusLbl, shieldLbl, weakLbl, intentLbl;
-            public VisualElement statusRow; // statusLbl (guard/phase text) followed by one icon per status
+            public VisualElement statusRow;      // status row inside vitals card / enemy card / boss bar
+            public VisualElement stageStatusRow; // floating status badges above hero stage sprites (22b/22c)
             public string statusKey;
             public int phase = 1;
+            public bool isPrimaryBoss;
             public bool flashing;
             public Texture2D[] idle; // remodeled idle loop, null for row-art units
             public float idleOffset;
@@ -82,12 +94,18 @@ namespace Obscure
         readonly List<ActiveFx> activeFxs = new List<ActiveFx>();
         readonly List<ActivePopup> activePopups = new List<ActivePopup>();
 
-        VisualElement screenRoot, turnBar, stageHost, menuHost, dossierBox, dossierStatusRow, qteHost, outcomeOverlay;
+        VisualElement screenRoot, turnBar, stageHost, menuHost, dossierBox, dossierStatusRow, dossierTargetBox, qteHost, outcomeOverlay;
         UiLabel roundLabel, hintLabel, actBanner;
         UiLabel dossierTitle, dossierCostType, dossierTarget, dossierDesc;
         UiLabel activeMarker;
         GameObject phaseGo;
         UitkMenu currentMenu;
+
+        // 22c Boss HUD bindings
+        bool isBossHud;
+        Combatant primaryBoss;
+        UiLabel bossTitleLbl, bossSubLbl, bossPhaseLbl, bossBarLbl, bossHpLbl, bossBrkLbl, bossIntentLbl;
+        VisualElement bossHpGauge, bossBrkGauge, bossStatusRow;
 
         string turnText = "";
         BattleAction chosen;
@@ -106,18 +124,19 @@ namespace Obscure
         {
             Battle = battle;
             UiRoot = root;
-            screenRoot = UiRoot.Q<VisualElement>(className: "_22-combat-hud") ?? UiRoot;
+            isBossHud = encounter.tier == Tier.Boss;
+            screenRoot = UiRoot.Q<VisualElement>(className: isBossHud ? "_22c-boss-combat-hud-zoroa" : "_22b-combat-hud-target-statuses") ?? UiRoot;
 
-            actBanner = UiRoot.Q<UiLabel>(className: "act-1-ashen-ruins-vars");
+            actBanner = UiRoot.Q<UiLabel>(className: isBossHud ? "act-1-ashen-ruins-vars-3" : "act-1-ashen-ruins-vars-2");
             if (actBanner != null)
             {
                 int act = Game.I?.Run?.Act ?? 1;
-                actBanner.text = encounter.tier == Tier.Boss
+                actBanner.text = isBossHud
                     ? $"ACT {act}: THE INNER SANCTUM"
                     : $"ACT {act}: {(Game.I?.Run?.Map?.name ?? "ASHEN RUINS").ToUpperInvariant()}";
             }
 
-            roundLabel = UiRoot.Q<UiLabel>(className: "round-1-vars");
+            roundLabel = UiRoot.Q<UiLabel>(className: isBossHud ? "round-1-vars-3" : "round-1-vars-2");
 
             // Find Turn-Chip flex container
             if (roundLabel != null && roundLabel.parent != null)
@@ -130,7 +149,9 @@ namespace Obscure
                 }
             }
 
-            hintLabel = UiRoot.Q<UiLabel>(className: "strike-enemy-with-weapon-vars");
+            hintLabel = UiRoot.Q<UiLabel>(className: isBossHud
+                ? "zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars"
+                : "choose-a-target-squire-a-vars");
             if (hintLabel != null)
             {
                 hintLabel.style.left = 20;
@@ -139,9 +160,9 @@ namespace Obscure
                 hintLabel.text = "";
             }
 
-            // Hide baked static sprites/enemies & static action menu buttons while keeping panels & vitals cards
-            var telegraphBorder = UiRoot.Q<VisualElement>(className: "rectangle-vars-170");
-            var vitalsPanel = UiRoot.Q<VisualElement>(className: "panel-default__i-34");
+            // Hide baked static sprites/enemies between telegraph banner and vitals panel
+            var telegraphBorder = UiRoot.Q<VisualElement>(className: isBossHud ? "rectangle-vars-234" : "rectangle-vars-232");
+            var vitalsPanel = UiRoot.Q<VisualElement>(className: isBossHud ? "panel-default__i-46" : "panel-default__i-44");
             if (telegraphBorder != null && vitalsPanel != null)
             {
                 int sIdx = screenRoot.IndexOf(hintLabel ?? telegraphBorder) + 1;
@@ -170,17 +191,40 @@ namespace Obscure
             activeMarker.style.unityTextAlign = TextAnchor.MiddleCenter;
             stageHost.Add(activeMarker);
 
+            // Clean baked command menu, baked floating status rows, and baked dossier labels (and bind Boss HUD if 22c)
+            HideBakedCommandMenuAndExtras();
+            if (isBossHud)
+                BindBossHeaderElements();
+
             // Bind party sprites + bottom 4 vitals cards
-            for (int i = 0; i < battle.Party.Count; i++) AddPartyCombatant(battle.Party[i], i, PartySlots[i]);
+            var slots = isBossHud ? PartySlotsBoss : PartySlots;
+            for (int i = 0; i < battle.Party.Count; i++) AddPartyCombatant(battle.Party[i], i, slots[i]);
             for (int i = battle.Party.Count; i < 4; i++) HideUnusedVitalsCard(i);
 
-            var eSlots = EnemySlots(battle.Enemies.Count);
-            for (int i = 0; i < battle.Enemies.Count; i++) AddEnemyCombatant(battle.Enemies[i], eSlots[i]);
+            if (isBossHud)
+            {
+                primaryBoss = battle.Enemies.FirstOrDefault(e => e.enemy.tier == Tier.Boss) ?? battle.Enemies.FirstOrDefault();
+                var adds = battle.Enemies.Where(e => e != primaryBoss).ToList();
+                if (primaryBoss != null) AddBossCombatant(primaryBoss);
+                if (adds.Count > 0)
+                {
+                    var addSlots = adds.Count == 1
+                        ? new[] { new Vector2(680, 176) }
+                        : new[] { new Vector2(660, 148), new Vector2(680, 248) };
+                    for (int i = 0; i < adds.Count; i++)
+                        AddEnemyCombatant(adds[i], addSlots[Mathf.Min(i, addSlots.Length - 1)]);
+                }
+            }
+            else
+            {
+                var eSlots = EnemySlots(battle.Enemies.Count);
+                for (int i = 0; i < battle.Enemies.Count; i++) AddEnemyCombatant(battle.Enemies[i], eSlots[i]);
+            }
 
-            ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
+            if (!isBossHud)
+                ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
 
             // Command menu column inside right console panel
-            HideBakedCommandMenu();
             menuHost = new VisualElement { name = "CombatCommandMenu" };
             menuHost.style.position = Position.Absolute;
             menuHost.style.left = 676;
@@ -190,7 +234,7 @@ namespace Obscure
             menuHost.style.flexDirection = FlexDirection.Column;
             screenRoot.Add(menuHost);
 
-            // Right Dossier / Log box over panel-raised__i
+            // Right Dossier / Log box over panel-raised
             dossierBox = new VisualElement { name = "CombatDossierBox" };
             dossierBox.style.position = Position.Absolute;
             dossierBox.style.left = 936;
@@ -217,11 +261,24 @@ namespace Obscure
                     display = DisplayStyle.None
                 }
             };
+            dossierTargetBox = new VisualElement
+            {
+                name = "CombatTargetDossier",
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    flexDirection = FlexDirection.Column,
+                    justifyContent = Justify.SpaceBetween,
+                    flexGrow = 1,
+                    display = DisplayStyle.None
+                }
+            };
             dossierBox.Add(dossierTitle);
             dossierBox.Add(dossierDesc);
             dossierBox.Add(dossierCostType);
             dossierBox.Add(dossierTarget);
             dossierBox.Add(dossierStatusRow);
+            dossierBox.Add(dossierTargetBox);
 
             for (int i = 0; i < LogLines; i++)
             {
@@ -248,28 +305,104 @@ namespace Obscure
             battle.Logged += AddLog;
             battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
             battle.StatusApplied += (_, _, isBuff) => Sfx.Play(isBuff ? Sound.Buff : Sound.Debuff);
-            AddLog(encounter.tier == Tier.Boss ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
+            AddLog(isBossHud ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
         }
 
-        void HideBakedCommandMenu()
+        void HideBakedCommandMenuAndExtras()
         {
-            var rightPanel = UiRoot.Q<VisualElement>(className: "panel-default__i-35");
-            var raisedPanel = UiRoot.Q<VisualElement>(className: "panel-raised__i");
+            var rightPanel = UiRoot.Q<VisualElement>(className: isBossHud ? "panel-default__i-47" : "panel-default__i-45");
+            var raisedPanel = UiRoot.Q<VisualElement>(className: isBossHud ? "panel-raised__i-3" : "panel-raised__i-2");
+            var bossTitleEl = isBossHud ? UiRoot.Q<VisualElement>(className: "zoroa-harvester-of-souls-vars") : null;
+            int bossHeaderStart = bossTitleEl != null ? screenRoot.IndexOf(bossTitleEl) : int.MaxValue;
+
             if (rightPanel != null)
             {
                 int start = screenRoot.IndexOf(rightPanel) + 1;
+                var toRemove = new List<VisualElement>();
                 for (int i = start; i < screenRoot.childCount; i++)
                 {
-                    if (screenRoot[i] == raisedPanel) continue;
-                    screenRoot[i].style.display = DisplayStyle.None;
+                    var child = screenRoot[i];
+                    if (child == raisedPanel) continue;
+                    // On 22c, preserve the top Boss HUD bar elements starting at zoroa-harvester-of-souls-vars
+                    if (isBossHud && i >= bossHeaderStart) continue;
+
+                    // Remove containers holding baked <Button>s so no orphaned buttons exist in UI Toolkit
+                    if (child.Q<Button>() != null)
+                    {
+                        toRemove.Add(child);
+                        continue;
+                    }
+                    // On 22c, keep the subtle ground aura (left: 800, top: 380) right behind the Boss sprite
+                    if (isBossHud && Mathf.Abs(child.style.left.value.value - 800f) < 2f && Mathf.Abs(child.style.top.value.value - 380f) < 2f)
+                        continue;
+
+                    child.style.display = DisplayStyle.None;
+                }
+                foreach (var el in toRemove) el.RemoveFromHierarchy();
+            }
+        }
+
+        void BindBossHeaderElements()
+        {
+            bossTitleLbl = UiRoot.Q<UiLabel>(className: "zoroa-harvester-of-souls-vars");
+            if (bossTitleLbl != null)
+            {
+                bossTitleLbl.style.left = 220;
+                bossTitleLbl.style.width = 840;
+                bossTitleLbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            }
+            bossSubLbl = UiRoot.Q<UiLabel>(className: "soul-entity-controller-vars");
+            bossPhaseLbl = UiRoot.Q<UiLabel>(className: "phase-1-2-vars");
+            if (bossPhaseLbl != null)
+            {
+                bossPhaseLbl.style.left = 860;
+                bossPhaseLbl.style.width = 200;
+                bossPhaseLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+            }
+            bossBarLbl = UiRoot.Q<UiLabel>(className: "bar-1-2-vars");
+            bossHpLbl = UiRoot.Q<UiLabel>(className: "_1-376-1-840-vars");
+            if (bossHpLbl != null)
+            {
+                bossHpLbl.style.left = 220;
+                bossHpLbl.style.width = 840;
+                bossHpLbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            }
+            bossHpGauge = screenRoot.Q<VisualElement>(className: "gauge-hp-low");
+            bossBrkGauge = screenRoot.Q<VisualElement>(className: "gauge-break");
+            bossBrkLbl = UiRoot.Q<UiLabel>(className: "_64-100-vars");
+            bossIntentLbl = UiRoot.Q<UiLabel>(className: "intent-final-reaping-4-heavy-all-vars");
+            if (bossIntentLbl != null)
+            {
+                bossIntentLbl.style.left = 220;
+                bossIntentLbl.style.width = 840;
+                bossIntentLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+            }
+
+            // Locate the Boss status badge container (left: 434, top: 128) and clear its baked icons,
+            // and hide the static HP chip flash bar (left: 848, top: 155)
+            foreach (var child in screenRoot.Children())
+            {
+                if (child.style.position != Position.Absolute) continue;
+                float l = child.style.left.value.value;
+                float t = child.style.top.value.value;
+                if (Mathf.Abs(l - 434f) < 4f && Mathf.Abs(t - 128f) < 4f)
+                {
+                    bossStatusRow = child;
+                    bossStatusRow.Clear();
+                    bossStatusRow.style.overflow = Overflow.Visible;
+                }
+                else if (Mathf.Abs(l - 848f) < 4f && Mathf.Abs(t - 155f) < 4f)
+                {
+                    child.style.display = DisplayStyle.None;
                 }
             }
         }
 
         void HideUnusedVitalsCard(int slot)
         {
-            string[] cls = { "vitals-knight-vars", "vitals-rogue-vars", "vitals-mage-vars", "vitals-healer-vars" };
+            string sfx = isBossHud ? "-3" : "-2";
+            string[] cls = { $"vitals-knight-vars{sfx}", $"vitals-rogue-vars{sfx}", $"vitals-mage-vars{sfx}", $"vitals-healer-vars{sfx}" };
             var card = UiRoot.Q<VisualElement>(className: cls[slot]);
             if (card != null) card.style.display = DisplayStyle.None;
         }
@@ -287,21 +420,57 @@ namespace Obscure
             RegisterStageTargetEvents(fig, c);
             stageHost.Add(fig);
 
+            // Floating status badges above hero stage sprite (matches 22b & 22c)
+            var stageStatusRow = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    position = Position.Absolute,
+                    left = Mathf.Max(4f, pos.x - 18f),
+                    top = Mathf.Max(2f, pos.y - 26f),
+                    width = w + 36f,
+                    flexDirection = FlexDirection.Row,
+                    justifyContent = Justify.Center,
+                    alignItems = UnityEngine.UIElements.Align.Center
+                }
+            };
+            stageHost.Add(stageStatusRow);
+
             var arrow = new UiLabel("▾")
             {
-                style = { position = Position.Absolute, left = pos.x + w / 2f - 12f, top = pos.y - 24f, width = 24, fontSize = 22, color = Palette.Err, unityTextAlign = TextAnchor.MiddleCenter, display = DisplayStyle.None }
+                style = { position = Position.Absolute, left = pos.x + w / 2f - 12f, top = pos.y - 44f, width = 24, fontSize = 22, color = Palette.Err, unityTextAlign = TextAnchor.MiddleCenter, display = DisplayStyle.None }
             };
             stageHost.Add(arrow);
 
-            string[] cardClasses = { "vitals-knight-vars", "vitals-rogue-vars", "vitals-mage-vars", "vitals-healer-vars" };
-            string[] nameClasses = { "knight-vars-7", "rogue-vars-6", "mage-vars-6", "healer-vars-7" };
-            string[] roleClasses = { "defender-vars", "striker-vars", "caster-vars", "support-vars" };
-            string[] hpClasses = { "_125-125-vars-2", "_85-85-vars", "_60-60-vars", "_80-80-vars" };
-            string[] mpClasses = { "_20-20-vars-2", "_25-25-vars", "_60-60-vars-2", "_55-55-vars" };
+            string sfx = isBossHud ? "-3" : "-2";
+            string[] cardClasses = { $"vitals-knight-vars{sfx}", $"vitals-rogue-vars{sfx}", $"vitals-mage-vars{sfx}", $"vitals-healer-vars{sfx}" };
+            string[] nameClasses = isBossHud
+                ? new[] { "knight-vars-12", "rogue-vars-11", "mage-vars-11", "healer-vars-12" }
+                : new[] { "knight-vars-11", "rogue-vars-10", "mage-vars-10", "healer-vars-11" };
+            string[] roleClasses = { $"defender-vars{sfx}", $"striker-vars{sfx}", $"caster-vars{sfx}", $"support-vars{sfx}" };
+            string[] hpClasses = isBossHud
+                ? new[] { "_125-125-vars-4", "_85-85-vars-3", "_60-60-vars-5", "_80-80-vars-3" }
+                : new[] { "_125-125-vars-3", "_85-85-vars-2", "_60-60-vars-3", "_80-80-vars-2" };
+            string[] mpClasses = isBossHud
+                ? new[] { "_20-20-vars-5", "_25-25-vars-3", "_60-60-vars-6", "_55-55-vars-3" }
+                : new[] { "_20-20-vars-4", "_25-25-vars-2", "_60-60-vars-4", "_55-55-vars-2" };
 
             var card = idx < 4 ? UiRoot.Q<VisualElement>(className: cardClasses[idx]) : null;
-            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, right = 10, top = 10, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
-            var statusLbl = new UiLabel("") { style = { fontSize = 12, color = Palette.Frost, marginRight = 2 } };
+            if (card != null)
+            {
+                // Strip any baked Status-Icon containers inside this vitals card
+                var bakedBadges = card.Children().Where(ch =>
+                    ch.Q<VisualElement>(className: "status-icon-buff") != null ||
+                    ch.Q<VisualElement>(className: "status-icon-dot") != null ||
+                    ch.Q<VisualElement>(className: "status-icon-debuff") != null ||
+                    ch.Q<VisualElement>(className: "status-icon-control") != null ||
+                    ch.Q<VisualElement>(className: "status-icon-broken") != null).ToList();
+                foreach (var b in bakedBadges) b.RemoveFromHierarchy();
+            }
+
+            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, right = 8, top = 8, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            var statusLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, marginRight = 3 } };
             statusRow.Add(statusLbl);
             card?.Add(statusRow);
 
@@ -322,10 +491,59 @@ namespace Obscure
                 mpGauge = card?.Q<VisualElement>(className: "gauge-mp"),
                 statusLbl = statusLbl,
                 statusRow = statusRow,
+                stageStatusRow = stageStatusRow,
             };
             if (hud.nameLbl != null) hud.nameLbl.text = c.name.ToUpperInvariant();
             if (hud.roleLbl != null) hud.roleLbl.text = (c.unit.role ?? "HERO").ToUpperInvariant();
             huds[c] = hud;
+        }
+
+        void AddBossCombatant(Combatant c)
+        {
+            var spr = c.unit.sprite;
+            float w = 192f, h = 224f;
+            var pos = new Vector2(854f, 162f); // matches 22c sprite-warden (left: 860, top: 244 - 82 = 162)
+
+            var fig = new VisualElement
+            {
+                style = { position = Position.Absolute, left = pos.x, top = pos.y, width = w, height = h }
+            };
+            var idle = UnitArt.Enemy(c.enemy?.id, spr);
+            if (idle != null)
+                FigmaUi.SetBackgroundContain(fig, idle[0]);
+            else if (spr != null && spr.Length > 0)
+                FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(spr, "cbt_boss_" + (c.enemy?.id ?? c.name)));
+            RegisterStageTargetEvents(fig, c);
+            stageHost.Add(fig);
+
+            var arrow = new UiLabel("▾")
+            {
+                style = { position = Position.Absolute, left = pos.x + w / 2f - 14f, top = pos.y - 26f, width = 28, fontSize = 24, color = Palette.Gold1, unityTextAlign = TextAnchor.MiddleCenter, display = DisplayStyle.None }
+            };
+            stageHost.Add(arrow);
+
+            var bossGuardLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, marginRight = 4 } };
+            if (bossStatusRow != null) bossStatusRow.Add(bossGuardLbl);
+
+            huds[c] = new Hud
+            {
+                pos = pos,
+                size = new Vector2(w, h),
+                isPrimaryBoss = true,
+                enemyCard = fig,
+                spriteEl = fig,
+                idle = idle,
+                artKey = c.enemy?.id,
+                idleOffset = 0f,
+                targetArrow = arrow,
+                nameLbl = bossTitleLbl,
+                hpGauge = bossHpGauge,
+                brkGauge = bossBrkGauge,
+                weakLbl = bossSubLbl,
+                statusLbl = bossGuardLbl,
+                statusRow = bossStatusRow,
+                intentLbl = bossIntentLbl,
+            };
         }
 
         void AddEnemyCombatant(Combatant c, Vector2 pos)
@@ -366,7 +584,7 @@ namespace Obscure
 
             var weakLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Mist2, marginTop = 2, unityTextAlign = TextAnchor.MiddleCenter } };
             var statusLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, unityTextAlign = TextAnchor.MiddleCenter, marginRight = 2 } };
-            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center, alignItems = UnityEngine.UIElements.Align.Center } };
+            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { flexDirection = FlexDirection.Row, justifyContent = Justify.Center, alignItems = UnityEngine.UIElements.Align.Center, marginTop = 2 } };
             statusRow.Add(statusLbl);
 
             card.Add(nameLbl);
@@ -432,25 +650,72 @@ namespace Obscure
             if (c.stunTurns > 0 && seen.Add(StatusId.Stun))
                 result.Add((StatusId.Stun, c.stunTurns, 1));
 
+            if (c.IsBroken && seen.Add(StatusId.Broken))
+                result.Add((StatusId.Broken, 1, 1));
+
             return result;
         }
 
-        // Rebuilds the icon strip only when the set of statuses or remaining turns changes (Refresh runs often).
+        static string StatusTemplateName(StatusId id)
+        {
+            if (id == StatusId.Broken) return "Status-Icon-Broken";
+            if (StatusInfo.IsBuff(id)) return "Status-Icon-Buff";
+            if (StatusInfo.IsDoT(id)) return "Status-Icon-DoT";
+            if (StatusInfo.IsControl(id)) return "Status-Icon-Control";
+            return "Status-Icon-Debuff";
+        }
+
+        // Builds a Figma Status-Icon-* badge enriched with the 16x16 pixel-art status icon.
+        static VisualElement BuildStatusIconBadge(StatusId id, int turns, int stacks)
+        {
+            var tpl = FigmaUi.InstantiateTemplate(StatusTemplateName(id));
+            if (tpl != null)
+            {
+                FigmaUi.SetInstanceText(tpl, "text-0", StatusInfo.Tag(id));
+                FigmaUi.SetInstanceText(tpl, "text-1", stacks > 1 ? $"{turns}×{stacks}" : turns.ToString());
+                tpl.style.marginRight = 3;
+                tpl.style.flexShrink = 0;
+
+                var row = tpl.childCount > 0 ? tpl[0] : tpl;
+                row.style.alignItems = UnityEngine.UIElements.Align.Center;
+                var iconEl = IconArt.Inline(IconArt.Status(id), 1, 3f);
+                if (iconEl != null)
+                {
+                    iconEl.style.alignSelf = UnityEngine.UIElements.Align.Center;
+                    row.Insert(0, iconEl);
+                }
+                return tpl;
+            }
+            return IconArt.StatusBadge(id, turns, stacks, 1, 3f);
+        }
+
+        // Rebuilds the status badge strip only when the set of statuses or remaining turns changes (Refresh runs often).
         static void SyncStatusIcons(Hud h, Combatant c)
         {
-            if (h.statusRow == null) return;
+            if (h.statusRow == null && h.stageStatusRow == null) return;
             var active = CollectActiveStatuses(c);
             string key = string.Join(",", active.Select(s => $"{(int)s.id}:{s.turns}:{s.stacks}"));
             if (key == h.statusKey) return;
             h.statusKey = key;
-            while (h.statusRow.childCount > 1) h.statusRow.RemoveAt(1); // child 0 is statusLbl
-            if (active.Count == 0) return;
 
-            int scale = active.Count > 2 && !c.IsEnemy ? 1 : 2;
-            foreach (var s in active)
+            if (h.statusRow != null)
             {
-                var el = IconArt.StatusBadge(s.id, s.turns, s.stacks, scale, 2f);
-                if (el != null) h.statusRow.Add(el);
+                while (h.statusRow.childCount > 1) h.statusRow.RemoveAt(1); // child 0 is statusLbl
+                foreach (var s in active.Take(c.IsEnemy ? 5 : 3))
+                {
+                    var el = BuildStatusIconBadge(s.id, s.turns, s.stacks);
+                    if (el != null) h.statusRow.Add(el);
+                }
+            }
+
+            if (h.stageStatusRow != null)
+            {
+                h.stageStatusRow.Clear();
+                foreach (var s in active.Take(3))
+                {
+                    var el = BuildStatusIconBadge(s.id, s.turns, s.stacks);
+                    if (el != null) h.stageStatusRow.Add(el);
+                }
             }
         }
 
@@ -464,7 +729,15 @@ namespace Obscure
                 if (c.IsEnemy)
                 {
                     if (h.enemyCard != null) h.enemyCard.style.display = c.Alive ? DisplayStyle.Flex : DisplayStyle.None;
-                    if (!c.Alive) continue;
+                    if (!c.Alive)
+                    {
+                        if (h.isPrimaryBoss && bossHpLbl != null)
+                        {
+                            FigmaUi.SetGaugeFill(bossHpGauge, 0f, Palette.HpLow);
+                            bossHpLbl.text = $"0 / {c.Stats.maxHp:#,##0}";
+                        }
+                        continue;
+                    }
 
                     FigmaUi.SetGaugeFill(h.hpGauge, (float)c.unit.hp / Mathf.Max(1, c.Stats.maxHp), Palette.HpLow);
                     if (h.brkGauge != null)
@@ -473,33 +746,70 @@ namespace Obscure
                         FigmaUi.SetGaugeFill(h.brkGauge, (float)c.CurrentBreakGauge / Mathf.Max(1, c.MaxBreakGauge), c.IsBroken ? Palette.Mist3 : Palette.Gold2);
                     }
 
-                    if (h.shieldLbl != null)
+                    if (h.isPrimaryBoss)
                     {
-                        h.shieldLbl.text = c.IsBroken ? "[BREAK!] STAGGERED (150% DMG)"
-                            : c.HasBreakGauge ? $"SHIELD {c.CurrentBreakGauge}" : "";
-                        h.shieldLbl.style.color = c.IsBroken ? Palette.Gold1 : Palette.Gold2;
+                        if (bossTitleLbl != null) bossTitleLbl.text = c.name.ToUpperInvariant();
+                        bool multiPhase = c.enemy.phase2At > 0 || c.enemy.nextPhase != null || c.phase > 1;
+                        if (bossPhaseLbl != null)
+                            bossPhaseLbl.text = multiPhase ? (c.phase >= 2 ? "PHASE ◆◆  2 / 2" : "PHASE ◆◇  1 / 2") : "PHASE ◆  1 / 1";
+                        if (bossBarLbl != null)
+                            bossBarLbl.text = multiPhase ? $"BAR {c.phase}/2" : "HP";
+                        if (bossHpLbl != null)
+                            bossHpLbl.text = $"{c.unit.hp:#,##0} / {c.Stats.maxHp:#,##0}";
+                        if (bossBrkLbl != null)
+                        {
+                            bossBrkLbl.text = c.IsBroken ? "BROKEN!" : (c.HasBreakGauge ? $"{c.CurrentBreakGauge} / {c.MaxBreakGauge}" : "—");
+                            bossBrkLbl.style.color = c.IsBroken ? Palette.Gold1 : Palette.Mist2;
+                        }
+                        if (bossSubLbl != null)
+                        {
+                            var weaks = c.Affinities?.weak;
+                            bossSubLbl.text = weaks != null && weaks.Length > 0
+                                ? "BOSS · WEAK: " + string.Join(" · ", weaks.Select(ElementConfig.Short))
+                                : "BOSS · INNER SANCTUM";
+                        }
+                        if (h.statusLbl != null)
+                        {
+                            h.statusLbl.text = c.guarding ? "GD" : "";
+                            SyncStatusIcons(h, c);
+                        }
+                        if (bossIntentLbl != null)
+                        {
+                            var intent = EnemyAI.IntentText(c);
+                            bossIntentLbl.text = !string.IsNullOrEmpty(intent) ? $"INTENT: {intent}" : "";
+                            bossIntentLbl.style.color = c.IsCharging || (c.Intent?.move.HasHeavy ?? false) ? Palette.CrimsonBright : Palette.Ember1;
+                        }
                     }
-
-                    if (h.weakLbl != null)
+                    else
                     {
-                        var weaks = c.Affinities?.weak;
-                        h.weakLbl.text = weaks != null && weaks.Length > 0
-                            ? "WEAK: " + string.Join(" · ", weaks.Select(ElementConfig.Short))
-                            : "";
-                    }
+                        if (h.shieldLbl != null)
+                        {
+                            h.shieldLbl.text = c.IsBroken ? "[BREAK!] STAGGERED (150% DMG)"
+                                : c.HasBreakGauge ? $"SHIELD {c.CurrentBreakGauge}" : "";
+                            h.shieldLbl.style.color = c.IsBroken ? Palette.Gold1 : Palette.Gold2;
+                        }
 
-                    if (h.statusLbl != null)
-                    {
-                        h.statusLbl.text = (c.enemy.phase2At > 0 || c.enemy.nextPhase != null || c.phase > 1 ? $"PHASE {c.phase} " : "") + (c.guarding ? "GD" : "");
-                        SyncStatusIcons(h, c);
-                        h.statusLbl.style.color = c.phase > 1 ? Palette.CrimsonBright : c.HasDebuff ? Palette.Ember : Palette.Frost;
-                    }
+                        if (h.weakLbl != null)
+                        {
+                            var weaks = c.Affinities?.weak;
+                            h.weakLbl.text = weaks != null && weaks.Length > 0
+                                ? "WEAK: " + string.Join(" · ", weaks.Select(ElementConfig.Short))
+                                : "";
+                        }
 
-                    if (h.intentLbl != null)
-                    {
-                        var intent = EnemyAI.IntentText(c);
-                        h.intentLbl.text = intent ?? "";
-                        h.intentLbl.style.color = c.IsCharging || (c.Intent?.move.HasHeavy ?? false) ? Palette.CrimsonBright : Palette.Ember;
+                        if (h.statusLbl != null)
+                        {
+                            h.statusLbl.text = (c.enemy.phase2At > 0 || c.enemy.nextPhase != null || c.phase > 1 ? $"PHASE {c.phase} " : "") + (c.guarding ? "GD" : "");
+                            SyncStatusIcons(h, c);
+                            h.statusLbl.style.color = c.phase > 1 ? Palette.CrimsonBright : c.HasDebuff ? Palette.Ember : Palette.Frost;
+                        }
+
+                        if (h.intentLbl != null)
+                        {
+                            var intent = EnemyAI.IntentText(c);
+                            h.intentLbl.text = intent ?? "";
+                            h.intentLbl.style.color = c.IsCharging || (c.Intent?.move.HasHeavy ?? false) ? Palette.CrimsonBright : Palette.Ember;
+                        }
                     }
 
                     if (c.phase != h.phase)
@@ -572,8 +882,9 @@ namespace Obscure
             if (a != null && activeMarker != null && activeMarker.style.display == DisplayStyle.Flex && huds.TryGetValue(a, out var ah))
             {
                 float bob = Mathf.Sin(Time.time * 6f) * 3f;
+                bool hasStageBadges = ah.stageStatusRow != null && ah.stageStatusRow.childCount > 0;
                 activeMarker.style.left = ah.pos.x + ah.size.x / 2f - 12f;
-                activeMarker.style.top = ah.pos.y - 24f + bob;
+                activeMarker.style.top = Mathf.Max(2f, ah.pos.y - (hasStageBadges ? 46f : 24f) + bob);
             }
 
             // Idle loops (fallen units hold their frame). A boss phase swaps the combatant's enemy def: reload its art.
@@ -650,6 +961,11 @@ namespace Obscure
         void ShowDossier(string title, string costType, string target, string desc, IEnumerable<(StatusId id, string label)> statusChips = null)
         {
             foreach (var l in logLabels) l.style.display = DisplayStyle.None;
+            if (dossierTargetBox != null)
+            {
+                dossierTargetBox.Clear();
+                dossierTargetBox.style.display = DisplayStyle.None;
+            }
             dossierTitle.style.display = DisplayStyle.Flex;
             dossierDesc.style.display = DisplayStyle.Flex;
             dossierCostType.style.display = string.IsNullOrEmpty(costType) ? DisplayStyle.None : DisplayStyle.Flex;
@@ -675,6 +991,114 @@ namespace Obscure
             }
         }
 
+        // Rich 22b Target Inspection Dossier with per-status Figma badges, pixel icons, durations, and descriptions.
+        void ShowTargetDossier(Combatant cand)
+        {
+            foreach (var l in logLabels) l.style.display = DisplayStyle.None;
+            dossierTitle.style.display = DisplayStyle.None;
+            dossierDesc.style.display = DisplayStyle.None;
+            dossierCostType.style.display = DisplayStyle.None;
+            dossierTarget.style.display = DisplayStyle.None;
+            if (dossierStatusRow != null)
+            {
+                dossierStatusRow.Clear();
+                dossierStatusRow.style.display = DisplayStyle.None;
+            }
+            if (dossierTargetBox == null || cand == null) return;
+
+            dossierTargetBox.Clear();
+            dossierTargetBox.style.display = DisplayStyle.Flex;
+
+            var topCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+
+            // Row 1: Target Name + HP/Shield (or HP/MP)
+            var hdrRow = new VisualElement
+            {
+                style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 2 }
+            };
+            hdrRow.Add(new UiLabel(cand.name.ToUpperInvariant())
+            {
+                style = { fontSize = 18, color = Palette.Gold1, flexShrink = 1 }
+            });
+            string vitalsText = !cand.Alive
+                ? "FALLEN (KO)"
+                : cand.IsEnemy
+                    ? $"HP {cand.unit.hp}/{cand.Stats.maxHp}" + (cand.HasBreakGauge ? $" · SHD {cand.CurrentBreakGauge}" : "")
+                    : $"HP {cand.unit.hp}/{cand.Stats.maxHp} · MP {cand.unit.mp}/{cand.Stats.maxMp}";
+            hdrRow.Add(new UiLabel(vitalsText)
+            {
+                style = { fontSize = 11, color = Palette.Mist1, letterSpacing = 0.4f }
+            });
+            topCol.Add(hdrRow);
+
+            // Row 2: Weaknesses (enemies) or Role (allies)
+            string subText = cand.IsEnemy
+                ? (cand.Affinities?.weak != null && cand.Affinities.weak.Length > 0
+                    ? "WEAK: " + string.Join(" · ", cand.Affinities.weak.Select(ElementConfig.Short))
+                    : cand.Affinities.Describe())
+                : (cand.unit.role ?? "ALLY").ToUpperInvariant();
+            if (!string.IsNullOrEmpty(subText))
+            {
+                topCol.Add(new UiLabel(subText)
+                {
+                    style = { fontSize = 11, color = Palette.Gold2, letterSpacing = 0.48f, marginBottom = 6 }
+                });
+            }
+
+            // Row 3..N: Active Status rows (22b style: Figma Status-Icon badge + Name/Turns + Description)
+            var active = CollectActiveStatuses(cand);
+            if (active.Count == 0)
+            {
+                topCol.Add(new UiLabel(cand.guarding ? "GUARDING — INCOMING DAMAGE HALVED" : "NO ACTIVE STATUS EFFECTS")
+                {
+                    style = { fontSize = 12, color = Palette.Mist2, marginTop = 6 }
+                });
+            }
+            else
+            {
+                int shown = 0;
+                foreach (var s in active.Take(3))
+                {
+                    var row = new VisualElement
+                    {
+                        style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.FlexStart, marginBottom = 6 }
+                    };
+                    var badge = BuildStatusIconBadge(s.id, s.turns, s.stacks);
+                    if (badge != null) row.Add(badge);
+
+                    var textCol = new VisualElement { style = { flexDirection = FlexDirection.Column, flexShrink = 1, marginLeft = 4 } };
+                    string turnWord = s.turns == 1 ? "TURN" : "TURNS";
+                    string stackNote = s.stacks > 1 ? $" ×{s.stacks}" : "";
+                    textCol.Add(new UiLabel($"{StatusInfo.Name(s.id)} · {s.turns} {turnWord}{stackNote}")
+                    {
+                        style = { fontSize = 13, color = Palette.Mist1, letterSpacing = 0.4f }
+                    });
+                    textCol.Add(new UiLabel(StatusInfo.Description(s.id).ToUpperInvariant())
+                    {
+                        style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                    });
+                    row.Add(textCol);
+                    topCol.Add(row);
+                    shown++;
+                }
+                if (active.Count > shown)
+                {
+                    topCol.Add(new UiLabel($"+{active.Count - shown} MORE STATUS EFFECTS")
+                    {
+                        style = { fontSize = 10, color = Palette.Mist3 }
+                    });
+                }
+            }
+
+            dossierTargetBox.Add(topCol);
+
+            // Bottom action hint matching 22b line 273
+            dossierTargetBox.Add(new UiLabel(cand.IsEnemy ? "▸ ENTER TO STRIKE · ESC BACK" : "▸ ENTER TO SELECT · ESC BACK")
+            {
+                style = { fontSize = 11, color = Palette.Gold2, letterSpacing = 0.48f }
+            });
+        }
+
         void HideDossier()
         {
             dossierTitle.style.display = DisplayStyle.None;
@@ -685,6 +1109,11 @@ namespace Obscure
             {
                 dossierStatusRow.Clear();
                 dossierStatusRow.style.display = DisplayStyle.None;
+            }
+            if (dossierTargetBox != null)
+            {
+                dossierTargetBox.Clear();
+                dossierTargetBox.style.display = DisplayStyle.None;
             }
             foreach (var l in logLabels) l.style.display = DisplayStyle.Flex;
         }
@@ -1251,15 +1680,6 @@ namespace Obscure
                 btn.SetEnabled(valid);
                 menuHost.Add(btn);
 
-                var targetChips = activeStatuses
-                    .Select(s => (s.id, $"{StatusInfo.Name(s.id).ToUpperInvariant()} · {s.turns}T" + (s.stacks > 1 ? $" ×{s.stacks}" : "")))
-                    .ToList();
-                string dDesc = cand.Alive
-                    ? $"HP {cand.unit.hp}/{cand.Stats.maxHp}" + (cand.IsEnemy ? (cand.HasBreakGauge ? $"   SHIELD {cand.CurrentBreakGauge}/{cand.MaxBreakGauge}" : "") : $"   MP {cand.unit.mp}/{cand.Stats.maxMp}")
-                    : "FALLEN (KO)";
-                string dMeta = cand.IsEnemy ? cand.Affinities.Describe() : (cand.unit.role ?? "ALLY").ToUpperInvariant();
-                string dStatLine = activeStatuses.Count == 0 ? "STATUS: NONE" : $"ACTIVE STATUSES ({activeStatuses.Count})";
-
                 var actionToTake = make(cand);
                 var item = m.Add(btn, cand.name.ToUpperInvariant(), () => Choose(actionToTake), interactable: valid, tooltip: tip);
                 activeTargets[cand] = (item, () => Choose(actionToTake));
@@ -1276,8 +1696,8 @@ namespace Obscure
                     }
                     if (on)
                     {
-                        Hint(tip);
-                        ShowDossier(cand.name.ToUpperInvariant(), dMeta, dStatLine, dDesc, targetChips);
+                        Hint($"CHOOSE A TARGET · {cand.name.ToUpperInvariant()}");
+                        ShowTargetDossier(cand);
                     }
                 };
                 item.visual(false);

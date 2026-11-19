@@ -1,0 +1,157 @@
+.reward-card-2 {
+    display: flex;
+    width: 300px;
+    height: 380px;
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    border-width: 4px;
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+}
+
+.reward-card-2:focus {
+    border-width: 2px;
+    border-color: var(--border-focus);
+}
+
+.reward-card-2__e.reward-card-2__e.reward-card-2__e.reward-card-2__e.reward-card-2__e.reward-card-2__e.reward-card-2__e {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    align-self: stretch;
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.reward-card-2__e-2.reward-card-2__e-2.reward-card-2__e-2.reward-card-2__e-2.reward-card-2__e-2.reward-card-2__e-2.reward-card-2__e-2 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.reward-card-2__e-3.reward-card-2__e-3.reward-card-2__e-3.reward-card-2__e-3.reward-card-2__e-3.reward-card-2__e-3.reward-card-2__e-3 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--rarity-rare);
+}
+
+.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4 {
+    display: flex;
+    height: 104px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    align-self: stretch;
+    border-width: 2px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--rarity-rare);
+}
+
+.reward-card-2__e-5.reward-card-2__e-5.reward-card-2__e-5.reward-card-2__e-5.reward-card-2__e-5.reward-card-2__e-5.reward-card-2__e-5 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--rarity-rare);
+}
+
+.reward-card-2__e-6.reward-card-2__e-6.reward-card-2__e-6.reward-card-2__e-6.reward-card-2__e-6.reward-card-2__e-6.reward-card-2__e-6 {
+    flex-shrink: 0;
+    align-self: stretch;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: normal;
+    color: var(--text-body);
+}
+
+.reward-card-2__e-7.reward-card-2__e-7.reward-card-2__e-7.reward-card-2__e-7.reward-card-2__e-7.reward-card-2__e-7.reward-card-2__e-7 {
+    height: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+    background-color: var(--border-line);
+}
+
+.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8 {
+    flex-shrink: 0;
+    align-self: stretch;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: normal;
+    color: var(--status-ok);
+}
+
+.reward-card-2__e-9.reward-card-2__e-9.reward-card-2__e-9.reward-card-2__e-9.reward-card-2__e-9.reward-card-2__e-9.reward-card-2__e-9 {
+    width: 10px;
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 0px;
+    overflow: hidden;
+}
+
+.reward-card-2__e-10.reward-card-2__e-10.reward-card-2__e-10.reward-card-2__e-10.reward-card-2__e-10.reward-card-2__e-10.reward-card-2__e-10 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    align-self: stretch;
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.reward-card-2__e-11.reward-card-2__e-11.reward-card-2__e-11.reward-card-2__e-11.reward-card-2__e-11.reward-card-2__e-11.reward-card-2__e-11 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-highlight);
+}
+
+.reward-card-2__e-12.reward-card-2__e-12.reward-card-2__e-12.reward-card-2__e-12.reward-card-2__e-12.reward-card-2__e-12.reward-card-2__e-12 {
+    display: flex;
+    padding: 4px 8px;
+    align-items: center;
+    flex-shrink: 0;
+    border-width: 2px;
+    overflow: hidden;
+    background-color: #1D1608;
+    flex-direction: row;
+    border-color: var(--border-focus);
+}
+
+.reward-card-2__e-13.reward-card-2__e-13.reward-card-2__e-13.reward-card-2__e-13.reward-card-2__e-13.reward-card-2__e-13.reward-card-2__e-13 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-highlight);
+}
+
+.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14 {
+    display: flex;
+    width: 28px;
+    height: 28px;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    right: -12px;
+    top: -18px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--accent-gold);
+}
+
+.reward-card-2__e-15.reward-card-2__e-15.reward-card-2__e-15.reward-card-2__e-15.reward-card-2__e-15.reward-card-2__e-15.reward-card-2__e-15 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-on-accent);
+}
+

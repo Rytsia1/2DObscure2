@@ -29,6 +29,8 @@ namespace Obscure
         public static bool Back => Pressed(Key.Escape, Key.Backspace, Key.X) || Pad(p => p.buttonEast);
         public static bool PrevPage => Pressed(Key.Q) || Pad(p => p.leftShoulder);
         public static bool NextPage => Pressed(Key.E) || Pad(p => p.rightShoulder);
+        public static bool Details => Pressed(Key.Tab) || Pad(p => p.selectButton);
+        public static bool ResetKey => Pressed(Key.R);
 
         // Timing/defense QTE button: one remappable key (Settings) plus gamepad south.
         public static Key QteKey = Key.Space;

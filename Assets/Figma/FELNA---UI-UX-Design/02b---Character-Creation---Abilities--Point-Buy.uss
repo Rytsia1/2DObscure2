@@ -1,0 +1,510 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-break {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.button-primary {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--accent-gold);
+    border-color: var(--border-focus);
+    color: var(--text-on-accent);
+}
+
+.button-primary:disabled {
+    opacity: 0.85;
+    background-color: var(--accent-gold-dim);
+    color: var(--text-muted);
+}
+
+.button-primary:focus {
+    background-color: var(--text-highlight);
+    border-color: var(--text-highlight);
+}
+
+._02b-character-creation-abilities-point-buy {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._02b-character-creation-abilities-point-buy {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._02b-character-creation-abilities-point-buy-vars._02b-character-creation-abilities-point-buy-vars._02b-character-creation-abilities-point-buy-vars._02b-character-creation-abilities-point-buy-vars._02b-character-creation-abilities-point-buy-vars._02b-character-creation-abilities-point-buy-vars {
+    background-color: var(--bg-ground);
+}
+
+.create-character-vars-2.create-character-vars-2.create-character-vars-2.create-character-vars-2.create-character-vars-2.create-character-vars-2 {
+    color: var(--text-accent);
+}
+
+.rectangle-vars-217.rectangle-vars-217.rectangle-vars-217.rectangle-vars-217.rectangle-vars-217.rectangle-vars-217 {
+    background-color: var(--bg-raised);
+}
+
+.fighter-vars-2.fighter-vars-2.fighter-vars-2.fighter-vars-2.fighter-vars-2.fighter-vars-2 {
+    color: var(--text-primary);
+}
+
+.lv-1-vars-12.lv-1-vars-12.lv-1-vars-12.lv-1-vars-12.lv-1-vars-12.lv-1-vars-12 {
+    color: var(--text-muted);
+}
+
+.cost-per-score-vars.cost-per-score-vars.cost-per-score-vars.cost-per-score-vars.cost-per-score-vars.cost-per-score-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars-45.frame-vars-45.frame-vars-45.frame-vars-45.frame-vars-45.frame-vars-45 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-line);
+}
+
+._8-vars-2._8-vars-2._8-vars-2._8-vars-2._8-vars-2._8-vars-2 {
+    color: var(--text-primary);
+}
+
+._0-vars-13._0-vars-13._0-vars-13._0-vars-13._0-vars-13._0-vars-13 {
+    color: var(--text-muted);
+}
+
+.frame-vars-46.frame-vars-46.frame-vars-46.frame-vars-46.frame-vars-46.frame-vars-46 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-line);
+}
+
+._9-vars._9-vars._9-vars._9-vars._9-vars._9-vars {
+    color: var(--text-primary);
+}
+
+._1-vars-11._1-vars-11._1-vars-11._1-vars-11._1-vars-11._1-vars-11 {
+    color: var(--text-muted);
+}
+
+.frame-vars-47.frame-vars-47.frame-vars-47.frame-vars-47.frame-vars-47.frame-vars-47 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-line);
+}
+
+._10-vars-2._10-vars-2._10-vars-2._10-vars-2._10-vars-2._10-vars-2 {
+    color: var(--text-primary);
+}
+
+._2-vars-6._2-vars-6._2-vars-6._2-vars-6._2-vars-6._2-vars-6 {
+    color: var(--text-muted);
+}
+
+.frame-vars-48.frame-vars-48.frame-vars-48.frame-vars-48.frame-vars-48.frame-vars-48 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-line);
+}
+
+._11-vars-3._11-vars-3._11-vars-3._11-vars-3._11-vars-3._11-vars-3 {
+    color: var(--text-primary);
+}
+
+._3-vars-3._3-vars-3._3-vars-3._3-vars-3._3-vars-3._3-vars-3 {
+    color: var(--text-muted);
+}
+
+.frame-vars-49.frame-vars-49.frame-vars-49.frame-vars-49.frame-vars-49.frame-vars-49 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-line);
+}
+
+._12-vars-2._12-vars-2._12-vars-2._12-vars-2._12-vars-2._12-vars-2 {
+    color: var(--text-primary);
+}
+
+._4-vars-5._4-vars-5._4-vars-5._4-vars-5._4-vars-5._4-vars-5 {
+    color: var(--text-muted);
+}
+
+.frame-vars-50.frame-vars-50.frame-vars-50.frame-vars-50.frame-vars-50.frame-vars-50 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-line);
+}
+
+._13-vars-4._13-vars-4._13-vars-4._13-vars-4._13-vars-4._13-vars-4 {
+    color: var(--text-primary);
+}
+
+._5-vars-5._5-vars-5._5-vars-5._5-vars-5._5-vars-5._5-vars-5 {
+    color: var(--text-muted);
+}
+
+.frame-vars-51.frame-vars-51.frame-vars-51.frame-vars-51.frame-vars-51.frame-vars-51 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-focus);
+}
+
+._14-vars-5._14-vars-5._14-vars-5._14-vars-5._14-vars-5._14-vars-5 {
+    color: var(--text-primary);
+}
+
+._7-vars-3._7-vars-3._7-vars-3._7-vars-3._7-vars-3._7-vars-3 {
+    color: var(--text-accent);
+}
+
+.frame-vars-52.frame-vars-52.frame-vars-52.frame-vars-52.frame-vars-52.frame-vars-52 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-focus);
+}
+
+._15-vars._15-vars._15-vars._15-vars._15-vars._15-vars {
+    color: var(--text-primary);
+}
+
+._9-vars-2._9-vars-2._9-vars-2._9-vars-2._9-vars-2._9-vars-2 {
+    color: var(--text-accent);
+}
+
+._14-and-15-cost-more-spread-points-or-specialise-vars._14-and-15-cost-more-spread-points-or-specialise-vars._14-and-15-cost-more-spread-points-or-specialise-vars._14-and-15-cost-more-spread-points-or-specialise-vars._14-and-15-cost-more-spread-points-or-specialise-vars._14-and-15-cost-more-spread-points-or-specialise-vars {
+    color: var(--text-muted);
+}
+
+.points-meter-vars.points-meter-vars.points-meter-vars.points-meter-vars.points-meter-vars.points-meter-vars {
+    border-color: var(--border-focus);
+}
+
+.points-left-vars.points-left-vars.points-left-vars.points-left-vars.points-left-vars.points-left-vars {
+    color: var(--text-accent);
+}
+
+._1-27-vars._1-27-vars._1-27-vars._1-27-vars._1-27-vars._1-27-vars {
+    color: var(--text-highlight);
+}
+
+.fill-vars-66.fill-vars-66.fill-vars-66.fill-vars-66.fill-vars-66.fill-vars-66 {
+    background-color: var(--accent-gold);
+}
+
+.ability-vars.ability-vars.ability-vars.ability-vars.ability-vars.ability-vars {
+    color: var(--text-muted);
+}
+
+.base-score-vars.base-score-vars.base-score-vars.base-score-vars.base-score-vars.base-score-vars {
+    color: var(--text-muted);
+}
+
+.cost-vars.cost-vars.cost-vars.cost-vars.cost-vars.cost-vars {
+    color: var(--text-muted);
+}
+
+.racial-vars.racial-vars.racial-vars.racial-vars.racial-vars.racial-vars {
+    color: var(--text-muted);
+}
+
+.final-vars.final-vars.final-vars.final-vars.final-vars.final-vars {
+    color: var(--text-muted);
+}
+
+.mod-vars.mod-vars.mod-vars.mod-vars.mod-vars.mod-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-218.rectangle-vars-218.rectangle-vars-218.rectangle-vars-218.rectangle-vars-218.rectangle-vars-218 {
+    background-color: var(--border-line);
+}
+
+.str-strength-vars-2.str-strength-vars-2.str-strength-vars-2.str-strength-vars-2.str-strength-vars-2.str-strength-vars-2 {
+    color: var(--text-primary);
+}
+
+.physical-power-carry-vars.physical-power-carry-vars.physical-power-carry-vars.physical-power-carry-vars.physical-power-carry-vars.physical-power-carry-vars {
+    color: var(--text-muted);
+}
+
+._9-vars-3._9-vars-3._9-vars-3._9-vars-3._9-vars-3._9-vars-3 {
+    color: var(--text-accent);
+}
+
+._16-vars-3._16-vars-3._16-vars-3._16-vars-3._16-vars-3._16-vars-3 {
+    color: var(--text-highlight);
+}
+
+._3-vars-4._3-vars-4._3-vars-4._3-vars-4._3-vars-4._3-vars-4 {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-219.rectangle-vars-219.rectangle-vars-219.rectangle-vars-219.rectangle-vars-219.rectangle-vars-219 {
+    background-color: var(--border-line);
+}
+
+.dex-dexterity-vars-2.dex-dexterity-vars-2.dex-dexterity-vars-2.dex-dexterity-vars-2.dex-dexterity-vars-2.dex-dexterity-vars-2 {
+    color: var(--text-primary);
+}
+
+.initiative-evasion-ranged-vars.initiative-evasion-ranged-vars.initiative-evasion-ranged-vars.initiative-evasion-ranged-vars.initiative-evasion-ranged-vars.initiative-evasion-ranged-vars {
+    color: var(--text-muted);
+}
+
+._4-vars-6._4-vars-6._4-vars-6._4-vars-6._4-vars-6._4-vars-6 {
+    color: var(--text-primary);
+}
+
+.node-vars-22.node-vars-22.node-vars-22.node-vars-22.node-vars-22.node-vars-22 {
+    color: var(--text-muted);
+}
+
+._12-vars-3._12-vars-3._12-vars-3._12-vars-3._12-vars-3._12-vars-3 {
+    color: var(--text-primary);
+}
+
+._1-vars-12._1-vars-12._1-vars-12._1-vars-12._1-vars-12._1-vars-12 {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-220.rectangle-vars-220.rectangle-vars-220.rectangle-vars-220.rectangle-vars-220.rectangle-vars-220 {
+    background-color: var(--border-line);
+}
+
+.vit-vitality-vars-2.vit-vitality-vars-2.vit-vitality-vars-2.vit-vitality-vars-2.vit-vitality-vars-2.vit-vitality-vars-2 {
+    color: var(--text-primary);
+}
+
+.max-hp-physical-defense-vars.max-hp-physical-defense-vars.max-hp-physical-defense-vars.max-hp-physical-defense-vars.max-hp-physical-defense-vars.max-hp-physical-defense-vars {
+    color: var(--text-muted);
+}
+
+._7-vars-4._7-vars-4._7-vars-4._7-vars-4._7-vars-4._7-vars-4 {
+    color: var(--text-accent);
+}
+
+._15-vars-2._15-vars-2._15-vars-2._15-vars-2._15-vars-2._15-vars-2 {
+    color: var(--text-highlight);
+}
+
+._2-vars-7._2-vars-7._2-vars-7._2-vars-7._2-vars-7._2-vars-7 {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-221.rectangle-vars-221.rectangle-vars-221.rectangle-vars-221.rectangle-vars-221.rectangle-vars-221 {
+    background-color: var(--border-line);
+}
+
+.int-intelligence-vars-2.int-intelligence-vars-2.int-intelligence-vars-2.int-intelligence-vars-2.int-intelligence-vars-2.int-intelligence-vars-2 {
+    color: var(--text-primary);
+}
+
+.magic-power-max-mp-vars.magic-power-max-mp-vars.magic-power-max-mp-vars.magic-power-max-mp-vars.magic-power-max-mp-vars.magic-power-max-mp-vars {
+    color: var(--text-muted);
+}
+
+._0-vars-14._0-vars-14._0-vars-14._0-vars-14._0-vars-14._0-vars-14 {
+    color: var(--text-primary);
+}
+
+.node-vars-23.node-vars-23.node-vars-23.node-vars-23.node-vars-23.node-vars-23 {
+    color: var(--text-muted);
+}
+
+._8-vars-3._8-vars-3._8-vars-3._8-vars-3._8-vars-3._8-vars-3 {
+    color: var(--text-primary);
+}
+
+._1-vars-13._1-vars-13._1-vars-13._1-vars-13._1-vars-13._1-vars-13 {
+    color: var(--status-error);
+}
+
+.rectangle-vars-222.rectangle-vars-222.rectangle-vars-222.rectangle-vars-222.rectangle-vars-222.rectangle-vars-222 {
+    background-color: var(--border-line);
+}
+
+.rectangle-vars-223.rectangle-vars-223.rectangle-vars-223.rectangle-vars-223.rectangle-vars-223.rectangle-vars-223 {
+    border-color: var(--border-accent);
+}
+
+.node-vars-24.node-vars-24.node-vars-24.node-vars-24.node-vars-24.node-vars-24 {
+    color: var(--text-highlight);
+}
+
+.wis-wisdom-vars-2.wis-wisdom-vars-2.wis-wisdom-vars-2.wis-wisdom-vars-2.wis-wisdom-vars-2.wis-wisdom-vars-2 {
+    color: var(--text-highlight);
+}
+
+.magic-defense-healing-vars.magic-defense-healing-vars.magic-defense-healing-vars.magic-defense-healing-vars.magic-defense-healing-vars.magic-defense-healing-vars {
+    color: var(--text-muted);
+}
+
+._4-vars-7._4-vars-7._4-vars-7._4-vars-7._4-vars-7._4-vars-7 {
+    color: var(--text-primary);
+}
+
+.node-vars-25.node-vars-25.node-vars-25.node-vars-25.node-vars-25.node-vars-25 {
+    color: var(--text-muted);
+}
+
+._12-vars-4._12-vars-4._12-vars-4._12-vars-4._12-vars-4._12-vars-4 {
+    color: var(--text-primary);
+}
+
+._1-vars-14._1-vars-14._1-vars-14._1-vars-14._1-vars-14._1-vars-14 {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-224.rectangle-vars-224.rectangle-vars-224.rectangle-vars-224.rectangle-vars-224.rectangle-vars-224 {
+    background-color: var(--border-line);
+}
+
+.cha-charisma-vars-2.cha-charisma-vars-2.cha-charisma-vars-2.cha-charisma-vars-2.cha-charisma-vars-2.cha-charisma-vars-2 {
+    color: var(--text-primary);
+}
+
+.shop-prices-support-vars.shop-prices-support-vars.shop-prices-support-vars.shop-prices-support-vars.shop-prices-support-vars.shop-prices-support-vars {
+    color: var(--text-muted);
+}
+
+._2-vars-8._2-vars-8._2-vars-8._2-vars-8._2-vars-8._2-vars-8 {
+    color: var(--text-primary);
+}
+
+.node-vars-26.node-vars-26.node-vars-26.node-vars-26.node-vars-26.node-vars-26 {
+    color: var(--text-muted);
+}
+
+._10-vars-3._10-vars-3._10-vars-3._10-vars-3._10-vars-3._10-vars-3 {
+    color: var(--text-primary);
+}
+
+._0-vars-15._0-vars-15._0-vars-15._0-vars-15._0-vars-15._0-vars-15 {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-225.rectangle-vars-225.rectangle-vars-225.rectangle-vars-225.rectangle-vars-225.rectangle-vars-225 {
+    background-color: var(--border-line);
+}
+
+.rectangle-vars-226.rectangle-vars-226.rectangle-vars-226.rectangle-vars-226.rectangle-vars-226.rectangle-vars-226 {
+    background-color: var(--border-line);
+}
+
+.next-point-preview-vars.next-point-preview-vars.next-point-preview-vars.next-point-preview-vars.next-point-preview-vars.next-point-preview-vars {
+    color: var(--text-accent);
+}
+
+.wis-12-13-costs-1-point-vars.wis-12-13-costs-1-point-vars.wis-12-13-costs-1-point-vars.wis-12-13-costs-1-point-vars.wis-12-13-costs-1-point-vars.wis-12-13-costs-1-point-vars {
+    color: var(--text-highlight);
+}
+
+.magic-defense-vars-2.magic-defense-vars-2.magic-defense-vars-2.magic-defense-vars-2.magic-defense-vars-2.magic-defense-vars-2 {
+    color: var(--text-body);
+}
+
+._7-8-vars._7-8-vars._7-8-vars._7-8-vars._7-8-vars._7-8-vars {
+    color: var(--status-ok);
+}
+
+.rectangle-vars-227.rectangle-vars-227.rectangle-vars-227.rectangle-vars-227.rectangle-vars-227.rectangle-vars-227 {
+    background-color: var(--border-line);
+}
+
+.healing-done-vars.healing-done-vars.healing-done-vars.healing-done-vars.healing-done-vars.healing-done-vars {
+    color: var(--text-body);
+}
+
+._0-0-vars._0-0-vars._0-0-vars._0-0-vars._0-0-vars._0-0-vars {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-228.rectangle-vars-228.rectangle-vars-228.rectangle-vars-228.rectangle-vars-228.rectangle-vars-228 {
+    background-color: var(--border-line);
+}
+
+.wis-modifier-vars.wis-modifier-vars.wis-modifier-vars.wis-modifier-vars.wis-modifier-vars.wis-modifier-vars {
+    color: var(--text-body);
+}
+
+._1-1-vars-3._1-1-vars-3._1-1-vars-3._1-1-vars-3._1-1-vars-3._1-1-vars-3 {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-229.rectangle-vars-229.rectangle-vars-229.rectangle-vars-229.rectangle-vars-229.rectangle-vars-229 {
+    background-color: var(--border-line);
+}
+
+.max-mp-vars.max-mp-vars.max-mp-vars.max-mp-vars.max-mp-vars.max-mp-vars {
+    color: var(--text-body);
+}
+
+._20-20-vars-3._20-20-vars-3._20-20-vars-3._20-20-vars-3._20-20-vars-3._20-20-vars-3 {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-230.rectangle-vars-230.rectangle-vars-230.rectangle-vars-230.rectangle-vars-230.rectangle-vars-230 {
+    background-color: var(--border-line);
+}
+
+.remaining-points-are-lost-if-unspent-vars.remaining-points-are-lost-if-unspent-vars.remaining-points-are-lost-if-unspent-vars.remaining-points-are-lost-if-unspent-vars.remaining-points-are-lost-if-unspent-vars.remaining-points-are-lost-if-unspent-vars {
+    color: var(--text-muted);
+}
+
+.panel-default__i-42 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-gold__i-21 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-30 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.toast-info__i-5 > .toast-info.toast-info.toast-info.toast-info.toast-info.toast-info.toast-info {
+    width: 100%;
+}
+

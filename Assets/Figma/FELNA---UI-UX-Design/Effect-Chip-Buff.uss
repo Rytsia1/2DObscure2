@@ -1,0 +1,46 @@
+.effect-chip-buff {
+    display: flex;
+    padding: 4px 8px 4px 4px;
+    align-items: center;
+    border-width: 2px;
+    background-color: #0E2818;
+    flex-direction: row;
+    border-color: var(--status-ok);
+}
+
+.effect-chip-buff__e.effect-chip-buff__e.effect-chip-buff__e.effect-chip-buff__e.effect-chip-buff__e.effect-chip-buff__e.effect-chip-buff__e {
+    display: flex;
+    width: 20px;
+    height: 20px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--status-ok);
+}
+
+.effect-chip-buff__e-2.effect-chip-buff__e-2.effect-chip-buff__e-2.effect-chip-buff__e-2.effect-chip-buff__e-2.effect-chip-buff__e-2.effect-chip-buff__e-2 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-on-accent);
+}
+
+.effect-chip-buff__e-3.effect-chip-buff__e-3.effect-chip-buff__e-3.effect-chip-buff__e-3.effect-chip-buff__e-3.effect-chip-buff__e-3.effect-chip-buff__e-3 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.effect-chip-buff__e-4.effect-chip-buff__e-4.effect-chip-buff__e-4.effect-chip-buff__e-4.effect-chip-buff__e-4.effect-chip-buff__e-4.effect-chip-buff__e-4 {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--status-ok);
+}
+

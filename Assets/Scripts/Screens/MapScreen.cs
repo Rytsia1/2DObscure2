@@ -7,12 +7,12 @@ using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Dungeon Map — migrated to Figma 12---Dungeon-Map.uxml (1280x720 UI Toolkit)
-    // with procedural Painter2D edges + interactive Map-Node templates and Pause / Abandon modals.
+    // Dungeon Map — migrated to Figma 12---Dungeon-Map.uxml + 12b---Dungeon-Map---Run-Effects--TAB.uxml
+    // with procedural Painter2D edges, RUN EFFECTS top bar, TAB Run Effects drawer, and Pause / Abandon modals.
     public class MapScreen : GameScreen
     {
-        const float CanvasW = 894f, CanvasH = 502f;
-        const float StartX = 40f, X0 = 124f, XEnd = 828f, CenterY = 250f, StepY = 92f;
+        const float CanvasW = 894f, CanvasH = 462f;
+        const float StartX = 40f, X0 = 124f, XEnd = 828f, CenterY = 231f, StepY = 86f;
 
         MapDef currentMap;
         readonly Dictionary<UitkMenu.Item, NodeDef> nodeOf = new Dictionary<UitkMenu.Item, NodeDef>();
@@ -30,6 +30,14 @@ namespace Obscure
         NodeDef focused;
 
         VisualElement pauseOverlay;
+        VisualElement effectsOverlay;
+        UitkMenu effectsModalMenu;
+
+        class TabWatcher : MonoBehaviour
+        {
+            public Action onTab;
+            void Update() { if (Controls.Details) onTab?.Invoke(); }
+        }
 
         enum LinkState { Locked, Open, Done }
 
@@ -61,7 +69,14 @@ namespace Obscure
                 FigmaUi.AnchorRight(runGold, 24f);
             }
 
-            ModifierHudHelper.BuildStrip(UiRoot, Run, 440f, 16f, 490f, UiRoot);
+            BuildRunEffectsBar();
+
+            var watcher = Root.gameObject.AddComponent<TabWatcher>();
+            watcher.onTab = () =>
+            {
+                if (pauseOverlay != null) return;
+                ToggleRunEffectsModal();
+            };
 
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
@@ -206,7 +221,7 @@ namespace Obscure
             mapCanvas = new VisualElement { name = "DynamicMapCanvas" };
             mapCanvas.style.position = Position.Absolute;
             mapCanvas.style.left = 28;
-            mapCanvas.style.top = 80;
+            mapCanvas.style.top = 120;
             mapCanvas.style.width = CanvasW;
             mapCanvas.style.height = CanvasH;
             mapCanvas.style.overflow = Overflow.Hidden;
@@ -446,10 +461,362 @@ namespace Obscure
             }
         }
 
+        // ------------------------------------------------------------ 12b Run Effects Bar & TAB Drawer
+
+        void BuildRunEffectsBar()
+        {
+            var screen = UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot;
+
+            // Add TAB DETAILS key-hint to bottom hint row if present
+            var escHint = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "ESC");
+            if (escHint?.parent != null)
+            {
+                var tabHint = FigmaUi.InstantiateTemplate("Key-Hint");
+                if (tabHint != null)
+                {
+                    tabHint.style.flexShrink = 0;
+                    tabHint.style.marginLeft = 10;
+                    FigmaUi.SetInstanceText(tabHint, "text-0", "TAB");
+                    FigmaUi.SetInstanceText(tabHint, "text-1", "DETAILS");
+                    tabHint.pickingMode = PickingMode.Position;
+                    tabHint.RegisterCallback<ClickEvent>(_ => ToggleRunEffectsModal());
+                    escHint.parent.Add(tabHint);
+                }
+            }
+
+            var bar = new VisualElement
+            {
+                name = "RunEffectsBar",
+                pickingMode = PickingMode.Position,
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 28,
+                    top = 80,
+                    width = 894,
+                    height = 40,
+                    paddingLeft = 10,
+                    paddingRight = 10,
+                    paddingTop = 4,
+                    paddingBottom = 4,
+                    flexDirection = FlexDirection.Row,
+                    alignItems = UnityEngine.UIElements.Align.Center,
+                    backgroundColor = Palette.Ink1,
+                    borderBottomWidth = 2,
+                    borderBottomColor = Palette.Ink4,
+                    overflow = Overflow.Hidden
+                }
+            };
+            bar.RegisterCallback<ClickEvent>(_ => ToggleRunEffectsModal());
+
+            bar.Add(new UiLabel("RUN EFFECTS")
+            {
+                pickingMode = PickingMode.Ignore,
+                style = { flexShrink = 0, fontSize = 13, letterSpacing = 0.56f, color = Palette.Mist3, marginRight = 10 }
+            });
+
+            var chips = CollectRunEffectChips();
+            if (chips.Count == 0)
+            {
+                bar.Add(new UiLabel("NONE ACTIVE · PRESS TAB TO INSPECT")
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { fontSize = 12, color = Palette.Mist3 }
+                });
+            }
+            else
+            {
+                int shown = Math.Min(3, chips.Count);
+                for (int i = 0; i < shown; i++)
+                {
+                    var chip = InstantiateEffectChip(chips[i].template, chips[i].glyph, chips[i].name, chips[i].meta);
+                    if (chip != null)
+                    {
+                        chip.style.marginRight = 8;
+                        bar.Add(chip);
+                    }
+                }
+                if (chips.Count > 3)
+                {
+                    var ov = FigmaUi.InstantiateTemplate("Effect-Chip-Overflow");
+                    if (ov != null)
+                    {
+                        ov.style.flexShrink = 0;
+                        FigmaUi.SetInstanceText(ov, "text-0", "+");
+                        FigmaUi.SetInstanceText(ov, "text-1", $"+{chips.Count - 3}");
+                        bar.Add(ov);
+                    }
+                }
+            }
+
+            bar.Add(new UiLabel("TAB › DETAILS")
+            {
+                pickingMode = PickingMode.Ignore,
+                style = { marginLeft = StyleKeyword.Auto, flexShrink = 0, fontSize = 11, color = Palette.Gold2 }
+            });
+
+            screen.Add(bar);
+        }
+
+        List<(string template, string glyph, string name, string meta)> CollectRunEffectChips()
+        {
+            var list = new List<(string, string, string, string)>();
+            if (Run == null) return list;
+
+            if (Run.ModifierManager != null)
+            {
+                foreach (var g in Run.ModifierManager.GetGroupSummaries())
+                {
+                    string dur = DungeonModifierManager.FormatShortDuration(g.def.durationUnit, g.shortestRemainingDuration);
+                    string tpl = g.def.polarity switch
+                    {
+                        ModifierPolarity.Debuff => "Effect-Chip-Debuff",
+                        ModifierPolarity.BuffWithDrawback => "Effect-Chip-Drawback",
+                        _ => "Effect-Chip-Buff"
+                    };
+                    string glyph = g.def.polarity switch
+                    {
+                        ModifierPolarity.Debuff => "▼",
+                        ModifierPolarity.BuffWithDrawback => "◆",
+                        _ => "▲"
+                    };
+                    string meta = g.effectiveStacks > 1 ? $"×{g.effectiveStacks} · {dur}" : dur;
+                    list.Add((tpl, glyph, g.def.displayName, meta));
+                }
+            }
+
+            if (Run.Relics != null)
+            {
+                foreach (var rid in Run.Relics)
+                {
+                    if (Database.Relics.TryGetValue(rid, out var rel))
+                        list.Add(("Effect-Chip-Relic", "◈", rel.name, "RELIC"));
+                }
+            }
+
+            if (Run.BattleBuffs != null)
+            {
+                foreach (var b in Run.BattleBuffs)
+                    list.Add(("Effect-Chip-Event", "✦", StatusInfo.Name(b.id), "NEXT"));
+            }
+            return list;
+        }
+
+        static VisualElement InstantiateEffectChip(string templateKey, string glyph, string name, string meta)
+        {
+            var chip = FigmaUi.InstantiateTemplate(templateKey);
+            if (chip == null) return null;
+            chip.style.flexShrink = 0;
+            chip.pickingMode = PickingMode.Ignore;
+            FigmaUi.SetInstanceText(chip, "text-0", glyph);
+            FigmaUi.SetInstanceText(chip, "text-1", name);
+            FigmaUi.SetInstanceText(chip, "text-2", meta);
+            var l1 = chip.Q<UiLabel>("text-1");
+            if (l1 != null) { l1.style.marginLeft = 6; l1.style.marginRight = 6; }
+            return chip;
+        }
+
+        public bool IsRunEffectsModalOpen => effectsOverlay != null;
+
+        public void ToggleRunEffectsModal()
+        {
+            if (effectsOverlay != null) CloseRunEffectsModal();
+            else OpenRunEffectsModal();
+        }
+
+        void CloseRunEffectsModal()
+        {
+            if (effectsModalMenu != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(effectsModalMenu);
+                else UnityEngine.Object.DestroyImmediate(effectsModalMenu);
+                effectsModalMenu = null;
+            }
+            effectsOverlay?.RemoveFromHierarchy();
+            effectsOverlay = null;
+        }
+
+        void OpenRunEffectsModal()
+        {
+            CloseModals();
+            Sfx.Play(Sound.ModalOpen);
+
+            effectsOverlay = new VisualElement
+            {
+                name = "MapRunEffectsOverlay",
+                pickingMode = PickingMode.Position,
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 0, top = 0, right = 0, bottom = 0,
+                    backgroundColor = new Color(5f / 255f, 8f / 255f, 15f / 255f, 0.72f),
+                    justifyContent = Justify.Center,
+                    alignItems = UnityEngine.UIElements.Align.Center
+                }
+            };
+
+            var card = new VisualElement
+            {
+                style =
+                {
+                    width = 560, height = 676,
+                    paddingLeft = 16, paddingRight = 16, paddingTop = 14, paddingBottom = 14,
+                    backgroundColor = Palette.Ink2,
+                    borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    borderTopColor = Palette.Gold3, borderBottomColor = Palette.Gold3,
+                    borderLeftColor = Palette.Gold3, borderRightColor = Palette.Gold3,
+                    flexDirection = FlexDirection.Column
+                }
+            };
+
+            var hdr = FigmaUi.CreateSectionHeader("Run Effects", 524f);
+            if (hdr != null)
+            {
+                hdr.style.height = 36;
+                hdr.style.flexShrink = 0;
+                hdr.style.marginBottom = 4;
+                card.Add(hdr);
+            }
+
+            card.Add(new UiLabel("MODIFIERS AND BLESSINGS EXPIRE. RELICS STAY.")
+            {
+                style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Mist2, marginBottom = 10, flexShrink = 0 }
+            });
+
+            var scroll = FigmaUi.CreateVerticalScrollView();
+            scroll.style.flexGrow = 1;
+            scroll.style.marginBottom = 10;
+
+            void AddSectionLabel(string text)
+            {
+                scroll.Add(new UiLabel(text)
+                {
+                    style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Gold2, marginTop = 6, marginBottom = 6 }
+                });
+            }
+
+            void AddEffectCard(VisualElement chip, string rightMeta, string desc, StatusId? statusIcon = null)
+            {
+                var box = new VisualElement
+                {
+                    style =
+                    {
+                        paddingLeft = 8, paddingRight = 10, paddingTop = 6, paddingBottom = 8,
+                        marginBottom = 6,
+                        backgroundColor = Palette.Ink1,
+                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4,
+                        borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4,
+                        flexDirection = FlexDirection.Column
+                    }
+                };
+                var topRow = new VisualElement
+                {
+                    style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, justifyContent = Justify.SpaceBetween, marginBottom = 6 }
+                };
+                var leftGroup = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+                if (chip != null) leftGroup.Add(chip);
+                if (statusIcon.HasValue)
+                {
+                    var ic = IconArt.Inline(IconArt.Status(statusIcon.Value), 1, 0f);
+                    if (ic != null) { ic.style.marginLeft = 6; leftGroup.Add(ic); }
+                }
+                topRow.Add(leftGroup);
+                topRow.Add(new UiLabel(rightMeta.ToUpperInvariant())
+                {
+                    style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Mist3, whiteSpace = WhiteSpace.NoWrap }
+                });
+                box.Add(topRow);
+                box.Add(new UiLabel((desc ?? "").ToUpperInvariant())
+                {
+                    style = { fontSize = 13, letterSpacing = 0.48f, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                });
+                scroll.Add(box);
+            }
+
+            int totalCount = 0;
+            var mods = Run?.ModifierManager?.GetGroupSummaries();
+            if (mods != null && mods.Count > 0)
+            {
+                AddSectionLabel("MODIFIERS");
+                foreach (var g in mods)
+                {
+                    totalCount++;
+                    string dur = DungeonModifierManager.FormatShortDuration(g.def.durationUnit, g.shortestRemainingDuration);
+                    string tpl = g.def.polarity == ModifierPolarity.Debuff ? "Effect-Chip-Debuff"
+                        : g.def.polarity == ModifierPolarity.BuffWithDrawback ? "Effect-Chip-Drawback" : "Effect-Chip-Buff";
+                    string glyph = g.def.polarity == ModifierPolarity.Debuff ? "▼"
+                        : g.def.polarity == ModifierPolarity.BuffWithDrawback ? "◆" : "▲";
+                    string meta = g.effectiveStacks > 1 ? $"×{g.effectiveStacks} · {dur}" : dur;
+                    string right = g.effectiveStacks > 1
+                        ? $"{g.effectiveStacks} STACKS · {dur} LEFT"
+                        : $"{dur} LEFT";
+                    AddEffectCard(InstantiateEffectChip(tpl, glyph, g.def.displayName, meta), right, g.def.description);
+                }
+            }
+
+            if (Run?.Relics != null && Run.Relics.Count > 0)
+            {
+                AddSectionLabel("RELICS");
+                foreach (var rid in Run.Relics)
+                {
+                    if (!Database.Relics.TryGetValue(rid, out var r)) continue;
+                    totalCount++;
+                    AddEffectCard(InstantiateEffectChip("Effect-Chip-Relic", "◈", r.name, "RELIC"),
+                        "PERMANENT · KEPT AFTER THE RUN", r.gameplayEffect ?? r.description);
+                }
+            }
+
+            if (Run?.BattleBuffs != null && Run.BattleBuffs.Count > 0)
+            {
+                AddSectionLabel("EVENT BLESSINGS");
+                foreach (var b in Run.BattleBuffs)
+                {
+                    totalCount++;
+                    AddEffectCard(InstantiateEffectChip("Effect-Chip-Event", "✦", StatusInfo.Name(b.id), "NEXT"),
+                        "ENDS AFTER 1 BATTLE", $"NEXT BATTLE: PARTY {StatusInfo.Name(b.id)} ({b.turns} TURNS).", b.id);
+                }
+            }
+
+            if (totalCount == 0)
+            {
+                scroll.Add(new UiLabel("NO ACTIVE MODIFIERS, RELICS, OR EVENT BLESSINGS IN THIS RUN YET.")
+                {
+                    style = { fontSize = 14, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginTop = 12 }
+                });
+            }
+
+            card.Add(scroll);
+
+            var footRow = new VisualElement
+            {
+                style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 0 }
+            };
+            var kh = FigmaUi.InstantiateTemplate("Key-Hint");
+            if (kh != null)
+            {
+                FigmaUi.SetInstanceText(kh, "text-0", "TAB");
+                FigmaUi.SetInstanceText(kh, "text-1", "CLOSE");
+                footRow.Add(kh);
+            }
+            var closeBtn = FigmaUi.CreateButton("Close", "button-slab", 130f);
+            footRow.Add(closeBtn);
+            card.Add(footRow);
+
+            effectsModalMenu = Root.gameObject.AddComponent<UitkMenu>();
+            effectsModalMenu.AttachRoot(effectsOverlay);
+            effectsModalMenu.onBack = CloseRunEffectsModal;
+            FigmaUi.ApplyDefaultFocusVisual(effectsModalMenu.Add(closeBtn, "Close", CloseRunEffectsModal), closeBtn);
+
+            effectsOverlay.Add(card);
+            UiRoot.Add(effectsOverlay);
+        }
+
         // ------------------------------------------------------------ Pause & Abandon modals
 
         void CloseModals()
         {
+            CloseRunEffectsModal();
             pauseOverlay?.RemoveFromHierarchy();
             pauseOverlay = null;
         }

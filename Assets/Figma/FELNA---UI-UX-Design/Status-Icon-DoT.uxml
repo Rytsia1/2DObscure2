@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Status-Icon-DoT.uss" />
+    <ui:VisualElement class="status-icon-dot">
+        <ui:Label name="text-0" text="A+" class="unity-label status-icon-dot__e" />
+        <ui:VisualElement class="status-icon-dot__e-2">
+            <ui:Label name="text-1" text="2" class="unity-label status-icon-dot__e-3" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -55,14 +55,16 @@ namespace Obscure
         UitkMenu menu, bgModalMenu;
         Transform bindingsRoot;
         VisualElement screenContainer;
-        VisualElement middleBody, rightBody;
+        VisualElement middlePanelEl, goldPanelEl;
+        VisualElement middleBody, rightBody, abilitiesHost, costTableHost, nextPreviewHost;
         VisualElement backBtn, nextBtn, keyHintRow;
-        UiLabel previewMemberTag, previewNameLbl, previewNoteLbl;
+        UiLabel previewMemberTag, previewNameLbl, previewNoteLbl, scoresHeaderLbl;
         VisualElement previewSpriteEl, previewRaceTag;
         readonly VisualElement[] stepChips = new VisualElement[7];
         readonly VisualElement[] abilityPreviewTags = new VisualElement[6];
         readonly Dictionary<UitkMenu.Item, Action> focusActions = new Dictionary<UitkMenu.Item, Action>();
 
+        Ability focusedAbility = Ability.STR;
         int templateIndex = -1;
         int focusIndex;
         bool rebuilding;
@@ -116,14 +118,14 @@ namespace Obscure
 
         void StripMiddleAndRightBakedContent()
         {
-            var middlePanel = screenContainer.Q<VisualElement>(className: "panel-default__i-4");
-            var goldPanel = screenContainer.Q<VisualElement>(className: "panel-gold__i");
+            middlePanelEl = screenContainer.Q<VisualElement>(className: "panel-default__i-4");
+            goldPanelEl = screenContainer.Q<VisualElement>(className: "panel-gold__i");
             var footerBack = FigmaUi.FindButton(screenContainer, "Back");
 
-            if (middlePanel != null && goldPanel != null && footerBack != null)
+            if (middlePanelEl != null && goldPanelEl != null && footerBack != null)
             {
-                int midStart = screenContainer.IndexOf(middlePanel) + 1;
-                int goldIdx = screenContainer.IndexOf(goldPanel);
+                int midStart = screenContainer.IndexOf(middlePanelEl) + 1;
+                int goldIdx = screenContainer.IndexOf(goldPanelEl);
                 int footerIdx = screenContainer.IndexOf(footerBack);
 
                 var toRemove = new List<VisualElement>();
@@ -149,6 +151,44 @@ namespace Obscure
             rightBody.style.height = 550;
             rightBody.style.overflow = Overflow.Hidden;
             screenContainer.Add(rightBody);
+
+            // 02b Point Buy merged gold panel host (shown only on Page.Abilities)
+            abilitiesHost = new VisualElement
+            {
+                name = "AbilitiesPointBuyHost",
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 296,
+                    top = 70,
+                    width = 956,
+                    height = 566,
+                    backgroundColor = Palette.Ink2,
+                    borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    borderTopColor = Palette.Gold3, borderBottomColor = Palette.Gold3,
+                    borderLeftColor = Palette.Gold3, borderRightColor = Palette.Gold3,
+                    overflow = Overflow.Hidden,
+                    display = DisplayStyle.None
+                }
+            };
+            screenContainer.Add(abilitiesHost);
+
+            // 02b Left panel COST PER SCORE table (replaces score tags on Page.Abilities)
+            costTableHost = new VisualElement
+            {
+                name = "CostPerScoreHost",
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 44,
+                    top = 404,
+                    width = 218,
+                    height = 200,
+                    flexDirection = FlexDirection.Column,
+                    display = DisplayStyle.None
+                }
+            };
+            screenContainer.Add(costTableHost);
         }
 
         void CacheShellElements()
@@ -172,6 +212,7 @@ namespace Obscure
             previewSpriteEl = screenContainer.Q<VisualElement>(className: "sprite-knight");
             previewNameLbl = FigmaUi.FindLabel(screenContainer, "Fighter");
             previewRaceTag = FigmaUi.FindInstanceWithText(screenContainer, "text-0", "HUMAN");
+            scoresHeaderLbl = FigmaUi.FindLabel(screenContainer, "SCORES AFTER RACIAL BONUS");
             previewNoteLbl = FigmaUi.FindLabel(screenContainer, "CAP 15 BEFORE BONUS · 17 AFTER · 20 BY PROGRESSION");
 
             string[] abDefaults = { "STR 9", "DEX 8", "VIT 9", "INT 8", "WIS 8", "CHA 8" };
@@ -206,6 +247,21 @@ namespace Obscure
             focusActions.Clear();
             middleBody.Clear();
             rightBody.Clear();
+            abilitiesHost?.Clear();
+            costTableHost?.Clear();
+            nextPreviewHost = null;
+
+            bool isAbilities = CurrentPage == Page.Abilities;
+            if (middlePanelEl != null) middlePanelEl.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            if (goldPanelEl != null) goldPanelEl.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            if (middleBody != null) middleBody.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            if (rightBody != null) rightBody.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            if (abilitiesHost != null) abilitiesHost.style.display = isAbilities ? DisplayStyle.Flex : DisplayStyle.None;
+            if (costTableHost != null) costTableHost.style.display = isAbilities ? DisplayStyle.Flex : DisplayStyle.None;
+            if (scoresHeaderLbl != null) scoresHeaderLbl.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            if (previewNoteLbl != null) previewNoteLbl.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            foreach (var tag in abilityPreviewTags)
+                if (tag != null) tag.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
 
             UpdateStepChips();
             UpdateLeftPreview();
@@ -592,43 +648,445 @@ namespace Obscure
             rightBody.Add(skillWrap);
         }
 
+        static string AbilityFullName(Ability a) => a switch
+        {
+            Ability.STR => "STR · STRENGTH",
+            Ability.DEX => "DEX · DEXTERITY",
+            Ability.VIT => "VIT · VITALITY",
+            Ability.INT => "INT · INTELLIGENCE",
+            Ability.WIS => "WIS · WISDOM",
+            _ => "CHA · CHARISMA"
+        };
+
+        static string AbilitySubtitle(Ability a) => a switch
+        {
+            Ability.STR => "PHYSICAL POWER · BREAK",
+            Ability.DEX => "INITIATIVE · EVASION · RANGED",
+            Ability.VIT => "MAX HP · PHYSICAL DEFENSE",
+            Ability.INT => "MAGIC POWER · MAX MP",
+            Ability.WIS => "MAGIC DEFENSE · HEALING",
+            _ => "SHOP PRICES · SUPPORT"
+        };
+
+        static DerivedStatId[] PreviewStatsFor(Ability a) => a switch
+        {
+            Ability.STR => new[] { DerivedStatId.PhysicalPower, DerivedStatId.PhysicalBreakPower, DerivedStatId.MaxHP },
+            Ability.DEX => new[] { DerivedStatId.Initiative, DerivedStatId.Evasion, DerivedStatId.RangedPower },
+            Ability.VIT => new[] { DerivedStatId.MaxHP, DerivedStatId.PhysicalDefense, DerivedStatId.StatusResistance },
+            Ability.INT => new[] { DerivedStatId.MagicPower, DerivedStatId.MaxMP, DerivedStatId.MagicBreakPower },
+            Ability.WIS => new[] { DerivedStatId.MagicDefense, DerivedStatId.HealingPower, DerivedStatId.MaxMP },
+            _ => new[] { DerivedStatId.SupportPower, DerivedStatId.CriticalChance, DerivedStatId.StatusResistance }
+        };
+
         void BuildAbilitiesPage()
         {
-            int rem = Session.PointBuy.RemainingPoints;
-            AddColumnHeader(middleBody, "Point Buy", $"{rem}/{Session.PointBuy.Config.budget} PTS");
+            var pb = Session.PointBuy;
+            int rem = pb.RemainingPoints;
+            int budget = pb.Config.budget;
+            int minScore = pb.Config.minScore;
+            int maxScore = pb.Config.maxScoreBeforeRacial;
 
-            var methodBtn = FigmaUi.CreateButton(MethodText(), "button-slab");
-            methodBtn.style.marginBottom = 10;
-            middleBody.Add(methodBtn);
-            menu.Add(methodBtn, "MODE", OnActivateCreationMethodButton, onAdjust: CycleCreationMethodOrTemplate,
-                tooltip: "L/R: MANUAL, TEMPLATE OR RANDOM. ENTER: REROLL");
-
-            var bases = Session.BaseScores; var race = Session.RacialModifiers; var fin = Session.FinalScores; var mods = Session.AbilityModifiers;
-            foreach (var a in AbilityScores.AllAbilities)
+            // Left panel: COST PER SCORE 2x4 table (02b design)
+            costTableHost.Add(new UiLabel("COST PER SCORE")
             {
-                var ab = a;
-                int r = race[ab]; int m = mods[ab];
-                string rStr = r > 0 ? $"+{r}" : r < 0 ? r.ToString() : "-";
-                string info = $"BASE {bases[ab]}   RACE {rStr}   TOT {fin[ab]}   ({AbilityScores.FormatMod(m)})";
-                AddCard(middleBody, ab.ToString(), $"COST {Session.PointBuy.GetCost(ab)}", info, false, () => AdjustAbility(ab, 1), d => AdjustAbility(ab, d), selectOnFocus: false);
+                style = { fontSize = 12, letterSpacing = 0.48f, color = Palette.Mist3, marginBottom = 6 }
+            });
+            var costGrid = new VisualElement
+            {
+                style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 224, marginBottom = 8 }
+            };
+            for (int sc = minScore; sc <= maxScore; sc++)
+            {
+                var cell = new VisualElement
+                {
+                    style =
+                    {
+                        width = 50, height = 28, marginRight = 6, marginBottom = 6,
+                        paddingLeft = 5, paddingRight = 5,
+                        flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center,
+                        backgroundColor = Palette.Ink1,
+                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        borderTopColor = sc >= 14 ? Palette.Gold4 : Palette.Ink4,
+                        borderBottomColor = sc >= 14 ? Palette.Gold4 : Palette.Ink4,
+                        borderLeftColor = sc >= 14 ? Palette.Gold4 : Palette.Ink4,
+                        borderRightColor = sc >= 14 ? Palette.Gold4 : Palette.Ink4
+                    }
+                };
+                cell.Add(new UiLabel(sc.ToString()) { style = { fontSize = 13, color = Palette.Mist1 } });
+                cell.Add(new UiLabel(pb.Config.GetCost(sc).ToString()) { style = { fontSize = 11, color = sc >= 14 ? Palette.Gold2 : Palette.Mist3 } });
+                costGrid.Add(cell);
+            }
+            costTableHost.Add(costGrid);
+            costTableHost.Add(new UiLabel("14 AND 15 COST MORE: SPREAD POINTS OR SPECIALISE.")
+            {
+                style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal }
+            });
+
+            // Top Header inside Gold Panel
+            var hdr = FigmaUi.CreateSectionHeader("Ability Scores · Point Buy", 560f);
+            if (hdr != null)
+            {
+                hdr.style.position = Position.Absolute;
+                hdr.style.left = 16;
+                hdr.style.top = 14;
+                hdr.style.height = 36;
+                abilitiesHost.Add(hdr);
             }
 
-            var btnRow = new VisualElement();
-            btnRow.style.flexDirection = FlexDirection.Row;
-            btnRow.style.justifyContent = Justify.SpaceBetween;
-            btnRow.style.marginTop = 6;
-            var resetBtn = FigmaUi.CreateButton("Reset", "button-slab", 125f);
-            var randBtn = FigmaUi.CreateButton("Randomize", "button-slab", 135f);
-            btnRow.Add(resetBtn);
-            btnRow.Add(randBtn);
-            middleBody.Add(btnRow);
-            menu.Add(resetBtn, "Reset", OnResetOrEditClicked);
-            menu.Add(randBtn, "Randomize", () => OnRandomOrRerollSelected());
+            // POINTS LEFT meter (02b top-right)
+            var meter = new VisualElement
+            {
+                style =
+                {
+                    position = Position.Absolute, left = 610, top = 8, width = 330, height = 52,
+                    paddingLeft = 10, paddingRight = 10, paddingTop = 4, paddingBottom = 6,
+                    backgroundColor = Palette.Hex(0x1D1608),
+                    borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                    borderTopColor = rem > 0 ? Palette.Gold2 : Palette.Ok,
+                    borderBottomColor = rem > 0 ? Palette.Gold2 : Palette.Ok,
+                    borderLeftColor = rem > 0 ? Palette.Gold2 : Palette.Ok,
+                    borderRightColor = rem > 0 ? Palette.Gold2 : Palette.Ok,
+                    flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween
+                }
+            };
+            var meterTop = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
+            meterTop.Add(new UiLabel("POINTS LEFT") { style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Gold2 } });
+            meterTop.Add(new UiLabel($"{rem} / {budget}") { style = { fontSize = 22, color = rem > 0 ? Palette.Gold1 : Palette.Ok } });
+            meter.Add(meterTop);
 
-            AddColumnHeader(rightBody, "Derived Stats");
-            var preview = Session.PreviewDerivedStats;
-            foreach (var st in PreviewedStats)
-                AddStatRow(rightBody, Database.DerivedStatDefs[st].shortName, preview.FormatValue(st));
+            var meterTrack = new VisualElement
+            {
+                style =
+                {
+                    width = 306, height = 8, paddingTop = 1, paddingBottom = 1, paddingLeft = 1, paddingRight = 1,
+                    backgroundColor = Palette.Ink0,
+                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                    borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4
+                }
+            };
+            float remRatio = budget > 0 ? Mathf.Clamp01((float)rem / budget) : 0f;
+            meterTrack.Add(new VisualElement { style = { width = Length.Percent(remRatio * 100f), height = Length.Percent(100), backgroundColor = rem > 0 ? Palette.Gold2 : Palette.Ok } });
+            meter.Add(meterTrack);
+            abilitiesHost.Add(meter);
+
+            // Table column headers (left = 16, top = 74)
+            void AddColHdr(string text, float leftPx)
+            {
+                abilitiesHost.Add(new UiLabel(text)
+                {
+                    style = { position = Position.Absolute, left = leftPx, top = 74, fontSize = 12, letterSpacing = 0.48f, color = Palette.Mist3 }
+                });
+            }
+            AddColHdr("ABILITY", 16);
+            AddColHdr("BASE SCORE", 248);
+            AddColHdr("COST", 388);
+            AddColHdr("RACIAL", 444);
+            AddColHdr("FINAL", 518);
+            AddColHdr("MOD", 574);
+
+            abilitiesHost.Add(new VisualElement
+            {
+                style = { position = Position.Absolute, left = 16, top = 92, width = 588, height = 2, backgroundColor = Palette.Ink4 }
+            });
+
+            // Vertical separator & Right sub-column (NEXT POINT PREVIEW)
+            abilitiesHost.Add(new VisualElement
+            {
+                style = { position = Position.Absolute, left = 620, top = 74, width = 2, height = 434, backgroundColor = Palette.Ink4 }
+            });
+
+            nextPreviewHost = new VisualElement
+            {
+                name = "NextPointPreviewHost",
+                style = { position = Position.Absolute, left = 636, top = 74, width = 304, height = 390, flexDirection = FlexDirection.Column }
+            };
+            abilitiesHost.Add(nextPreviewHost);
+
+            var bases = Session.BaseScores; var race = Session.RacialModifiers; var fin = Session.FinalScores; var mods = Session.AbilityModifiers;
+            for (int i = 0; i < AbilityScores.AllAbilities.Length; i++)
+            {
+                var ab = AbilityScores.AllAbilities[i];
+                int baseVal = bases[ab];
+                int rBonus = race[ab];
+                int finVal = fin[ab];
+                int modVal = mods[ab];
+                int costVal = pb.GetCost(ab);
+                int incCost = pb.GetIncreaseCost(ab);
+                bool atMin = baseVal <= minScore;
+                bool atMax = baseVal >= maxScore;
+                bool canAfford = !atMax && incCost > 0 && incCost <= rem;
+                float rowTop = 98 + i * 62;
+
+                var row = new VisualElement
+                {
+                    style =
+                    {
+                        position = Position.Absolute, left = 8, top = rowTop, width = 604, height = 58,
+                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        borderTopColor = Color.clear, borderBottomColor = Color.clear, borderLeftColor = Color.clear, borderRightColor = Color.clear,
+                        backgroundColor = Color.clear,
+                        overflow = Overflow.Hidden
+                    }
+                };
+
+                var cursorLbl = new UiLabel("▸")
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 4, top = 16, fontSize = 18, color = Palette.Gold1, visibility = Visibility.Hidden }
+                };
+                row.Add(cursorLbl);
+
+                var abTitle = new UiLabel(AbilityFullName(ab))
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 20, top = 4, fontSize = 18, color = Palette.Mist1 }
+                };
+                row.Add(abTitle);
+
+                row.Add(new UiLabel(AbilitySubtitle(ab))
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 20, top = 30, width = 204, fontSize = 11, letterSpacing = 0.42f, color = Palette.Mist3 }
+                });
+
+                string stepperTpl = atMax ? "Stat-Stepper-At-Max"
+                    : atMin ? "Stat-Stepper-At-Min"
+                    : !canAfford ? "Stat-Stepper-No-Points"
+                    : "Stat-Stepper";
+                var stepper = FigmaUi.InstantiateTemplate(stepperTpl) ?? new VisualElement();
+                stepper.style.position = Position.Absolute;
+                stepper.style.left = 232;
+                stepper.style.top = 7;
+                FigmaUi.SetInstanceText(stepper, "text-0", "−");
+                FigmaUi.SetInstanceText(stepper, "text-1", baseVal.ToString());
+                FigmaUi.SetInstanceText(stepper, "text-2", "+");
+
+                var minusEl = stepper.Q<UiLabel>("text-0")?.parent;
+                if (minusEl != null)
+                {
+                    minusEl.pickingMode = PickingMode.Position;
+                    minusEl.RegisterCallback<ClickEvent>(evt =>
+                    {
+                        evt.StopPropagation();
+                        AdjustAbility(ab, -1);
+                    });
+                }
+                var plusEl = stepper.Q<UiLabel>("text-2")?.parent;
+                if (plusEl != null)
+                {
+                    plusEl.pickingMode = PickingMode.Position;
+                    plusEl.RegisterCallback<ClickEvent>(evt =>
+                    {
+                        evt.StopPropagation();
+                        AdjustAbility(ab, 1);
+                    });
+                }
+                row.Add(stepper);
+
+                row.Add(new UiLabel(costVal.ToString())
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 388, top = 16, width = 32, fontSize = 14, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleCenter }
+                });
+
+                if (rBonus != 0)
+                {
+                    var rTag = FigmaUi.InstantiateTemplate("Tag-Gold");
+                    if (rTag != null)
+                    {
+                        rTag.pickingMode = PickingMode.Ignore;
+                        rTag.style.position = Position.Absolute;
+                        rTag.style.left = 438;
+                        rTag.style.top = 13;
+                        FigmaUi.SetInstanceText(rTag, "text-0", rBonus > 0 ? $"+{rBonus}" : rBonus.ToString());
+                        row.Add(rTag);
+                    }
+                }
+                else
+                {
+                    row.Add(new UiLabel("—")
+                    {
+                        pickingMode = PickingMode.Ignore,
+                        style = { position = Position.Absolute, left = 450, top = 16, fontSize = 14, color = Palette.Mist3 }
+                    });
+                }
+
+                row.Add(new UiLabel(finVal.ToString())
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 510, top = 11, width = 40, fontSize = 22, color = rBonus > 0 ? Palette.Gold1 : Palette.Mist1, unityTextAlign = TextAnchor.MiddleCenter }
+                });
+
+                row.Add(new UiLabel(AbilityScores.FormatMod(modVal))
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 566, top = 16, width = 32, fontSize = 14, color = modVal > 0 ? Palette.Ok : modVal < 0 ? Palette.Err : Palette.Mist2, unityTextAlign = TextAnchor.MiddleCenter }
+                });
+
+                abilitiesHost.Add(row);
+
+                // Row separator
+                abilitiesHost.Add(new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style = { position = Position.Absolute, left = 16, top = rowTop + 58, width = 588, height = 2, backgroundColor = Palette.Ink3 }
+                });
+
+                var item = menu.Add(row, ab.ToString(), () => AdjustAbility(ab, 1), onAdjust: d => AdjustAbility(ab, d),
+                    tooltip: $"{AbilityFullName(ab)}: LEFT/RIGHT OR CLICK -/+ TO ADJUST");
+                item.visual = on =>
+                {
+                    row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
+                    var b = on ? Palette.Gold2 : Color.clear;
+                    row.style.borderTopColor = b; row.style.borderBottomColor = b;
+                    row.style.borderLeftColor = b; row.style.borderRightColor = b;
+                    cursorLbl.style.visibility = on ? Visibility.Visible : Visibility.Hidden;
+                    abTitle.style.color = on ? Palette.Gold1 : Palette.Mist1;
+                    if (on)
+                    {
+                        focusedAbility = ab;
+                        UpdateNextPointPreview();
+                    }
+                };
+                item.visual(false);
+            }
+
+            // Bottom-left warning note inside Gold Panel
+            abilitiesHost.Add(new UiLabel(rem > 0 ? "REMAINING POINTS ARE LOST IF UNSPENT." : "ALL POINTS ALLOCATED · READY TO CONTINUE.")
+            {
+                style =
+                {
+                    position = Position.Absolute, left = 16, top = 524,
+                    fontSize = 12, letterSpacing = 0.48f, color = rem > 0 ? Palette.Ember1 : Palette.Ok
+                }
+            });
+
+            // Bottom-right controls inside Gold Panel (Mode + Reset + Use Recommended)
+            var modeBtn = FigmaUi.CreateButton(MethodText(), "button-slab", 304f);
+            modeBtn.style.position = Position.Absolute;
+            modeBtn.style.left = 636;
+            modeBtn.style.top = 468;
+            modeBtn.style.height = 36;
+            abilitiesHost.Add(modeBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(modeBtn, "MODE", OnActivateCreationMethodButton, onAdjust: CycleCreationMethodOrTemplate,
+                tooltip: "L/R: MANUAL, TEMPLATE OR RANDOM. ENTER: REROLL"), modeBtn);
+
+            var resetBtn = FigmaUi.CreateButton("Reset", "button-slab", 108f);
+            resetBtn.style.position = Position.Absolute;
+            resetBtn.style.left = 636;
+            resetBtn.style.top = 514;
+            resetBtn.style.height = 38;
+            abilitiesHost.Add(resetBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(resetBtn, "Reset", OnResetOrEditClicked, tooltip: "REFUND ALL ABILITY POINTS TO BASE 8"), resetBtn);
+
+            var recBtn = FigmaUi.CreateButton("Use Recommended", "button-slab", 188f);
+            recBtn.style.position = Position.Absolute;
+            recBtn.style.left = 752;
+            recBtn.style.top = 514;
+            recBtn.style.height = 38;
+            var recLbl = recBtn.Q<UiLabel>("uitkLabel");
+            if (recLbl != null) recLbl.style.fontSize = 15;
+            abilitiesHost.Add(recBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(recBtn, "Use Recommended", ApplyRecommendedPointBuy,
+                tooltip: "APPLY RECOMMENDED POINT BUY SPREAD FOR THIS CLASS"), recBtn);
+
+            UpdateNextPointPreview();
+        }
+
+        void ApplyRecommendedPointBuy()
+        {
+            var match = Database.Templates.Values.FirstOrDefault(t => string.Equals(t.classId, Session.Class?.id, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+            {
+                Session.PointBuy.Reset();
+                var targetScores = match.baseScores;
+                foreach (var ab in AbilityScores.AllAbilities)
+                {
+                    while (Session.BaseScores[ab] < targetScores[ab] && Session.PointBuy.TryIncrease(ab)) { }
+                }
+                SetHint($"APPLIED RECOMMENDED SPREAD FOR {Session.Class?.name.ToUpperInvariant()}.");
+                Sfx.Play(Sound.Confirm);
+                Refresh();
+                return;
+            }
+            OnRandomOrRerollSelected();
+        }
+
+        void UpdateNextPointPreview()
+        {
+            if (nextPreviewHost == null) return;
+            nextPreviewHost.Clear();
+
+            var pb = Session.PointBuy;
+            int rem = pb.RemainingPoints;
+            int cur = Session.BaseScores[focusedAbility];
+            int max = pb.Config.maxScoreBeforeRacial;
+            int nextCost = pb.GetIncreaseCost(focusedAbility);
+            bool atMax = cur >= max;
+            bool canAfford = !atMax && nextCost > 0 && nextCost <= rem;
+
+            nextPreviewHost.Add(new UiLabel("NEXT POINT PREVIEW")
+            {
+                style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Gold2, marginBottom = 6 }
+            });
+
+            string subLine = atMax
+                ? $"{focusedAbility} {cur}  ·  AT BASE CAP ({max})"
+                : $"{focusedAbility} {cur} › {cur + 1}  ·  COSTS {nextCost} {(nextCost == 1 ? "POINT" : "POINTS")}";
+            nextPreviewHost.Add(new UiLabel(subLine)
+            {
+                style = { fontSize = 13, letterSpacing = 0.48f, color = atMax ? Palette.Mist3 : canAfford ? Palette.Mist1 : Palette.Ember1, marginBottom = 12 }
+            });
+
+            var nowDerived = Session.PreviewDerivedStats;
+            var nextDerived = atMax ? nowDerived : Session.PreviewDerivedStatsWithDelta(focusedAbility, 1);
+            int curMod = Session.AbilityModifiers[focusedAbility];
+            int nextMod = atMax ? curMod : AbilityScores.GetModifier(Session.FinalScores[focusedAbility] + 1);
+
+            void AddDeltaRow(string label, string before, string after, bool changed)
+            {
+                var r = new VisualElement
+                {
+                    style =
+                    {
+                        flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween,
+                        paddingTop = 4, paddingBottom = 5, marginBottom = 4,
+                        borderBottomWidth = 2, borderBottomColor = Palette.Ink3
+                    }
+                };
+                r.Add(new UiLabel(label) { style = { fontSize = 13, color = Palette.Mist2 } });
+                r.Add(new UiLabel($"{before} › {after}") { style = { fontSize = 13, color = changed ? Palette.Ok : Palette.Mist3 } });
+                nextPreviewHost.Add(r);
+            }
+
+            foreach (var st in PreviewStatsFor(focusedAbility))
+            {
+                string bStr = nowDerived.FormatValue(st);
+                string aStr = nextDerived.FormatValue(st);
+                AddDeltaRow(Database.DerivedStatDefs[st].displayName.ToUpperInvariant(), bStr, aStr, bStr != aStr);
+            }
+            AddDeltaRow($"{focusedAbility} MODIFIER", AbilityScores.FormatMod(curMod), AbilityScores.FormatMod(nextMod), curMod != nextMod);
+
+            string toastMsg = null;
+            if (!atMax && !canAfford)
+                toastMsg = $"{focusedAbility} {cur} › {cur + 1} NEEDS {nextCost} POINTS. YOU HAVE {rem}. FREE ONE BY LOWERING ANOTHER SCORE.";
+            else if (atMax)
+                toastMsg = $"{focusedAbility} IS AT THE BASE CAP OF {max} BEFORE RACIAL BONUS.";
+            else if (rem == 0)
+                toastMsg = "ALL 27 POINTS SPENT. YOU CAN PROCEED TO BACKGROUND OR ADJUST SCORES.";
+
+            if (toastMsg != null)
+            {
+                var toast = FigmaUi.InstantiateTemplate("Toast-Info");
+                if (toast != null)
+                {
+                    toast.style.marginTop = 10;
+                    toast.style.width = 300;
+                    FigmaUi.SetInstanceText(toast, "text-0", "!");
+                    FigmaUi.SetInstanceText(toast, "text-1", toastMsg);
+                    nextPreviewHost.Add(toast);
+                }
+            }
         }
 
         void BuildBackgroundPage()

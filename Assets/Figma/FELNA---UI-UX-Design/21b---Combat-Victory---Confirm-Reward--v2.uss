@@ -1,0 +1,315 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-xp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-iconbattle {
+    width: 27px;
+    height: 27px;
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+._21b-combat-victory-confirm-reward-v2 {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._21b-combat-victory-confirm-reward-v2 {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._21b-combat-victory-confirm-reward-v2-vars._21b-combat-victory-confirm-reward-v2-vars._21b-combat-victory-confirm-reward-v2-vars._21b-combat-victory-confirm-reward-v2-vars._21b-combat-victory-confirm-reward-v2-vars._21b-combat-victory-confirm-reward-v2-vars {
+    background-color: var(--bg-ground);
+}
+
+.victory-vars-2.victory-vars-2.victory-vars-2.victory-vars-2.victory-vars-2.victory-vars-2 {
+    color: var(--text-highlight);
+}
+
+.collected-automatically-vars.collected-automatically-vars.collected-automatically-vars.collected-automatically-vars.collected-automatically-vars.collected-automatically-vars {
+    color: var(--text-muted);
+}
+
+.frame-vars-53.frame-vars-53.frame-vars-53.frame-vars-53.frame-vars-53.frame-vars-53 {
+    border-color: var(--currency-run);
+}
+
+._24-run-gold-vars-2._24-run-gold-vars-2._24-run-gold-vars-2._24-run-gold-vars-2._24-run-gold-vars-2._24-run-gold-vars-2 {
+    color: var(--currency-run-text);
+}
+
+._120-144-vars._120-144-vars._120-144-vars._120-144-vars._120-144-vars._120-144-vars {
+    color: var(--currency-run-text);
+}
+
+.frame-vars-54.frame-vars-54.frame-vars-54.frame-vars-54.frame-vars-54.frame-vars-54 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-vars-9.knight-vars-9.knight-vars-9.knight-vars-9.knight-vars-9.knight-vars-9 {
+    color: var(--text-primary);
+}
+
+._32-exp-vars-5._32-exp-vars-5._32-exp-vars-5._32-exp-vars-5._32-exp-vars-5._32-exp-vars-5 {
+    color: var(--status-ok);
+}
+
+.fill-vars-67.fill-vars-67.fill-vars-67.fill-vars-67.fill-vars-67.fill-vars-67 {
+    background-color: var(--vital-xp);
+}
+
+._62-100-exp-vars-2._62-100-exp-vars-2._62-100-exp-vars-2._62-100-exp-vars-2._62-100-exp-vars-2._62-100-exp-vars-2 {
+    color: var(--text-muted);
+}
+
+.frame-vars-55.frame-vars-55.frame-vars-55.frame-vars-55.frame-vars-55.frame-vars-55 {
+    background-color: var(--bg-void);
+    border-color: var(--border-accent);
+}
+
+.rogue-vars-8.rogue-vars-8.rogue-vars-8.rogue-vars-8.rogue-vars-8.rogue-vars-8 {
+    color: var(--text-primary);
+}
+
+._32-exp-vars-6._32-exp-vars-6._32-exp-vars-6._32-exp-vars-6._32-exp-vars-6._32-exp-vars-6 {
+    color: var(--status-ok);
+}
+
+.fill-vars-68.fill-vars-68.fill-vars-68.fill-vars-68.fill-vars-68.fill-vars-68 {
+    background-color: var(--vital-xp);
+}
+
+.frame-vars-56.frame-vars-56.frame-vars-56.frame-vars-56.frame-vars-56.frame-vars-56 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.mage-vars-8.mage-vars-8.mage-vars-8.mage-vars-8.mage-vars-8.mage-vars-8 {
+    color: var(--text-primary);
+}
+
+._32-exp-vars-7._32-exp-vars-7._32-exp-vars-7._32-exp-vars-7._32-exp-vars-7._32-exp-vars-7 {
+    color: var(--status-ok);
+}
+
+.fill-vars-69.fill-vars-69.fill-vars-69.fill-vars-69.fill-vars-69.fill-vars-69 {
+    background-color: var(--vital-xp);
+}
+
+._55-100-exp-vars-2._55-100-exp-vars-2._55-100-exp-vars-2._55-100-exp-vars-2._55-100-exp-vars-2._55-100-exp-vars-2 {
+    color: var(--text-muted);
+}
+
+.frame-vars-57.frame-vars-57.frame-vars-57.frame-vars-57.frame-vars-57.frame-vars-57 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.healer-vars-9.healer-vars-9.healer-vars-9.healer-vars-9.healer-vars-9.healer-vars-9 {
+    color: var(--text-primary);
+}
+
+._32-exp-vars-8._32-exp-vars-8._32-exp-vars-8._32-exp-vars-8._32-exp-vars-8._32-exp-vars-8 {
+    color: var(--status-ok);
+}
+
+.fill-vars-70.fill-vars-70.fill-vars-70.fill-vars-70.fill-vars-70.fill-vars-70 {
+    background-color: var(--vital-xp);
+}
+
+._70-100-exp-vars-2._70-100-exp-vars-2._70-100-exp-vars-2._70-100-exp-vars-2._70-100-exp-vars-2._70-100-exp-vars-2 {
+    color: var(--text-muted);
+}
+
+._1-sp-for-the-rogue-level-up-vars._1-sp-for-the-rogue-level-up-vars._1-sp-for-the-rogue-level-up-vars._1-sp-for-the-rogue-level-up-vars._1-sp-for-the-rogue-level-up-vars._1-sp-for-the-rogue-level-up-vars {
+    color: var(--text-accent);
+}
+
+.spend-sp-at-a-rest-site-or-in-the-hub-vars.spend-sp-at-a-rest-site-or-in-the-hub-vars.spend-sp-at-a-rest-site-or-in-the-hub-vars.spend-sp-at-a-rest-site-or-in-the-hub-vars.spend-sp-at-a-rest-site-or-in-the-hub-vars.spend-sp-at-a-rest-site-or-in-the-hub-vars {
+    color: var(--text-muted);
+}
+
+.pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars.pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars.pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars.pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars.pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars.pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars {
+    color: var(--text-body);
+}
+
+.give-tideglass-wand-to-vars.give-tideglass-wand-to-vars.give-tideglass-wand-to-vars.give-tideglass-wand-to-vars.give-tideglass-wand-to-vars.give-tideglass-wand-to-vars {
+    color: var(--text-accent);
+}
+
+.frame-vars-58.frame-vars-58.frame-vars-58.frame-vars-58.frame-vars-58.frame-vars-58 {
+    border-color: var(--border-accent);
+}
+
+.mage-vars-9.mage-vars-9.mage-vars-9.mage-vars-9.mage-vars-9.mage-vars-9 {
+    color: var(--text-highlight);
+}
+
+.best-mag-7-vars.best-mag-7-vars.best-mag-7-vars.best-mag-7-vars.best-mag-7-vars.best-mag-7-vars {
+    color: var(--status-ok);
+}
+
+.frame-vars-59.frame-vars-59.frame-vars-59.frame-vars-59.frame-vars-59.frame-vars-59 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.knight-vars-10.knight-vars-10.knight-vars-10.knight-vars-10.knight-vars-10.knight-vars-10 {
+    color: var(--text-primary);
+}
+
+.can-t-use-vars.can-t-use-vars.can-t-use-vars.can-t-use-vars.can-t-use-vars.can-t-use-vars {
+    color: var(--status-error);
+}
+
+.frame-vars-60.frame-vars-60.frame-vars-60.frame-vars-60.frame-vars-60.frame-vars-60 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.rogue-vars-9.rogue-vars-9.rogue-vars-9.rogue-vars-9.rogue-vars-9.rogue-vars-9 {
+    color: var(--text-primary);
+}
+
+.can-t-use-vars-2.can-t-use-vars-2.can-t-use-vars-2.can-t-use-vars-2.can-t-use-vars-2.can-t-use-vars-2 {
+    color: var(--status-error);
+}
+
+.frame-vars-61.frame-vars-61.frame-vars-61.frame-vars-61.frame-vars-61.frame-vars-61 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.healer-vars-10.healer-vars-10.healer-vars-10.healer-vars-10.healer-vars-10.healer-vars-10 {
+    color: var(--text-primary);
+}
+
+.can-equip-mag-5-vars.can-equip-mag-5-vars.can-equip-mag-5-vars.can-equip-mag-5-vars.can-equip-mag-5-vars.can-equip-mag-5-vars {
+    color: var(--text-body);
+}
+
+.panel-default__i-43 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-31 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.section-header__i-32 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.reward-card__i > .reward-card.reward-card.reward-card.reward-card.reward-card.reward-card.reward-card {
+    opacity: 0.45;
+    width: 100%;
+}
+
+.reward-card__i .reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3 {
+    color: var(--rarity-uncommon);
+}
+
+.reward-card__i .reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4 {
+    border-color: var(--rarity-uncommon);
+}
+
+.reward-card__i .reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5 {
+    color: var(--rarity-uncommon);
+}
+
+.reward-card-2__i > .reward-card-2.reward-card-2.reward-card-2.reward-card-2.reward-card-2.reward-card-2.reward-card-2 {
+    width: 100%;
+}
+
+.reward-card__i-2 > .reward-card.reward-card.reward-card.reward-card.reward-card.reward-card.reward-card {
+    opacity: 0.45;
+    width: 100%;
+}
+
+.reward-card__i-2 .reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3.reward-card__e-3 {
+    color: var(--rarity-common);
+}
+
+.reward-card__i-2 .reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4 {
+    border-color: var(--rarity-common);
+}
+
+.reward-card__i-2 .reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5.reward-card__e-5 {
+    color: var(--rarity-common);
+}
+
+.reward-card__i-2 .reward-card__e-12.reward-card__e-12.reward-card__e-12.reward-card__e-12.reward-card__e-12.reward-card__e-12.reward-card__e-12 {
+    background-color: #22120A;
+    border-color: var(--currency-run);
+}
+
+.reward-card__i-2 .reward-card__e-13.reward-card__e-13.reward-card__e-13.reward-card__e-13.reward-card__e-13.reward-card__e-13.reward-card__e-13 {
+    color: var(--currency-run-text);
+}
+
+.panel-gold__i-22 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+

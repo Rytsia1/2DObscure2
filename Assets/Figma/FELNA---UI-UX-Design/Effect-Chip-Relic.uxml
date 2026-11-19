@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Effect-Chip-Relic.uss" />
+    <ui:VisualElement class="effect-chip-relic">
+        <ui:VisualElement class="effect-chip-relic__e">
+            <ui:Label name="text-0" text="◈" class="unity-label effect-chip-relic__e-2" />
+        </ui:VisualElement>
+        <ui:Label name="text-1" text="Battle Focus" class="unity-label effect-chip-relic__e-3" />
+        <ui:Label name="text-2" text="×2 · 2B" class="unity-label effect-chip-relic__e-4" />
+    </ui:VisualElement>
+</ui:UXML>

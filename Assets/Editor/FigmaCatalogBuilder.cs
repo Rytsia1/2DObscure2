@@ -201,7 +201,9 @@ namespace Obscure.Editor
             var ps = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
             var dispFa = AssetDatabase.LoadAssetAtPath<FontAsset>(DisplayAssetPath);
             var gothFa = AssetDatabase.LoadAssetAtPath<FontAsset>(GothicAssetPath);
-            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || ps.themeStyleSheet == null || HasUnresolvedRuntimeStylesheetRefs(dispFa, gothFa))
+            string diskFolder = Path.Combine(Application.dataPath, "Figma", "FELNA---UI-UX-Design");
+            int diskCount = Directory.Exists(diskFolder) ? Directory.GetFiles(diskFolder, "*.uxml", SearchOption.TopDirectoryOnly).Length : 0;
+            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || catalog.entries.Count != diskCount || ps.themeStyleSheet == null || HasUnresolvedRuntimeStylesheetRefs(dispFa, gothFa))
                 BuildAll();
         }
 

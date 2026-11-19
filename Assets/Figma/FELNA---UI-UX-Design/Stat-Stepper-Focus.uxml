@@ -1,0 +1,15 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Stat-Stepper-Focus.uss" />
+    <ui:VisualElement class="stat-stepper-5">
+        <ui:VisualElement class="stat-stepper-5__e">
+            <ui:Label name="text-0" text="−" class="unity-label stat-stepper-5__e-2" />
+        </ui:VisualElement>
+        <ui:VisualElement class="stat-stepper-5__e-3">
+            <ui:Label name="text-1" text="12" class="unity-label stat-stepper-5__e-4" />
+        </ui:VisualElement>
+        <ui:VisualElement class="stat-stepper-5__e-5">
+            <ui:Label name="text-2" text="+" class="unity-label stat-stepper-5__e-6" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

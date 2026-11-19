@@ -1,0 +1,36 @@
+.status-icon-debuff {
+    display: flex;
+    padding: 3px 4px 3px 5px;
+    align-items: flex-start;
+    border-width: 2px;
+    background-color: #280E12;
+    flex-direction: row;
+    border-color: var(--status-error);
+}
+
+.status-icon-debuff__e.status-icon-debuff__e.status-icon-debuff__e.status-icon-debuff__e.status-icon-debuff__e.status-icon-debuff__e.status-icon-debuff__e {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--status-error);
+}
+
+.status-icon-debuff__e-2.status-icon-debuff__e-2.status-icon-debuff__e-2.status-icon-debuff__e-2.status-icon-debuff__e-2.status-icon-debuff__e-2.status-icon-debuff__e-2 {
+    display: flex;
+    padding: 0px 2px;
+    align-items: flex-start;
+    flex-shrink: 0;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--status-error);
+}
+
+.status-icon-debuff__e-3.status-icon-debuff__e-3.status-icon-debuff__e-3.status-icon-debuff__e-3.status-icon-debuff__e-3.status-icon-debuff__e-3.status-icon-debuff__e-3 {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--text-on-accent);
+}
+

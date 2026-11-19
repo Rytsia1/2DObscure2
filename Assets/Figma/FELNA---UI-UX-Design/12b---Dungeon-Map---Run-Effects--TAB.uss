@@ -1,0 +1,374 @@
+.sprite-iconboss {
+    width: 27px;
+    height: 27px;
+}
+
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+._12b-dungeon-map-run-effects-tab {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._12b-dungeon-map-run-effects-tab {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._12b-dungeon-map-run-effects-tab-vars._12b-dungeon-map-run-effects-tab-vars._12b-dungeon-map-run-effects-tab-vars._12b-dungeon-map-run-effects-tab-vars._12b-dungeon-map-run-effects-tab-vars._12b-dungeon-map-run-effects-tab-vars {
+    background-color: var(--bg-ground);
+}
+
+.dungeon-1-of-8-vars-3.dungeon-1-of-8-vars-3.dungeon-1-of-8-vars-3.dungeon-1-of-8-vars-3.dungeon-1-of-8-vars-3.dungeon-1-of-8-vars-3 {
+    color: var(--text-muted);
+}
+
+.the-sunken-crypt-vars-4.the-sunken-crypt-vars-4.the-sunken-crypt-vars-4.the-sunken-crypt-vars-4.the-sunken-crypt-vars-4.the-sunken-crypt-vars-4 {
+    color: var(--text-accent);
+}
+
+.node-vars-19.node-vars-19.node-vars-19.node-vars-19.node-vars-19.node-vars-19 {
+    color: var(--accent-gold);
+}
+
+.map-field-vars-2.map-field-vars-2.map-field-vars-2.map-field-vars-2.map-field-vars-2.map-field-vars-2 {
+    background-color: var(--bg-void);
+}
+
+.node-vars-20.node-vars-20.node-vars-20.node-vars-20.node-vars-20.node-vars-20 {
+    color: var(--text-highlight);
+}
+
+.rectangle-vars-213.rectangle-vars-213.rectangle-vars-213.rectangle-vars-213.rectangle-vars-213.rectangle-vars-213 {
+    background-color: var(--border-line);
+}
+
+.rectangle-vars-214.rectangle-vars-214.rectangle-vars-214.rectangle-vars-214.rectangle-vars-214.rectangle-vars-214 {
+    background-color: var(--bg-ground);
+}
+
+.combat-vars-3.combat-vars-3.combat-vars-3.combat-vars-3.combat-vars-3.combat-vars-3 {
+    color: var(--text-body);
+}
+
+.event-vars-3.event-vars-3.event-vars-3.event-vars-3.event-vars-3.event-vars-3 {
+    color: var(--text-body);
+}
+
+.shop-vars-4.shop-vars-4.shop-vars-4.shop-vars-4.shop-vars-4.shop-vars-4 {
+    color: var(--text-body);
+}
+
+.rest-vars-2.rest-vars-2.rest-vars-2.rest-vars-2.rest-vars-2.rest-vars-2 {
+    color: var(--text-body);
+}
+
+.treasure-vars-2.treasure-vars-2.treasure-vars-2.treasure-vars-2.treasure-vars-2.treasure-vars-2 {
+    color: var(--text-body);
+}
+
+.final-dashed-locked-vars-2.final-dashed-locked-vars-2.final-dashed-locked-vars-2.final-dashed-locked-vars-2.final-dashed-locked-vars-2.final-dashed-locked-vars-2 {
+    color: var(--text-muted);
+}
+
+.gravebound-archer-hollow-squire-vars-2.gravebound-archer-hollow-squire-vars-2.gravebound-archer-hollow-squire-vars-2.gravebound-archer-hollow-squire-vars-2.gravebound-archer-hollow-squire-vars-2.gravebound-archer-hollow-squire-vars-2 {
+    color: var(--text-primary);
+}
+
+.currency-vars-2.currency-vars-2.currency-vars-2.currency-vars-2.currency-vars-2.currency-vars-2 {
+    color: var(--text-body);
+}
+
+.node-vars-21.node-vars-21.node-vars-21.node-vars-21.node-vars-21.node-vars-21 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-215.rectangle-vars-215.rectangle-vars-215.rectangle-vars-215.rectangle-vars-215.rectangle-vars-215 {
+    background-color: var(--border-line);
+}
+
+.risk-vars-2.risk-vars-2.risk-vars-2.risk-vars-2.risk-vars-2.risk-vars-2 {
+    color: var(--text-body);
+}
+
+.combat-vars-4.combat-vars-4.combat-vars-4.combat-vars-4.combat-vars-4.combat-vars-4 {
+    color: var(--text-primary);
+}
+
+.rectangle-vars-216.rectangle-vars-216.rectangle-vars-216.rectangle-vars-216.rectangle-vars-216.rectangle-vars-216 {
+    background-color: var(--border-line);
+}
+
+.frame-vars-41.frame-vars-41.frame-vars-41.frame-vars-41.frame-vars-41.frame-vars-41 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.knight-vars-8.knight-vars-8.knight-vars-8.knight-vars-8.knight-vars-8.knight-vars-8 {
+    color: var(--text-primary);
+}
+
+.fill-vars-58.fill-vars-58.fill-vars-58.fill-vars-58.fill-vars-58.fill-vars-58 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-59.fill-vars-59.fill-vars-59.fill-vars-59.fill-vars-59.fill-vars-59 {
+    background-color: var(--vital-mp);
+}
+
+.frame-vars-42.frame-vars-42.frame-vars-42.frame-vars-42.frame-vars-42.frame-vars-42 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.rogue-vars-7.rogue-vars-7.rogue-vars-7.rogue-vars-7.rogue-vars-7.rogue-vars-7 {
+    color: var(--text-primary);
+}
+
+.fill-vars-60.fill-vars-60.fill-vars-60.fill-vars-60.fill-vars-60.fill-vars-60 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-61.fill-vars-61.fill-vars-61.fill-vars-61.fill-vars-61.fill-vars-61 {
+    background-color: var(--vital-mp);
+}
+
+.frame-vars-43.frame-vars-43.frame-vars-43.frame-vars-43.frame-vars-43.frame-vars-43 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.mage-vars-7.mage-vars-7.mage-vars-7.mage-vars-7.mage-vars-7.mage-vars-7 {
+    color: var(--text-primary);
+}
+
+.fill-vars-62.fill-vars-62.fill-vars-62.fill-vars-62.fill-vars-62.fill-vars-62 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-63.fill-vars-63.fill-vars-63.fill-vars-63.fill-vars-63.fill-vars-63 {
+    background-color: var(--vital-mp);
+}
+
+.frame-vars-44.frame-vars-44.frame-vars-44.frame-vars-44.frame-vars-44.frame-vars-44 {
+    background-color: var(--bg-void);
+    border-color: var(--border-default);
+}
+
+.healer-vars-8.healer-vars-8.healer-vars-8.healer-vars-8.healer-vars-8.healer-vars-8 {
+    color: var(--text-primary);
+}
+
+.fill-vars-64.fill-vars-64.fill-vars-64.fill-vars-64.fill-vars-64.fill-vars-64 {
+    background-color: var(--vital-hp);
+}
+
+.fill-vars-65.fill-vars-65.fill-vars-65.fill-vars-65.fill-vars-65.fill-vars-65 {
+    background-color: var(--vital-mp);
+}
+
+.run-effects-bar-vars.run-effects-bar-vars.run-effects-bar-vars.run-effects-bar-vars.run-effects-bar-vars.run-effects-bar-vars {
+    background-color: var(--bg-ground);
+    border-color: var(--border-line);
+}
+
+.run-effects-vars.run-effects-vars.run-effects-vars.run-effects-vars.run-effects-vars.run-effects-vars {
+    color: var(--text-muted);
+}
+
+.modifiers-and-blessings-expire-relics-stay-vars.modifiers-and-blessings-expire-relics-stay-vars.modifiers-and-blessings-expire-relics-stay-vars.modifiers-and-blessings-expire-relics-stay-vars.modifiers-and-blessings-expire-relics-stay-vars.modifiers-and-blessings-expire-relics-stay-vars {
+    color: var(--text-body);
+}
+
+.modifiers-vars.modifiers-vars.modifiers-vars.modifiers-vars.modifiers-vars.modifiers-vars {
+    color: var(--text-accent);
+}
+
+.effect-battle-focus-vars.effect-battle-focus-vars.effect-battle-focus-vars.effect-battle-focus-vars.effect-battle-focus-vars.effect-battle-focus-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+._2-stacks-2-battles-left-vars._2-stacks-2-battles-left-vars._2-stacks-2-battles-left-vars._2-stacks-2-battles-left-vars._2-stacks-2-battles-left-vars._2-stacks-2-battles-left-vars {
+    color: var(--text-muted);
+}
+
+.physical-damage-5-per-stack-vars.physical-damage-5-per-stack-vars.physical-damage-5-per-stack-vars.physical-damage-5-per-stack-vars.physical-damage-5-per-stack-vars.physical-damage-5-per-stack-vars {
+    color: var(--text-primary);
+}
+
+.effect-glass-edge-vars.effect-glass-edge-vars.effect-glass-edge-vars.effect-glass-edge-vars.effect-glass-edge-vars.effect-glass-edge-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+._1-battle-left-vars._1-battle-left-vars._1-battle-left-vars._1-battle-left-vars._1-battle-left-vars._1-battle-left-vars {
+    color: var(--text-muted);
+}
+
+.crit-damage-20-but-defense-10-vars.crit-damage-20-but-defense-10-vars.crit-damage-20-but-defense-10-vars.crit-damage-20-but-defense-10-vars.crit-damage-20-but-defense-10-vars.crit-damage-20-but-defense-10-vars {
+    color: var(--text-primary);
+}
+
+.effect-withering-curse-vars.effect-withering-curse-vars.effect-withering-curse-vars.effect-withering-curse-vars.effect-withering-curse-vars.effect-withering-curse-vars {
+    background-color: var(--bg-raised);
+    border-color: var(--border-focus);
+}
+
+._1-stack-2-battles-left-vars._1-stack-2-battles-left-vars._1-stack-2-battles-left-vars._1-stack-2-battles-left-vars._1-stack-2-battles-left-vars._1-stack-2-battles-left-vars {
+    color: var(--text-muted);
+}
+
+.healing-received-15-per-stack-vars.healing-received-15-per-stack-vars.healing-received-15-per-stack-vars.healing-received-15-per-stack-vars.healing-received-15-per-stack-vars.healing-received-15-per-stack-vars {
+    color: var(--text-primary);
+}
+
+.relics-vars-2.relics-vars-2.relics-vars-2.relics-vars-2.relics-vars-2.relics-vars-2 {
+    color: var(--text-accent);
+}
+
+.effect-coffin-nail-vars.effect-coffin-nail-vars.effect-coffin-nail-vars.effect-coffin-nail-vars.effect-coffin-nail-vars.effect-coffin-nail-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.permanent-kept-after-the-run-vars.permanent-kept-after-the-run-vars.permanent-kept-after-the-run-vars.permanent-kept-after-the-run-vars.permanent-kept-after-the-run-vars.permanent-kept-after-the-run-vars {
+    color: var(--text-muted);
+}
+
+._7-damage-to-broken-enemies-vars._7-damage-to-broken-enemies-vars._7-damage-to-broken-enemies-vars._7-damage-to-broken-enemies-vars._7-damage-to-broken-enemies-vars._7-damage-to-broken-enemies-vars {
+    color: var(--text-primary);
+}
+
+.event-blessings-vars.event-blessings-vars.event-blessings-vars.event-blessings-vars.event-blessings-vars.event-blessings-vars {
+    color: var(--text-accent);
+}
+
+.effect-anointed-vars.effect-anointed-vars.effect-anointed-vars.effect-anointed-vars.effect-anointed-vars.effect-anointed-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.ends-after-1-battle-vars.ends-after-1-battle-vars.ends-after-1-battle-vars.ends-after-1-battle-vars.ends-after-1-battle-vars.ends-after-1-battle-vars {
+    color: var(--text-muted);
+}
+
+.next-battle-party-attack-up-vars.next-battle-party-attack-up-vars.next-battle-party-attack-up-vars.next-battle-party-attack-up-vars.next-battle-party-attack-up-vars.next-battle-party-attack-up-vars {
+    color: var(--text-primary);
+}
+
+.panel-default__i-40 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-gold__i-19 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-27 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.toast-info__i-4 > .toast-info.toast-info.toast-info.toast-info.toast-info.toast-info.toast-info {
+    width: 100%;
+}
+
+.panel-default__i-41 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-28 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+
+.effect-chip-relic__i .effect-chip-relic__e-4.effect-chip-relic__e-4.effect-chip-relic__e-4.effect-chip-relic__e-4.effect-chip-relic__e-4.effect-chip-relic__e-4.effect-chip-relic__e-4 {
+    display: none;
+}
+
+.panel-gold__i-20 > .panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold.panel-gold {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-29 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: 100%;
+}
+

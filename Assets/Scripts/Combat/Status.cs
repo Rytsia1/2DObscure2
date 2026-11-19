@@ -154,5 +154,43 @@ namespace Obscure
             id == StatusId.Burn ||
             id == StatusId.Poison ||
             id == StatusId.Bleed;
+
+        public static bool IsControl(StatusId id) =>
+            id == StatusId.Stun ||
+            id == StatusId.Freeze ||
+            id == StatusId.Shock ||
+            IsMental(id);
+
+        public static string Description(StatusId id) => id switch
+        {
+            StatusId.DefenseUp => "Physical defense increased.",
+            StatusId.DefenseDown => "Physical defense reduced.",
+            StatusId.AttackUp => "Attack power increased.",
+            StatusId.AttackDown => "Attack power reduced.",
+            StatusId.Slow => "Initiative and turn speed reduced.",
+            StatusId.Poison => "Takes poison damage at turn start.",
+            StatusId.Guardian => "Intercepts attacks targeting protected ally.",
+            StatusId.Evasion => "Increased chance to evade incoming strikes.",
+            StatusId.MagicDefenseUp => "Magic defense increased.",
+            StatusId.MagicDefenseDown => "Magic defense reduced.",
+            StatusId.Broken => "Staggered — takes +50% damage and skips turn.",
+            StatusId.Exhausted => "Skills cost more MP and output is reduced.",
+            StatusId.Burn => "Takes fire damage at turn start.",
+            StatusId.Bleed => "Takes bleed damage over time.",
+            StatusId.Freeze => "Frozen solid — cannot act until thawed.",
+            StatusId.Shock => "Lightning disruption — risk of losing action.",
+            StatusId.Curse => "Healing received reduced and dark vulnerability.",
+            StatusId.Stun => "Incapacitated — skips the next turn.",
+            StatusId.ResistanceDown => "Elemental & status resistance reduced.",
+            StatusId.MindControl => "Compelled to act against allies.",
+            StatusId.Confusion => "Actions target randomly.",
+            StatusId.Fear => "Hesitates and deals reduced damage.",
+            StatusId.Despair => "Cannot restore MP or gain buffs.",
+            StatusId.Charm => "Unable to attack the charmer.",
+            StatusId.Sleep => "Asleep — skips turn until awakened.",
+            StatusId.Silence => "Cannot cast magic skills.",
+            StatusId.Madness => "Erratic high-damage strikes without control.",
+            _ => "Active combat status effect.",
+        };
     }
 }

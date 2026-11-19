@@ -386,7 +386,7 @@ namespace Obscure
             if (a?.apply != null && a.apply.Length > 0)
             {
                 host.Add(new UiLabel("STATUS EFFECTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 8, marginBottom = 4 } });
-                var statusRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center } };
+                var statusRow = new VisualElement { style = { width = 346, flexShrink = 0, flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center } };
                 foreach (var ap in a.apply)
                 {
                     var chip = IconArt.StatusChip(ap.id, $"{StatusInfo.Name(ap.id).ToUpperInvariant()} {Mathf.RoundToInt(ap.chance * 100)}% · {ap.turns}T", 1, 5f);

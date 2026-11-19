@@ -1,0 +1,76 @@
+.stat-stepper-2 {
+    display: flex;
+    padding: 4px;
+    align-items: center;
+    flex-direction: row;
+}
+
+.stat-stepper-2:focus {
+    border-width: 2px;
+    background-color: #2B2210;
+    border-color: var(--border-accent);
+}
+
+.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e {
+    display: flex;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    border-width: 2px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.stat-stepper-2__e-2.stat-stepper-2__e-2.stat-stepper-2__e-2.stat-stepper-2__e-2.stat-stepper-2__e-2.stat-stepper-2__e-2.stat-stepper-2__e-2 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3 {
+    display: flex;
+    width: 48px;
+    height: 32px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    border-width: 2px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.stat-stepper-2__e-4.stat-stepper-2__e-4.stat-stepper-2__e-4.stat-stepper-2__e-4.stat-stepper-2__e-4.stat-stepper-2__e-4.stat-stepper-2__e-4 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.stat-stepper-2__e-5.stat-stepper-2__e-5.stat-stepper-2__e-5.stat-stepper-2__e-5.stat-stepper-2__e-5.stat-stepper-2__e-5.stat-stepper-2__e-5 {
+    display: flex;
+    width: 32px;
+    height: 32px;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    border-width: 2px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.stat-stepper-2__e-6.stat-stepper-2__e-6.stat-stepper-2__e-6.stat-stepper-2__e-6.stat-stepper-2__e-6.stat-stepper-2__e-6.stat-stepper-2__e-6 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+

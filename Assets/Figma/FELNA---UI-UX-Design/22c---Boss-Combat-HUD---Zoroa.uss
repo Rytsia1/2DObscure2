@@ -1,0 +1,373 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.sprite-warden {
+    width: 112px;
+    height: 140px;
+}
+
+.gauge-hp-low {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-break {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+._22c-boss-combat-hud-zoroa {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._22c-boss-combat-hud-zoroa {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._22c-boss-combat-hud-zoroa-vars._22c-boss-combat-hud-zoroa-vars._22c-boss-combat-hud-zoroa-vars._22c-boss-combat-hud-zoroa-vars._22c-boss-combat-hud-zoroa-vars._22c-boss-combat-hud-zoroa-vars {
+    background-color: var(--bg-ground);
+}
+
+.rectangle-vars-233.rectangle-vars-233.rectangle-vars-233.rectangle-vars-233.rectangle-vars-233.rectangle-vars-233 {
+    background-color: var(--border-line);
+}
+
+.act-1-ashen-ruins-vars-3.act-1-ashen-ruins-vars-3.act-1-ashen-ruins-vars-3.act-1-ashen-ruins-vars-3.act-1-ashen-ruins-vars-3.act-1-ashen-ruins-vars-3 {
+    color: var(--text-highlight);
+}
+
+.round-1-vars-3.round-1-vars-3.round-1-vars-3.round-1-vars-3.round-1-vars-3.round-1-vars-3 {
+    color: var(--text-accent);
+}
+
+.node-vars-30.node-vars-30.node-vars-30.node-vars-30.node-vars-30.node-vars-30 {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-234.rectangle-vars-234.rectangle-vars-234.rectangle-vars-234.rectangle-vars-234.rectangle-vars-234 {
+    border-color: var(--border-focus);
+}
+
+.zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars.zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars.zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars.zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars.zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars.zoroa-charges-final-reaping-all-releases-next-turn-break-it-to-interrupt-vars {
+    color: var(--status-error);
+}
+
+.node-vars-31.node-vars-31.node-vars-31.node-vars-31.node-vars-31.node-vars-31 {
+    color: var(--text-highlight);
+}
+
+.vitals-knight-vars-3.vitals-knight-vars-3.vitals-knight-vars-3.vitals-knight-vars-3.vitals-knight-vars-3.vitals-knight-vars-3 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.knight-vars-12.knight-vars-12.knight-vars-12.knight-vars-12.knight-vars-12.knight-vars-12 {
+    color: var(--text-primary);
+}
+
+.defender-vars-3.defender-vars-3.defender-vars-3.defender-vars-3.defender-vars-3.defender-vars-3 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-23.hp-vars-23.hp-vars-23.hp-vars-23.hp-vars-23.hp-vars-23 {
+    color: var(--vital-hp);
+}
+
+._125-125-vars-4._125-125-vars-4._125-125-vars-4._125-125-vars-4._125-125-vars-4._125-125-vars-4 {
+    color: var(--text-primary);
+}
+
+.fill-vars-83.fill-vars-83.fill-vars-83.fill-vars-83.fill-vars-83.fill-vars-83 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-22.mp-vars-22.mp-vars-22.mp-vars-22.mp-vars-22.mp-vars-22 {
+    color: var(--vital-mp);
+}
+
+._20-20-vars-5._20-20-vars-5._20-20-vars-5._20-20-vars-5._20-20-vars-5._20-20-vars-5 {
+    color: var(--text-primary);
+}
+
+.fill-vars-84.fill-vars-84.fill-vars-84.fill-vars-84.fill-vars-84.fill-vars-84 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-rogue-vars-3.vitals-rogue-vars-3.vitals-rogue-vars-3.vitals-rogue-vars-3.vitals-rogue-vars-3.vitals-rogue-vars-3 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+}
+
+.rogue-vars-11.rogue-vars-11.rogue-vars-11.rogue-vars-11.rogue-vars-11.rogue-vars-11 {
+    color: var(--text-highlight);
+}
+
+.striker-vars-3.striker-vars-3.striker-vars-3.striker-vars-3.striker-vars-3.striker-vars-3 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-24.hp-vars-24.hp-vars-24.hp-vars-24.hp-vars-24.hp-vars-24 {
+    color: var(--vital-hp);
+}
+
+._85-85-vars-3._85-85-vars-3._85-85-vars-3._85-85-vars-3._85-85-vars-3._85-85-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-85.fill-vars-85.fill-vars-85.fill-vars-85.fill-vars-85.fill-vars-85 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-23.mp-vars-23.mp-vars-23.mp-vars-23.mp-vars-23.mp-vars-23 {
+    color: var(--vital-mp);
+}
+
+._25-25-vars-3._25-25-vars-3._25-25-vars-3._25-25-vars-3._25-25-vars-3._25-25-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-86.fill-vars-86.fill-vars-86.fill-vars-86.fill-vars-86.fill-vars-86 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-mage-vars-3.vitals-mage-vars-3.vitals-mage-vars-3.vitals-mage-vars-3.vitals-mage-vars-3.vitals-mage-vars-3 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.mage-vars-11.mage-vars-11.mage-vars-11.mage-vars-11.mage-vars-11.mage-vars-11 {
+    color: var(--text-primary);
+}
+
+.caster-vars-3.caster-vars-3.caster-vars-3.caster-vars-3.caster-vars-3.caster-vars-3 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-25.hp-vars-25.hp-vars-25.hp-vars-25.hp-vars-25.hp-vars-25 {
+    color: var(--vital-hp);
+}
+
+._60-60-vars-5._60-60-vars-5._60-60-vars-5._60-60-vars-5._60-60-vars-5._60-60-vars-5 {
+    color: var(--text-primary);
+}
+
+.fill-vars-87.fill-vars-87.fill-vars-87.fill-vars-87.fill-vars-87.fill-vars-87 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-24.mp-vars-24.mp-vars-24.mp-vars-24.mp-vars-24.mp-vars-24 {
+    color: var(--vital-mp);
+}
+
+._60-60-vars-6._60-60-vars-6._60-60-vars-6._60-60-vars-6._60-60-vars-6._60-60-vars-6 {
+    color: var(--text-primary);
+}
+
+.fill-vars-88.fill-vars-88.fill-vars-88.fill-vars-88.fill-vars-88.fill-vars-88 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-healer-vars-3.vitals-healer-vars-3.vitals-healer-vars-3.vitals-healer-vars-3.vitals-healer-vars-3.vitals-healer-vars-3 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.healer-vars-12.healer-vars-12.healer-vars-12.healer-vars-12.healer-vars-12.healer-vars-12 {
+    color: var(--text-primary);
+}
+
+.support-vars-3.support-vars-3.support-vars-3.support-vars-3.support-vars-3.support-vars-3 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-26.hp-vars-26.hp-vars-26.hp-vars-26.hp-vars-26.hp-vars-26 {
+    color: var(--vital-hp);
+}
+
+._80-80-vars-3._80-80-vars-3._80-80-vars-3._80-80-vars-3._80-80-vars-3._80-80-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-89.fill-vars-89.fill-vars-89.fill-vars-89.fill-vars-89.fill-vars-89 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-25.mp-vars-25.mp-vars-25.mp-vars-25.mp-vars-25.mp-vars-25 {
+    color: var(--vital-mp);
+}
+
+._55-55-vars-3._55-55-vars-3._55-55-vars-3._55-55-vars-3._55-55-vars-3._55-55-vars-3 {
+    color: var(--text-primary);
+}
+
+.fill-vars-90.fill-vars-90.fill-vars-90.fill-vars-90.fill-vars-90.fill-vars-90 {
+    background-color: var(--vital-mp);
+}
+
+.attack-vars-2.attack-vars-2.attack-vars-2.attack-vars-2.attack-vars-2.attack-vars-2 {
+    color: var(--text-highlight);
+}
+
+.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars-2.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars-2.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars-2.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars-2.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars-2.strike-one-enemy-with-your-weapon-timed-qte-raises-damage-vars-2 {
+    color: var(--text-primary);
+}
+
+.cost-type-physical-vars-2.cost-type-physical-vars-2.cost-type-physical-vars-2.cost-type-physical-vars-2.cost-type-physical-vars-2.cost-type-physical-vars-2 {
+    color: var(--text-muted);
+}
+
+.target-enemy-vars-2.target-enemy-vars-2.target-enemy-vars-2.target-enemy-vars-2.target-enemy-vars-2.target-enemy-vars-2 {
+    color: var(--text-muted);
+}
+
+.zoroa-harvester-of-souls-vars.zoroa-harvester-of-souls-vars.zoroa-harvester-of-souls-vars.zoroa-harvester-of-souls-vars.zoroa-harvester-of-souls-vars.zoroa-harvester-of-souls-vars {
+    color: var(--text-highlight);
+}
+
+.soul-entity-controller-vars.soul-entity-controller-vars.soul-entity-controller-vars.soul-entity-controller-vars.soul-entity-controller-vars.soul-entity-controller-vars {
+    color: var(--text-muted);
+}
+
+.phase-1-2-vars.phase-1-2-vars.phase-1-2-vars.phase-1-2-vars.phase-1-2-vars.phase-1-2-vars {
+    color: var(--status-error);
+}
+
+.fill-vars-91.fill-vars-91.fill-vars-91.fill-vars-91.fill-vars-91.fill-vars-91 {
+    background-color: var(--vital-hp-low);
+}
+
+._1-376-1-840-vars._1-376-1-840-vars._1-376-1-840-vars._1-376-1-840-vars._1-376-1-840-vars._1-376-1-840-vars {
+    color: var(--text-primary);
+}
+
+.bar-1-2-vars.bar-1-2-vars.bar-1-2-vars.bar-1-2-vars.bar-1-2-vars.bar-1-2-vars {
+    color: var(--text-body);
+}
+
+.fill-vars-92.fill-vars-92.fill-vars-92.fill-vars-92.fill-vars-92.fill-vars-92 {
+    background-color: var(--accent-gold);
+}
+
+.break-vars.break-vars.break-vars.break-vars.break-vars.break-vars {
+    color: var(--accent-gold);
+}
+
+._64-100-vars._64-100-vars._64-100-vars._64-100-vars._64-100-vars._64-100-vars {
+    color: var(--text-body);
+}
+
+.intent-final-reaping-4-heavy-all-vars.intent-final-reaping-4-heavy-all-vars.intent-final-reaping-4-heavy-all-vars.intent-final-reaping-4-heavy-all-vars.intent-final-reaping-4-heavy-all-vars.intent-final-reaping-4-heavy-all-vars {
+    color: var(--status-error);
+}
+
+.panel-default__i-46 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-47 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.button-slab-2__i-4 > .button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2 {
+    width: 100%;
+}
+
+.panel-raised__i-3 > .panel-raised.panel-raised.panel-raised.panel-raised.panel-raised.panel-raised.panel-raised {
+    width: 100%;
+    height: 100%;
+}
+

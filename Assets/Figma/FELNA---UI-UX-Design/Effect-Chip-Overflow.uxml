@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Effect-Chip-Overflow.uss" />
+    <ui:VisualElement class="effect-chip-overflow">
+        <ui:VisualElement class="effect-chip-overflow__e">
+            <ui:Label name="text-0" text="+" class="unity-label effect-chip-overflow__e-2" />
+        </ui:VisualElement>
+        <ui:Label name="text-1" text="Battle Focus" class="unity-label effect-chip-overflow__e-3" />
+    </ui:VisualElement>
+</ui:UXML>

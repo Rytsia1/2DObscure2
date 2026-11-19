@@ -3,295 +3,628 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UiAlign = UnityEngine.UIElements.Align;
 using UiLabel = UnityEngine.UIElements.Label;
 
 namespace Obscure
 {
-    // Presents RunState.PendingReward — migrated to Figma 21---Combat-Victory---Rewards.uxml (1280x720 UI Toolkit).
+    // Presents RunState.PendingReward — migrated to Figma 21b---Combat-Victory---Confirm-Reward--v2.uxml (1280x720 UI Toolkit).
     public class RewardScreen : GameScreen
     {
+        int selectedChoiceIdx = -1;
+        int selectedHeroIdx = -1;
         int selectedModifierIdx = -1;
         ElementType selectedAttunementElement = ElementType.Fire;
 
+        RewardOffer currentOffer;
+        List<Unit> currentParty;
+        bool isBossReward;
+        UitkMenu menu;
+        VisualElement cardsHost;
+        VisualElement confirmHost;
+
         protected override void Build()
         {
+            selectedChoiceIdx = -1;
+            selectedHeroIdx = -1;
             selectedModifierIdx = -1;
             selectedAttunementElement = ElementType.Fire;
-            var r = Run?.PendingReward ?? new RewardOffer { title = "VICTORY", text = "SPOILS OF WAR", choices = new List<RewardOption>() };
-            MountFigma("21---Combat-Victory---Rewards");
 
-            var menu = Root.gameObject.AddComponent<UitkMenu>();
-            menu.AttachRoot(UiRoot);
+            currentOffer = Run?.PendingReward ?? new RewardOffer { title = "VICTORY", text = "SPOILS OF WAR", choices = new List<RewardOption>() };
+            currentParty = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+            isBossReward = Run?.Current?.type == NodeType.Boss;
 
-            var titleLbl = UiRoot.Q<UiLabel>(className: "victory-vars");
-            if (titleLbl != null) titleLbl.text = (r.title ?? "VICTORY").ToUpperInvariant();
+            MountFigma("21b---Combat-Victory---Confirm-Reward--v2");
+            var screen = UiRoot.Q<VisualElement>(className: "_21b-combat-victory-confirm-reward-v2") ?? UiRoot;
 
-            var subLbl = UiRoot.Q<UiLabel>(className: "spoils-of-war-vars");
-            if (subLbl != null) subLbl.text = (r.text ?? "SPOILS OF WAR").ToUpperInvariant();
+            // Header title + top gold tags
+            var titleLbl = UiRoot.Q<UiLabel>(className: "victory-vars-2");
+            if (titleLbl != null) titleLbl.text = (currentOffer.title ?? "VICTORY").ToUpperInvariant();
 
-            var goldDeltaLbl = UiRoot.Q<UiLabel>(className: "_24-run-gold-vars");
+            var topTags = UiRoot.Query<VisualElement>(className: "tag-gold").ToList();
+            int standing = currentParty.Count(u => u.Alive);
+            if (topTags.Count >= 1)
+                FigmaUi.SetInstanceText(topTags[0], "text-0", isBossReward ? "BOSS CLEARED" : $"ACT {Run?.Act ?? 1}");
+            if (topTags.Count >= 2)
+                FigmaUi.SetInstanceText(topTags[1], "text-0", standing == currentParty.Count ? "NO HERO FELL" : $"{standing}/{currentParty.Count} STANDING");
+            if (topTags.Count >= 3)
+            {
+                string thirdTag = currentOffer.bonusGoldFromModifier > 0
+                    ? $"+{currentOffer.bonusGoldFromModifier} FORTUNE"
+                    : $"RELICS {Run?.Relics.Count ?? 0}/{RelicManager.MaxRelicCapacity}";
+                FigmaUi.SetInstanceText(topTags[2], "text-0", thirdTag);
+            }
+            // Hide the baked 4th Tag-Gold ("★ LEVEL UP · LV 2") inside row 2 of the left panel
+            if (topTags.Count >= 4)
+                topTags[3].style.display = DisplayStyle.None;
+
+            // Left Battle Spoils panel
+            var goldDeltaLbl = UiRoot.Q<UiLabel>(className: "_24-run-gold-vars-2");
             if (goldDeltaLbl != null)
             {
-                string extra = r.bonusGoldFromModifier > 0 ? $" (+{r.bonusGoldFromModifier} FORTUNE)" : "";
-                goldDeltaLbl.text = $"◆ +{r.gold} RUN GOLD{extra}";
+                string extra = currentOffer.bonusGoldFromModifier > 0 ? $" (+{currentOffer.bonusGoldFromModifier})" : "";
+                goldDeltaLbl.text = $"◆ +{currentOffer.gold} RUN GOLD{extra}";
             }
 
-            var goldTotalLbl = UiRoot.Q<UiLabel>(className: "run-gold-120-144-vars");
+            var goldTotalLbl = UiRoot.Q<UiLabel>(className: "_120-144-vars");
             if (goldTotalLbl != null)
             {
-                string bonusItemNote = !string.IsNullOrEmpty(r.bonusItemId) && Database.Items.TryGetValue(r.bonusItemId, out var bi)
-                    ? $" · +{bi.name.ToUpperInvariant()}"
-                    : "";
-                goldTotalLbl.text = (Run != null ? $"RUN GOLD {Run.Gold} › {Run.Gold + r.gold}" : $"RUN GOLD +{r.gold}") + bonusItemNote;
+                goldTotalLbl.text = Run != null ? $"{Run.Gold} › {Run.Gold + currentOffer.gold}" : $"+{currentOffer.gold}";
             }
 
-            var prizeHdr = UiRoot.Q<UiLabel>(className: "choose-one-prize-vars");
-            if (prizeHdr != null) prizeHdr.text = r.choices.Count > 0 ? "CHOOSE ONE PRIZE" : "NO PRIZE THIS TIME";
-
-            bool isBossReward = Run?.Current?.type == NodeType.Boss;
-            var tipLbl = UiRoot.Q<UiLabel>(className: "or-take-only-the-gold-and-continue-vars");
-            if (tipLbl != null)
-            {
-                tipLbl.text = isBossReward
-                    ? "BOSS CLEARED: ALL DUNGEON MODIFIERS END HERE · RELICS ARE KEPT"
-                    : "";
-                if (isBossReward) tipLbl.style.color = Palette.Ember1;
-            }
-
-            var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            bool hasModifierOffers = r.modifierChoices != null && r.modifierChoices.Count > 0;
-
-            // Prize cards in 21---Combat-Victory---Rewards.uxml
-            string[] cardClasses = { "prize-draught-2-vars", "prize-tideglass-wand-vars", "prize-iron-scrap-3-vars" };
-            for (int i = 0; i < cardClasses.Length; i++)
-            {
-                var card = UiRoot.Q<VisualElement>(className: cardClasses[i]);
-                if (card == null) continue;
-                if (i >= r.choices.Count)
-                {
-                    card.style.display = DisplayStyle.None;
-                    continue;
-                }
-                if (hasModifierOffers) card.style.height = 134;
-
-                int choiceIdx = i;
-                var o = r.choices[i];
-                var (label, detail) = RewardGenerator.Describe(o, Run?.ModifierManager);
-                if (o.kind == RewardKind.Upgrade)
-                {
-                    var u = party.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id) ?? party[0];
-                    detail = u.stats.Preview(Database.Upgrades[o.id].bonus);
-                }
-
-                card.Clear();
-                card.style.justifyContent = Justify.SpaceBetween;
-
-                var topGroup = new VisualElement { style = { flexDirection = FlexDirection.Column } };
-                var slot = FigmaUi.InstantiateTemplate("Item-Slot-Filled");
-                if (slot != null && !hasModifierOffers)
-                {
-                    var prizeIcon = o.kind == RewardKind.Item ? IconArt.Item(o.id) : o.kind == RewardKind.Equipment ? IconArt.Gear(o.id) : null;
-                    FigmaUi.SetInstanceText(slot, "text-0", prizeIcon != null ? "" : PrizeSymbol(o));
-                    IconArt.Overlay(slot, prizeIcon);
-                    slot.style.marginBottom = 8;
-                    topGroup.Add(slot);
-                }
-
-                var nameEl = new UiLabel(label);
-                nameEl.style.fontSize = hasModifierOffers ? 14 : 16;
-                nameEl.style.color = Palette.Mist1;
-                nameEl.style.whiteSpace = WhiteSpace.Normal;
-                nameEl.style.marginBottom = 4;
-                topGroup.Add(nameEl);
-
-                var detEl = new UiLabel(detail.ToUpperInvariant());
-                detEl.style.fontSize = hasModifierOffers ? 11 : 12;
-                detEl.style.color = Palette.Mist2;
-                detEl.style.whiteSpace = WhiteSpace.Normal;
-                topGroup.Add(detEl);
-                card.Add(topGroup);
-
-                bool keep = o.kind == RewardKind.Relic || o.kind == RewardKind.Equipment || o.kind == RewardKind.Upgrade;
-                var tag = FigmaUi.InstantiateTemplate(keep ? "Tag-Keep" : "Tag-Temp");
-                if (tag != null)
-                {
-                    FigmaUi.SetInstanceText(tag, "text-0", keep ? "KEPT" : "RUN ONLY");
-                    card.Add(tag);
-                }
-
-                var item = menu.Add(card, label, () => Claim(choiceIdx), tooltip: detail.ToUpperInvariant());
-                item.visual = on =>
-                {
-                    card.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Palette.Ink2;
-                    var border = on ? Palette.Gold2 : Palette.Ink5;
-                    card.style.borderTopColor = border;
-                    card.style.borderBottomColor = border;
-                    card.style.borderLeftColor = border;
-                    card.style.borderRightColor = border;
-                };
-                item.visual(false);
-            }
-
-            if (hasModifierOffers)
-            {
-                BuildModifierOfferStrip(r, menu, tipLbl);
-            }
-
-            // Party panel
             string[] spriteClasses = { "sprite-knight", "sprite-rogue", "sprite-mage", "sprite-healer" };
-            string[] nameClasses = { "knight-vars-6", "rogue-vars-5", "mage-vars-5", "healer-vars-6" };
-            string[] lvClasses = { "lv-1-vars-8", "lv-1-vars-9", "lv-1-vars-10", "lv-1-vars-11" };
-            string[] deltaClasses = { "_32-exp-vars", "_32-exp-vars-2", "_32-exp-vars-3", "_32-exp-vars-4" };
-            string[] barTextClasses = { "_62-100-exp-vars", "_48-100-exp-vars", "_55-100-exp-vars", "_70-100-exp-vars" };
+            string[] frameClasses = { "frame-vars-54", "frame-vars-55", "frame-vars-56", "frame-vars-57" };
+            string[] nameClasses = { "knight-vars-9", "rogue-vars-8", "mage-vars-8", "healer-vars-9" };
+            string[] deltaClasses = { "_32-exp-vars-5", "_32-exp-vars-6", "_32-exp-vars-7", "_32-exp-vars-8" };
+            string[] barTextClasses = { "_62-100-exp-vars-2", null, "_55-100-exp-vars-2", "_70-100-exp-vars-2" };
             var xpGauges = UiRoot.Query<VisualElement>(className: "gauge-xp").ToList();
+
+            // Add row 1 sub-label where the baked LEVEL UP tag used to sit
+            var row1SubLbl = new UiLabel("")
+            {
+                style =
+                {
+                    position = Position.Absolute, left = 104, top = 360,
+                    fontSize = 12, letterSpacing = 0.48f, color = Palette.Mist2,
+                    whiteSpace = WhiteSpace.NoWrap
+                }
+            };
+            screen.Add(row1SubLbl);
 
             for (int i = 0; i < 4; i++)
             {
-                var fig = UiRoot.Q<VisualElement>(className: spriteClasses[i]);
+                var frame = UiRoot.Q<VisualElement>(className: frameClasses[i]);
+                var fig = frame != null ? frame.Q<VisualElement>(className: spriteClasses[i]) : UiRoot.Q<VisualElement>(className: spriteClasses[i]);
                 var nLbl = UiRoot.Q<UiLabel>(className: nameClasses[i]);
-                var lLbl = UiRoot.Q<UiLabel>(className: lvClasses[i]);
                 var dLbl = UiRoot.Q<UiLabel>(className: deltaClasses[i]);
-                var bLbl = UiRoot.Q<UiLabel>(className: barTextClasses[i]);
+                var bLbl = i == 1 ? row1SubLbl : UiRoot.Q<UiLabel>(className: barTextClasses[i]);
                 var g = i < xpGauges.Count ? xpGauges[i] : null;
 
-                if (i >= party.Count)
+                if (i >= currentParty.Count)
                 {
-                    if (fig != null && fig.parent != null) fig.parent.style.display = DisplayStyle.None;
+                    if (frame != null) frame.style.display = DisplayStyle.None;
                     if (nLbl != null) nLbl.style.display = DisplayStyle.None;
-                    if (lLbl != null) lLbl.style.display = DisplayStyle.None;
                     if (dLbl != null) dLbl.style.display = DisplayStyle.None;
                     if (bLbl != null) bLbl.style.display = DisplayStyle.None;
                     if (g != null) g.style.display = DisplayStyle.None;
                     continue;
                 }
 
-                var u = party[i];
+                var u = currentParty[i];
                 if (fig != null && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "rw_" + (u.classDef?.id ?? u.name)));
                 if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = u.Alive ? Palette.Mist1 : Palette.Mist3; }
-                if (lLbl != null) lLbl.text = $"LV {u.level}";
-                if (dLbl != null) { dLbl.text = u.Alive ? "STANDING" : "KO"; dLbl.style.color = u.Alive ? Palette.Ok : Palette.HpLow; }
+                if (dLbl != null)
+                {
+                    dLbl.text = $"LV {u.level} · {(u.Alive ? "OK" : "KO")}";
+                    dLbl.style.color = u.Alive ? Palette.Ok : Palette.HpLow;
+                    dLbl.style.left = 292;
+                }
                 float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
                 FigmaUi.SetGaugeFill(g, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
-                if (bLbl != null) bLbl.text = $"HP {u.hp} / {u.stats.maxHp}  ·  MP {u.mp} / {u.stats.maxMp}";
+                if (bLbl != null) bLbl.text = $"HP {u.hp}/{u.stats.maxHp} · MP {u.mp}/{u.stats.maxMp}";
             }
 
-            // Continue / Skip button
-            var contInst = UiRoot.Q<VisualElement>(className: "button-primary-2__i-8");
-            if (contInst != null)
+            var noteTop = UiRoot.Q<UiLabel>(className: "_1-sp-for-the-rogue-level-up-vars");
+            if (noteTop != null)
             {
-                string labelText = r.choices.Count > 0 ? "Skip prize" : "Continue to map";
-                FigmaUi.SetInstanceText(contInst, "text-1", labelText);
-                var contBtn = contInst.Q<Button>() ?? contInst;
-                var item = menu.Add(contBtn, labelText, () => Claim(-1), tooltip: "TAKE ONLY THE GOLD AND CONTINUE");
-                item.visual = on =>
+                if (isBossReward)
                 {
-                    FigmaUi.SetInstanceText(contInst, "text-0", on ? "▸" : "");
-                    contBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
-                    contBtn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
-                    contBtn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
-                    contBtn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
-                };
-                item.visual(false);
+                    noteTop.text = "ALL DUNGEON MODIFIERS END HERE";
+                    noteTop.style.color = Palette.Ember1;
+                }
+                else if (!string.IsNullOrEmpty(currentOffer.bonusItemId) && Database.Items.TryGetValue(currentOffer.bonusItemId, out var bi))
+                {
+                    noteTop.text = $"BONUS LOOT: +{bi.name.ToUpperInvariant()}";
+                    noteTop.style.color = Palette.Ok;
+                }
+                else
+                {
+                    noteTop.text = (currentOffer.text ?? "SPOILS OF WAR").ToUpperInvariant();
+                }
+                noteTop.style.width = 340;
+                noteTop.style.whiteSpace = WhiteSpace.Normal;
             }
 
-            menu.onFocus = s =>
+            var noteBottom = UiRoot.Q<UiLabel>(className: "spend-sp-at-a-rest-site-or-in-the-hub-vars");
+            if (noteBottom != null)
             {
-                if (tipLbl != null)
+                noteBottom.text = isBossReward
+                    ? "RELICS & KEPT GEAR SURVIVE THE RUN."
+                    : "KEPT REWARDS SURVIVE A WIPE.";
+                noteBottom.style.width = 340;
+                noteBottom.style.whiteSpace = WhiteSpace.Normal;
+            }
+
+            // Right header
+            var rewardHdr = UiRoot.Q<VisualElement>(className: "section-header__i-32");
+            if (rewardHdr != null)
+                FigmaUi.SetInstanceText(rewardHdr, "text-0", currentOffer.choices.Count > 0 ? "Choose one reward" : "No prize this time");
+
+            var subHdr = UiRoot.Q<UiLabel>(className: "pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars");
+            if (subHdr != null)
+            {
+                subHdr.text = currentOffer.choices.Count > 0
+                    ? $"PICK 1 OF {currentOffer.choices.Count} · CONFIRM BELOW · KEPT ITEMS SURVIVE A WIPE"
+                    : "COLLECT YOUR GOLD AND CONTINUE";
+            }
+
+            // Remove baked static cards, baked overlay icons, and baked confirm panel children (including baked <Button>s)
+            StripBakedRewardElements(screen);
+
+            // Dynamic hosts matching exact 21b coordinates
+            cardsHost = new VisualElement
+            {
+                name = "RewardCardsHost",
+                style =
                 {
-                    if (isBossReward)
-                        tipLbl.text = "BOSS CLEARED: ALL DUNGEON MODIFIERS END HERE · RELICS ARE KEPT";
-                    else
-                        tipLbl.text = s?.tooltip ?? "";
+                    position = Position.Absolute, left = 412, top = 132, width = 844, height = 380,
+                    flexDirection = FlexDirection.Row, alignItems = UiAlign.FlexStart
                 }
             };
+            screen.Add(cardsHost);
+
+            confirmHost = new VisualElement
+            {
+                name = "RewardConfirmHost",
+                style =
+                {
+                    position = Position.Absolute, left = 428, top = 534, width = 812, height = 140,
+                    flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween
+                }
+            };
+            screen.Add(confirmHost);
+
+            menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            menu.onBack = () =>
+            {
+                if (selectedChoiceIdx >= 0)
+                {
+                    int prev = selectedChoiceIdx;
+                    selectedChoiceIdx = -1;
+                    selectedHeroIdx = -1;
+                    RebuildInteractive(focusIndex: prev);
+                }
+            };
+
+            RebuildInteractive(focusIndex: 0);
         }
 
-        void BuildModifierOfferStrip(RewardOffer r, UitkMenu menu, UiLabel tipLbl)
+        static void StripBakedRewardElements(VisualElement screen)
         {
-            var screen = UiRoot.Q<VisualElement>(className: "_21-combat-victory-rewards") ?? UiRoot;
-            if (tipLbl != null)
+            var toRemove = new List<VisualElement>();
+            foreach (var child in screen.Children())
             {
-                tipLbl.style.top = 560;
-                tipLbl.style.width = 508;
-                tipLbl.style.fontSize = 11;
-                tipLbl.style.whiteSpace = WhiteSpace.Normal;
+                if (child.ClassListContains("reward-card__i") ||
+                    child.ClassListContains("reward-card-2__i") ||
+                    child.ClassListContains("reward-card__i-2") ||
+                    child.ClassListContains("sprite-iconbattle") ||
+                    child.ClassListContains("give-tideglass-wand-to-vars"))
+                {
+                    toRemove.Add(child);
+                    continue;
+                }
+                // Remove baked overlay icon containers sitting over the cards (top 198..199, left >= 500)
+                float top = child.style.top.value.value;
+                float left = child.style.left.value.value;
+                if (child.style.position == Position.Absolute &&
+                    ((Mathf.Abs(top - 198f) < 4f && left >= 500f) ||
+                     (Mathf.Abs(top - 562f) < 4f && left >= 420f) ||
+                     (Mathf.Abs(top - 636f) < 4f && left >= 600f)))
+                {
+                    toRemove.Add(child);
+                }
             }
-            var hdr = new UiLabel("BONUS MODIFIER (OPTIONAL · CLICK TO SELECT)")
+            foreach (var el in toRemove) el.RemoveFromHierarchy();
+        }
+
+        void RebuildInteractive(int focusIndex = 0, bool focusConfirm = false)
+        {
+            cardsHost.Clear();
+            confirmHost.Clear();
+            menu.Clear();
+
+            int choiceCount = Mathf.Min(3, currentOffer.choices.Count);
+            bool hasModifierOffers = currentOffer.modifierChoices != null && currentOffer.modifierChoices.Count > 0;
+
+            // 1. Build 1..3 Figma Reward-Card / Reward-Card-Selected cards
+            for (int i = 0; i < choiceCount; i++)
             {
-                style =
+                int choiceIdx = i;
+                var o = currentOffer.choices[i];
+                bool isSel = selectedChoiceIdx == i;
+                var tpl = FigmaUi.InstantiateTemplate(isSel ? "Reward-Card-Selected" : "Reward-Card");
+                VisualElement cardRoot = tpl ?? new VisualElement();
+                var inner = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2" : "reward-card") ?? cardRoot;
+                cardRoot.style.width = 268;
+                cardRoot.style.height = 380;
+                cardRoot.style.marginRight = i < choiceCount - 1 ? 16 : 0;
+                inner.style.width = 268;
+                inner.style.height = 380;
+
+                var (rawLabel, rawDetail) = RewardGenerator.Describe(o, Run?.ModifierManager);
+                string displayTitle = FormatCardTitle(o, rawLabel);
+                string displayDetail = rawDetail;
+                if (o.kind == RewardKind.Upgrade && Database.Upgrades.TryGetValue(o.id, out var upDef))
                 {
-                    position = Position.Absolute, left = 96, top = 482,
-                    fontSize = 11, color = Palette.Gold2, letterSpacing = 0.4f
+                    var u = currentParty.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id) ?? currentParty[0];
+                    displayDetail = u.stats.Preview(upDef.bonus);
                 }
-            };
-            screen.Add(hdr);
 
-            var row = new VisualElement
-            {
-                name = "ModifierOfferRow",
-                style =
+                var (catText, rarityText, rarityColor) = GetCardCategoryAndRarity(o);
+                string compareText = BuildComparisonLine(o);
+                bool keep = o.kind == RewardKind.Relic || o.kind == RewardKind.Equipment || o.kind == RewardKind.Upgrade;
+
+                FigmaUi.SetInstanceText(cardRoot, "text-0", catText);
+                FigmaUi.SetInstanceText(cardRoot, "text-1", rarityText);
+                FigmaUi.SetInstanceText(cardRoot, "text-2", displayTitle);
+                FigmaUi.SetInstanceText(cardRoot, "text-3", displayDetail.ToUpperInvariant());
+                FigmaUi.SetInstanceText(cardRoot, "text-4", compareText);
+                FigmaUi.SetInstanceText(cardRoot, "text-5", isSel ? "✓ SELECTED" : (i + 1).ToString());
+                FigmaUi.SetInstanceText(cardRoot, "text-6", keep ? "KEPT" : "RUN ONLY");
+                if (isSel) FigmaUi.SetInstanceText(cardRoot, "text-7", "✓");
+
+                // Apply rarity color to rarity tag, icon well border, and card title
+                var rarityLbl = cardRoot.Q<UiLabel>("text-1");
+                if (rarityLbl != null) rarityLbl.style.color = rarityColor;
+                var titleLbl = cardRoot.Q<UiLabel>("text-2");
+                if (titleLbl != null)
                 {
-                    position = Position.Absolute, left = 96, top = 500, width = 508, height = 56,
-                    flexDirection = FlexDirection.Row, justifyContent = Justify.FlexStart
+                    titleLbl.style.color = rarityColor;
+                    titleLbl.style.fontSize = 19;
+                    titleLbl.style.whiteSpace = WhiteSpace.Normal;
                 }
-            };
-            screen.Add(row);
+                var detailLbl = cardRoot.Q<UiLabel>("text-3");
+                if (detailLbl != null) detailLbl.style.fontSize = 12;
+                var cmpLbl = cardRoot.Q<UiLabel>("text-4");
+                if (cmpLbl != null) cmpLbl.style.fontSize = 12;
 
-            var pillItems = new List<(UitkMenu.Item item, VisualElement box, int idx, UiLabel titleLbl, RewardOption opt)>();
-
-            void RefreshPills(UitkMenu.Item focusedItem = null)
-            {
-                foreach (var p in pillItems)
+                // Tag badge styling for RUN ONLY vs KEPT
+                var tagBox = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2__e-12" : "reward-card__e-12");
+                var tagLbl = cardRoot.Q<UiLabel>("text-6");
+                if (!keep && tagBox != null && tagLbl != null)
                 {
-                    bool sel = selectedModifierIdx == p.idx;
-                    bool isFocused = focusedItem == p.item || menu.Current == p.item;
-                    bool isMax = Run?.ModifierManager != null && Run.ModifierManager.IsAtCap(p.opt.id, p.opt.id == "MOD-024" ? selectedAttunementElement : p.opt.element);
-                    var (mLbl, _) = RewardGenerator.Describe(new RewardOption
+                    tagBox.style.backgroundColor = Palette.Hex(0x2A160A);
+                    tagBox.style.borderTopColor = Palette.Ember1;
+                    tagBox.style.borderBottomColor = Palette.Ember1;
+                    tagBox.style.borderLeftColor = Palette.Ember1;
+                    tagBox.style.borderRightColor = Palette.Ember1;
+                    tagLbl.style.color = Palette.Ember1;
+                }
+
+                // Icon well content
+                var well = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2__e-4" : "reward-card__e-4");
+                if (well != null)
+                {
+                    well.Clear();
+                    well.style.borderTopColor = rarityColor;
+                    well.style.borderBottomColor = rarityColor;
+                    well.style.borderLeftColor = rarityColor;
+                    well.style.borderRightColor = rarityColor;
+                    well.style.justifyContent = Justify.Center;
+                    well.style.alignItems = UiAlign.Center;
+
+                    var tex = o.kind == RewardKind.Item ? IconArt.Item(o.id)
+                            : o.kind == RewardKind.Equipment ? IconArt.Gear(o.id)
+                            : null;
+                    if (tex != null)
                     {
-                        kind = RewardKind.Modifier,
-                        id = p.opt.id,
-                        element = p.opt.id == "MOD-024" ? selectedAttunementElement : p.opt.element
-                    }, Run?.ModifierManager);
-                    p.titleLbl.text = (sel ? "✓ " : "") + mLbl.ToUpperInvariant();
-                    p.box.style.backgroundColor = sel ? Palette.Hex(0x1E3328) : (isMax ? Palette.Ink1 : Palette.Ink2);
-                    var b = sel ? Palette.Ok : (isFocused ? Palette.Gold2 : Palette.Ink5);
-                    p.box.style.borderTopColor = b; p.box.style.borderBottomColor = b;
-                    p.box.style.borderLeftColor = b; p.box.style.borderRightColor = b;
+                        var img = new VisualElement { style = { width = 64, height = 64 } };
+                        FigmaUi.SetBackgroundContain(img, tex);
+                        well.Add(img);
+                    }
+                    else
+                    {
+                        var sym = new UiLabel(PrizeSymbol(o))
+                        {
+                            style =
+                            {
+                                fontSize = 36, color = rarityColor,
+                                unityFontStyleAndWeight = FontStyle.Bold,
+                                unityTextAlign = TextAnchor.MiddleCenter
+                            }
+                        };
+                        well.Add(sym);
+                    }
+                }
+
+                cardsHost.Add(cardRoot);
+
+                var cardItem = menu.Add(inner, displayTitle, () => SelectRewardCard(choiceIdx), tooltip: displayDetail.ToUpperInvariant());
+                cardItem.visual = on =>
+                {
+                    if (isSel)
+                    {
+                        inner.style.backgroundColor = Palette.Hex(0x2B2210);
+                        var b = on ? Palette.Mist1 : Palette.Gold2;
+                        inner.style.borderTopColor = b; inner.style.borderBottomColor = b;
+                        inner.style.borderLeftColor = b; inner.style.borderRightColor = b;
+                    }
+                    else
+                    {
+                        inner.style.backgroundColor = on ? Palette.Hex(0x1E2640) : Palette.Ink2;
+                        var b = on ? Palette.Gold2 : Palette.Ink5;
+                        inner.style.borderTopColor = b; inner.style.borderBottomColor = b;
+                        inner.style.borderLeftColor = b; inner.style.borderRightColor = b;
+                    }
+                };
+                cardItem.visual(false);
+            }
+
+            // 2. Build Bottom Confirmation Panel
+            int confirmFocusIdx = -1;
+
+            if (selectedChoiceIdx < 0 || selectedChoiceIdx >= choiceCount)
+            {
+                // State A: Nothing selected yet
+                var topRow = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                var prompt = new UiLabel(choiceCount > 0
+                    ? "SELECT A REWARD CARD ABOVE TO PREVIEW & CONFIRM"
+                    : "NO PRIZE AVAILABLE — COLLECT YOUR GOLD AND CONTINUE")
+                {
+                    style = { fontSize = 13, color = Palette.Gold2, letterSpacing = 0.5f, marginBottom = 6 }
+                };
+                topRow.Add(prompt);
+
+                if (hasModifierOffers)
+                {
+                    topRow.Add(BuildCompactModifierRow());
+                }
+                else
+                {
+                    var subNote = new UiLabel(choiceCount > 0
+                        ? "PRESS ENTER ON A CARD TO SELECT IT, THEN CONFIRM BELOW. OR SKIP TO TAKE ONLY GOLD."
+                        : "YOUR RUN GOLD IS ADDED AUTOMATICALLY.")
+                    {
+                        style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                    };
+                    topRow.Add(subNote);
+                }
+                confirmHost.Add(topRow);
+
+                var btnRow = new VisualElement
+                {
+                    style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
+                };
+                string skipLabel = choiceCount > 0 ? "Skip prize" : "Continue to map";
+                if (choiceCount == 0)
+                {
+                    confirmFocusIdx = menu.items.Count;
+                    btnRow.Add(MakePrimaryConfirmButton(skipLabel, () => Claim(-1, -1)));
+                }
+                else
+                {
+                    btnRow.Add(MakeSlabActionButton(skipLabel, () => Claim(-1, -1)));
+                }
+                confirmHost.Add(btnRow);
+            }
+            else
+            {
+                var selOpt = currentOffer.choices[selectedChoiceIdx];
+                var (selLabel, selDetail) = RewardGenerator.Describe(selOpt, Run?.ModifierManager);
+
+                if (selOpt.kind == RewardKind.Equipment && Database.Equipment.TryGetValue(selOpt.id, out var eqDef))
+                {
+                    // State B: Equipment Selected — Hero selector + Back + Store in bag + Confirm & equip
+                    var hdr = new UiLabel($"GIVE {eqDef.name.ToUpperInvariant()} TO")
+                    {
+                        style = { fontSize = 13, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
+                    };
+                    confirmHost.Add(hdr);
+
+                    var heroRow = new VisualElement
+                    {
+                        style = { flexDirection = FlexDirection.Row, alignItems = UiAlign.Center, marginBottom = 6 }
+                    };
+                    int bestHeroIdx = FindBestHeroForEquipment(eqDef);
+
+                    for (int h = 0; h < currentParty.Count && h < 4; h++)
+                    {
+                        int hIdx = h;
+                        var u = currentParty[h];
+                        bool canEquip = CanHeroEquip(u, eqDef, out _);
+                        bool isPicked = selectedHeroIdx == h;
+                        bool isBest = canEquip && h == bestHeroIdx;
+
+                        var hCard = new VisualElement
+                        {
+                            style =
+                            {
+                                flexDirection = FlexDirection.Row, alignItems = UiAlign.Center,
+                                paddingTop = 5, paddingBottom = 5, paddingLeft = 8, paddingRight = 10,
+                                marginRight = 8, minWidth = 178, height = 52,
+                                borderTopWidth = isPicked ? 3 : 2, borderBottomWidth = isPicked ? 3 : 2,
+                                borderLeftWidth = isPicked ? 3 : 2, borderRightWidth = isPicked ? 3 : 2,
+                                backgroundColor = isPicked ? Palette.Hex(0x2B2210) : Palette.Ink2,
+                                borderTopColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                borderBottomColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                borderLeftColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                borderRightColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                opacity = canEquip ? 1f : 0.45f
+                            }
+                        };
+
+                        var spr = new VisualElement { style = { width = 28, height = 34, marginRight = 8, flexShrink = 0 } };
+                        if (u.sprite != null && u.sprite.Length > 0)
+                            FigmaUi.SetBackgroundContain(spr, FigmaUi.GetSpriteTexture(u.sprite, "rw_h_" + (u.classDef?.id ?? u.name)));
+                        hCard.Add(spr);
+
+                        var txtCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                        txtCol.Add(new UiLabel(u.name) { style = { fontSize = 15, color = Palette.Mist1 } });
+                        string subTxt = !canEquip ? "CAN'T USE" : (isBest ? "✓ BEST · EQUIP" : "CAN EQUIP");
+                        txtCol.Add(new UiLabel(subTxt)
+                        {
+                            style = { fontSize = 11, color = !canEquip ? Palette.Mist3 : (isBest ? Palette.Ok : Palette.Gold2) }
+                        });
+                        hCard.Add(txtCol);
+                        heroRow.Add(hCard);
+
+                        if (canEquip)
+                        {
+                            var hItem = menu.Add(hCard, $"Give to {u.name}", () =>
+                            {
+                                selectedHeroIdx = hIdx;
+                                RebuildInteractive(focusConfirm: true);
+                            });
+                            hItem.visual = on =>
+                            {
+                                hCard.style.backgroundColor = isPicked ? Palette.Hex(0x2B2210) : (on ? Palette.Hex(0x1E2640) : Palette.Ink2);
+                                var b = on ? Palette.Mist1 : (isPicked ? Palette.Gold2 : Palette.Ink5);
+                                hCard.style.borderTopColor = b; hCard.style.borderBottomColor = b;
+                                hCard.style.borderLeftColor = b; hCard.style.borderRightColor = b;
+                            };
+                            hItem.visual(false);
+                        }
+                    }
+                    confirmHost.Add(heroRow);
+
+                    var btnRow = new VisualElement
+                    {
+                        style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
+                    };
+                    btnRow.Add(MakeSlabActionButton("Back", () =>
+                    {
+                        int prev = selectedChoiceIdx;
+                        selectedChoiceIdx = -1;
+                        selectedHeroIdx = -1;
+                        RebuildInteractive(focusIndex: prev);
+                    }, marginRight: 8));
+                    btnRow.Add(MakeSlabActionButton("Store in bag", () => Claim(selectedChoiceIdx, -1), marginRight: 8));
+
+                    string confirmText = selectedHeroIdx >= 0 && selectedHeroIdx < currentParty.Count
+                        ? $"Confirm & equip on {currentParty[selectedHeroIdx].name}"
+                        : "Confirm & store in bag";
+                    confirmFocusIdx = menu.items.Count;
+                    btnRow.Add(MakePrimaryConfirmButton(confirmText, () => Claim(selectedChoiceIdx, selectedHeroIdx)));
+                    confirmHost.Add(btnRow);
+                }
+                else
+                {
+                    // State C: Relic / Consumable / Upgrade / Gold Selected
+                    var topCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                    topCol.Add(new UiLabel($"CONFIRM REWARD · {FormatCardTitle(selOpt, selLabel).ToUpperInvariant()}")
+                    {
+                        style = { fontSize = 14, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
+                    });
+
+                    if (hasModifierOffers)
+                    {
+                        topCol.Add(BuildCompactModifierRow());
+                    }
+                    else
+                    {
+                        topCol.Add(new UiLabel(selDetail.ToUpperInvariant())
+                        {
+                            style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                        });
+                    }
+                    confirmHost.Add(topCol);
+
+                    var btnRow = new VisualElement
+                    {
+                        style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
+                    };
+                    btnRow.Add(MakeSlabActionButton("Back", () =>
+                    {
+                        int prev = selectedChoiceIdx;
+                        selectedChoiceIdx = -1;
+                        RebuildInteractive(focusIndex: prev);
+                    }, marginRight: 8));
+                    confirmFocusIdx = menu.items.Count;
+                    btnRow.Add(MakePrimaryConfirmButton("Confirm reward", () => Claim(selectedChoiceIdx, -1)));
+                    confirmHost.Add(btnRow);
                 }
             }
 
-            for (int i = 0; i < r.modifierChoices.Count && i < 3; i++)
+            // Focus target item cleanly
+            int targetIdx = focusConfirm && confirmFocusIdx >= 0
+                ? confirmFocusIdx
+                : Mathf.Clamp(focusIndex, 0, Mathf.Max(0, menu.items.Count - 1));
+            if (menu.items.Count > 0)
+                menu.Focus(targetIdx, false, true);
+        }
+
+        void SelectRewardCard(int choiceIdx)
+        {
+            selectedChoiceIdx = choiceIdx;
+            selectedHeroIdx = -1;
+            if (choiceIdx >= 0 && choiceIdx < currentOffer.choices.Count)
+            {
+                var o = currentOffer.choices[choiceIdx];
+                if (o.kind == RewardKind.Equipment && Database.Equipment.TryGetValue(o.id, out var eqDef))
+                    selectedHeroIdx = FindBestHeroForEquipment(eqDef);
+            }
+            Sfx.Play(Sound.Confirm);
+            RebuildInteractive(focusConfirm: true);
+        }
+
+        VisualElement BuildCompactModifierRow()
+        {
+            var wrap = new VisualElement { style = { flexDirection = FlexDirection.Column, marginBottom = 4 } };
+            wrap.Add(new UiLabel("BONUS MODIFIER (OPTIONAL · CLICK TO SELECT)")
+            {
+                style = { fontSize = 10, color = Palette.Gold2, letterSpacing = 0.4f, marginBottom = 3 }
+            });
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UiAlign.Center } };
+            wrap.Add(row);
+
+            for (int i = 0; i < currentOffer.modifierChoices.Count && i < 3; i++)
             {
                 int mIdx = i;
-                var mOpt = r.modifierChoices[i];
-                if (mOpt.id == "MOD-024" && mOpt.element.IsValidElement())
+                var mOpt = currentOffer.modifierChoices[i];
+                if (mOpt.id == "MOD-024" && mOpt.element.IsValidElement() && selectedModifierIdx != mIdx)
                     selectedAttunementElement = mOpt.element;
 
-                var box = new VisualElement();
-                box.style.width = 164;
-                box.style.height = 54;
-                box.style.marginRight = i < 2 ? 8 : 0;
-                box.style.paddingLeft = 6;
-                box.style.paddingRight = 6;
-                box.style.paddingTop = 3;
-                box.style.paddingBottom = 3;
-                box.style.borderTopWidth = 2; box.style.borderBottomWidth = 2;
-                box.style.borderLeftWidth = 2; box.style.borderRightWidth = 2;
-                box.style.justifyContent = Justify.Center;
-                box.style.overflow = Overflow.Hidden;
-
-                var (mLabel, mDetail) = RewardGenerator.Describe(mOpt, Run?.ModifierManager);
-                var mTitle = new UiLabel(mLabel.ToUpperInvariant())
+                bool isSel = selectedModifierIdx == mIdx;
+                var elem = mOpt.id == "MOD-024" ? selectedAttunementElement : mOpt.element;
+                var (mLabel, mDetail) = RewardGenerator.Describe(new RewardOption
                 {
-                    style = { fontSize = 10, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                    kind = RewardKind.Modifier, id = mOpt.id, element = elem
+                }, Run?.ModifierManager);
+
+                var box = new VisualElement
+                {
+                    style =
+                    {
+                        width = 262, height = 42, marginRight = i < 2 ? 8 : 0,
+                        paddingLeft = 8, paddingRight = 8, paddingTop = 2, paddingBottom = 2,
+                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        backgroundColor = isSel ? Palette.Hex(0x1E3328) : Palette.Ink2,
+                        borderTopColor = isSel ? Palette.Ok : Palette.Ink5,
+                        borderBottomColor = isSel ? Palette.Ok : Palette.Ink5,
+                        borderLeftColor = isSel ? Palette.Ok : Palette.Ink5,
+                        borderRightColor = isSel ? Palette.Ok : Palette.Ink5,
+                        justifyContent = Justify.Center, overflow = Overflow.Hidden
+                    }
                 };
-                box.Add(mTitle);
+                box.Add(new UiLabel((isSel ? "✓ " : "") + mLabel.ToUpperInvariant())
+                {
+                    style = { fontSize = 10, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                });
                 row.Add(box);
 
-                string tip = mOpt.id == "MOD-024"
-                    ? mDetail.ToUpperInvariant() + " (CLICK AGAIN WHILE SELECTED TO CYCLE ELEMENT)"
-                    : mDetail.ToUpperInvariant();
+                int keepIdx = menu.items.Count;
                 var mItem = menu.Add(box, mLabel, () =>
                 {
                     if (selectedModifierIdx == mIdx)
@@ -310,14 +643,189 @@ namespace Obscure
                     {
                         selectedModifierIdx = mIdx;
                     }
-                    RefreshPills();
-                    if (tipLbl != null) tipLbl.text = selectedModifierIdx == mIdx ? $"SELECTED: {mLabel.ToUpperInvariant()}" : "";
-                }, tooltip: tip);
-
-                pillItems.Add((mItem, box, mIdx, mTitle, mOpt));
-                mItem.visual = on => RefreshPills(on ? mItem : null);
+                    RebuildInteractive(focusIndex: keepIdx);
+                }, tooltip: mDetail.ToUpperInvariant());
+                mItem.visual = on =>
+                {
+                    var b = on ? Palette.Gold2 : (isSel ? Palette.Ok : Palette.Ink5);
+                    box.style.borderTopColor = b; box.style.borderBottomColor = b;
+                    box.style.borderLeftColor = b; box.style.borderRightColor = b;
+                };
+                mItem.visual(false);
             }
-            RefreshPills();
+            return wrap;
+        }
+
+        VisualElement MakeSlabActionButton(string label, Action onClick, float marginRight = 0f)
+        {
+            var btn = new Button { text = label };
+            btn.AddToClassList("button-slab");
+            btn.style.height = 38;
+            btn.style.paddingLeft = 14;
+            btn.style.paddingRight = 14;
+            btn.style.marginRight = marginRight;
+            btn.style.fontSize = 14;
+            var item = menu.Add(btn, label, onClick);
+            item.visual = on =>
+            {
+                btn.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Palette.Ink2;
+                var b = on ? Palette.Gold2 : Palette.Ink5;
+                btn.style.borderTopColor = b; btn.style.borderBottomColor = b;
+                btn.style.borderLeftColor = b; btn.style.borderRightColor = b;
+            };
+            item.visual(false);
+            return btn;
+        }
+
+        VisualElement MakePrimaryConfirmButton(string label, Action onClick)
+        {
+            var tpl = FigmaUi.InstantiateTemplate("Button-Primary-Focus");
+            if (tpl != null)
+            {
+                FigmaUi.SetInstanceText(tpl, "text-0", "▸");
+                FigmaUi.SetInstanceText(tpl, "text-1", label);
+                var btn = tpl.Q<Button>() ?? tpl;
+                btn.style.height = 38;
+                var item = menu.Add(btn, label, onClick);
+                item.visual = on =>
+                {
+                    FigmaUi.SetInstanceText(tpl, "text-0", on ? "▸" : "");
+                    var b = on ? Palette.Mist1 : Palette.Gold2;
+                    btn.style.borderTopColor = b; btn.style.borderBottomColor = b;
+                    btn.style.borderLeftColor = b; btn.style.borderRightColor = b;
+                };
+                item.visual(false);
+                return tpl;
+            }
+            return MakeSlabActionButton(label, onClick);
+        }
+
+        static string FormatCardTitle(RewardOption o, string fallback) => o.kind switch
+        {
+            RewardKind.Equipment => Database.Equipment.TryGetValue(o.id, out var eq) ? eq.name : fallback,
+            RewardKind.Relic => Database.Relics.TryGetValue(o.id, out var rel) ? rel.name : fallback,
+            RewardKind.Item => Database.Items.TryGetValue(o.id, out var itm) ? itm.name : fallback,
+            _ => fallback
+        };
+
+        static (string category, string rarity, Color color) GetCardCategoryAndRarity(RewardOption o)
+        {
+            switch (o.kind)
+            {
+                case RewardKind.Equipment:
+                    if (Database.Equipment.TryGetValue(o.id, out var eq))
+                    {
+                        var rc = eq.rarity switch
+                        {
+                            EquipmentRarity.Common => Palette.Mist1,
+                            EquipmentRarity.Uncommon => Palette.Ok,
+                            EquipmentRarity.Rare => Palette.Mp,
+                            EquipmentRarity.Epic => Palette.ArcaneViolet,
+                            EquipmentRarity.Legendary => Palette.Gold2,
+                            _ => Palette.Mist1
+                        };
+                        return ("EQUIPMENT", eq.rarity.ToString().ToUpperInvariant(), rc);
+                    }
+                    return ("EQUIPMENT", "COMMON", Palette.Mist1);
+                case RewardKind.Relic:
+                    bool isBoss = o.id == Database.BossRelic;
+                    return ("RELIC", isBoss ? "BOSS RELIC" : "UNCOMMON", isBoss ? Palette.Gold2 : Palette.Ok);
+                case RewardKind.Item:
+                    bool isElixir = o.id == "elixir";
+                    return ("CONSUMABLE", isElixir ? "RARE" : "COMMON", isElixir ? Palette.Mp : Palette.Mist1);
+                case RewardKind.Upgrade:
+                    return ("UPGRADE", "RARE", Palette.Gold2);
+                case RewardKind.Modifier:
+                    return ("MODIFIER", "RUN BUFF", Palette.ArcaneViolet);
+                default:
+                    return ("TREASURE", "GOLD", Palette.Gold2);
+            }
+        }
+
+        string BuildComparisonLine(RewardOption o)
+        {
+            switch (o.kind)
+            {
+                case RewardKind.Relic:
+                {
+                    int cur = Run?.Relics.Count ?? 0;
+                    int next = Mathf.Min(RelicManager.MaxRelicCapacity, cur + 1);
+                    return $"RELIC SLOTS {cur}/{RelicManager.MaxRelicCapacity} › {next}/{RelicManager.MaxRelicCapacity}";
+                }
+                case RewardKind.Item:
+                {
+                    int owned = Run?.Inventory != null
+                        ? Run.Inventory.GetConsumableCount(o.id)
+                        : (Run?.Items.Count(x => x == o.id) ?? 0);
+                    return $"YOU OWN {owned} › {owned + 1}";
+                }
+                case RewardKind.Equipment:
+                {
+                    if (Database.Equipment.TryGetValue(o.id, out var eq))
+                    {
+                        int best = FindBestHeroForEquipment(eq);
+                        string slotName = EquipmentSlots.DisplayName(eq.slot).ToUpperInvariant();
+                        return best >= 0 && best < currentParty.Count
+                            ? $"BEST FOR {currentParty[best].name.ToUpperInvariant()} · {slotName}"
+                            : $"STORED IN BAG · {slotName}";
+                    }
+                    return "STORED IN INVENTORY";
+                }
+                case RewardKind.Upgrade:
+                {
+                    var u = currentParty.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id);
+                    return u != null ? $"PERMANENT BOOST FOR {u.name.ToUpperInvariant()}" : "PERMANENT PARTY BOOST";
+                }
+                default:
+                    return $"+{o.amount} EXTRA RUN GOLD";
+            }
+        }
+
+        static bool CanHeroEquip(Unit u, EquipmentDef def, out EquipmentSlot validSlot)
+        {
+            validSlot = def.slot;
+            if (u == null || def == null) return false;
+            if (EquipmentValidator.SlotMatches(def, def.slot, u.classDef) &&
+                EquipmentValidator.Validate(def, def.slot, u.classDef, u.race, u.level, u.FinalScores, u.id) == null)
+            {
+                validSlot = def.slot;
+                return true;
+            }
+            if (def.GetEquipmentCategory() == EquipmentType.Accessory || EquipmentValidator.IsAccessorySlot(def.slot))
+            {
+                if (EquipmentValidator.Validate(def, EquipmentSlot.Accessory1, u.classDef, u.race, u.level, u.FinalScores, u.id) == null)
+                {
+                    validSlot = EquipmentSlot.Accessory1;
+                    return true;
+                }
+            }
+            if (EquipmentValidator.SlotMatches(def, EquipmentSlot.MainHand, u.classDef) &&
+                EquipmentValidator.Validate(def, EquipmentSlot.MainHand, u.classDef, u.race, u.level, u.FinalScores, u.id) == null)
+            {
+                validSlot = EquipmentSlot.MainHand;
+                return true;
+            }
+            if (EquipmentValidator.SlotMatches(def, EquipmentSlot.SecondHand, u.classDef) &&
+                EquipmentValidator.Validate(def, EquipmentSlot.SecondHand, u.classDef, u.race, u.level, u.FinalScores, u.id) == null)
+            {
+                validSlot = EquipmentSlot.SecondHand;
+                return true;
+            }
+            return false;
+        }
+
+        int FindBestHeroForEquipment(EquipmentDef def)
+        {
+            if (def == null || currentParty == null) return -1;
+            int firstValid = -1;
+            for (int i = 0; i < currentParty.Count; i++)
+            {
+                var u = currentParty[i];
+                if (!CanHeroEquip(u, def, out var slot)) continue;
+                if (firstValid < 0) firstValid = i;
+                if (!u.equipped.ContainsKey(slot)) return i;
+            }
+            return firstValid;
         }
 
         static string PrizeSymbol(RewardOption o) => o.kind switch
@@ -330,12 +838,45 @@ namespace Obscure
             _ => "+",
         };
 
-        void Claim(int choice)
+        void Claim(int choice, int equipHeroIdx)
         {
             int gainedGold = Run != null && Run.PendingReward != null ? Run.PendingReward.gold : 0;
+            RewardOption picked = (choice >= 0 && Run?.PendingReward != null && choice < Run.PendingReward.choices.Count)
+                ? Run.PendingReward.choices[choice]
+                : null;
+            int prevEquipCount = Run?.Inventory?.equipment?.Count ?? 0;
+
             Run.ClaimReward(choice, selectedModifierIdx, selectedAttunementElement);
+
+            // Auto-equip newly granted equipment onto the selected hero if requested
+            if (equipHeroIdx >= 0 && picked != null && picked.kind == RewardKind.Equipment &&
+                Run?.Party != null && equipHeroIdx < Run.Party.Count && Run.Inventory?.equipment != null)
+            {
+                var hero = Run.Party[equipHeroIdx];
+                EquipmentInstance newInst = Run.Inventory.equipment.Count > prevEquipCount
+                    ? Run.Inventory.equipment[Run.Inventory.equipment.Count - 1]
+                    : Run.Inventory.equipment.LastOrDefault(e => e.definitionId == picked.id && !e.isEquipped);
+                if (newInst != null && newInst.Definition != null)
+                {
+                    if (newInst.Definition.GetEquipmentCategory() == EquipmentType.Accessory ||
+                        EquipmentValidator.IsAccessorySlot(newInst.Definition.slot))
+                    {
+                        EquipmentManager.AutoEquipAccessory(hero, newInst, Run.Inventory, out _);
+                    }
+                    else if (newInst.Definition.slot == EquipmentSlot.MainHand || newInst.Definition.slot == EquipmentSlot.SecondHand)
+                    {
+                        EquipmentManager.AutoEquipWeapon(hero, newInst, Run.Inventory, out _);
+                    }
+                    else
+                    {
+                        EquipmentManager.EquipFromInventory(hero, newInst.Definition.slot, newInst, Run.Inventory, out _);
+                    }
+                }
+            }
+
             if (choice >= 0) Sfx.Play(Sound.Success);
             else if (gainedGold > 0) Sfx.Play(Sound.Coin);
+
             if (Run.Won)
             {
                 PersistenceCommitHandler.CommitDungeonClear(Run);
