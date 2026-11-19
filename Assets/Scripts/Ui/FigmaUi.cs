@@ -56,7 +56,130 @@ namespace Obscure
             AttachSharedStyles(root, catalog, entry);
             if (root != null)
                 root.AddToClassList("uitk-screen-root");
+            KeepRowsClear(root);
             return root;
+        }
+
+        // Hides baked Figma elements the game doesn't use (display: none keeps sibling indices stable).
+        public static void HideByClass(VisualElement root, params string[] classes)
+        {
+            if (root == null) return;
+            foreach (var cls in classes)
+                foreach (var el in root.Query<VisualElement>(className: cls).ToList())
+                    el.style.display = DisplayStyle.None;
+        }
+
+        // Hides baked Figma tag/toast instances by their text (they carry no class of their own).
+        public static void HideInstancesWithText(VisualElement root, params string[] texts)
+        {
+            foreach (var t in texts)
+            {
+                var inst = FindLabel(root, t)?.GetFirstAncestorOfType<TemplateContainer>();
+                if (inst != null && inst != root) inst.style.display = DisplayStyle.None;
+            }
+        }
+
+        // Rule/descriptor tags baked beside screen titles; they only restate the title or a rule.
+        public static readonly string[] TitleRuleTags =
+        {
+            "HUB SHOP · CONSUMABLES · PAYS IN HUB GOLD", "EQUIPMENT · PAYS IN HUB GOLD",
+            "REVIVE · RECOVERY · PAYS IN HUB GOLD", "RELICS · PAYS IN HUB GOLD",
+            "PRICES ARE PLACEHOLDERS · TBD", "HUB ONLY", "RUN GOLD · LOST IF THE PARTY FALLS",
+        };
+
+        // Runs once, after the element's first layout. Use it to read exported Figma positions:
+        // UXML inline styles are NOT visible through element.style (it reads 0), only via layout.
+        public static void OnFirstLayout(VisualElement el, Action action)
+        {
+            if (el == null || action == null) return;
+            EventCallback<GeometryChangedEvent> cb = null;
+            cb = _ => { el.UnregisterCallback(cb); action(); };
+            el.RegisterCallback(cb);
+        }
+
+        // Figma exports rows (screen title + tag, combat banner + round + turn bar) as absolutely
+        // positioned siblings spaced for the design font. The game's fonts and runtime strings are
+        // often wider, so a single-line label runs into what follows it. After layout, push those
+        // followers right just enough to clear the text; rows that already fit are left untouched.
+        // Only row leaders are handled: Display-font titles automatically, other labels via KeepRowClear.
+        // (Applying it to every label shoves body text that is meant to clip, e.g. shop descriptions.)
+        const float RowGap = 8f;
+        const string RowClearClass = "uitk-row-clear";
+        const string RowLeaderClass = "uitk-row-leader";
+
+        public static void KeepRowClear(UiLabel label)
+        {
+            if (label == null) return;
+            label.AddToClassList(RowLeaderClass);
+            if (label.ClassListContains(RowClearClass)) return;
+            label.AddToClassList(RowClearClass);
+            label.RegisterCallback<GeometryChangedEvent>(_ => PushFollowers(label));
+        }
+        sealed class DesignX { public float left; public float applied = float.NaN; }
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<VisualElement, DesignX> designX =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<VisualElement, DesignX>();
+
+        static void KeepRowsClear(VisualElement root)
+        {
+            if (root == null) return;
+            root.Query<UiLabel>().ForEach(l =>
+            {
+                if (l.ClassListContains(RowClearClass)) return;
+                l.AddToClassList(RowClearClass);
+                l.RegisterCallback<GeometryChangedEvent>(_ => PushFollowers(l));
+            });
+        }
+
+        // The element's authored left, remembered across our own pushes; re-read if other code moved it.
+        static float DesignLeft(VisualElement el)
+        {
+            var d = designX.GetOrCreateValue(el);
+            float now = el.resolvedStyle.left;
+            if (float.IsNaN(d.applied) || Mathf.Abs(now - d.applied) > 0.5f) d.left = now;
+            return d.left;
+        }
+
+        static void PushFollowers(UiLabel l)
+        {
+            var parent = l.parent;
+            var rs = l.resolvedStyle;
+            if (parent == null || string.IsNullOrEmpty(l.text) || rs.display == DisplayStyle.None
+                || rs.position != Position.Absolute || rs.whiteSpace != WhiteSpace.NoWrap)
+                return;
+            var font = rs.unityFontDefinition.fontAsset;
+            if (!l.ClassListContains(RowLeaderClass) && (font == null || font.name != "FelnaDisplayFont")) return;
+            // Only left-aligned text grows rightward; centred/right-aligned labels own their box.
+            var align = rs.unityTextAlign;
+            if (align != TextAnchor.UpperLeft && align != TextAnchor.MiddleLeft && align != TextAnchor.LowerLeft) return;
+
+            var r = l.layout;
+            float myLeft = DesignLeft(l);
+            var row = new List<VisualElement>();
+            foreach (var s in parent.Children())
+            {
+                if (s == l || s.resolvedStyle.position != Position.Absolute || s.resolvedStyle.display == DisplayStyle.None) continue;
+                if (s.style.left.keyword == StyleKeyword.Auto) continue; // right-anchored, e.g. AnchorRight
+                var sr = s.layout;
+                // Same row = vertical centres within half the smaller height; a big title's tall
+                // box merely overlapping the subtitle line below it doesn't count.
+                if (Mathf.Abs(sr.center.y - r.center.y) > 0.5f * Mathf.Min(sr.height, r.height)) continue;
+                if (DesignLeft(s) <= myLeft) continue;                    // behind/under the label
+                row.Add(s);
+            }
+            if (row.Count == 0) return;
+            row.Sort((a, b) => DesignLeft(a).CompareTo(DesignLeft(b)));
+
+            float cursor = r.xMin + l.MeasureTextSize(l.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x + RowGap;
+            foreach (var s in row)
+            {
+                float left = Mathf.Max(DesignLeft(s), cursor);
+                if (Mathf.Abs(s.resolvedStyle.left - left) > 0.5f)
+                {
+                    s.style.left = left;
+                    designX.GetOrCreateValue(s).applied = left;
+                }
+                cursor = left + s.layout.width + RowGap;
+            }
         }
 
         public static VisualElement InstantiateTemplate(string templateKey)

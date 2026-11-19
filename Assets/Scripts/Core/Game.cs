@@ -25,6 +25,10 @@ namespace Obscure
         {
             var prev = Game.I != null ? Game.I.PreviousState : GameState.MainMenu;
             if (prev == GameState.Hub || prev == GameState.Party || prev == GameState.CharacterStatus || prev == GameState.Map) return prev;
+            // Mid-node (e.g. opened from camp, possibly via Skills → Talents): go back to that node's screen.
+            // The map can't advance until the node is resolved, so returning there would soft-lock the run.
+            var run = Game.I?.Run;
+            if (run != null && run.Current != null && !run.OnMap) return Game.StateFor(run.Current);
             return Game.I != null ? Game.I.LastBase : GameState.MainMenu;
         }
 

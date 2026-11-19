@@ -140,6 +140,7 @@ namespace Obscure
                     : $"ACT {act}{stageSuffix}: {(Game.I?.Run?.Map?.name ?? "ASHEN RUINS").ToUpperInvariant()}";
             }
 
+            FigmaUi.KeepRowClear(actBanner); // runtime act/stage text is longer than the design's
             roundLabel = UiRoot.Q<UiLabel>(className: isBossHud ? "round-1-vars-3" : "round-1-vars-2");
 
             // Find Turn-Chip flex container
@@ -150,6 +151,8 @@ namespace Obscure
                 {
                     turnBar = roundLabel.parent[rIdx + 1];
                     turnBar.style.maxWidth = 810;
+                    turnBar.style.right = 16; // stays on screen when a long act banner pushes it right
+
                 }
             }
 
@@ -319,6 +322,7 @@ namespace Obscure
             var raisedPanel = UiRoot.Q<VisualElement>(className: isBossHud ? "panel-raised__i-3" : "panel-raised__i-2");
             var bossTitleEl = isBossHud ? UiRoot.Q<VisualElement>(className: "zoroa-harvester-of-souls-vars") : null;
             int bossHeaderStart = bossTitleEl != null ? screenRoot.IndexOf(bossTitleEl) : int.MaxValue;
+            var bossAura = isBossHud ? BossNeighbour("sprite-warden", -1) : null;
 
             if (rightPanel != null)
             {
@@ -337,8 +341,8 @@ namespace Obscure
                         toRemove.Add(child);
                         continue;
                     }
-                    // On 22c, keep the subtle ground aura (left: 800, top: 380) right behind the Boss sprite
-                    if (isBossHud && Mathf.Abs(child.style.left.value.value - 800f) < 2f && Mathf.Abs(child.style.top.value.value - 380f) < 2f)
+                    // On 22c, keep the subtle ground aura (design 800,380) right behind the Boss sprite
+                    if (child == bossAura)
                         continue;
 
                     child.style.display = DisplayStyle.None;
@@ -383,24 +387,26 @@ namespace Obscure
                 bossIntentLbl.style.unityTextAlign = TextAnchor.MiddleRight;
             }
 
-            // Locate the Boss status badge container (left: 434, top: 128) and clear its baked icons,
-            // and hide the static HP chip flash bar (left: 848, top: 155)
-            foreach (var child in screenRoot.Children())
+            // Boss status badge row (design 434,128): clear its baked icons so live statuses go there.
+            bossStatusRow = BossNeighbour("intent-final-reaping-4-heavy-all-vars", -1);
+            if (bossStatusRow != null)
             {
-                if (child.style.position != Position.Absolute) continue;
-                float l = child.style.left.value.value;
-                float t = child.style.top.value.value;
-                if (Mathf.Abs(l - 434f) < 4f && Mathf.Abs(t - 128f) < 4f)
-                {
-                    bossStatusRow = child;
-                    bossStatusRow.Clear();
-                    bossStatusRow.style.overflow = Overflow.Visible;
-                }
-                else if (Mathf.Abs(l - 848f) < 4f && Mathf.Abs(t - 155f) < 4f)
-                {
-                    child.style.display = DisplayStyle.None;
-                }
+                bossStatusRow.Clear();
+                bossStatusRow.style.overflow = Overflow.Visible;
             }
+            // Static HP "chip" flash bar (design 848,155) baked over the boss gauge.
+            var hpFlash = BossNeighbour("gauge-hp-low", +1);
+            if (hpFlash != null) hpFlash.style.display = DisplayStyle.None;
+        }
+
+        // Baked 22c header pieces have no class, and exported positions read as 0 through
+        // element.style, so find them by their class-named neighbour in the UXML instead.
+        VisualElement BossNeighbour(string anchorClass, int offset)
+        {
+            var anchor = screenRoot.Q<VisualElement>(className: anchorClass);
+            if (anchor == null || anchor.parent != screenRoot) return null;
+            int i = screenRoot.IndexOf(anchor) + offset;
+            return i >= 0 && i < screenRoot.childCount ? screenRoot[i] : null;
         }
 
         void HideUnusedVitalsCard(int slot)
@@ -1572,7 +1578,7 @@ namespace Obscure
         {
             turnText = $"{c.name.ToUpperInvariant()}'S TURN — {c.unit.role.ToUpperInvariant()}";
             var m = NewMenu();
-            Option(m, "ATTACK", () => ChooseTarget(Battle.Opponents(c), t => BattleAction.Attack(c, t), () => ShowActions(c)),
+            Option(m, "ATTACK", () => ChooseTarget(Battle.Opponents(c).Where(e => e.Alive), t => BattleAction.Attack(c, t), () => ShowActions(c)),
                 tooltip: "STRIKE ONE ENEMY WITH YOUR WEAPON. TIMED QTE RAISES DAMAGE.",
                 costType: "COST: —   TYPE: PHYSICAL", target: "TARGET: ENEMY", rawTitle: "ATTACK");
             Option(m, "SKILL", () => ShowSkills(c),
@@ -1617,7 +1623,7 @@ namespace Obscure
         {
             switch (s.target)
             {
-                case TargetType.Enemy: ChooseTarget(Battle.Opponents(c), t => BattleAction.Skill(c, s, t), () => ShowSkills(c)); break;
+                case TargetType.Enemy: ChooseTarget(Battle.Opponents(c).Where(e => e.Alive), t => BattleAction.Skill(c, s, t), () => ShowSkills(c)); break;
                 case TargetType.Ally: ChooseTarget(Battle.Allies(c), t => BattleAction.Skill(c, s, t), () => ShowSkills(c)); break;
                 default: Choose(BattleAction.Skill(c, s, s.target == TargetType.Self ? c : null)); break;
             }

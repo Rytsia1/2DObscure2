@@ -216,7 +216,6 @@ namespace Obscure
             leftHost.Add(new VisualElement { style = { flexGrow = 1 } });
             if (!string.IsNullOrEmpty(feedbackText))
                 leftHost.Add(new UiLabel(feedbackText) { style = { fontSize = 14, color = Palette.Gold1, marginBottom = 6 } });
-            leftHost.Add(new UiLabel("CONSUMABLES AND MATERIALS STACK — ONE SLOT PER ITEM TYPE.") { style = { fontSize = 13, color = Palette.Mist2 } });
 
             BuildDetailPanel(screen, pageIndex * ItemsPerPage + selectedIndex);
 

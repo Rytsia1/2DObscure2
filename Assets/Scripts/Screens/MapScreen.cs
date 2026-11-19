@@ -46,6 +46,7 @@ namespace Obscure
             var map = currentMap = Run?.Map ?? MapGenerator.Generate(1);
             MountFigma("12---Dungeon-Map");
             StripStaticNodesAndPreview();
+            FigmaUi.HideByClass(UiRoot, "toast-info__i-2"); // baked "ONE-WAY: OTHER PATHS CLOSE…" rule note
 
             var available = Run != null ? Run.Available.ToList() : map.nodes.Where(n => n.floor == 0).ToList();
             var current = Run?.Current;
@@ -683,11 +684,6 @@ namespace Obscure
                 card.Add(hdr);
             }
 
-            card.Add(new UiLabel("MODIFIERS AND BLESSINGS EXPIRE. RELICS STAY.")
-            {
-                style = { fontSize = 13, letterSpacing = 0.56f, color = Palette.Mist2, marginBottom = 10, flexShrink = 0 }
-            });
-
             var scroll = FigmaUi.CreateVerticalScrollView();
             scroll.style.flexGrow = 1;
             scroll.style.marginBottom = 10;
@@ -768,7 +764,7 @@ namespace Obscure
                     if (!Database.Relics.TryGetValue(rid, out var r)) continue;
                     totalCount++;
                     AddEffectCard(InstantiateEffectChip("Effect-Chip-Relic", "◈", r.name, "RELIC"),
-                        "PERMANENT · KEPT AFTER THE RUN", r.gameplayEffect ?? r.description);
+                        "PERMANENT", r.gameplayEffect ?? r.description);
                 }
             }
 
@@ -926,10 +922,6 @@ namespace Obscure
             footer.Add(new UiLabel($"DUNGEON {Run?.Act ?? 1} OF 8{stageText} · NODE {Run?.Floor ?? 1} · {gold} RUN GOLD")
             {
                 style = { fontSize = 12, color = Palette.Mist2, marginBottom = 4 }
-            });
-            footer.Add(new UiLabel("DUNGEON RUNS CAN'T BE SAVED OR RESUMED. PROGRESS IS COMMITTED ONLY BY DUNGEON CLEAR.")
-            {
-                style = { fontSize = 11, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal }
             });
             card.Add(footer);
 

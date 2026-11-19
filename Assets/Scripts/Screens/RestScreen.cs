@@ -232,7 +232,7 @@ namespace Obscure
             ShowParty();
             NewMenu();
             feedbackLbl.text = text;
-            Option("CONTINUE EXPEDITION", "LEAVE THE CAMP. YOU CAN ONLY TAKE ONE CAMP ACTION.", () => Game.Go(GameState.Map));
+            Option("CONTINUE EXPEDITION", "LEAVE THE CAMP", () => Game.Go(GameState.Map));
         }
     }
 }

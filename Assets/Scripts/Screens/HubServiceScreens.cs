@@ -56,6 +56,7 @@ namespace Obscure
             {
                 // Re-clone fresh layout on state changes or rebuild dynamic hosts
                 UiRoot = FigmaUi.Mount(Root.gameObject, FigmaScreenKey);
+                FigmaUi.HideInstancesWithText(UiRoot, FigmaUi.TitleRuleTags);
                 ResetMenu();
                 BuildPage();
                 if (menu.items.Count > 0)
@@ -92,12 +93,7 @@ namespace Obscure
             }
         }
 
-        protected static void HideElementsByClass(VisualElement root, params string[] classes)
-        {
-            foreach (var cls in classes)
-                foreach (var el in root.Query<VisualElement>(className: cls).ToList())
-                    el.style.display = DisplayStyle.None;
-        }
+        protected static void HideElementsByClass(VisualElement root, params string[] classes) => FigmaUi.HideByClass(root, classes);
 
         protected VisualElement CreateListRow(string title, string sub, string mid, string right, string subRight, Color? titleCol, Color? rightCol, bool chosen, bool locked, Action onSelect, Texture2D icon = null)
         {
@@ -118,8 +114,13 @@ namespace Obscure
             var iconEl = IconArt.Inline(icon, 3);
             if (iconEl != null) { if (locked) iconEl.style.opacity = 0.5f; row.Add(iconEl); }
 
+            // The item name stays on one line: once measured it becomes the column's min width, so a long
+            // middle note wraps instead of squeezing the name. The sub line (often a description) still wraps.
             var mainCol = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, justifyContent = Justify.Center, overflow = Overflow.Hidden } };
-            mainCol.Add(new UiLabel(title) { style = { fontSize = 18, color = titleCol ?? Palette.Mist1 } });
+            var titleLbl = new UiLabel(title) { style = { fontSize = 18, color = titleCol ?? Palette.Mist1, whiteSpace = WhiteSpace.NoWrap } };
+            mainCol.Add(titleLbl);
+            FigmaUi.OnFirstLayout(titleLbl, () => mainCol.style.minWidth = Mathf.Min(360f,
+                titleLbl.MeasureTextSize(titleLbl.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined).x));
             if (!string.IsNullOrEmpty(sub))
                 mainCol.Add(new UiLabel(sub) { style = { fontSize = 12, color = Palette.Mist3 } });
             row.Add(mainCol);
@@ -636,7 +637,7 @@ namespace Obscure
             if (fbToast != null) host.Add(fbToast);
 
             host.Add(new VisualElement { style = { flexGrow = 1 } });
-            host.Add(new UiLabel($"HUB GOLD {Money(Gold)} › {Money(Gold - s.cost)} · GOES TO THE BAG") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 8 } });
+            host.Add(new UiLabel($"HUB GOLD {Money(Gold)} › {Money(Gold - s.cost)}") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 8 } });
             bool canBuy = !s.isSold && Gold >= s.cost;
             var buyBtn = FigmaUi.CreateButton(s.isSold ? "Sold out" : $"Buy · {Money(s.cost)}", canBuy ? "button-primary" : "button-slab", 346f);
             buyBtn.SetEnabled(canBuy);
@@ -682,6 +683,7 @@ namespace Obscure
         {
             BindBackButton();
             BindHubGold();
+            HideElementsByClass(UiRoot, "upgrades-raise-base-stats-only-vars");
             var screen = UiRoot.Q<VisualElement>(className: "_08-blacksmith-upgrade") ?? UiRoot;
 
             var panel1 = UiRoot.Q<VisualElement>(className: "panel-default__i-15");
@@ -929,7 +931,6 @@ namespace Obscure
                 heroList.Add(card);
             }
             leftHost.Add(heroList);
-            leftHost.Add(new UiLabel("RECOVERY: FULL HP AND MP, CLEARS DEBUFFS. REVIVE RETURNS AT 50% HP.") { style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, marginTop = 6 } });
 
             // Right bill panel
             var rightHost = new VisualElement { style = { position = Position.Absolute, left = 682, top = 84, width = 556, height = 600, flexDirection = FlexDirection.Column } };
@@ -1025,7 +1026,7 @@ namespace Obscure
                 var r = stock[i];
                 bool owned = Owned.Contains(r.id), afford = Gold >= r.buyPrice;
                 string price = owned ? "OWNED" : Money(r.buyPrice);
-                string subRight = owned ? "NO DUPLICATES" : !afford ? $"NEED {Money(r.buyPrice - Gold)} MORE" : null;
+                string subRight = !owned && !afford ? $"NEED {Money(r.buyPrice - Gold)} MORE" : null;
                 listHost.Add(CreateListRow(r.name, (r.gameplayEffect ?? r.description ?? "").ToUpperInvariant(), $"{r.proposedRarity} · {r.category}".ToUpperInvariant(), price, subRight, Ui.RelicColor(r), owned ? Palette.Mist3 : afford ? Palette.Gold1 : Palette.Err, i == selected, false, () =>
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
@@ -1046,7 +1047,6 @@ namespace Obscure
             left.Add(new UiLabel(r.name) { style = { fontSize = 24, color = Ui.RelicColor(r), marginBottom = 8 } });
             left.Add(new UiLabel($"{r.proposedRarity} · {r.category}".ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 8 } });
             left.Add(new UiLabel((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, flexGrow = 1 } });
-            left.Add(new UiLabel("PASSIVE · WHOLE PARTY · PERMANENT ONCE BOUGHT") { style = { fontSize = 12, color = Palette.Mist2 } });
             host.Add(left);
 
             var right = new VisualElement { style = { width = 260, flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween } };
@@ -1098,8 +1098,6 @@ namespace Obscure
                 slotsCol.Add(box);
             }
             host.Add(slotsCol);
-
-            host.Add(new UiLabel("RELICS CAN ONLY BE SOLD HERE. NO DUPLICATES.") { style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, marginTop = 6 } });
             var fbToast = CreateFeedbackToast();
             if (fbToast != null) host.Add(fbToast);
         }

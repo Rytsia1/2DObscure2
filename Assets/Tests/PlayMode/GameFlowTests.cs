@@ -475,5 +475,72 @@ namespace Obscure.Tests
             yield return null;
             Assert.AreEqual(1, screenGo.GetComponents<UitkMenu>().Length, "Closing modal must destroy dialog UitkMenu");
         }
+
+        // Regression: Camp → Develop Skills (→ Talents) → Back used to land on the map with the camp node
+        // still unresolved, where no path could be taken.
+        [UnityTest]
+        public IEnumerator CampSkillTreeBack_ReturnsToCamp_AndRunCanContinue()
+        {
+            yield return Begin();
+            yield return StartRunOnMap();
+
+            // No public way to jump nodes: point the run at the first camp, as if the player walked there.
+            var camp = Run.Map.nodes.First(n => n.type == NodeType.Rest);
+            typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(Run, camp);
+            Game.I.Go(GameState.Rest);
+            yield return Settle();
+            Assert.AreEqual(GameState.Rest, State);
+
+            Game.I.Go(GameState.Skills);
+            yield return Settle();
+            yield return TapAndSettle(Key.Escape);
+            Assert.AreEqual(GameState.Rest, State, "Back from the skill tree must return to the camp");
+
+            Game.I.Go(GameState.Skills);
+            yield return Settle();
+            Game.I.Go(GameState.Talents);
+            yield return Settle();
+            yield return TapAndSettle(Key.Escape);
+            Assert.AreEqual(GameState.Rest, State, "Back from talents opened via the camp must return to the camp");
+
+            yield return Tap(Key.Enter);            // RECOVER (first camp action) resolves the node
+            yield return TapAndSettle(Key.Enter);   // CONTINUE EXPEDITION
+            Assert.AreEqual(GameState.Map, State);
+            Assert.IsTrue(Run.Available.Any(), "After the camp the map must offer a path forward");
+        }
+
+        // Battle rewards: every offered modifier shows its effect, and one is always taken (even on "Skip prize").
+        [UnityTest]
+        public IEnumerator BattleReward_ModifierIsMandatory_AndShowsItsEffect()
+        {
+            yield return Begin();
+            yield return StartRunOnMap();
+            yield return TapAndSettle(Key.Enter);   // first node is a battle
+            Assert.AreEqual(GameState.Combat, State);
+            yield return WinBattle();
+            Assert.AreEqual(GameState.Reward, State);
+
+            var mods = Run.PendingReward.modifierChoices;
+            Assert.Greater(mods.Count, 0, "a normal battle offers modifiers");
+            var texts = ActiveUiTexts();
+            foreach (var m in mods)
+            {
+                var (_, detail) = RewardGenerator.Describe(new RewardOption { kind = RewardKind.Modifier, id = m.id, element = m.element }, Run.ModifierManager);
+                CollectionAssert.Contains(texts, detail, $"effect of {m.id} must be shown on the reward screen");
+            }
+
+            // Pick a lasting (not one-shot) modifier so its instance can be counted afterwards.
+            var lasting = mods.First(m => !Database.DungeonModifiers[m.id].IsOneShot);
+            var (label, _) = RewardGenerator.Describe(new RewardOption { kind = RewardKind.Modifier, id = lasting.id, element = lasting.element }, Run.ModifierManager);
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == label), false, true);
+            yield return Tap(Key.Enter);
+            yield return null;
+
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == "Skip prize"), false, true);
+            yield return TapAndSettle(Key.Enter);
+            Assert.AreNotEqual(GameState.Reward, State);
+            Assert.IsTrue(Run.ModifierManager.ActiveModifiers.Any(i => i.modifierId == lasting.id),
+                "skipping the prize must still grant the chosen modifier");
+        }
     }
 }

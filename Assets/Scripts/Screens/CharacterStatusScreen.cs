@@ -262,7 +262,8 @@ namespace Obscure
 
         void BindIdentity(Unit u)
         {
-            var fig = UiRoot.Q<VisualElement>(className: "sprite-knight");
+            var fig = UiRoot.Query<VisualElement>(className: "sprite-knight").ToList()
+                .FirstOrDefault(e => e.parent == null || !e.parent.ClassListContains("frame-vars-13"));
             if (fig != null && u.sprite != null && u.sprite.Length > 0)
                 FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "st_id_" + (u.classDef?.id ?? u.name)));
 

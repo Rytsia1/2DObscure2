@@ -18,7 +18,7 @@ namespace Obscure
         int selectedIndex;
         int focusIndex;
         bool rebuilding;
-        string feedback = "WELCOME TO THE CARAVAN. TRADE GOLD TO PREPARE FOR DEEPER FLOORS.";
+        string feedback;
         bool feedbackBad;
 
         protected override void Build()
@@ -42,6 +42,7 @@ namespace Obscure
             try
             {
                 UiRoot = FigmaUi.Mount(Root.gameObject, "20---Dungeon-Shop---Run-Gold");
+                FigmaUi.HideInstancesWithText(UiRoot, FigmaUi.TitleRuleTags);
                 FigmaUi.DestroyMenu(ref menu);
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);

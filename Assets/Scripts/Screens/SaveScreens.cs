@@ -135,6 +135,8 @@ namespace Obscure
         protected override void Build()
         {
             UiRoot = FigmaUi.Mount(Root.gameObject, "11---Save-Game");
+            FigmaUi.HideByClass(UiRoot, "saves-progress-committed-by-your-last-dungeon-clear-vars");
+            FigmaUi.HideInstancesWithText(UiRoot, FigmaUi.TitleRuleTags);
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onBack = () => Game?.Go(GameState.Hub);

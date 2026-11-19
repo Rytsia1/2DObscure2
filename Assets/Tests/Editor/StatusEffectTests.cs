@@ -66,7 +66,7 @@ namespace Obscure.Tests
             Assert.AreEqual(0.20f, chance1, 0.0001f);
 
             // GDD Section 9 second example:
-            // "Resistance 60% dengan dua debuff 20% -> 38.4% resistance; chance skill 40% -> 24.64%."
+            // "Resistance 60% with two 20% debuffs -> 38.4% resistance; skill chance 40% -> 24.64%."
             var profile2 = new StatusResistanceProfile { baseResistance = 0.60f };
             profile2.AddReduction(0.20f);
             profile2.AddReduction(0.20f);
@@ -92,7 +92,7 @@ namespace Obscure.Tests
             boss.StatusController.ResistanceProfile.AddReduction(0.50f);
             boss.StatusController.ResistanceProfile.AddReduction(0.50f);
 
-            // GDD Section 13: "Immunity bypass: Status Effect Resistance Reduction tidak menembus Mental Effect immunity."
+            // GDD Section 13: "Immunity bypass: Status Effect Resistance Reduction does not pierce Mental Effect immunity."
             Assert.AreEqual(0f, boss.StatusController.ResistanceProfile.CalculateFinalApplicationChance(1.0f, StatusId.Sleep, isBoss: true));
 
             var sleepApply = new StatusApply { id = StatusId.Sleep, turns = 2, chance = 1f };
@@ -130,8 +130,8 @@ namespace Obscure.Tests
             var hero = CreateMockHero();
             var target = CreateMockEnemy();
 
-            // GDD Section 8: "Status instances independen: instance baru tidak refresh/extend instance lama.
-            // Tidak ada batas jumlah instance aktif untuk status yang sama."
+            // GDD Section 8: "Status instances are independent: a new instance does not refresh/extend an old one.
+            // There is no limit on the number of active instances of the same status."
             var burn1 = new StatusApply { id = StatusId.Burn, turns = 2, chance = 1f };
             var burn2 = new StatusApply { id = StatusId.Burn, turns = 3, chance = 1f };
 

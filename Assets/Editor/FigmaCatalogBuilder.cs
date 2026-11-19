@@ -35,9 +35,9 @@ namespace Obscure.Editor
             EnsureFolder("Assets/UI/Fonts");
 
             var symbolAsset = EnsureSymbolFallbackFontAsset();
-            var fontAsset = EnsureFontAsset(FontTtfPath, FontAssetPath, symbolAsset);
+            var fontAsset = EnsureFontAsset(FontTtfPath, FontAssetPath, symbolAsset, null);
             EnsureFontAsset(DisplayTtfPath, DisplayAssetPath, fontAsset, symbolAsset);
-            EnsureFontAsset(GothicTtfPath, GothicAssetPath, fontAsset, symbolAsset);
+            EnsureFontAsset(GothicTtfPath, GothicAssetPath, fontAsset, symbolAsset, pixelGrid: GothicPixelGrid);
             var textSettings = EnsureTextSettings(fontAsset, symbolAsset);
             // USS/TSS bake font url() refs at import time; reimport both so refs to just-created font assets resolve.
             AssetDatabase.SaveAssets();
@@ -104,17 +104,38 @@ namespace Obscure.Editor
             FigmaScreenCatalog.ClearCache();
         }
 
-        static FontAsset EnsureFontAsset(string ttfPath, string assetPath, params FontAsset[] fallbacks)
+        // DotGothic16 rasterized as hard pixels with point filtering instead of SDF-rounded blobs.
+        // Sampled at 32, not 16: its Latin outlines sit on half-pixel offsets, so at 16 every
+        // stroke smears to 2px and the i/j dots merge into the stem. At 32 each dot is an exact 2x2 block.
+        const int GothicPixelGrid = 32;
+
+        static bool IsPixelFontStale(FontAsset fa) =>
+            fa == null || fa.atlasRenderMode != UnityEngine.TextCore.LowLevel.GlyphRenderMode.RASTER
+            || fa.faceInfo.pointSize != GothicPixelGrid;
+
+        static FontAsset EnsureFontAsset(string ttfPath, string assetPath, FontAsset fallbackA, FontAsset fallbackB, int pixelGrid = 0)
         {
+            var fallbacks = new[] { fallbackA, fallbackB };
             var fa = AssetDatabase.LoadAssetAtPath<FontAsset>(assetPath);
+            if (pixelGrid > 0 && fa != null && IsPixelFontStale(fa))
+            {
+                AssetDatabase.DeleteAsset(assetPath);
+                fa = null;
+            }
             if (fa == null || fa.sourceFontFile == null)
             {
                 AssetDatabase.ImportAsset(ttfPath, ImportAssetOptions.ForceUpdate);
                 var ttf = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
                 if (ttf == null) return null;
 
-                fa = FontAsset.CreateFontAsset(ttf);
+                fa = pixelGrid > 0
+                    ? FontAsset.CreateFontAsset(ttf, pixelGrid, 2, UnityEngine.TextCore.LowLevel.GlyphRenderMode.RASTER,
+                        1024, 1024, AtlasPopulationMode.Dynamic, true)
+                    : FontAsset.CreateFontAsset(ttf);
                 if (fa == null) return null;
+                if (pixelGrid > 0 && fa.atlasTextures != null)
+                    foreach (var tex in fa.atlasTextures)
+                        if (tex != null) tex.filterMode = FilterMode.Point;
                 AssetDatabase.CreateAsset(fa, assetPath);
                 if (fa.material != null) AssetDatabase.AddObjectToAsset(fa.material, fa);
                 if (fa.atlasTextures != null)
@@ -124,7 +145,6 @@ namespace Obscure.Editor
                 }
             }
 
-            if (fallbacks != null && fallbacks.Length > 0)
             {
                 if (fa.fallbackFontAssetTable == null)
                     fa.fallbackFontAssetTable = new System.Collections.Generic.List<FontAsset>();
@@ -203,7 +223,7 @@ namespace Obscure.Editor
             var gothFa = AssetDatabase.LoadAssetAtPath<FontAsset>(GothicAssetPath);
             string diskFolder = Path.Combine(Application.dataPath, "Figma", "FELNA---UI-UX-Design");
             int diskCount = Directory.Exists(diskFolder) ? Directory.GetFiles(diskFolder, "*.uxml", SearchOption.TopDirectoryOnly).Length : 0;
-            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || catalog.entries.Count != diskCount || ps.themeStyleSheet == null || HasUnresolvedRuntimeStylesheetRefs(dispFa, gothFa))
+            if (catalog == null || ps == null || ps.textSettings == null || dispFa == null || gothFa == null || catalog.entries == null || catalog.entries.Count == 0 || catalog.entries.Count != diskCount || ps.themeStyleSheet == null || IsPixelFontStale(gothFa) || HasUnresolvedRuntimeStylesheetRefs(dispFa, gothFa))
                 BuildAll();
         }
 

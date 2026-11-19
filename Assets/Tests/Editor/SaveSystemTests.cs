@@ -728,6 +728,96 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void HubScreen_FocusMenu_UpdatesTooltipWithoutChangingDungeonButtonText()
+        {
+            var hubHost = new GameObject("HubHost");
+            var gameGo = new GameObject("GameMock");
+            try
+            {
+                var game = gameGo.AddComponent<Game>();
+                Game.SetInstance(game);
+                game.EnterHubFromCreation(seed: 999);
+
+                var hub = new HubScreen();
+                hub.Open(hubHost.transform);
+
+                var root = hubHost.transform.Find("HubScreen");
+                var uitkMenu = root.GetComponent<UitkMenu>();
+                var partyItem = uitkMenu.items.FirstOrDefault(i => i.text == "Character / Party");
+                var gateItem = uitkMenu.items.FirstOrDefault(i => i.text == "Dungeon Entrance");
+                Assert.IsNotNull(partyItem, "HubScreen must register Character / Party menu item.");
+                Assert.IsNotNull(gateItem, "HubScreen must register Dungeon Entrance menu item.");
+
+                var gateTextLbl = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(gateItem.element, "text-1");
+                var tipTitleLbl = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(hub.UiRoot, className: "dungeon-entrance-vars");
+                var tipBodyLbl = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(hub.UiRoot, className: "begin-dungeon-1-of-8-a-new-run-starts-with-0-run-gold-vars");
+                Assert.IsNotNull(gateTextLbl, "Dungeon Entrance button must contain text-1 label.");
+                Assert.IsNotNull(tipTitleLbl, "Tooltip title label must exist.");
+                Assert.IsNotNull(tipBodyLbl, "Tooltip body label must exist.");
+
+                uitkMenu.Focus(partyItem, sound: false, force: true);
+                Assert.AreEqual("Dungeon Entrance", gateTextLbl.text, "Hovering/focusing a facility must not overwrite the Dungeon Entrance button label.");
+                Assert.AreEqual("Character / Party", tipTitleLbl.text, "Tooltip title must update to the focused menu item.");
+                Assert.AreEqual("VIEW THE PARTY, STATUS AND LINEUP.", tipBodyLbl.text);
+
+                uitkMenu.Focus(gateItem, sound: false, force: true);
+                Assert.AreEqual("Dungeon Entrance", gateTextLbl.text);
+                Assert.AreEqual("Dungeon Entrance", tipTitleLbl.text);
+                StringAssert.Contains("BEGIN DUNGEON", tipBodyLbl.text);
+
+                hub.Close();
+            }
+            finally
+            {
+                Game.SetInstance(null);
+                UnityEngine.Object.DestroyImmediate(gameGo);
+                UnityEngine.Object.DestroyImmediate(hubHost);
+            }
+        }
+
+        [Test]
+        public void CharacterStatusScreen_IdentityPortrait_UsesSelectedHeroSpriteWithoutOverwritingHeaderSlot0()
+        {
+            var host = new GameObject("StatusHost");
+            try
+            {
+                var party = Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
+                Assert.GreaterOrEqual(party.Count, 3, "Default party must have at least 3 members.");
+
+                var status = new CharacterStatusScreen(party, GameState.Hub);
+                status.Open(host.transform);
+                // Ensure we test with a selected hero other than party[0]
+                if (status.CurrentUnit == party[0])
+                    status.SwitchHero(1);
+
+                var slot0Frame = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(status.UiRoot, className: "frame-vars-13");
+                var slot1Frame = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.VisualElement>(status.UiRoot, className: "frame-vars-14");
+                var portrait = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.VisualElement>(status.UiRoot, className: "sprite-knight")
+                    .ToList()
+                    .FirstOrDefault(e => e.parent == null || !e.parent.ClassListContains("frame-vars-13"));
+
+                Assert.IsNotNull(slot0Frame);
+                Assert.IsNotNull(slot1Frame);
+                Assert.IsNotNull(portrait, "Main identity portrait element must exist.");
+
+                var expected0 = FigmaUi.GetSpriteTexture(party[0].sprite, "t0");
+                var expected1 = FigmaUi.GetSpriteTexture(party[1].sprite, "t1");
+                var expectedSelected = FigmaUi.GetSpriteTexture(status.CurrentUnit.sprite, "tsel");
+                Assert.AreNotSame(expected0, expectedSelected, "Selected hero and party[0] should have distinct sprite textures.");
+
+                Assert.AreEqual(expected0, slot0Frame[0].style.backgroundImage.value.texture, "Header slot 0 must keep party[0]'s sprite.");
+                Assert.AreEqual(expected1, slot1Frame[0].style.backgroundImage.value.texture, "Header slot 1 must keep party[1]'s sprite.");
+                Assert.AreEqual(expectedSelected, portrait.style.backgroundImage.value.texture, "Main identity portrait must show the selected hero's sprite.");
+
+                status.Close();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
+
+        [Test]
         public void UiAuditFixes_TalentBlacksmithAndCharacterCreationSteps_WorkCleanly()
         {
             var host = new GameObject("UiAuditHost");

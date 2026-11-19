@@ -80,6 +80,7 @@ namespace Obscure
                 foreach (var el in toRemove)
                     el.RemoveFromHierarchy();
             }
+            if (footerHint != null) footerHint.style.display = DisplayStyle.None; // only needed as a layout anchor
 
             rowsContainer = new VisualElement { name = "SettingsRows" };
             rowsContainer.style.position = Position.Absolute;

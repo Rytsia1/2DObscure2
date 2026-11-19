@@ -309,7 +309,7 @@ namespace Obscure
         public string demerit;
         public int buyPrice;
         public int sellPrice;
-        public bool HasDemerit => !string.IsNullOrEmpty(demerit) && demerit != "— (tidak memiliki demerit)";
+        public bool HasDemerit => !string.IsNullOrEmpty(demerit) && demerit != "— (no demerit)";
 
         public string Description => !string.IsNullOrEmpty(gameplayEffect) ? gameplayEffect : description;
     }

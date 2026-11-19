@@ -259,7 +259,7 @@ namespace Obscure
             if (abilitiesHost != null) abilitiesHost.style.display = isAbilities ? DisplayStyle.Flex : DisplayStyle.None;
             if (costTableHost != null) costTableHost.style.display = isAbilities ? DisplayStyle.Flex : DisplayStyle.None;
             if (scoresHeaderLbl != null) scoresHeaderLbl.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
-            if (previewNoteLbl != null) previewNoteLbl.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
+            if (previewNoteLbl != null) previewNoteLbl.style.display = DisplayStyle.None; // stat-cap footnote: not shown
             foreach (var tag in abilityPreviewTags)
                 if (tag != null) tag.style.display = isAbilities ? DisplayStyle.None : DisplayStyle.Flex;
 
@@ -345,13 +345,6 @@ namespace Obscure
                 inner.style.borderRightColor = bonus ? Palette.Gold2 : Palette.Ink4;
                 inner.style.borderBottomColor = bonus ? Palette.Gold2 : Palette.Ink4;
                 inner.style.borderLeftColor = bonus ? Palette.Gold2 : Palette.Ink4;
-            }
-
-            if (previewNoteLbl != null)
-            {
-                previewNoteLbl.text = CurrentPage == Page.Background
-                    ? "BACKGROUND ADDS ONE PASSIVE PERK. IT NEVER CHANGES RACE, CLASS OR SKILLS."
-                    : "CAP 15 BEFORE BONUS · 17 AFTER · 20 BY PROGRESSION";
             }
         }
 
@@ -1332,7 +1325,6 @@ namespace Obscure
 
             AddColumnHeader(rightBody, sp?.name ?? "Passive");
             AddParagraph(rightBody, sp?.description ?? "No starter passive.");
-            AddParagraph(rightBody, "STARTER PASSIVES ARE ALWAYS ON AND DO NOT USE A SKILL SLOT.", Palette.Mist3);
         }
 
         void BuildGearPage()

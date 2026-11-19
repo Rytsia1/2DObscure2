@@ -12,9 +12,12 @@
     background-color: #090C14;
 }
 
-Label,
-.unity-text-element,
-.unity-label,
+/* Default face set at the root so it INHERITS. Never target Label/.unity-label here:
+   a direct match beats inheritance and would force Inter onto every label inside
+   Gothic/Display containers (buttons, tabs, headers). */
+:root,
+.unity-ui-document__root,
+.uitk-screen-root,
 .uitk-font-ui {
     -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaUIFont.asset");
 }

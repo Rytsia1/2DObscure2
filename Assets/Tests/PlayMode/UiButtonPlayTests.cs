@@ -501,6 +501,41 @@ namespace Obscure.Tests
         }
 
         [UnityTest]
+        public IEnumerator Combat_DefeatedEnemyIsRemovedFromAttackSelection()
+        {
+            yield return Begin();
+            Game.I.StartRun();
+            yield return Settle();
+
+            var firstCombatNode = Run.Available.First(n => n.IsCombat);
+            firstCombatNode.encounter = "d1_e6"; // Soul Reaper, Militia, Hound, Leech
+            var combatItem = UitkMenu.ActiveMenu.items.First(i => i.text == "Combat");
+            yield return ClickElement(combatItem.element);
+            Assert.AreEqual(GameState.Combat, State);
+
+            for (float t = 0; t < 10f && (UitkMenu.ActiveMenu == null || UitkMenu.ActiveMenu.items.Count == 0); t += Time.unscaledDeltaTime)
+                yield return null;
+
+            var cb = UnityEngine.Object.FindFirstObjectByType<CombatView>().Battle;
+            Assert.AreEqual(4, cb.Enemies.Count);
+
+            // Defeat the second enemy (Militia)
+            var defeated = cb.Enemies[1];
+            defeated.unit.hp = 0;
+            Assert.IsFalse(defeated.Alive);
+
+            yield return ClickMenuItem("ATTACK");
+            AssertActiveMenuAudit("Combat-Targets");
+
+            var targetNames = UitkMenu.ActiveMenu.items.Select(i => i.text).ToList();
+            Assert.AreEqual(3, targetNames.Count, "Only the 3 living enemies should appear in ATTACK target selection.");
+            CollectionAssert.DoesNotContain(targetNames, defeated.name.ToUpperInvariant(), "Defeated enemy must be removed from attack selection.");
+            CollectionAssert.Contains(targetNames, cb.Enemies[0].name.ToUpperInvariant());
+            CollectionAssert.Contains(targetNames, cb.Enemies[2].name.ToUpperInvariant());
+            CollectionAssert.Contains(targetNames, cb.Enemies[3].name.ToUpperInvariant());
+        }
+
+        [UnityTest]
         public IEnumerator MainMenu_ResolvesDisplayGothicAndUiFontAssets()
         {
             yield return Begin();
@@ -529,6 +564,15 @@ namespace Obscure.Tests
             Assert.AreEqual("FelnaUIFont", uiFont.name);
             Assert.Greater(titleFont.characterTable.Count, 0, "FelnaDisplayFont must populate dynamic glyphs on MainMenu");
             Assert.Greater(gothicFont.characterTable.Count, 0, "FelnaGothicFont must populate dynamic glyphs on MainMenu");
+
+            // Plain labels nested in a Gothic container must inherit Gothic, not get forced to the UI face.
+            var slab = FigmaUi.CreateButton("TEST", "button-slab");
+            doc.rootVisualElement.Add(slab);
+            yield return null;
+            var slabLabel = slab.Q<UiLabel>("uitkLabel");
+            Assert.AreEqual("FelnaGothicFont", slabLabel.resolvedStyle.unityFontDefinition.fontAsset?.name,
+                "Label inside .button-slab must inherit FelnaGothicFont");
+            slab.RemoveFromHierarchy();
         }
     }
 }

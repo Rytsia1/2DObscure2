@@ -69,9 +69,7 @@ namespace Obscure
                 nextLbl.text = $"TIME {(int)dur.TotalMinutes}:{dur.Seconds:00} · ACT {act} CLEARED";
             }
 
-            var keepTags = UiRoot.Query<VisualElement>(className: "tag-keep").ToList();
-            if (keepTags.Count >= 2)
-                FigmaUi.SetInstanceText(keepTags[1], "text-0", $"{Run?.Relics.Count ?? 0} RELICS STAY");
+            DungeonClearScreen.HideDungeonClearReminders(UiRoot);
 
             var newRunInst = UiRoot.Q<VisualElement>(className: "button-primary-2__i-9");
             if (newRunInst != null)
@@ -105,7 +103,7 @@ namespace Obscure
 
             var subLbl = UiRoot.Q<UiLabel>(className: "fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars");
             if (subLbl != null)
-                subLbl.text = $"FELL IN DUNGEON {act} OF 8{stageText} · NODE {floor} · PROGRESS FROM EARLIER CLEARS IS SAFE";
+                subLbl.text = $"FELL IN DUNGEON {act} OF 8{stageText} · NODE {floor}";
 
             var gainedTitle = UiRoot.Q<UiLabel>(className: "gained-in-dungeon-1-vars");
             if (gainedTitle != null) gainedTitle.text = $"Gained in Dungeon {act}";
@@ -131,8 +129,7 @@ namespace Obscure
             }
 
             var nextNote = UiRoot.Q<UiLabel>(className: "dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars");
-            if (nextNote != null)
-                nextNote.text = $"DUNGEON PROGRESS STAYS. DUNGEON {act} IS YOUR NEXT DUNGEON AGAIN.";
+            if (nextNote != null) nextNote.style.display = DisplayStyle.None;
 
             int hub = PersistenceCommitHandler.ActiveCommittedSnapshot?.hubGold ?? (Run != null ? Run.Gold : 0);
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
@@ -156,8 +153,7 @@ namespace Obscure
             }
 
             var footerNote = UiRoot.Q<UiLabel>(className: "from-the-main-menu-start-a-new-expedition-into-dungeon-1-or-load-a-save-vars");
-            if (footerNote != null)
-                footerNote.text = $"FROM THE MAIN MENU, START A NEW EXPEDITION INTO DUNGEON {act} OR LOAD A SAVE.";
+            if (footerNote != null) footerNote.style.display = DisplayStyle.None;
         }
     }
 }

@@ -32,6 +32,13 @@ namespace Obscure
             selectedAttunementElement = ElementType.Fire;
 
             currentOffer = Run?.PendingReward ?? new RewardOffer { title = "VICTORY", text = "SPOILS OF WAR", choices = new List<RewardOption>() };
+            // Taking a modifier is mandatory: start with the first one picked (the player can switch, not drop it).
+            if (currentOffer.modifierChoices != null && currentOffer.modifierChoices.Count > 0)
+            {
+                selectedModifierIdx = 0;
+                var first = currentOffer.modifierChoices[0];
+                if (first.id == "MOD-024" && first.element.IsValidElement()) selectedAttunementElement = first.element;
+            }
             currentParty = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             isBossReward = Run != null && Run.IsAtFinalDungeonBoss;
             isStageBossReward = Run != null && Run.IsAtStageBoss;
@@ -139,12 +146,11 @@ namespace Obscure
             {
                 if (isBossReward)
                 {
-                    noteTop.text = "ALL DUNGEON MODIFIERS END HERE";
-                    noteTop.style.color = Palette.Ember1;
+                    noteTop.style.display = DisplayStyle.None;
                 }
                 else if (isStageBossReward)
                 {
-                    noteTop.text = $"NEXT: STAGE {Run.Stage + 1} OF {Run.TotalStages} · MODIFIERS CARRY OVER";
+                    noteTop.text = $"NEXT: STAGE {Run.Stage + 1} OF {Run.TotalStages}";
                     noteTop.style.color = Palette.Gold2;
                 }
                 else if (!string.IsNullOrEmpty(currentOffer.bonusItemId) && Database.Items.TryGetValue(currentOffer.bonusItemId, out var bi))
@@ -154,21 +160,14 @@ namespace Obscure
                 }
                 else
                 {
-                    noteTop.text = (currentOffer.text ?? "SPOILS OF WAR").ToUpperInvariant();
+                    noteTop.style.display = DisplayStyle.None; // flavour line ("The dead lie still once more.")
                 }
                 noteTop.style.width = 340;
                 noteTop.style.whiteSpace = WhiteSpace.Normal;
             }
 
             var noteBottom = UiRoot.Q<UiLabel>(className: "spend-sp-at-a-rest-site-or-in-the-hub-vars");
-            if (noteBottom != null)
-            {
-                noteBottom.text = isBossReward
-                    ? "RELICS & KEPT GEAR SURVIVE THE RUN."
-                    : "KEPT REWARDS SURVIVE A WIPE.";
-                noteBottom.style.width = 340;
-                noteBottom.style.whiteSpace = WhiteSpace.Normal;
-            }
+            if (noteBottom != null) noteBottom.style.display = DisplayStyle.None;
 
             // Right header
             var rewardHdr = UiRoot.Q<VisualElement>(className: "section-header__i-32");
@@ -178,13 +177,15 @@ namespace Obscure
             var subHdr = UiRoot.Q<UiLabel>(className: "pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars");
             if (subHdr != null)
             {
-                subHdr.text = currentOffer.choices.Count > 0
-                    ? $"PICK 1 OF {currentOffer.choices.Count} · CONFIRM BELOW · KEPT ITEMS SURVIVE A WIPE"
-                    : "COLLECT YOUR GOLD AND CONTINUE";
+                // With no prize, the header and the confirm panel already say so.
+                if (currentOffer.choices.Count > 0) subHdr.text = $"PICK 1 OF {currentOffer.choices.Count}";
+                else subHdr.style.display = DisplayStyle.None;
             }
 
             // Remove baked static cards, baked overlay icons, and baked confirm panel children (including baked <Button>s)
             StripBakedRewardElements(screen);
+            // Position-matched leftovers can only be found once layout exists (see FigmaUi.OnFirstLayout).
+            FigmaUi.OnFirstLayout(screen, () => StripBakedRewardElements(screen));
 
             // Dynamic hosts matching exact 21b coordinates
             cardsHost = new VisualElement
@@ -203,7 +204,7 @@ namespace Obscure
                 name = "RewardConfirmHost",
                 style =
                 {
-                    position = Position.Absolute, left = 428, top = 534, width = 812, height = 140,
+                    position = Position.Absolute, left = 428, top = 528, width = 812, height = 150,
                     flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween
                 }
             };
@@ -239,10 +240,12 @@ namespace Obscure
                     toRemove.Add(child);
                     continue;
                 }
-                // Remove baked overlay icon containers sitting over the cards (top 198..199, left >= 500)
-                float top = child.style.top.value.value;
-                float left = child.style.left.value.value;
-                if (child.style.position == Position.Absolute &&
+                // Remove baked overlay icon containers sitting over the cards (top 198..199, left >= 500).
+                // Read layout, not style: exported UXML positions read as 0 through element.style.
+                if (child.name == "RewardCardsHost" || child.name == "RewardConfirmHost") continue;
+                float top = child.layout.y;
+                float left = child.layout.x;
+                if (child.resolvedStyle.position == Position.Absolute &&
                     ((Mathf.Abs(top - 198f) < 4f && left >= 500f) ||
                      (Mathf.Abs(top - 562f) < 4f && left >= 420f) ||
                      (Mathf.Abs(top - 636f) < 4f && left >= 600f)))
@@ -405,11 +408,9 @@ namespace Obscure
                 {
                     topRow.Add(BuildCompactModifierRow());
                 }
-                else
+                else if (choiceCount > 0)
                 {
-                    var subNote = new UiLabel(choiceCount > 0
-                        ? "PRESS ENTER ON A CARD TO SELECT IT, THEN CONFIRM BELOW. OR SKIP TO TAKE ONLY GOLD."
-                        : "YOUR RUN GOLD IS ADDED AUTOMATICALLY.")
+                    var subNote = new UiLabel("PRESS ENTER ON A CARD TO SELECT IT, THEN CONFIRM BELOW. OR SKIP TO TAKE ONLY GOLD.")
                     {
                         style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
                     };
@@ -596,7 +597,7 @@ namespace Obscure
         VisualElement BuildCompactModifierRow()
         {
             var wrap = new VisualElement { style = { flexDirection = FlexDirection.Column, marginBottom = 4 } };
-            wrap.Add(new UiLabel("BONUS MODIFIER (OPTIONAL · CLICK TO SELECT)")
+            wrap.Add(new UiLabel("CHOOSE A MODIFIER (REQUIRED)")
             {
                 style = { fontSize = 10, color = Palette.Gold2, letterSpacing = 0.4f, marginBottom = 3 }
             });
@@ -621,7 +622,7 @@ namespace Obscure
                 {
                     style =
                     {
-                        width = 262, height = 42, marginRight = i < 2 ? 8 : 0,
+                        width = 262, height = 60, marginRight = i < 2 ? 8 : 0,
                         paddingLeft = 8, paddingRight = 8, paddingTop = 2, paddingBottom = 2,
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                         backgroundColor = isSel ? Palette.Hex(0x1E3328) : Palette.Ink2,
@@ -629,12 +630,17 @@ namespace Obscure
                         borderBottomColor = isSel ? Palette.Ok : Palette.Ink5,
                         borderLeftColor = isSel ? Palette.Ok : Palette.Ink5,
                         borderRightColor = isSel ? Palette.Ok : Palette.Ink5,
-                        justifyContent = Justify.Center, overflow = Overflow.Hidden
+                        justifyContent = Justify.FlexStart, overflow = Overflow.Hidden
                     }
                 };
                 box.Add(new UiLabel((isSel ? "✓ " : "") + mLabel.ToUpperInvariant())
                 {
-                    style = { fontSize = 10, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                    style = { fontSize = 10, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.NoWrap, flexShrink = 0 }
+                });
+                // The effect itself, so the choice is informed (not only in the tooltip).
+                box.Add(new UiLabel(mDetail)
+                {
+                    style = { fontSize = 10, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
                 });
                 row.Add(box);
 
@@ -643,14 +649,11 @@ namespace Obscure
                 {
                     if (selectedModifierIdx == mIdx)
                     {
+                        // Already picked: Elemental Attunement cycles its element; others stay picked (mandatory).
                         if (mOpt.id == "MOD-024")
                         {
                             int curIdx = Array.IndexOf(ElementTypes.All, selectedAttunementElement);
                             selectedAttunementElement = ElementTypes.All[(curIdx + 1) % ElementTypes.All.Length];
-                        }
-                        else
-                        {
-                            selectedModifierIdx = -1;
                         }
                     }
                     else
@@ -860,7 +863,10 @@ namespace Obscure
                 : null;
             int prevEquipCount = Run?.Inventory?.equipment?.Count ?? 0;
 
-            Run.ClaimReward(choice, selectedModifierIdx, selectedAttunementElement);
+            // The chosen element only applies to Elemental Attunement; other element modifiers keep their rolled element.
+            var mods = Run.PendingReward?.modifierChoices;
+            bool attunement = mods != null && selectedModifierIdx >= 0 && selectedModifierIdx < mods.Count && mods[selectedModifierIdx].id == "MOD-024";
+            Run.ClaimReward(choice, selectedModifierIdx, attunement ? selectedAttunementElement : (ElementType?)null);
 
             // Auto-equip newly granted equipment onto the selected hero if requested
             if (equipHeroIdx >= 0 && picked != null && picked.kind == RewardKind.Equipment &&
@@ -907,6 +913,16 @@ namespace Obscure
     // Dungeon Clear — migrated to Figma 23---Dungeon-Clear.uxml (1280x720 UI Toolkit).
     public class DungeonClearScreen : GameScreen
     {
+        // Rule reminders baked into 23---Dungeon-Clear: the "COMMITTED · KEPT IF A LATER RUN FAILS" note and the
+        // footer chip row (PROGRESS COMMITTED · MODIFIERS END HERE · N RELICS STAY). Shared with EndScreen.
+        internal static void HideDungeonClearReminders(VisualElement root)
+        {
+            FigmaUi.HideByClass(root, "committed-kept-if-a-later-run-fails-vars");
+            var keepTags = root.Query<VisualElement>(className: "tag-keep").ToList();
+            var chipRow = keepTags.Count > 0 ? keepTags[keepTags.Count - 1].GetFirstAncestorOfType<TemplateContainer>()?.parent : null;
+            if (chipRow != null && chipRow != root) chipRow.style.display = DisplayStyle.None;
+        }
+
         protected override void Build()
         {
             Sfx.Play(Sound.VictoryStinger);
@@ -951,9 +967,7 @@ namespace Obscure
             var nextLbl = UiRoot.Q<UiLabel>(className: "next-dungeon-2-of-8-unlocked-vars");
             if (nextLbl != null) nextLbl.text = $"NEXT: DUNGEON {Mathf.Min(8, act + 1)} OF 8 UNLOCKED";
 
-            var keepTags = UiRoot.Query<VisualElement>(className: "tag-keep").ToList();
-            if (keepTags.Count >= 2)
-                FigmaUi.SetInstanceText(keepTags[1], "text-0", $"{Run?.Relics.Count ?? 0} RELICS STAY");
+            HideDungeonClearReminders(UiRoot);
 
             var retInst = UiRoot.Q<VisualElement>(className: "button-primary-2__i-9");
             if (retInst != null)

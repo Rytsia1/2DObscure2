@@ -166,7 +166,7 @@ namespace Obscure.Tests
         [Test]
         public void PerfectParryDoesNotBlockTheStatus()
         {
-            // GDD Bab 11 §2.3: "Defensive Perfect tidak menghalangi Status Effect" (no damage, status still rolls).
+            // GDD Bab 11 §2.3: "Defensive Perfect does not block Status Effects" (no damage, status still rolls).
             var b = NewBattle(1, "cursed_knight");
             var ck = AdvanceTo(b, c => c.IsEnemy);
             var hits = b.Perform(BattleAction.Strike(ck, Move("cursed_knight", "Dread Howl"), null), 1f, new[] { QteResult.Perfect });

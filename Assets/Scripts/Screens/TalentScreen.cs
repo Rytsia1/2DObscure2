@@ -296,14 +296,6 @@ namespace Obscure
                 host.Add(new UiLabel(feedback.ToUpperInvariant()) { style = { fontSize = 13, color = feedbackBad ? Palette.Err : Palette.Ok, whiteSpace = WhiteSpace.Normal, marginTop = 12 } });
 
             host.Add(new VisualElement { style = { flexGrow = 1 } });
-            var toast = FigmaUi.InstantiateTemplate("Toast-Info");
-            if (toast != null)
-            {
-                FigmaUi.SetInstanceText(toast, "text-0", "!");
-                FigmaUi.SetInstanceText(toast, "text-1", "RESPEC: A SCROLL OF EMPTINESS REFUNDS EVERY TALENT SLOT.");
-                toast.style.width = Length.Percent(100); toast.style.marginBottom = 10;
-                host.Add(toast);
-            }
 
             bool can = hero.AvailableTalentSelections > 0 && TalentSystem.ValidateSelection(hero, t.id, out _);
             string label = hero.HasTalent(t.id) ? "Already owned" : hero.AvailableTalentSelections <= 0 ? "No pick available" : $"Choose {t.name}";

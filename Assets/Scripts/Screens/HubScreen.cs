@@ -29,6 +29,7 @@ namespace Obscure
             }
 
             UiRoot = FigmaUi.Mount(Root.gameObject, "04---Hub---Geistwald-City");
+            FigmaUi.HideByClass(UiRoot, "a-wipe-resets-run-progress-equipment-is-always-kept-vars");
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onFocus = ShowTip;
@@ -88,7 +89,7 @@ namespace Obscure
             BindFacilityRow("Magic Shop", () => Game?.Go(GameState.MagicShop), "BUY AND SELL PERMANENT RELICS.",
                 replaceRightText: $"RELICS {relics}/5");
 
-            tipTitleLbl = FigmaUi.FindLabel(UiRoot, "Dungeon Entrance");
+            tipTitleLbl = UiRoot.Q<UiLabel>(className: "dungeon-entrance-vars");
             tipBodyLbl = FigmaUi.FindLabel(UiRoot, "BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.");
             var tipPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-2");
             if (tipPanel != null) tipPanel.style.height = 128;
