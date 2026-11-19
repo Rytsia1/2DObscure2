@@ -235,8 +235,12 @@ namespace Obscure
 
             if (Run.Map == null || Run.Map.act < targetAct)
             {
-                var nextMap = MapGenerator.Generate(Run.Seed + targetAct, targetAct);
+                var nextMap = MapGenerator.Generate(Run.Seed + targetAct, targetAct, 1);
                 Run.AdvanceToNextDungeon(nextMap);
+            }
+            else if (Run.Stage != 1 || Run.Status != RunStatus.Active || Run.Current != null || Run.Cleared.Count > 0)
+            {
+                Run.RestartCurrentDungeon(MapGenerator.Generate(Run.Seed + targetAct, targetAct, 1));
             }
             Game?.Go(GameState.Map);
         }

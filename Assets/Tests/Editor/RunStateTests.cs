@@ -46,35 +46,54 @@ namespace Obscure.Tests
         [Test]
         public void GeneratedMapsAreValidAcrossManySeeds()
         {
-            for (int seed = 1; seed <= 300; seed++)
+            string[] d1Bosses = { "d1_e6", "d1_e7", "d1_boss" };
+            for (int seed = 1; seed <= 100; seed++)
             {
-                var map = MapGenerator.Generate(seed);
-                Assert.IsNull(MapGenerator.Validate(map), $"seed {seed}");
-                Assert.AreEqual(MapGenerator.Floors, map.Floors);
-                Assert.AreEqual(MapGenerator.StartLanes, map.nodes.Count(n => n.floor == 0));
-                Assert.GreaterOrEqual(Paths(map), 3, $"seed {seed}: needs real route choices");
-
-                var boss = map.nodes.Single(n => n.type == NodeType.Boss);
-                foreach (var n in map.nodes)
+                for (int stage = 1; stage <= 3; stage++)
                 {
-                    var seen = new HashSet<string>();
-                    var stack = new Stack<NodeDef>(new[] { n });
-                    while (stack.Count > 0)
-                    {
-                        var m = stack.Pop();
-                        if (seen.Add(m.id)) foreach (var id in m.next) stack.Push(map.Get(id));
-                    }
-                    Assert.IsTrue(seen.Contains(boss.id), $"seed {seed}: {n.id} cannot reach the boss");
+                    var map = MapGenerator.Generate(seed, act: 1, stage: stage);
+                    Assert.IsNull(MapGenerator.Validate(map), $"seed {seed} stage {stage}");
+                    Assert.AreEqual(MapGenerator.Floors, map.Floors);
+                    Assert.AreEqual(MapGenerator.StartLanes, map.nodes.Count(n => n.floor == 0));
+                    Assert.AreEqual(stage, map.stage);
+                    Assert.AreEqual(3, map.totalStages);
+                    Assert.AreEqual(stage == 3, map.IsFinalStage);
+                    Assert.IsFalse(map.allowEliteNodes);
+                    Assert.AreEqual(0, map.nodes.Count(n => n.type == NodeType.Elite), $"seed {seed} stage {stage}: D1 has no mid-map elites");
+                    Assert.GreaterOrEqual(Paths(map), 3, $"seed {seed} stage {stage}: needs real route choices");
 
-                    if (n.IsCombat)
+                    var boss = map.nodes.Single(n => n.type == NodeType.Boss);
+                    Assert.AreEqual(d1Bosses[stage - 1], boss.encounter, $"seed {seed} stage {stage} boss encounter");
+
+                    foreach (var n in map.nodes)
                     {
-                        var enc = Database.Encounters[n.encounter];
-                        var want = n.type == NodeType.Boss ? Tier.Boss : n.type == NodeType.Elite ? Tier.Elite : Tier.Normal;
-                        Assert.AreEqual(want, enc.tier, $"seed {seed}: {n.id}");
-                        Assert.LessOrEqual(enc.minFloor, n.floor);
+                        var seen = new HashSet<string>();
+                        var stack = new Stack<NodeDef>(new[] { n });
+                        while (stack.Count > 0)
+                        {
+                            var m = stack.Pop();
+                            if (seen.Add(m.id)) foreach (var id in m.next) stack.Push(map.Get(id));
+                        }
+                        Assert.IsTrue(seen.Contains(boss.id), $"seed {seed} stage {stage}: {n.id} cannot reach the boss");
+
+                        if (n.IsCombat)
+                        {
+                            var enc = Database.Encounters[n.encounter];
+                            if (n.type == NodeType.Boss)
+                                Assert.AreEqual(stage == 3 ? Tier.Boss : Tier.Elite, enc.tier, $"seed {seed} stage {stage}: {n.id}");
+                            else
+                                Assert.AreEqual(Tier.Normal, enc.tier, $"seed {seed} stage {stage}: {n.id}");
+                            Assert.LessOrEqual(enc.minFloor, n.floor);
+                        }
                     }
+                    Assert.IsTrue(map.nodes.Where(n => n.floor == map.Floors - 2).All(n => n.type == NodeType.Rest), "rest before the boss");
                 }
-                Assert.IsTrue(map.nodes.Where(n => n.floor == map.Floors - 2).All(n => n.type == NodeType.Rest), "rest before the boss");
+
+                // Also verify a single-stage dungeon with mid-map Elite nodes enabled (Act 2)
+                var act2Map = MapGenerator.Generate(seed, act: 2, stage: 1);
+                Assert.IsNull(MapGenerator.Validate(act2Map), $"seed {seed} act 2");
+                Assert.IsTrue(act2Map.allowEliteNodes);
+                Assert.IsTrue(act2Map.nodes.Any(n => n.type == NodeType.Elite), $"seed {seed} act 2: has elite");
             }
         }
 
@@ -84,17 +103,211 @@ namespace Obscure.Tests
             string Shape(MapDef m) => string.Join(";", m.nodes.Select(n => $"{n.id}:{n.type}:{n.encounter}:{n.eventId}:{string.Join(",", n.next)}"));
             Assert.AreEqual(Shape(MapGenerator.Generate(42)), Shape(MapGenerator.Generate(42)));
             Assert.AreNotEqual(Shape(MapGenerator.Generate(42)), Shape(MapGenerator.Generate(43)));
+            Assert.AreEqual(Shape(MapGenerator.Generate(42, 1, 2)), Shape(MapGenerator.Generate(42, 1, 2)));
+            Assert.AreNotEqual(Shape(MapGenerator.Generate(42, 1, 1)), Shape(MapGenerator.Generate(42, 1, 2)));
+            Assert.AreNotEqual(Shape(MapGenerator.Generate(42, 1, 2)), Shape(MapGenerator.Generate(42, 1, 3)));
+        }
+
+        [Test]
+        public void Dungeon1HasThreeStagesWithConfiguredBossesAndFourEnemyStageBosses()
+        {
+            var plan = MapGenerator.GetDungeonPlan(1);
+            Assert.AreEqual(3, plan.TotalStages);
+            Assert.AreEqual(3, MapGenerator.GetStageCount(1));
+            Assert.AreEqual("d1_e6", plan.GetStage(1).bossEncounterId);
+            Assert.AreEqual("d1_e7", plan.GetStage(2).bossEncounterId);
+            Assert.AreEqual("d1_boss", plan.GetStage(3).bossEncounterId);
+
+            // Stage 1 (Soul Reaper) and Stage 2 (Royal Ossuary Knight) each fight with 3 allies (4 enemies total)
+            var s1Enc = Database.Encounters["d1_e6"];
+            Assert.AreEqual(4, s1Enc.enemies.Length);
+            Assert.AreEqual("soul_reaper", s1Enc.enemies[0]);
+
+            var s2Enc = Database.Encounters["d1_e7"];
+            Assert.AreEqual(4, s2Enc.enemies.Length);
+            Assert.AreEqual("royal_ossuary_knight", s2Enc.enemies[0]);
+
+            var s3Enc = Database.Encounters["d1_boss"];
+            Assert.AreEqual(1, s3Enc.enemies.Length);
+            Assert.AreEqual("zoroa_p1", s3Enc.enemies[0]);
+        }
+
+        [Test]
+        public void Stage1AndStage2BossesAdvanceToNewMapAtFloor0PreservingRunState()
+        {
+            var run = NewRun(MapGenerator.Generate(17, act: 1, stage: 1), seed: 17);
+            Assert.AreEqual(1, run.Stage);
+            Assert.AreEqual(3, run.TotalStages);
+            Assert.IsFalse(run.IsFinalStage);
+
+            // Add persistent run state that must carry across stages
+            run.Gold = 55;
+            run.Party[0].hp = Math.Max(1, run.Party[0].stats.maxHp - 20);
+            int expectedHp = run.Party[0].hp;
+            run.ModifierManager.AddModifier("MOD-001", run); // 2 battles duration
+            run.ModifierManager.AddModifier("MOD-006", run); // Inspiring Formation (2 battles)
+
+            void ClearCurrentStage()
+            {
+                int startStage = run.Stage;
+                while (run.Status == RunStatus.Active && run.Stage == startStage)
+                {
+                    var next = run.Available.First();
+                    run.Enter(next);
+                    switch (next.type)
+                    {
+                        case NodeType.Battle:
+                        case NodeType.Elite:
+                        case NodeType.Boss:
+                            run.WinCombat();
+                            if (next.type == NodeType.Boss && startStage < 3)
+                            {
+                                Assert.IsTrue(run.IsAtStageBoss);
+                                Assert.IsFalse(run.Stats.bossDefeated, "Stage boss does not complete dungeon");
+                                Assert.Greater(run.PendingReward.modifierChoices.Count, 0, "Stage boss still offers modifiers");
+                            }
+                            run.ClaimReward(next.type == NodeType.Boss && startStage == 3 ? 0 : -1);
+                            break;
+                        case NodeType.Treasure:
+                            run.ClaimReward(-1);
+                            break;
+                        case NodeType.Rest:
+                            run.RestRecover();
+                            break;
+                        case NodeType.Event:
+                            run.ChooseEvent(run.CurrentEvent.choices.Length - 1);
+                            break;
+                        case NodeType.Shop:
+                            run.Cleared.Add(next.id);
+                            run.Stats.nodesCompleted++;
+                            break;
+                    }
+                }
+            }
+
+            // Stage 1 -> clears Soul Reaper -> automatically generates Stage 2 map at floor 0
+            string stage1Boss = run.Map.nodes.Single(n => n.type == NodeType.Boss).encounter;
+            Assert.AreEqual("d1_e6", stage1Boss);
+            ClearCurrentStage();
+
+            Assert.AreEqual(RunStatus.Active, run.Status, "Stage 1 boss does not end the run");
+            Assert.AreEqual(2, run.Stage);
+            Assert.IsNull(run.Current, "Player starts at entrance of Stage 2 map");
+            Assert.IsEmpty(run.Cleared, "Stage 2 cleared set starts fresh");
+            CollectionAssert.AreEquivalent(run.Map.nodes.Where(n => n.floor == 0), run.Available, "Floor 0 nodes available on Stage 2");
+            Assert.AreEqual(8, run.Stats.nodesCompleted);
+            Assert.Greater(run.Gold, 55, "Run gold carried over and increased");
+            Assert.IsFalse(run.Stats.bossDefeated);
+            Assert.IsFalse(run.Inventory.HasKeyItem("KEY002"));
+
+            // Add a fresh modifier before Stage 2 boss to verify modifiers carry over into Stage 3
+            run.ModifierManager.AddModifier("MOD-001", run); // 2 battles
+            int goldBeforeS2 = run.Gold;
+
+            // Stage 2 -> clears Royal Ossuary Knight -> automatically generates Stage 3 map at floor 0
+            string stage2Boss = run.Map.nodes.Single(n => n.type == NodeType.Boss).encounter;
+            Assert.AreEqual("d1_e7", stage2Boss);
+            ClearCurrentStage();
+
+            Assert.AreEqual(RunStatus.Active, run.Status, "Stage 2 boss does not end the run");
+            Assert.AreEqual(3, run.Stage);
+            Assert.IsTrue(run.IsFinalStage);
+            Assert.IsNull(run.Current, "Player starts at entrance of Stage 3 map");
+            Assert.IsEmpty(run.Cleared, "Stage 3 cleared set starts fresh");
+            CollectionAssert.AreEquivalent(run.Map.nodes.Where(n => n.floor == 0), run.Available);
+            Assert.AreEqual(16, run.Stats.nodesCompleted);
+            Assert.Greater(run.Gold, goldBeforeS2);
+            Assert.IsFalse(run.Stats.bossDefeated);
+
+            // Ensure a modifier added on Stage 3 is cleared upon defeating Zoroa
+            run.ModifierManager.AddModifier("MOD-002", run);
+            string stage3Boss = run.Map.nodes.Single(n => n.type == NodeType.Boss).encounter;
+            Assert.AreEqual("d1_boss", stage3Boss);
+            ClearCurrentStage();
+
+            Assert.AreEqual(RunStatus.Victory, run.Status);
+            Assert.IsTrue(run.Won && run.Stats.bossDefeated && run.Stats.bossReached);
+            Assert.IsTrue(run.Inventory.HasKeyItem("KEY002"));
+            CollectionAssert.Contains(run.Relics, Database.BossRelic);
+            Assert.AreEqual(24, run.Stats.nodesCompleted);
+            Assert.AreEqual(0, run.ModifierManager.Count, "All modifiers cleared after final boss");
+            Assert.LessOrEqual(expectedHp, run.Party[0].stats.maxHp);
+        }
+
+        [Test]
+        public void AbandoningMidStageResetsBackToStageOne()
+        {
+            var run = NewRun(MapGenerator.Generate(21, act: 1, stage: 1), seed: 21);
+            Assert.IsTrue(run.AdvanceToNextStage());
+            Assert.AreEqual(2, run.Stage);
+
+            run.AbandonExpedition();
+            Assert.AreEqual(1, run.Stage);
+            Assert.AreEqual(1, run.Map.stage);
+            Assert.IsNull(run.Current);
+            Assert.IsEmpty(run.Cleared);
+            Assert.AreEqual(RunStatus.Active, run.Status);
+        }
+
+        [Test]
+        public void DungeonPlanDefSupportsVariableStageCountsPerDungeon()
+        {
+            var customPlan = new DungeonPlanDef
+            {
+                act = 2,
+                name = "Custom Multi-Stage",
+                stages = new[]
+                {
+                    new DungeonStageDef { stage = 1, bossEncounterId = "d1_e6" },
+                    new DungeonStageDef { stage = 2, bossEncounterId = "d1_boss" },
+                }
+            };
+            Assert.AreEqual(2, customPlan.TotalStages);
+            Assert.AreEqual("d1_e6", customPlan.GetStage(1).bossEncounterId);
+            Assert.AreEqual("d1_boss", customPlan.GetStage(2).bossEncounterId);
+            Assert.AreEqual(3, MapGenerator.GetStageCount(1));
+            Assert.AreEqual(1, MapGenerator.GetStageCount(2));
+        }
+
+        [Test]
+        public void StageNodeRngProducesDistinctRollsPerStage()
+        {
+            string RollAt(int stage)
+            {
+                var map = new MapDef
+                {
+                    name = "Test",
+                    act = 1,
+                    stage = stage,
+                    totalStages = 3,
+                    nodes = new[] { new NodeDef { id = "f0n0", type = NodeType.Treasure, floor = 0, lane = 0 } }
+                };
+                var run = NewRun(map, seed: 99);
+                run.Enter(run.Map.Get("f0n0"));
+                return run.PendingReward.gold + ":" + string.Join(",", run.PendingReward.choices.Select(c => $"{c.kind}:{c.id}:{c.amount}"));
+            }
+
+            string s1 = RollAt(1);
+            string s2 = RollAt(2);
+            string s3 = RollAt(3);
+            Assert.AreEqual(s1, RollAt(1), "Same stage and seed stays deterministic");
+            Assert.IsTrue(s1 != s2 || s2 != s3, "Stages must not reuse identical node RNG streams");
         }
 
         [Test]
         public void NodeTypesAreReasonablyDistributed()
         {
-            var all = Enumerable.Range(1, 100).SelectMany(s => MapGenerator.Generate(s).nodes).ToList();
-            int Count(NodeType t) => all.Count(n => n.type == t);
-            Assert.Greater(Count(NodeType.Battle), Count(NodeType.Elite));
-            Assert.Greater(Count(NodeType.Battle), Count(NodeType.Event));
-            Assert.Greater(Count(NodeType.Event), Count(NodeType.Treasure));
-            Assert.AreEqual(100, Count(NodeType.Boss));
+            var allD1 = Enumerable.Range(1, 100).SelectMany(s => MapGenerator.Generate(s, act: 1, stage: 1).nodes).ToList();
+            int CountD1(NodeType t) => allD1.Count(n => n.type == t);
+            Assert.AreEqual(0, CountD1(NodeType.Elite), "Dungeon 1 has no mid-map elites");
+            Assert.Greater(CountD1(NodeType.Battle), CountD1(NodeType.Event));
+            Assert.Greater(CountD1(NodeType.Event), CountD1(NodeType.Treasure));
+            Assert.AreEqual(100, CountD1(NodeType.Boss));
+
+            var allD2 = Enumerable.Range(1, 100).SelectMany(s => MapGenerator.Generate(s, act: 2, stage: 1).nodes).ToList();
+            int CountD2(NodeType t) => allD2.Count(n => n.type == t);
+            Assert.Greater(CountD2(NodeType.Battle), CountD2(NodeType.Elite));
+            Assert.Greater(CountD2(NodeType.Elite), 0);
         }
 
         // ---- flow ----

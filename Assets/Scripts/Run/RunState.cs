@@ -639,7 +639,12 @@ namespace Obscure
     {
         public readonly int Seed;
         public string RunId => Seed.ToString("X8");
-        public int Act => Map.act;
+        public int Act => Map != null ? Map.act : 1;
+        public int Stage => Map != null ? Math.Max(1, Map.stage) : 1;
+        public int TotalStages => Map != null ? Math.Max(1, Map.totalStages) : 1;
+        public bool IsFinalStage => Map == null || Map.IsFinalStage;
+        public bool IsAtFinalDungeonBoss => Current != null && Current.type == NodeType.Boss && IsFinalStage;
+        public bool IsAtStageBoss => Current != null && Current.type == NodeType.Boss && !IsFinalStage;
         public MapDef Map { get; private set; }
         public ShopInventory CurrentShop { get; set; }
         public readonly List<Unit> Party;
@@ -758,20 +763,21 @@ namespace Obscure
 
         public bool CanEnter(NodeDef n) => Available.Contains(n);
 
-        // Per-node RNG: rewards and event rolls depend only on the run seed and the node,
+        // Per-node RNG: rewards and event rolls depend only on the run seed, stage, and node,
         // never on how combat went, so a seed reproduces them.
         Random NodeRng(NodeDef n, int salt = 0)
         {
             int h = 17;
             foreach (var c in n.id) h = unchecked(h * 31 + c);
-            return new Random(unchecked(Seed * 486187739 + h * 31 + salt));
+            int stageSalt = (Stage - 1) * 1000003;
+            return new Random(unchecked(Seed * 486187739 + h * 31 + stageSalt + salt));
         }
 
         public void Enter(NodeDef n)
         {
             if (!CanEnter(n)) throw new InvalidOperationException($"Node {n.id} is not reachable");
             Current = n;
-            if (n.type == NodeType.Boss) Stats.bossReached = true;
+            if (n.type == NodeType.Boss && IsFinalStage) Stats.bossReached = true;
             if (n.type == NodeType.Treasure)
             {
                 PendingReward = RewardGenerator.ForTreasure(NodeRng(n), Relics);
@@ -840,9 +846,11 @@ namespace Obscure
             var enc = CurrentEncounter;
             if (enc == null || !Current.IsCombat || Cleared.Contains(Current.id) || PendingReward != null || Status != RunStatus.Active)
                 throw new InvalidOperationException("No combat to win");
+            bool isFinalBoss = IsAtFinalDungeonBoss;
+            bool isStageBoss = IsAtStageBoss;
             Stats.battlesWon++;
             if (enc.tier == Tier.Elite) Stats.elitesWon++;
-            if (enc.tier == Tier.Boss)
+            if (isFinalBoss)
             {
                 Stats.bossDefeated = true;
                 Inventory.AddKeyItem("KEY002");
@@ -865,22 +873,27 @@ namespace Obscure
                 }
             }
 
-            if (enc.tier != Tier.Boss)
+            if (!isFinalBoss)
             {
-                foreach (var u in Party) if (!u.Alive) u.hp = 1; // regular battle rise
+                foreach (var u in Party) if (!u.Alive) u.hp = 1; // regular & stage-boss battle rise
             }
-            // For Boss victory, fallen heroes remain dead and must be revived at Temple in Hub (GDD Section 6.3)
+            // For Final Boss victory, fallen heroes remain dead and must be revived at Temple in Hub (GDD Section 6.3)
             float heal = Relics.Sum(id => Database.Relics[id].victoryHeal);
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));
 
             int fortuneBonus = ModifierManager.ConsumeBattleVictoryBonusGold();
             PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics);
+            if (isStageBoss)
+            {
+                PendingReward.title = $"Stage {Stage} Cleared";
+                PendingReward.text = $"{enc.name} defeated. Claim a prize before Stage {Stage + 1}.";
+            }
             if (fortuneBonus > 0)
             {
                 PendingReward.bonusGoldFromModifier = fortuneBonus;
                 PendingReward.gold += fortuneBonus;
             }
-            if (enc.tier != Tier.Boss)
+            if (!isFinalBoss)
             {
                 PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(Current, 3), count: 3);
             }
@@ -919,6 +932,8 @@ namespace Obscure
             ModifierManager.ClearAll();
             ResetDungeonUtilityCharges();
             PersistenceCommitHandler.RollbackUncommitted(this);
+            if (Map != null && Map.stage != 1)
+                Map = MapGenerator.Generate(Seed, Act, 1);
             Status = RunStatus.Active;
         }
 
@@ -1386,11 +1401,64 @@ namespace Obscure
             Stats.nodesCompleted++;
             if (Current.type == NodeType.Boss)
             {
-                Status = RunStatus.Victory;
-                EndedUtc = DateTime.UtcNow;
-                // GDD Bab 15 §3.1: All dungeon modifiers expire upon dungeon clear (after boss reward screen).
-                ModifierManager.ClearAll();
+                if (IsFinalStage)
+                {
+                    Status = RunStatus.Victory;
+                    EndedUtc = DateTime.UtcNow;
+                    // GDD Bab 15 §3.1: All dungeon modifiers expire upon dungeon clear (after boss reward screen).
+                    ModifierManager.ClearAll();
+                }
+                else
+                {
+                    AdvanceToNextStage();
+                }
             }
+        }
+
+        // Advances to the next stage within the same dungeon, generating a fresh node map
+        // and placing the party back at floor 0 while preserving run state (HP/MP, Gold, Relics, Modifiers, Stats).
+        public bool AdvanceToNextStage(MapDef overrideNextStageMap = null)
+        {
+            if (Map == null || IsFinalStage) return false;
+            int nextStage = Stage + 1;
+            var nextMap = overrideNextStageMap ?? MapGenerator.Generate(Seed, Act, nextStage);
+            if (nextMap == null || nextMap.act != Act || nextMap.stage != nextStage) return false;
+
+            Map = nextMap;
+            Current = null;
+            Cleared.Clear();
+            CurrentEvent = null;
+            EventRelic = null;
+            EventEquipment = null;
+            EventModifiers.Clear();
+            EventCurseModifiers.Clear();
+            EventRiskFailModifiers.Clear();
+            EventChoiceRiskFailed.Clear();
+            return true;
+        }
+
+        // Resets the current dungeon run cleanly back to Stage 1 floor 0 (used when re-embarking from Hub).
+        public void RestartCurrentDungeon(MapDef stageOneMap = null)
+        {
+            int act = Act;
+            Map = stageOneMap ?? MapGenerator.Generate(Seed, act, 1);
+            Current = null;
+            Cleared.Clear();
+            Status = RunStatus.Active;
+            EndedUtc = null;
+            PendingReward = null;
+            CurrentEvent = null;
+            EventRelic = null;
+            EventEquipment = null;
+            EventModifiers.Clear();
+            EventCurseModifiers.Clear();
+            EventRiskFailModifiers.Clear();
+            EventChoiceRiskFailed.Clear();
+            BattleBuffs.Clear();
+            ModifierManager.ClearAll();
+            ResetDungeonUtilityCharges();
+            CurrentDungeonShop = DungeonShopData.Generate(Map?.act ?? 1, Rng);
+            CurrentShop = CurrentDungeonShop.equipmentShop;
         }
 
         // Restores progression and per-character runtime state from a saved game (Section 2 & Section 12).
@@ -1528,6 +1596,8 @@ namespace Obscure
             PendingReward = null;
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
+            if (Map != null && Map.stage != 1)
+                Map = MapGenerator.Generate(Seed, Act, 1);
 
             Relics.Clear();
             RelicManager.ClearAll();

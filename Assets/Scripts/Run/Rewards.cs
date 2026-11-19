@@ -23,10 +23,15 @@ namespace Obscure
             switch (tier)
             {
                 case Tier.Boss:
+                    bool canTakeBossRelic = ownedRelics == null
+                        || (!ownedRelics.Contains(Database.BossRelic) && ownedRelics.Count < RelicManager.MaxRelicCapacity);
+                    var bossChoice = canTakeBossRelic
+                        ? new RewardOption { kind = RewardKind.Relic, id = Database.BossRelic }
+                        : new RewardOption { kind = RewardKind.Gold, amount = RunConfig.RelicFallbackGold };
                     return new RewardOffer
                     {
                         title = "The Warden Falls", text = "The abyss shudders and goes silent.", gold = RunConfig.BossGold,
-                        choices = { new RewardOption { kind = RewardKind.Relic, id = Database.BossRelic } },
+                        choices = { bossChoice },
                     };
                 case Tier.Elite:
                     return new RewardOffer

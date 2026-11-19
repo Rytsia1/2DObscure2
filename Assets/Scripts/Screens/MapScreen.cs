@@ -53,7 +53,12 @@ namespace Obscure
 
             // Header
             var actLbl = UiRoot.Q<UiLabel>(className: "dungeon-1-of-8-vars");
-            if (actLbl != null) actLbl.text = $"DUNGEON {map.act} OF 8";
+            if (actLbl != null)
+            {
+                actLbl.text = map.totalStages > 1
+                    ? $"DUNGEON {map.act} OF 8 · STAGE {map.stage} OF {map.totalStages}"
+                    : $"DUNGEON {map.act} OF 8";
+            }
 
             var titleLbl = UiRoot.Q<UiLabel>(className: "the-sunken-crypt-vars");
             if (titleLbl != null) titleLbl.text = map.name;
@@ -917,7 +922,8 @@ namespace Obscure
 
             int gold = Run != null ? Run.Gold : 0;
             var footer = new VisualElement { style = { marginTop = 10, paddingTop = 8, borderTopWidth = 1, borderTopColor = Palette.Ink4 } };
-            footer.Add(new UiLabel($"DUNGEON {Run?.Act ?? 1} OF 8 · NODE {Run?.Floor ?? 1} · {gold} RUN GOLD")
+            string stageText = Run != null && Run.TotalStages > 1 ? $" · STAGE {Run.Stage}/{Run.TotalStages}" : "";
+            footer.Add(new UiLabel($"DUNGEON {Run?.Act ?? 1} OF 8{stageText} · NODE {Run?.Floor ?? 1} · {gold} RUN GOLD")
             {
                 style = { fontSize = 12, color = Palette.Mist2, marginBottom = 4 }
             });
@@ -951,17 +957,19 @@ namespace Obscure
                 OpenPause);
         }
 
-        static string TypeName(NodeType t) => t switch
+        string TypeName(NodeType t) => t switch
         {
             NodeType.Battle => "Combat", NodeType.Elite => "Elite", NodeType.Event => "Event", NodeType.Treasure => "Treasure",
-            NodeType.Shop => "Shop", NodeType.Rest => "Rest", NodeType.Boss => "Final", _ => t.ToString(),
+            NodeType.Shop => "Shop", NodeType.Rest => "Rest",
+            NodeType.Boss => currentMap != null && !currentMap.IsFinalStage ? "Stage Boss" : "Final",
+            _ => t.ToString(),
         };
 
-        static string Risk(NodeType t) => t switch
+        string Risk(NodeType t) => t switch
         {
             NodeType.Battle => "COMBAT",
             NodeType.Elite => "HIGH · ELITE FOES",
-            NodeType.Boss => "FINAL ENCOUNTER",
+            NodeType.Boss => currentMap != null && !currentMap.IsFinalStage ? $"STAGE {currentMap.stage} BOSS" : "FINAL ENCOUNTER",
             NodeType.Event => "UNKNOWN",
             _ => "NONE KNOWN",
         };
@@ -982,14 +990,16 @@ namespace Obscure
         public static string EnemyNames(EncounterDef e) => string.Join(", ", e.enemies.GroupBy(id => id)
             .Select(g => (g.Count() > 1 ? g.Count() + "X " : "") + Database.Enemies[g.Key].name.ToUpper()));
 
-        static string Describe(NodeDef n) => n.type switch
+        string Describe(NodeDef n) => n.type switch
         {
             NodeType.Shop => "A WANDERING MERCHANT HAS SET UP CAMP. BUY SUPPLIES WITH RUN GOLD.",
             NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
             NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
             NodeType.Rest => "A QUIET ALCOVE. RECOVER THE PARTY OR IMPROVE A HERO.",
             NodeType.Elite => EnemyNames(Database.Encounters[n.encounter]) + ". DANGEROUS — VALUABLE BOUNTY.",
-            NodeType.Boss => "THE FINAL ENCOUNTER OF THIS DUNGEON. " + EnemyNames(Database.Encounters[n.encounter]) + ".",
+            NodeType.Boss => currentMap != null && !currentMap.IsFinalStage
+                ? $"STAGE {currentMap.stage} BOSS. " + EnemyNames(Database.Encounters[n.encounter]) + $". DEFEAT TO ADVANCE TO STAGE {currentMap.stage + 1}."
+                : "THE FINAL ENCOUNTER OF THIS DUNGEON. " + EnemyNames(Database.Encounters[n.encounter]) + ".",
             _ => EnemyNames(Database.Encounters[n.encounter]),
         };
     }

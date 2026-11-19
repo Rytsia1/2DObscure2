@@ -117,7 +117,8 @@ namespace Obscure
         {
             1 => new[] { new Vector2(930, 124) },
             2 => new[] { new Vector2(840, 86), new Vector2(1040, 182) },
-            _ => new[] { new Vector2(760, 76), new Vector2(920, 174), new Vector2(1080, 82) },
+            3 => new[] { new Vector2(760, 76), new Vector2(920, 174), new Vector2(1080, 82) },
+            _ => new[] { new Vector2(730, 56), new Vector2(790, 206), new Vector2(960, 56), new Vector2(1060, 206) },
         };
 
         public void Init(Battle battle, EncounterDef encounter, VisualElement root)
@@ -131,9 +132,12 @@ namespace Obscure
             if (actBanner != null)
             {
                 int act = Game.I?.Run?.Act ?? 1;
+                int stage = Game.I?.Run?.Stage ?? 1;
+                int totalStages = Game.I?.Run?.TotalStages ?? 1;
+                string stageSuffix = totalStages > 1 ? $" · STAGE {stage}/{totalStages}" : "";
                 actBanner.text = isBossHud
-                    ? $"ACT {act}: THE INNER SANCTUM"
-                    : $"ACT {act}: {(Game.I?.Run?.Map?.name ?? "ASHEN RUINS").ToUpperInvariant()}";
+                    ? $"ACT {act}{stageSuffix}: THE INNER SANCTUM"
+                    : $"ACT {act}{stageSuffix}: {(Game.I?.Run?.Map?.name ?? "ASHEN RUINS").ToUpperInvariant()}";
             }
 
             roundLabel = UiRoot.Q<UiLabel>(className: isBossHud ? "round-1-vars-3" : "round-1-vars-2");
@@ -218,7 +222,7 @@ namespace Obscure
             else
             {
                 var eSlots = EnemySlots(battle.Enemies.Count);
-                for (int i = 0; i < battle.Enemies.Count; i++) AddEnemyCombatant(battle.Enemies[i], eSlots[i]);
+                for (int i = 0; i < battle.Enemies.Count; i++) AddEnemyCombatant(battle.Enemies[i], eSlots[Mathf.Min(i, eSlots.Length - 1)]);
             }
 
             if (!isBossHud)

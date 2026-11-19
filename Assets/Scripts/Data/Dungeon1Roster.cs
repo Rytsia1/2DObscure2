@@ -161,10 +161,10 @@ namespace Obscure
                 enemies = new[] { "soulbound_hound", "crypt_leech" } },
             new EncounterDef { id = "d1_e5", name = "Royal Remnant", tier = Tier.Normal, minFloor = 2, focus = "Enemy durability; target selection",
                 enemies = new[] { "possessed_royal_guard", "hollow_squire", "hollow_squire" } },
-            new EncounterDef { id = "d1_e6", name = "Reaper's Passage", tier = Tier.Elite, minFloor = 2, focus = "Elite QTE; Accelerando",
-                enemies = new[] { "soul_reaper", "forgotten_militia" }, music = MusicIds.Battle2 },
-            new EncounterDef { id = "d1_e7", name = "Ossuary Threshold", tier = Tier.Elite, minFloor = 2, focus = "Telegraph, charge, Heavy, Break interrupt",
-                enemies = new[] { "royal_ossuary_knight" }, music = MusicIds.Battle2 },
+            new EncounterDef { id = "d1_e6", name = "Reaper's Passage", tier = Tier.Elite, minFloor = 2, focus = "Stage 1 Boss: Soul Reaper with 3 allies; Accelerando",
+                enemies = new[] { "soul_reaper", "forgotten_militia", "soulbound_hound", "crypt_leech" }, music = MusicIds.Battle2 },
+            new EncounterDef { id = "d1_e7", name = "Ossuary Threshold", tier = Tier.Elite, minFloor = 2, focus = "Stage 2 Boss: Royal Ossuary Knight with 3 allies; Heavy & Break interrupt",
+                enemies = new[] { "royal_ossuary_knight", "possessed_royal_guard", "gravebound_archer", "hollow_squire" }, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_boss", name = "Zoroa", tier = Tier.Boss, focus = "Signature multi-hit, resources, Break timing, Phase 2 escalation",
                 enemies = new[] { "zoroa_p1" }, music = MusicIds.ZoroaP1 }, // Phase 2 replaces Phase 1; never spawned alongside it
         };

@@ -185,14 +185,19 @@ namespace Obscure.Tests
             var run = Run;
             Assert.AreEqual(MapGenerator.StartLanes, run.Available.Count());
 
-            // Walk the generated map by keyboard, always taking the first open node, until the boss falls.
+            // Walk all 3 stages of Dungeon 1 by keyboard, always taking the first open node, until Zoroa falls.
             string rewardFocus = "";
-            for (int step = 0; step < 60 && State != GameState.Victory && State != GameState.DungeonClear; step++)
+            var bossEncountersSeen = new List<string>();
+            for (int step = 0; step < 220 && State != GameState.Victory && State != GameState.DungeonClear; step++)
             {
                 switch (State)
                 {
                     case GameState.Map: yield return TapAndSettle(Key.Enter); break;
-                    case GameState.Combat: yield return WinBattle(); break;
+                    case GameState.Combat:
+                        if (run.Current?.type == NodeType.Boss && !string.IsNullOrEmpty(run.Current.encounter))
+                            bossEncountersSeen.Add(run.Current.encounter);
+                        yield return WinBattle();
+                        break;
                     case GameState.Reward: rewardFocus = Focus; yield return TapAndSettle(Key.Enter); break; // first prize
                     case GameState.Rest:                                                  // recover, continue
                         yield return TapAndSettle(Key.Enter);
@@ -211,9 +216,13 @@ namespace Obscure.Tests
             }
             Assert.AreEqual(GameState.DungeonClear, State);
             Assert.AreEqual(RunStatus.Victory, run.Status);
-            Assert.AreEqual(run.Map.Floors, run.Stats.nodesCompleted);
+            Assert.AreEqual(3, run.Stage);
+            Assert.AreEqual(run.TotalStages * MapGenerator.Floors, run.Stats.nodesCompleted);
+            CollectionAssert.AreEqual(new[] { "d1_e6", "d1_e7", "d1_boss" }, bossEncountersSeen);
             Assert.IsTrue(run.Stats.bossDefeated);
-            CollectionAssert.Contains(run.Relics, Database.BossRelic, "boss reward focus was " + rewardFocus);
+            Assert.IsTrue(
+                run.Relics.Contains(Database.BossRelic) || run.Relics.Count == RelicManager.MaxRelicCapacity,
+                $"expected BossRelic or full {RelicManager.MaxRelicCapacity} relics across 3 stages; had [{string.Join(", ", run.Relics)}], boss reward focus was {rewardFocus}");
 
             yield return TapAndSettle(Key.Enter); // Return to Hub from Dungeon Clear
             Assert.AreEqual(GameState.Hub, State);

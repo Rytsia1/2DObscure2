@@ -23,19 +23,72 @@ namespace Obscure
             "The Void Sanctum"       // Dungeon 8
         };
 
-        public static MapDef Generate(int seed, int act = 1)
+        // Data-driven per-dungeon stage plans. Each dungeon can configure a different number of stages
+        // and its own stage bosses / mid-map Elite rules.
+        public static readonly DungeonPlanDef[] DungeonPlans =
         {
-            int safeAct = Math.Clamp(act, 1, 8);
-            for (int attempt = 0; attempt < 100; attempt++)
+            new DungeonPlanDef
             {
-                var map = Build(new Random(unchecked(seed * 7919 + attempt + safeAct * 1013)), safeAct);
-                if (Validate(map) == null) return map;
+                act = 1,
+                name = DungeonNames[0],
+                stages = new[]
+                {
+                    new DungeonStageDef { stage = 1, stageName = "Outer Crypt", bossEncounterId = "d1_e6", allowEliteNodes = false },
+                    new DungeonStageDef { stage = 2, stageName = "Ossuary Gate", bossEncounterId = "d1_e7", allowEliteNodes = false },
+                    new DungeonStageDef { stage = 3, stageName = "Inner Sanctum", bossEncounterId = "d1_boss", allowEliteNodes = false },
+                }
+            },
+            DefaultSingleStagePlan(2, DungeonNames[1]),
+            DefaultSingleStagePlan(3, DungeonNames[2]),
+            DefaultSingleStagePlan(4, DungeonNames[3]),
+            DefaultSingleStagePlan(5, DungeonNames[4]),
+            DefaultSingleStagePlan(6, DungeonNames[5]),
+            DefaultSingleStagePlan(7, DungeonNames[6]),
+            DefaultSingleStagePlan(8, DungeonNames[7]),
+        };
+
+        static DungeonPlanDef DefaultSingleStagePlan(int act, string name) => new DungeonPlanDef
+        {
+            act = act,
+            name = name,
+            stages = new[]
+            {
+                new DungeonStageDef { stage = 1, stageName = name, bossEncounterId = "d1_boss", allowEliteNodes = true }
             }
-            throw new InvalidOperationException($"No valid map for seed {seed} act {act}");
+        };
+
+        public static DungeonPlanDef GetDungeonPlan(int act)
+        {
+            int safeAct = Math.Clamp(act, 1, DungeonPlans.Length);
+            return DungeonPlans[safeAct - 1];
         }
 
-        static MapDef Build(Random rng, int act = 1)
+        public static int GetStageCount(int act) => GetDungeonPlan(act).TotalStages;
+
+        public static MapDef Generate(int seed, int act = 1, int stage = 1)
         {
+            int safeAct = Math.Clamp(act, 1, 8);
+            var plan = GetDungeonPlan(safeAct);
+            int totalStages = plan.TotalStages;
+            int safeStage = Math.Clamp(stage, 1, totalStages);
+            var stageDef = plan.GetStage(safeStage);
+
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                var map = Build(
+                    new Random(unchecked(seed * 7919 + attempt + safeAct * 1013 + (safeStage - 1) * 2677)),
+                    safeAct,
+                    safeStage,
+                    totalStages,
+                    stageDef);
+                if (Validate(map) == null) return map;
+            }
+            throw new InvalidOperationException($"No valid map for seed {seed} act {act} stage {safeStage}");
+        }
+
+        static MapDef Build(Random rng, int act, int stage, int totalStages, DungeonStageDef stageDef)
+        {
+            bool allowEliteNodes = stageDef == null || stageDef.allowEliteNodes;
             var floors = new List<List<NodeDef>>();
             for (int f = 0; f < Floors; f++)
             {
@@ -55,12 +108,21 @@ namespace Obscure
                 foreach (var n in floors[f])
                 {
                     var parents = f == 0 ? new List<NodeDef>() : floors[f - 1].Where(p => p.next.Contains(n.id)).ToList();
-                    n.type = PickType(f, parents, rng);
-                    if (n.IsCombat) n.encounter = PickEncounter(n, rng);
+                    n.type = PickType(f, parents, rng, allowEliteNodes);
+                    if (n.IsCombat) n.encounter = PickEncounter(n, rng, stageDef);
                     if (n.type == NodeType.Event) n.eventId = events[nextEvent++ % events.Count].id; // spread events before repeating
                 }
             string dungeonName = (act >= 1 && act <= DungeonNames.Length) ? DungeonNames[act - 1] : $"Dungeon {act}";
-            return new MapDef { name = dungeonName, act = act, nodes = floors.SelectMany(x => x).ToArray() };
+            return new MapDef
+            {
+                name = dungeonName,
+                act = act,
+                stage = stage,
+                totalStages = totalStages,
+                stageName = stageDef?.stageName,
+                allowEliteNodes = allowEliteNodes,
+                nodes = floors.SelectMany(x => x).ToArray()
+            };
         }
 
         // Each source gets a contiguous range of targets; consecutive ranges touch but never cross,
@@ -78,7 +140,7 @@ namespace Obscure
             }
         }
 
-        static NodeType PickType(int floor, List<NodeDef> parents, Random rng)
+        static NodeType PickType(int floor, List<NodeDef> parents, Random rng, bool allowEliteNodes)
         {
             if (floor == 0) return NodeType.Battle;
             if (floor == Floors - 1) return NodeType.Boss;
@@ -88,7 +150,7 @@ namespace Obscure
                 double r = rng.NextDouble();
                 var t = r < 0.45 ? NodeType.Battle
                     : r < 0.65 ? NodeType.Event
-                    : r < 0.78 ? (floor >= 2 ? NodeType.Elite : NodeType.Battle)
+                    : r < 0.78 ? (allowEliteNodes && floor >= 2 ? NodeType.Elite : NodeType.Battle)
                     : r < 0.88 ? NodeType.Treasure
                     : r < 0.94 && floor >= 1 && floor <= Floors - 3 ? NodeType.Shop
                     : floor >= 2 && floor <= Floors - 4 ? NodeType.Rest : NodeType.Event;
@@ -99,8 +161,11 @@ namespace Obscure
             return NodeType.Battle;
         }
 
-        static string PickEncounter(NodeDef n, Random rng)
+        static string PickEncounter(NodeDef n, Random rng, DungeonStageDef stageDef)
         {
+            if (n.type == NodeType.Boss && !string.IsNullOrEmpty(stageDef?.bossEncounterId) && Database.Encounters.ContainsKey(stageDef.bossEncounterId))
+                return stageDef.bossEncounterId;
+
             var tier = n.type == NodeType.Boss ? Tier.Boss : n.type == NodeType.Elite ? Tier.Elite : Tier.Normal;
             var pool = Database.Encounters.Values.Where(e => e.tier == tier && e.minFloor <= n.floor).ToList();
             return pool[rng.Next(pool.Count)].id;
@@ -136,10 +201,18 @@ namespace Obscure
                 if (edges.Any(a => edges.Any(b => a.Item1 < b.Item1 && a.Item2 > b.Item2))) return $"crossing paths on floor {f}";
             }
 
-            if (!map.nodes.Any(n => n.type == NodeType.Elite)) return "no elite";
+            if (map.allowEliteNodes)
+            {
+                if (!map.nodes.Any(n => n.type == NodeType.Elite)) return "no elite";
+                if (!PathAvoiding(map, NodeType.Elite)) return "elites are unavoidable";
+            }
+            else if (map.nodes.Any(n => n.type == NodeType.Elite))
+            {
+                return "unexpected elite node";
+            }
+
             if (!map.nodes.Any(n => n.type == NodeType.Treasure)) return "no treasure";
             if (!map.nodes.Any(n => n.type == NodeType.Event)) return "no event";
-            if (!PathAvoiding(map, NodeType.Elite)) return "elites are unavoidable";
             return null;
         }
 

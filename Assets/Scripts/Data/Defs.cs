@@ -458,12 +458,40 @@ namespace Obscure
         public bool IsCombat => type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss;
     }
 
+    public class DungeonStageDef
+    {
+        public int stage = 1;
+        public string stageName;
+        public string bossEncounterId;
+        public bool allowEliteNodes = true;
+    }
+
+    public class DungeonPlanDef
+    {
+        public int act = 1;
+        public string name;
+        public DungeonStageDef[] stages = Array.Empty<DungeonStageDef>();
+        public int TotalStages => stages != null && stages.Length > 0 ? stages.Length : 1;
+
+        public DungeonStageDef GetStage(int stage)
+        {
+            if (stages == null || stages.Length == 0) return null;
+            int idx = Math.Clamp(stage, 1, stages.Length) - 1;
+            return stages[idx];
+        }
+    }
+
     public class MapDef
     {
         public string name;
         public int act = 1;
+        public int stage = 1;
+        public int totalStages = 1;
+        public string stageName;
+        public bool allowEliteNodes = true;
         public NodeDef[] nodes;
         public NodeDef Get(string id) => nodes.First(n => n.id == id);
         public int Floors => nodes.Max(n => n.floor) + 1;
+        public bool IsFinalStage => stage >= Math.Max(1, totalStages);
     }
 }

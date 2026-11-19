@@ -815,8 +815,8 @@ namespace Obscure.Tests
                 ["d1_e3"] = (Tier.Normal, new[] { "cinder_wisp", "forgotten_militia" }),
                 ["d1_e4"] = (Tier.Normal, new[] { "soulbound_hound", "crypt_leech" }),
                 ["d1_e5"] = (Tier.Normal, new[] { "possessed_royal_guard", "hollow_squire", "hollow_squire" }),
-                ["d1_e6"] = (Tier.Elite, new[] { "soul_reaper", "forgotten_militia" }),
-                ["d1_e7"] = (Tier.Elite, new[] { "royal_ossuary_knight" }),
+                ["d1_e6"] = (Tier.Elite, new[] { "soul_reaper", "forgotten_militia", "soulbound_hound", "crypt_leech" }),
+                ["d1_e7"] = (Tier.Elite, new[] { "royal_ossuary_knight", "possessed_royal_guard", "gravebound_archer", "hollow_squire" }),
                 ["d1_boss"] = (Tier.Boss, new[] { "zoroa_p1" }),
             };
             CollectionAssert.AreEquivalent(expected.Keys, Database.Encounters.Keys);

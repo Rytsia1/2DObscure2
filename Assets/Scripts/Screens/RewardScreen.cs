@@ -19,6 +19,7 @@ namespace Obscure
         RewardOffer currentOffer;
         List<Unit> currentParty;
         bool isBossReward;
+        bool isStageBossReward;
         UitkMenu menu;
         VisualElement cardsHost;
         VisualElement confirmHost;
@@ -32,7 +33,8 @@ namespace Obscure
 
             currentOffer = Run?.PendingReward ?? new RewardOffer { title = "VICTORY", text = "SPOILS OF WAR", choices = new List<RewardOption>() };
             currentParty = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
-            isBossReward = Run?.Current?.type == NodeType.Boss;
+            isBossReward = Run != null && Run.IsAtFinalDungeonBoss;
+            isStageBossReward = Run != null && Run.IsAtStageBoss;
 
             MountFigma("21b---Combat-Victory---Confirm-Reward--v2");
             var screen = UiRoot.Q<VisualElement>(className: "_21b-combat-victory-confirm-reward-v2") ?? UiRoot;
@@ -44,7 +46,14 @@ namespace Obscure
             var topTags = UiRoot.Query<VisualElement>(className: "tag-gold").ToList();
             int standing = currentParty.Count(u => u.Alive);
             if (topTags.Count >= 1)
-                FigmaUi.SetInstanceText(topTags[0], "text-0", isBossReward ? "BOSS CLEARED" : $"ACT {Run?.Act ?? 1}");
+            {
+                string firstTag = isBossReward
+                    ? "BOSS CLEARED"
+                    : isStageBossReward
+                        ? $"STAGE {Run.Stage}/{Run.TotalStages} CLEARED"
+                        : (Run != null && Run.TotalStages > 1 ? $"ACT {Run.Act} · S{Run.Stage}/{Run.TotalStages}" : $"ACT {Run?.Act ?? 1}");
+                FigmaUi.SetInstanceText(topTags[0], "text-0", firstTag);
+            }
             if (topTags.Count >= 2)
                 FigmaUi.SetInstanceText(topTags[1], "text-0", standing == currentParty.Count ? "NO HERO FELL" : $"{standing}/{currentParty.Count} STANDING");
             if (topTags.Count >= 3)
@@ -132,6 +141,11 @@ namespace Obscure
                 {
                     noteTop.text = "ALL DUNGEON MODIFIERS END HERE";
                     noteTop.style.color = Palette.Ember1;
+                }
+                else if (isStageBossReward)
+                {
+                    noteTop.text = $"NEXT: STAGE {Run.Stage + 1} OF {Run.TotalStages} · MODIFIERS CARRY OVER";
+                    noteTop.style.color = Palette.Gold2;
                 }
                 else if (!string.IsNullOrEmpty(currentOffer.bonusItemId) && Database.Items.TryGetValue(currentOffer.bonusItemId, out var bi))
                 {

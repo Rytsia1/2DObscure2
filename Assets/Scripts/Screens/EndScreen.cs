@@ -100,11 +100,12 @@ namespace Obscure
 
             int act = Run != null ? Run.Act : 1;
             int floor = Run != null ? Run.Floor : 1;
+            string stageText = Run != null && Run.TotalStages > 1 ? $" · STAGE {Run.Stage}/{Run.TotalStages}" : "";
             var s = Run != null ? Run.Stats : new RunStats();
 
             var subLbl = UiRoot.Q<UiLabel>(className: "fell-in-dungeon-1-of-8-node-4-progress-from-earlier-clears-is-safe-vars");
             if (subLbl != null)
-                subLbl.text = $"FELL IN DUNGEON {act} OF 8 · NODE {floor} · PROGRESS FROM EARLIER CLEARS IS SAFE";
+                subLbl.text = $"FELL IN DUNGEON {act} OF 8{stageText} · NODE {floor} · PROGRESS FROM EARLIER CLEARS IS SAFE";
 
             var gainedTitle = UiRoot.Q<UiLabel>(className: "gained-in-dungeon-1-vars");
             if (gainedTitle != null) gainedTitle.text = $"Gained in Dungeon {act}";

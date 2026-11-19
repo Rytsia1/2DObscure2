@@ -1836,6 +1836,7 @@ namespace Obscure
         public bool isDefeated = false;
         public int seed = 1;
         public int act = 1;
+        public int stage = 1;
         public int gold;
         public int hubGold;
         public string currentNodeId;
@@ -1941,6 +1942,7 @@ namespace Obscure
                 isDefeated = isDefeated,
                 seed = run.Seed,
                 act = isDefeated ? 1 : run.Act,
+                stage = isDefeated ? 1 : run.Stage,
                 gold = isDefeated ? 0 : run.Gold,
                 hubGold = isDefeated ? 0 : run.Gold,
                 currentNodeId = isDefeated ? "" : (run.Current?.id ?? ""),
@@ -2005,7 +2007,7 @@ namespace Obscure
             restoredRoster = new CharacterRoster(startWithEmptyParty: true);
             restoredRoster.CommitConfirmedParty(partyDefs);
 
-            restoredRun = new RunState(MapGenerator.Generate(data.seed), partyDefs, data.seed);
+            restoredRun = new RunState(MapGenerator.Generate(data.seed, Math.Max(1, data.act), Math.Max(1, data.stage)), partyDefs, data.seed);
             restoredRun.RestoreFromSave(data);
             return true;
         }
