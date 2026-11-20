@@ -37,7 +37,7 @@ namespace Obscure.Editor
             var symbolAsset = EnsureSymbolFallbackFontAsset();
             var fontAsset = EnsureFontAsset(FontTtfPath, FontAssetPath, symbolAsset, null);
             EnsureFontAsset(DisplayTtfPath, DisplayAssetPath, fontAsset, symbolAsset);
-            EnsureFontAsset(GothicTtfPath, GothicAssetPath, fontAsset, symbolAsset, pixelGrid: GothicPixelGrid);
+            EnsureFontAsset(GothicTtfPath, GothicAssetPath, fontAsset, symbolAsset, samplingSize: GothicSamplingSize);
             var textSettings = EnsureTextSettings(fontAsset, symbolAsset);
             // USS/TSS bake font url() refs at import time; reimport both so refs to just-created font assets resolve.
             AssetDatabase.SaveAssets();
@@ -104,20 +104,22 @@ namespace Obscure.Editor
             FigmaScreenCatalog.ClearCache();
         }
 
-        // DotGothic16 rasterized as hard pixels with point filtering instead of SDF-rounded blobs.
-        // Sampled at 32, not 16: its Latin outlines sit on half-pixel offsets, so at 16 every
-        // stroke smears to 2px and the i/j dots merge into the stem. At 32 each dot is an exact 2x2 block.
-        const int GothicPixelGrid = 32;
+        // DotGothic16 as a high-res SDF, NOT a RASTER bitmap atlas. With RASTER, UI Toolkit layout floors each
+        // glyph advance to whole screen pixels but draws it unrounded, so at sizes whose advance is fractional
+        // (14/18/22px at 1.5x panel scale) the last glyphs wrapped onto a 2nd line and overlapped the text below
+        // ("+1" read as "¥}"), and point-sampled downscaling made strokes randomly 1px or 2px.
+        // 64pt keeps the square dots square; SDF scales evenly to any size and measures what it draws.
+        const int GothicSamplingSize = 64;
 
         static bool IsPixelFontStale(FontAsset fa) =>
-            fa == null || fa.atlasRenderMode != UnityEngine.TextCore.LowLevel.GlyphRenderMode.RASTER
-            || fa.faceInfo.pointSize != GothicPixelGrid;
+            fa == null || fa.atlasRenderMode != UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA
+            || fa.faceInfo.pointSize != GothicSamplingSize;
 
-        static FontAsset EnsureFontAsset(string ttfPath, string assetPath, FontAsset fallbackA, FontAsset fallbackB, int pixelGrid = 0)
+        static FontAsset EnsureFontAsset(string ttfPath, string assetPath, FontAsset fallbackA, FontAsset fallbackB, int samplingSize = 0)
         {
             var fallbacks = new[] { fallbackA, fallbackB };
             var fa = AssetDatabase.LoadAssetAtPath<FontAsset>(assetPath);
-            if (pixelGrid > 0 && fa != null && IsPixelFontStale(fa))
+            if (samplingSize > 0 && fa != null && IsPixelFontStale(fa))
             {
                 AssetDatabase.DeleteAsset(assetPath);
                 fa = null;
@@ -128,14 +130,11 @@ namespace Obscure.Editor
                 var ttf = AssetDatabase.LoadAssetAtPath<Font>(ttfPath);
                 if (ttf == null) return null;
 
-                fa = pixelGrid > 0
-                    ? FontAsset.CreateFontAsset(ttf, pixelGrid, 2, UnityEngine.TextCore.LowLevel.GlyphRenderMode.RASTER,
+                fa = samplingSize > 0
+                    ? FontAsset.CreateFontAsset(ttf, samplingSize, samplingSize / 8, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
                         1024, 1024, AtlasPopulationMode.Dynamic, true)
                     : FontAsset.CreateFontAsset(ttf);
                 if (fa == null) return null;
-                if (pixelGrid > 0 && fa.atlasTextures != null)
-                    foreach (var tex in fa.atlasTextures)
-                        if (tex != null) tex.filterMode = FilterMode.Point;
                 AssetDatabase.CreateAsset(fa, assetPath);
                 if (fa.material != null) AssetDatabase.AddObjectToAsset(fa.material, fa);
                 if (fa.atlasTextures != null)

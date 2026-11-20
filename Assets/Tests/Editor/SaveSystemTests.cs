@@ -959,6 +959,8 @@ namespace Obscure.Tests
 
             Assert.IsNotNull(disp.sourceFontFile, "FelnaDisplayFont missing sourceFontFile");
             Assert.IsNotNull(goth.sourceFontFile, "FelnaGothicFont missing sourceFontFile");
+            // RASTER atlases make UITK measure text narrower than it draws: trailing glyphs wrap over the next line.
+            Assert.AreNotEqual(UnityEngine.TextCore.LowLevel.GlyphRenderMode.RASTER, goth.atlasRenderMode, "FelnaGothicFont must be SDF, not RASTER");
             Assert.IsTrue(disp.TryAddCharacters("FELNA VICTORY DEFEAT", out _), "Display font must rasterize title glyphs");
             Assert.IsTrue(goth.TryAddCharacters("CONTINUE NEW GAME SETTINGS", out _), "Gothic font must rasterize menu glyphs");
 

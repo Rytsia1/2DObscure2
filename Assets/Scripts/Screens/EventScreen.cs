@@ -200,11 +200,12 @@ namespace Obscure
             {
                 var entry = visible[vIdx];
                 int index = entry.index;
-                AddChoiceCard(vIdx + 1, entry.choice, entry.status, compact, () => Choose(index));
+                int goldBack = entry.choice.goldCost > 0 ? (Run?.PreviewEventGold(index) ?? entry.choice.gold) : 0;
+                AddChoiceCard(vIdx + 1, entry.choice, entry.status, goldBack, compact, () => Choose(index));
             }
         }
 
-        void AddChoiceCard(int number, EventChoice c, RunState.EventChoiceStatus status, bool compact, Action choose)
+        void AddChoiceCard(int number, EventChoice c, RunState.EventChoiceStatus status, int goldBack, bool compact, Action choose)
         {
             bool enabled = !status.isBlocked;
             var card = new VisualElement();
@@ -241,7 +242,7 @@ namespace Obscure
             titleLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(titleLbl);
 
-            string sub = enabled ? ChoiceCostSubtitle(c) : status.blockedReason.ToUpperInvariant();
+            string sub = enabled ? ChoiceCostSubtitle(c, goldBack) : status.blockedReason.ToUpperInvariant();
             if (!string.IsNullOrEmpty(sub))
             {
                 var subLbl = new UiLabel(sub);
@@ -252,7 +253,7 @@ namespace Obscure
             }
             card.Add(textCol);
 
-            string tagText = DetermineCardTag(c, status);
+            string tagText = DetermineCardTag(c, status, goldBack);
             if (tagText != null)
             {
                 var tag = FigmaUi.InstantiateTemplate(enabled ? "Tag-Temp" : "Tag-Cond");
@@ -280,13 +281,17 @@ namespace Obscure
             item.visual(false);
         }
 
-        static string DetermineCardTag(EventChoice c, RunState.EventChoiceStatus status)
+        // Net is shown only when the return is guaranteed; on a risky choice it would spoil the hidden risk, so cost alone.
+        static bool GoldBackGuaranteed(EventChoice c) => c.riskChancePercent <= 0 || c.riskGrantsRewardOnFail;
+
+        static string DetermineCardTag(EventChoice c, RunState.EventChoiceStatus status, int goldBack)
         {
             if (status.isBlocked) return status.blockedReason.ToUpperInvariant();
             if (status.usesAdaptabilityBorrow) return "ADAPTABILITY 75%";
             if (c.isImprovise) return "HUMAN · IMPROVISE";
             if (!string.IsNullOrEmpty(c.requiredRace)) return c.requiredRace.ToUpperInvariant();
-            if (c.goldCost > 0) return $"-{c.goldCost} SPOILS";
+            if (c.goldCost > 0)
+                return goldBack > 0 && GoldBackGuaranteed(c) ? $"NET {goldBack - c.goldCost:+0;-0;0} SPOILS" : $"-{c.goldCost} SPOILS";
             if (!string.IsNullOrEmpty(c.requiredItem) && Database.Items.TryGetValue(c.requiredItem, out var reqItm))
                 return $"USE {reqItm.name.ToUpperInvariant()}";
             if (!string.IsNullOrEmpty(c.requiredMaterialId))
@@ -297,11 +302,15 @@ namespace Obscure
             return null;
         }
 
-        // Only upfront costs/requirements are shown before choosing; all outputs/rewards/consequences stay hidden until chosen.
-        static string ChoiceCostSubtitle(EventChoice c)
+        // Only upfront costs/requirements are shown before choosing; outputs stay hidden until chosen. Exception: a guaranteed
+        // gold return on a paid choice is folded into the cost, so the card matches what the purse actually loses.
+        static string ChoiceCostSubtitle(EventChoice c, int goldBack)
         {
             var parts = new List<string>();
-            if (c.goldCost > 0) parts.Add($"COST: {c.goldCost} SPOILS");
+            if (c.goldCost > 0)
+                parts.Add(goldBack > 0 && GoldBackGuaranteed(c)
+                    ? $"COST: {c.goldCost} SPOILS · RETURNS {goldBack} (NET {goldBack - c.goldCost:+0;-0;0})"
+                    : $"COST: {c.goldCost} SPOILS");
             if (!string.IsNullOrEmpty(c.requiredItem))
             {
                 string itemName = Database.Items.TryGetValue(c.requiredItem, out var itm) ? itm.name : c.requiredItem;

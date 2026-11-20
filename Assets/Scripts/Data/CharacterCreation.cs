@@ -629,12 +629,20 @@ namespace Obscure
         }
 
         // Generates a valid random Point Buy Ability Score allocation within [minScore..maxScoreBeforeRacial]
-        // that spends the full configured budget (Section 5).
-        public static AbilityScores GenerateRandomPointBuy(PointBuyConfig config, Random rng = null)
+        // that spends the full configured budget (Section 5). With a class guide, points lean toward its primary
+        // (weight 4) and secondary (2) abilities, and the final values are dealt out so primaries always end highest,
+        // then secondaries. Dealing is a permutation, so the cost (exactly the budget) is unchanged.
+        public static AbilityScores GenerateRandomPointBuy(PointBuyConfig config, Random rng = null, ClassStatGuide guide = null)
         {
             var cfg = config ?? PointBuyConfig.Standard;
             var r = rng ?? new Random();
             var scores = AbilityScores.Uniform(cfg.baseScore);
+            int Weight(Ability a) => guide == null ? 1 : guide.GetPriority(a) switch
+            {
+                AbilityPriority.Primary => 4,
+                AbilityPriority.Secondary => 2,
+                _ => 1,
+            };
 
             int safety = 64;
             while (cfg.RemainingPoints(scores) > 0 && safety-- > 0)
@@ -647,13 +655,22 @@ namespace Obscure
                     if (cur >= cfg.maxScoreBeforeRacial) continue;
                     int stepCost = cfg.GetCost(cur + 1) - cfg.GetCost(cur);
                     if (stepCost <= rem)
-                        candidates.Add(a);
+                        for (int w = Weight(a); w > 0; w--) candidates.Add(a);
                 }
                 if (candidates.Count == 0) break;
                 var pick = candidates[r.Next(candidates.Count)];
                 scores[pick] = scores[pick] + 1;
             }
-            return scores;
+            if (guide == null) return scores;
+
+            var values = AbilityScores.AllAbilities.Select(a => scores[a]).OrderByDescending(v => v).ToList();
+            var order = AbilityScores.AllAbilities
+                .Select(a => (a, tier: Weight(a), roll: r.Next()))
+                .OrderByDescending(x => x.tier).ThenBy(x => x.roll) // ties within a tier are random
+                .Select(x => x.a).ToList();
+            var dealt = AbilityScores.Uniform(cfg.baseScore);
+            for (int i = 0; i < order.Count; i++) dealt[order[i]] = values[i];
+            return dealt;
         }
 
         // Random Creation: automatically generates a valid character with random Race, Class, Point Buy allocation,
@@ -672,7 +689,7 @@ namespace Obscure
                 if (!Database.Races.TryGetValue(raceId, out var race) || !Database.Classes.TryGetValue(classId, out var classDef))
                     continue;
 
-                var randomScores = GenerateRandomPointBuy(PointBuy.Config, r);
+                var randomScores = GenerateRandomPointBuy(PointBuy.Config, r, ClassStatGuidance.ForClass(classDef));
                 if (PointBuy.Config.Validate(randomScores) != null)
                     continue;
 
@@ -1080,6 +1097,8 @@ namespace Obscure
             if (string.IsNullOrWhiteSpace(CharacterName)) return "Character name is required.";
             var pbErr = PointBuy.ValidationError;
             if (pbErr != null) return pbErr;
+            // The cost table can always be spent exactly (8->13 costs 1 per step), so leftovers are never forced.
+            if (PointBuy.RemainingPoints > 0) return $"Spend all ability points ({PointBuy.RemainingPoints} left).";
 
             if (!string.IsNullOrEmpty(Class.starterPassiveId) && !Loadout.UnlockedPassiveSkills.Contains(Class.starterPassiveId))
                 return $"Starter passive '{Class.starterPassiveId}' must be unlocked.";

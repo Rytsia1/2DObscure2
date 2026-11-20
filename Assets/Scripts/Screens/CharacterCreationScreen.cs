@@ -57,7 +57,7 @@ namespace Obscure
         VisualElement screenContainer;
         VisualElement middlePanelEl, goldPanelEl;
         VisualElement middleBody, rightBody, abilitiesHost, costTableHost, nextPreviewHost;
-        VisualElement backBtn, nextBtn, keyHintRow;
+        VisualElement backBtn, nextBtn, keyHintUp, keyHintDn;
         UiLabel previewMemberTag, previewNameLbl, previewNoteLbl, scoresHeaderLbl;
         VisualElement previewSpriteEl, previewRaceTag;
         readonly VisualElement[] stepChips = new VisualElement[7];
@@ -230,7 +230,15 @@ namespace Obscure
                 nextBtn.style.paddingLeft = 18;
                 nextBtn.style.paddingRight = 18;
             }
-            keyHintRow = FigmaUi.FindInstanceWithText(screenContainer, "text-0", "DN")?.parent;
+            // The two footer key hints (".key-hint": key box with text-0, label text-1), found by their baked key text.
+            VisualElement KeyHint(string key)
+            {
+                var e = FigmaUi.FindInstanceWithText(screenContainer, "text-0", key);
+                while (e != null && !e.ClassListContains("key-hint")) e = e.parent;
+                return e;
+            }
+            keyHintUp = KeyHint("UP");
+            keyHintDn = KeyHint("DN");
         }
 
         public void Refresh()
@@ -292,7 +300,8 @@ namespace Obscure
             {
                 var chip = stepChips[i];
                 if (chip == null) continue;
-                bool done = i < (int)CurrentPage;
+                // Passed AND complete: Abilities isn't done while points are unspent, even if you jumped past it.
+                bool done = i < (int)CurrentPage && (i != (int)Page.Abilities || Session.PointBuy.RemainingPoints == 0);
                 bool now = i == (int)CurrentPage;
                 string txt = (done ? "+" : (i + 1).ToString()) + " " + PageNames[i];
                 var lbl = chip.Q<UiLabel>("text-0");
@@ -301,7 +310,7 @@ namespace Obscure
                     lbl.text = txt;
                     lbl.style.color = now ? Palette.Gold1 : done ? Palette.Mist2 : Palette.Mist3;
                 }
-                var inner = chip.childCount > 0 ? chip[0] : chip;
+                var inner = chip; // FindInstanceWithText returns the box itself; chip[0] is its label
                 inner.style.backgroundColor = now ? new Color(0.17f, 0.13f, 0.06f, 1f) : done ? Palette.Ink2 : Color.clear;
                 inner.style.borderTopColor = now ? Palette.Gold2 : done ? Palette.Ink4 : Palette.Ink5;
                 inner.style.borderRightColor = now ? Palette.Gold2 : done ? Palette.Ink4 : Palette.Ink5;
@@ -340,7 +349,9 @@ namespace Obscure
                     lbl.text = $"{a} {fin[a]}";
                     lbl.style.color = bonus ? Palette.Gold1 : Palette.Mist1;
                 }
-                var inner = chip.childCount > 0 ? chip[0] : chip;
+                var inner = chip; // FindInstanceWithText returns the box itself; chip[0] is its label
+                // STR/VIT come from the gold Tag-Keep template (the Human mock-up), so set the fill too or they never un-highlight.
+                inner.style.backgroundColor = bonus ? Palette.Hex(0x1D1608) : Palette.Ink3;
                 inner.style.borderTopColor = bonus ? Palette.Gold2 : Palette.Ink4;
                 inner.style.borderRightColor = bonus ? Palette.Gold2 : Palette.Ink4;
                 inner.style.borderBottomColor = bonus ? Palette.Gold2 : Palette.Ink4;
@@ -353,19 +364,19 @@ namespace Obscure
             if (backBtn != null)
                 menu.Add(backBtn, "Back", OnBackPressed, tooltip: "PREVIOUS STEP OR RETURN TO TITLE SCREEN");
 
-            var dnInst = keyHintRow != null && keyHintRow.childCount > 1 ? keyHintRow[1] : null;
-            if (dnInst != null)
+            // Two key hints. Lists browse with UP/DN; on Abilities and Gear UP/DN picks the row and L/R changes it (onAdjust),
+            // so those pages name both keys instead of crediting UP/DN with the change.
+            var (k0, t0, k1, t1) = CurrentPage switch
             {
-                FigmaUi.SetInstanceText(dnInst, "text-1", CurrentPage switch
-                {
-                    Page.Race => "BROWSE RACES",
-                    Page.Class => "BROWSE CLASSES",
-                    Page.Abilities => "ADJUST SCORE",
-                    Page.Gear => "CHANGE ITEM",
-                    Page.Review => "SELECT HERO",
-                    _ => "BROWSE"
-                });
-            }
+                Page.Race => ("UP", "", "DN", "BROWSE RACES"),
+                Page.Class => ("UP", "", "DN", "BROWSE CLASSES"),
+                Page.Abilities => ("UP DN", "STAT", "L R", "ADJUST SCORE"),
+                Page.Gear => ("UP DN", "SLOT", "L R", "CHANGE ITEM"),
+                Page.Review => ("UP", "", "DN", "SELECT HERO"),
+                _ => ("UP", "", "DN", "BROWSE"),
+            };
+            if (keyHintUp != null) { FigmaUi.SetInstanceText(keyHintUp, "text-0", k0); FigmaUi.SetInstanceText(keyHintUp, "text-1", t0); }
+            if (keyHintDn != null) { FigmaUi.SetInstanceText(keyHintDn, "text-0", k1); FigmaUi.SetInstanceText(keyHintDn, "text-1", t1); }
 
             if (CurrentPage == Page.Review)
             {
@@ -1080,7 +1091,7 @@ namespace Obscure
             }
 
             // Bottom-left warning note inside Gold Panel
-            abilitiesHost.Add(new UiLabel(rem > 0 ? "REMAINING POINTS ARE LOST IF UNSPENT." : "ALL POINTS ALLOCATED · READY TO CONTINUE.")
+            abilitiesHost.Add(new UiLabel(rem > 0 ? $"SPEND ALL POINTS TO ADD THIS HERO ({rem} LEFT)." :"ALL POINTS ALLOCATED · READY TO CONTINUE.")
             {
                 style =
                 {
@@ -1348,7 +1359,21 @@ namespace Obscure
 
             AddParagraph(rightBody, sel?.description ?? "NOTHING EQUIPPED IN THIS SLOT.");
             int count = Session.GetCompatibleEquipmentForSlot(SelectedEquipmentSlot).Count();
-            AddParagraph(rightBody, $"{count} COMPATIBLE ITEMS · LEFT/RIGHT TO CHANGE. TWO-HANDED WEAPONS USE MAIN HAND ONLY.", Palette.Mist3);
+
+            // Mouse path for what L R does on the slot list.
+            var cycleRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 6, marginBottom = 6 } };
+            var prevBtn = FigmaUi.CreateButton("‹ Prev Item", "button-slab", 140f);
+            var nextItemBtn = FigmaUi.CreateButton("Next Item ›", "button-slab", 140f);
+            prevBtn.style.marginRight = 8;
+            prevBtn.SetEnabled(count > 1);
+            nextItemBtn.SetEnabled(count > 1);
+            cycleRow.Add(prevBtn);
+            cycleRow.Add(nextItemBtn);
+            rightBody.Add(cycleRow);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(prevBtn, "Prev Item", () => CycleEquipmentItem(-1), interactable: count > 1), prevBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(nextItemBtn, "Next Item", () => CycleEquipmentItem(1), interactable: count > 1), nextItemBtn);
+
+            AddParagraph(rightBody, $"{count} COMPATIBLE ITEMS · L R ON A SLOT OR PREV / NEXT TO CHANGE. TWO-HANDED WEAPONS USE MAIN HAND ONLY.", Palette.Mist3);
         }
 
         void BuildReviewPage()

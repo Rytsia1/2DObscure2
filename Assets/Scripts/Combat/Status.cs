@@ -65,6 +65,24 @@ namespace Obscure
 
     public static class StatusInfo
     {
+        // Text for a status a skill/enemy move applies: the effect size where it is a plain stat % (Combatant: stat x (1 + up - down)),
+        // then the apply chance only when it isn't certain. The old chips printed the chance alone, so a sure Defense Down
+        // read "DEFENSE DOWN 100%" (a 100% defense cut) when it is really -25%.
+        public static string ChipText(StatusApply ap)
+        {
+            float mag = ap.magnitude != 0f ? ap.magnitude : StatusEffectDefs.Get(ap.id).defaultMagnitude; // same fallback as applying
+            string sign = ap.id switch
+            {
+                StatusId.AttackUp or StatusId.DefenseUp or StatusId.MagicDefenseUp => "+",
+                StatusId.AttackDown or StatusId.DefenseDown or StatusId.MagicDefenseDown or StatusId.Slow => "-",
+                _ => null,
+            };
+            var s = Name(ap.id).ToUpperInvariant();
+            if (sign != null && mag > 0f) s += $" {sign}{System.Math.Round(mag * 100f)}%";
+            if (ap.chance < 1f) s += $" · {System.Math.Round(ap.chance * 100f)}% CHANCE";
+            return ap.turns > 0 ? $"{s} · {ap.turns}T" : s;
+        }
+
         public static string Tag(StatusId id) => id switch
         {
             StatusId.DefenseUp => "D+",

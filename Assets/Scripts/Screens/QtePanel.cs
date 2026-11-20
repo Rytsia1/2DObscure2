@@ -15,7 +15,7 @@ namespace Obscure
         int bornFrame, lastResolved = -1, lastTypingIndex, lastMistakes;
         bool defenseActiveStarted, heavyTelegraphed, resultSfxPlayed;
         Keyboard keyboard;
-        UiLabel infoLbl, resultLbl;
+        UiLabel headingLbl, infoLbl, resultLbl;
         VisualElement host, timeFill, chargeFill;
         readonly List<VisualElement> markers = new List<VisualElement>();
         readonly List<(VisualElement good, VisualElement perfect)> zoneEls = new List<(VisualElement, VisualElement)>();
@@ -46,7 +46,8 @@ namespace Obscure
                 host.style.alignItems = UnityEngine.UIElements.Align.Center;
                 host.style.justifyContent = Justify.SpaceBetween;
 
-                host.Add(new UiLabel(heading ?? "") { style = { fontSize = 22, color = Palette.Gold1 } });
+                headingLbl = new UiLabel(heading ?? "") { style = { fontSize = 22, color = Palette.Gold1 } };
+                host.Add(headingLbl);
                 infoLbl = new UiLabel("") { style = { fontSize = 14, color = Palette.Mist2 } };
                 host.Add(infoLbl);
 
@@ -78,6 +79,9 @@ namespace Obscure
                         float goodScaled = QteConfig.ScaleGood(d.profile, d.TimingBonusFraction);
                         float perfScaled = QteConfig.ScalePerfect(d.profile, d.TimingBonusFraction);
                         BuildTrack(new[] { Impact }, goodScaled * speed, perfScaled * speed, d.Hits);
+                        // Name the dodge direction from the first frame (the cue is known before the telegraph ends).
+                        var dodge = System.Array.Find(d.cues, c => c != DodgeDir.None);
+                        if (dodge != DodgeDir.None) headingLbl.text = $"DODGE {DirName(dodge)}!";
                         for (int i = 0; i < d.Hits && i < markers.Count; i++)
                             if (d.cues[i] != DodgeDir.None)
                                 markers[i].Add(new UiLabel(Arrow(d.cues[i]))
@@ -147,6 +151,8 @@ namespace Obscure
             DodgeDir.Right => "▶",
             _ => "",
         };
+
+        static string DirName(DodgeDir d) => d == DodgeDir.None ? $"[{Key}]" : $"{d.ToString().ToUpperInvariant()} {Arrow(d)}";
 
         VisualElement BuildTrack(float[] zones, float goodHalf, float perfectHalf, int markerCount)
         {
@@ -301,7 +307,11 @@ namespace Obscure
         void RenderDefense(DefenseQte d)
         {
             string key = Controls.QteKey.ToString().ToUpperInvariant();
-            if (d.InTelegraph) infoLbl.text = "GET READY TO DEFEND...";
+            var dodge = System.Array.Find(d.cues, c => c != DodgeDir.None);
+            if (d.InTelegraph)
+                infoLbl.text = dodge != DodgeDir.None
+                    ? $"GET READY: PRESS {DirName(dodge)} (ARROW KEY OR W/A/S/D)"
+                    : $"GET READY: PRESS [{key}] WHEN IT LANDS";
             else if (!defenseActiveStarted)
             {
                 defenseActiveStarted = true;
@@ -349,14 +359,14 @@ namespace Obscure
                 SetMarker(i, p, c);
             }
             if (!d.InTelegraph)
-                infoLbl.text = System.Array.Exists(d.cues, c => c != DodgeDir.None)
-                    ? "PRESS THE ARROW AS IT LANDS"
+                infoLbl.text = dodge != DodgeDir.None
+                    ? $"PRESS {DirName(dodge)} AS IT LANDS"
                     : (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : "");
 
             for (int i = d.Hits - 1; i >= 0; i--)
                 if (d.HitResult(i) is QteResult r)
                 {
-                    if (i != lastResolved) { lastResolved = i; resultSfxPlayed = false; ShowResult(r, "PARRY!", "BLOCK", "HIT", true); }
+                    if (i != lastResolved) { lastResolved = i; resultSfxPlayed = false; ShowResult(r, "PARRY!", "BLOCK", d.WrongInput(i) ? $"WRONG KEY: {DirName(d.cues[i])}" : "HIT", true); }
                     break;
                 }
         }
@@ -377,13 +387,15 @@ namespace Obscure
                 letters[i].style.color = i < t.Index ? Palette.Gold1 : i == t.Index ? Palette.WarmIvory : i >= t.wordLength ? Palette.ArcaneViolet : Palette.MutedGray;
             float left = Mathf.Clamp01(1f - t.T / t.timeLimit);
             if (timeFill != null) timeFill.style.width = left * TrackW;
-            bool ward = t is WardQte;
-            infoLbl.text = t.Mistakes > 0 ? $"MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}"
-                : ward ? "TYPE THE WARD BEFORE IT LANDS" : "RECITE THE ANCIENT WORDS";
+            var ward = t as WardQte;
+            infoLbl.text = t.Mistakes > 0 ? $"WRONG LETTER - MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}"
+                : ward == null ? "RECITE THE ANCIENT WORDS"
+                : ward.InLead ? "INCOMING SPELL: TYPE THESE LETTERS ON YOUR KEYBOARD"
+                : "TYPE THE LETTERS BEFORE THE BAR EMPTIES";
             infoLbl.style.color = t.Mistakes > 0 ? Palette.SpecCrimson : Palette.Mist2;
             if (t.Done && !t.Cancelled)
             {
-                if (ward) ShowResult(t.Result, "WARDED!", "DEFLECT", "HIT", true);
+                if (ward != null) ShowResult(t.Result, "WARDED!", "DEFLECT", t.Mistakes >= QteConfig.TypingMaxMistakes ? "WARD BROKEN" : "TOO SLOW", true);
                 else ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
             }
         }

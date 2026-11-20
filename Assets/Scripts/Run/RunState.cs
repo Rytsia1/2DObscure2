@@ -743,6 +743,13 @@ namespace Obscure
         public bool CanSneakNode(NodeDef n) =>
             n != null && n.type == NodeType.Battle && CanEnter(n) && HasRace("halfling") && HalflingSneakUsesRemaining > 0;
 
+        // What sneaking past a (Normal-tier) Battle node gives up, for the map to say before and after.
+        public static string SneakForfeit =>
+            $"its {RunConfig.BattleGold.min}-{RunConfig.BattleGold.max} spoils, {RunConfig.BattleExp} EXP per hero and the reward pick";
+
+        // Set by SneakNode, shown once by the map, then cleared. Not saved.
+        public string LastSneakNote;
+
         public void SneakNode(NodeDef n)
         {
             if (!CanSneakNode(n))
@@ -750,6 +757,7 @@ namespace Obscure
             HalflingSneakUsesRemaining = Math.Max(0, HalflingSneakUsesRemaining - 1);
             Current = n;
             Complete();
+            LastSneakNote = $"Snuck past the fight. Gave up {SneakForfeit}.";
         }
 
         public bool CanUseDragonbornShopDiscount =>
@@ -929,6 +937,12 @@ namespace Obscure
 
             int fortuneBonus = ModifierManager.ConsumeBattleVictoryBonusGold();
             PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics, Act);
+            // Upgrade offers are keyed to the preset heroes (knight/rogue/...). Point any that match nobody in this party at a
+            // real hero, so the card names who gets it instead of silently falling back to the first hero.
+            var upgradeRng = NodeRng(Current, 5);
+            foreach (var o in PendingReward.choices.Where(o => o.kind == RewardKind.Upgrade))
+                if (!Party.Any(p => p.id == o.id || p.classDef?.id == o.id))
+                    o.id = Party[upgradeRng.Next(Party.Count)].id;
             AwardBattleExp(enc.tier, standing);
             if (isStageBoss)
             {
@@ -1137,12 +1151,18 @@ namespace Obscure
             return Database.Upgrades["knight"];
         }
 
+        // Who an upgrade reward lands on and what it grants. Shared by the grant and the reward card so they always agree.
+        public static (Unit hero, UpgradeDef up) ResolveUpgrade(IList<Unit> party, string character)
+        {
+            var u = party.FirstOrDefault(p => p.id == character)
+                    ?? party.FirstOrDefault(p => p.classDef?.id == character)
+                    ?? party[0];
+            return (u, Database.Upgrades.TryGetValue(character, out var def) ? def : GetUpgradeFor(u));
+        }
+
         void Upgrade(string character)
         {
-            var u = Party.FirstOrDefault(p => p.id == character)
-                    ?? Party.FirstOrDefault(p => p.classDef?.id == character)
-                    ?? Party[0];
-            var up = Database.Upgrades.TryGetValue(character, out var def) ? def : GetUpgradeFor(u);
+            var (u, up) = ResolveUpgrade(Party, character);
             if (!up.abilityBonus.IsZero) u.AddPermanentAbilityBonuses(up.abilityBonus);
             if (up.modifiers != null)
                 foreach (var m in up.modifiers) u.AddPermanentModifier(m);
@@ -1327,6 +1347,19 @@ namespace Obscure
         // Null when the choice can be taken, otherwise why not.
         public string EventBlocked(EventChoice c) => EvaluateEventChoice(CurrentEvent, c).blockedReason;
 
+        static int ScaleEffect(int val, float scale) => val <= 0 ? 0 : (scale >= 0.999f ? val : Math.Max(1, (int)Math.Round(val * scale)));
+
+        // Gold the choice pays on success, exactly as ChooseEvent -> AddGold would land it (scale, modifiers, relics).
+        public int PreviewEventGold(int index)
+        {
+            var c = CurrentEvent?.choices?[index];
+            if (c == null || c.gold <= 0) return 0;
+            int g = ScaleEffect(c.gold, EvaluateEventChoice(CurrentEvent, c).effectScale);
+            ModifierManager.ModifyGoldReward(ref g);
+            RelicManager.ModifyGoldReward(ref g);
+            return g;
+        }
+
         public string ChooseEvent(int index)
         {
             var e = CurrentEvent;
@@ -1342,7 +1375,7 @@ namespace Obscure
                 HumanAdaptabilityUsesRemaining = Math.Max(0, HumanAdaptabilityUsesRemaining - 1);
 
             float scale = status.effectScale;
-            int ScalePositive(int val) => val <= 0 ? 0 : (scale >= 0.999f ? val : Math.Max(1, (int)Math.Round(val * scale)));
+            int ScalePositive(int val) => ScaleEffect(val, scale);
 
             Gold -= c.goldCost;
             if (!string.IsNullOrEmpty(c.requiredItem))
@@ -1358,7 +1391,12 @@ namespace Obscure
                 notes.Add("[Human Adaptability: 75% effect]");
 
             int goldGain = grantSuccessRewards ? ScalePositive(c.gold) : 0;
-            if (goldGain > 0) AddGold(goldGain);
+            if (goldGain > 0)
+            {
+                int before = Gold;
+                AddGold(goldGain); // modifiers/relics may change the amount; report what actually landed
+                notes.Add($"Gained {Gold - before} spoils.");
+            }
 
             int healPct = grantSuccessRewards ? ScalePositive(c.healPercent) : 0;
             int mpPct = grantSuccessRewards ? ScalePositive(c.mpRestorePercent) : 0;

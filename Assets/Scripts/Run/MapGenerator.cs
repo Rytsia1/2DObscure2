@@ -132,16 +132,33 @@ namespace Obscure
 
         // Each source gets a contiguous range of targets; consecutive ranges touch but never cross,
         // and together they cover every target, so no node is orphaned and no paths intersect.
+        // Ranges start at 0, end at T-1, and the next one starts on (shared) or right after the previous end, so
+        // sum(extra width) + sum(gaps) = T-1. That budget is spent first on giving as many sources as possible a
+        // second exit (at most T-1 can have one without crossing), on randomly chosen sources so it is never always
+        // the same lane that gets a single way forward; what is left widens ranges or opens gaps.
         static void Connect(List<NodeDef> from, List<NodeDef> to, Random rng)
         {
-            int start = 0;
-            for (int i = 0; i < from.Count; i++)
+            int F = from.Count, T = to.Count;
+            var width = new int[F];                 // extra targets beyond the first
+            var gap = new int[F];                   // 1: next range starts after this one's end instead of sharing it
+            int budget = T - 1;
+            foreach (int i in Enumerable.Range(0, F).OrderBy(_ => rng.Next()).Take(Math.Min(F, budget)))
+                width[i] = 1;
+            budget -= Math.Min(F, budget);
+            while (budget > 0)
             {
-                int end = i == from.Count - 1
-                    ? to.Count - 1
-                    : Math.Min(to.Count - 1, Math.Max(start, (i + 1) * to.Count / from.Count - 1 + (rng.NextDouble() < 0.4 ? 1 : 0)));
+                int i = rng.Next(F);
+                if (i < F - 1 && gap[i] == 0 && rng.NextDouble() < 0.5) gap[i] = 1;
+                else width[i]++;
+                budget--;
+            }
+
+            int start = 0;
+            for (int i = 0; i < F; i++)
+            {
+                int end = start + width[i];
                 from[i].next = Enumerable.Range(start, end - start + 1).Select(j => to[j].id).ToArray();
-                if (i < from.Count - 1) start = rng.NextDouble() < 0.35 ? end : Math.Min(end + 1, to.Count - 1);
+                start = end + gap[i];
             }
         }
 
@@ -198,6 +215,10 @@ namespace Obscure
                     var m = byId[id];
                     if ((n.type == NodeType.Elite || n.type == NodeType.Rest || n.type == NodeType.Shop) && m.type == n.type) return $"{n.id}->{id} repeats {n.type}";
                 }
+                // No forced corridors: a single way forward never leads straight into another one. Non-crossing paths make
+                // some single exits unavoidable when a floor narrows; the rest floor -> boss approach is single by design.
+                if (n.next.Length == 1 && byId[n.next[0]] is var only && only.floor < last - 1 && only.next.Length == 1)
+                    return $"{n.id}->{only.id} is a forced corridor";
             }
 
             // Edges between consecutive floors never cross (by lane order).

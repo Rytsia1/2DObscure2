@@ -233,7 +233,8 @@ namespace Obscure.Tests
         {
             yield return Begin();
             yield return StartRunOnMap();
-            yield return TapAndSettle(Key.Enter); // node a
+            yield return TapAndSettle(Key.Enter); // pick node a (focus moves to Travel)
+            yield return TapAndSettle(Key.Enter); // Travel
             Assert.AreEqual(GameState.Combat, State);
             var battle = CurrentBattle;
             foreach (var p in battle.Party) p.unit.hp = 1;
@@ -252,7 +253,8 @@ namespace Obscure.Tests
         {
             yield return Begin();
             yield return StartRunOnMap();
-            yield return TapAndSettle(Key.Enter); // node a
+            yield return TapAndSettle(Key.Enter); // pick node a (focus moves to Travel)
+            yield return TapAndSettle(Key.Enter); // Travel
             Assert.AreEqual(GameState.Combat, State);
             var b = CurrentBattle;
 
@@ -286,7 +288,8 @@ namespace Obscure.Tests
         {
             yield return Begin(assist);
             yield return StartRunOnMap();
-            yield return TapAndSettle(Key.Enter); // node a
+            yield return TapAndSettle(Key.Enter); // pick node a (focus moves to Travel)
+            yield return TapAndSettle(Key.Enter); // Travel
             Assert.AreEqual(GameState.Combat, State);
         }
 

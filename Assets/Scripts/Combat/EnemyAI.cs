@@ -91,7 +91,7 @@ namespace Obscure
             string stage = c.Intent == null ? "CHARGED" : c.Charge != null ? "RELEASE" : i.charging ? "CHARGING" : m.StatusOnly ? "STATUS" : "HEAVY";
             string hits = m.hits > 1 ? $" x{m.hits}" : "";
             string heavy = m.HasHeavy ? " HEAVY" : "";
-            string status = m.apply == null ? "" : " " + string.Join(" ", m.apply.Select(ap => $"{StatusInfo.Name(ap.id)} {ap.chance * 100:0}%"));
+            string status = m.apply == null ? "" : " " + string.Join(" ", m.apply.Select(StatusInfo.ChipText));
             string who = m.allTargets ? "ALL" : i.target?.tag ?? "?";
             string when = i.charging || c.Intent == null ? " NEXT TURN" : "";
             return $"{stage}: {m.name}{hits}{heavy}{status} > {who}{when}".ToUpperInvariant();

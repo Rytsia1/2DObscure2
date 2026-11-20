@@ -107,6 +107,31 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void MapsNeverForceTwoMovesInARow_AndTheTopLaneBranchesLikeTheRest()
+        {
+            int topNodes = 0, topBranching = 0, allNodes = 0, allBranching = 0;
+            for (int seed = 1; seed <= 150; seed++)
+                for (int act = 1; act <= 8; act++)
+                    for (int stage = 1; stage <= MapGenerator.GetStageCount(act); stage++)
+                    {
+                        var map = MapGenerator.Generate(seed, act, stage);
+                        int last = map.Floors - 1;
+                        foreach (var n in map.nodes.Where(n => n.floor < last - 1)) // the rest floor -> boss is single by design
+                        {
+                            bool branches = n.next.Length >= 2;
+                            allNodes++; if (branches) allBranching++;
+                            if (n.lane == 0) { topNodes++; if (branches) topBranching++; }
+                            if (!branches && map.Get(n.next[0]) is var only && only.floor < last - 1)
+                                Assert.GreaterOrEqual(only.next.Length, 2, $"seed {seed} act {act} stage {stage}: {n.id} -> {only.id} forces two moves in a row");
+                        }
+                    }
+            float top = (float)topBranching / topNodes, all = (float)allBranching / allNodes;
+            TestContext.WriteLine($"branching: top lane {top:P0}, all nodes {all:P0}");
+            Assert.Greater(top, all - 0.10f, $"top lane branches {top:P0} of the time vs {all:P0} overall: no lane is a corridor");
+            Assert.Greater(all, 0.6f, $"most nodes offer a choice ({all:P0})");
+        }
+
+        [Test]
         public void SameSeedSameMap()
         {
             string Shape(MapDef m) => string.Join(";", m.nodes.Select(n => $"{n.id}:{n.type}:{n.encounter}:{n.eventId}:{string.Join(",", n.next)}"));
@@ -473,6 +498,37 @@ namespace Obscure.Tests
             Assert.AreEqual($"MAX HP {knight.stats.maxHp}>{knight.stats.maxHp + 15}, DEF 13>15", knight.stats.Preview(Database.Upgrades["knight"].bonus));
             run.Grant(new RewardOption { kind = RewardKind.Upgrade, id = "knight" });
             Assert.AreEqual(15, knight.stats.def);
+        }
+
+        [Test]
+        public void UpgradeRewardWithCreatedPartyNamesAndBoostsARealHero()
+        {
+            CharacterDef Hero(string id, string name) => new CharacterDef
+            {
+                id = id, name = name, classId = "fighter", raceId = "human", backgroundId = "oathsworn",
+                baseScores = AbilityScores.DefaultBase, stats = new Stats(100, 20, 10, 10, 5, 5),
+            };
+            var party = new[] { Hero("hero_a", "Aldric"), Hero("hero_b", "Brann"), Hero("hero_c", "Cass"), Hero("hero_d", "Dara") };
+            for (int seed = 1; seed <= 20; seed++)
+            {
+                var run = new RunState(Line(null, NodeType.Elite, NodeType.Boss), party, seed);
+                run.Enter(run.Map.Get("n0"));
+                run.WinCombat();
+                int idx = run.PendingReward.choices.FindIndex(c => c.kind == RewardKind.Upgrade);
+                var opt = run.PendingReward.choices[idx];
+
+                var hero = run.Party.SingleOrDefault(p => p.id == opt.id);
+                Assert.IsNotNull(hero, $"seed {seed}: upgrade targets a party hero, not preset '{opt.id}'");
+                var (label, _) = RewardGenerator.Describe(opt, run.ModifierManager, run.Party);
+                StringAssert.StartsWith(hero.name + ":", label);
+                StringAssert.DoesNotContain("Knight", label);
+
+                var before = run.Party.Select(p => p.stats.maxHp).ToList();
+                run.ClaimReward(idx);
+                for (int i = 0; i < run.Party.Count; i++)
+                    if (run.Party[i] == hero) Assert.Greater(run.Party[i].stats.maxHp, before[i]);
+                    else Assert.AreEqual(before[i], run.Party[i].stats.maxHp, "only the named hero is boosted");
+            }
         }
 
         [Test]

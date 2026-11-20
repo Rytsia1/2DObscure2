@@ -10,6 +10,9 @@ namespace Obscure
     // Party Management — migrated to Figma 05---Party.uxml (1280x720 UI Toolkit).
     public class PartyScreen : GameScreen
     {
+        // Red HP gauge and "not ready" note share this rule.
+        public static bool IsLowHp(Unit u) => (float)u.hp / Math.Max(1, u.stats.maxHp) < 0.25f;
+
         public static int SelectedIndex { get; private set; }
 
         List<Unit> party;
@@ -163,7 +166,7 @@ namespace Obscure
 
                 float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
                 float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
-                FigmaUi.SetGaugeFill(hpGauge, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
+                FigmaUi.SetGaugeFill(hpGauge, hpRatio, u.Alive && IsLowHp(u) ? Palette.HpLow : Palette.Hp);
                 FigmaUi.SetGaugeFill(mpGauge, mpRatio, Palette.Mp);
                 if (hpVal != null) { hpVal.text = u.hp.ToString(); hpVal.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow; }
                 if (mpVal != null) mpVal.text = u.mp.ToString();
@@ -363,13 +366,15 @@ namespace Obscure
             if (noteLbl != null)
             {
                 var ko = party.Where(u => !u.Alive).Select(u => u.name).ToList();
-                string note = ko.Count == 0
-                    ? "ALL MEMBERS READY."
-                    : $"{string.Join(", ", ko)} {(ko.Count == 1 ? "IS" : "ARE")} KO — REVIVE AT THE TEMPLE BEFORE ENTERING A DUNGEON.";
+                var low = party.Where(u => u.Alive && IsLowHp(u)).Select(u => u.name).ToList(); // same rule as the red gauge
+                string Are(List<string> n) => n.Count == 1 ? "IS" : "ARE";
+                string note = ko.Count > 0 ? $"{string.Join(", ", ko)} {Are(ko)} KO — REVIVE AT THE TEMPLE BEFORE ENTERING A DUNGEON."
+                    : low.Count > 0 ? $"{string.Join(", ", low)} {Are(low)} LOW ON HP — RECOVER AT THE TEMPLE."
+                    : "ALL MEMBERS READY.";
                 noteLbl.text = note.ToUpperInvariant();
                 noteLbl.style.whiteSpace = WhiteSpace.Normal;
                 noteLbl.style.maxWidth = 350;
-                noteLbl.style.color = ko.Count == 0 ? Palette.Ok : Palette.Err;
+                noteLbl.style.color = ko.Count > 0 ? Palette.Err : low.Count > 0 ? Palette.Ember1 : Palette.Ok;
             }
         }
 

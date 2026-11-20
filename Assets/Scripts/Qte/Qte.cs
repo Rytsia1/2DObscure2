@@ -288,19 +288,38 @@ namespace Obscure
     }
 
     // Enemy magic: type a short rune ward before it lands. Same Perfect/Good/Poor rules as spell typing.
+    // A lead-in (the tier's telegraph) lets the player read the runes before the clock runs; the first keystroke ends it.
     public class WardQte : TypingQte
     {
         public readonly int hits;
+        public float LeadLeft { get; private set; }
+        public bool InLead => LeadLeft > 0f && !Done;
         public IReadOnlyList<QteResult> Results => Enumerable.Repeat(Result, hits).ToList();
 
-        public WardQte(string runes, float timeLimit, int hits) : base(runes, 0, timeLimit) => this.hits = Math.Max(1, hits);
+        public WardQte(string runes, float timeLimit, int hits, float lead = 0f) : base(runes, 0, timeLimit)
+        {
+            this.hits = Math.Max(1, hits);
+            LeadLeft = Math.Max(0f, lead);
+        }
 
         public static WardQte For(QteProfile p, int hits, Random rng)
         {
             var sb = new StringBuilder();
             for (int i = 0; i < QteConfig.WardBaseLetters + p.runeLetters; i++)
                 sb.Append(QteConfig.RuneLetters[rng.Next(QteConfig.RuneLetters.Length)]);
-            return new WardQte(sb.ToString(), sb.Length * p.letterTime, hits);
+            return new WardQte(sb.ToString(), sb.Length * p.letterTime, hits, p.telegraph);
+        }
+
+        public override void Tick(float dt)
+        {
+            if (InLead) { LeadLeft -= dt; return; } // ponytail: leftover dt past the lead is dropped (< 1 frame)
+            base.Tick(dt);
+        }
+
+        public override void Type(char c)
+        {
+            if (InLead && char.IsLetter(c)) LeadLeft = 0f; // typing early just starts the clock
+            base.Type(c);
         }
     }
 
@@ -317,6 +336,7 @@ namespace Obscure
         readonly float[] feintStarts;             // when the fake cue appears; < 0 = no feint
         readonly QteResult?[] results;
         readonly QteOutcomeCategory?[] categories;
+        readonly bool[] wrong;                    // hit spent by the wrong input (key vs arrow, or wrong arrow)
 
         // intervals: seconds between consecutive markers (Accelerando etc.); null = profile.hitInterval (Steady).
         public DefenseQte(QteProfile profile, int hits, float firstHitDelay = 0f, float timingBonusFraction = 0f,
@@ -331,6 +351,7 @@ namespace Obscure
             feintStarts = Enumerable.Repeat(-1f, hits).ToArray();
             results = new QteResult?[hits];
             categories = new QteOutcomeCategory?[hits];
+            wrong = new bool[hits];
             delays[0] = firstHitDelay;
             float t = profile.telegraph + profile.windup + firstHitDelay;
             for (int i = 0; i < hits; i++)
@@ -352,6 +373,7 @@ namespace Obscure
         public int Hits => impacts.Length;
         public QteResult? HitResult(int i) => results[i];
         public QteOutcomeCategory? HitCategory(int i) => categories[i];
+        public bool WrongInput(int i) => wrong[i];
         public IReadOnlyList<QteResult> Results => results.Select(r => r ?? QteResult.Miss).ToList();
         public IReadOnlyList<QteOutcomeCategory> Categories => categories.Select(c => c ?? QteOutcomeCategory.Failure).ToList();
 
@@ -386,6 +408,7 @@ namespace Obscure
             if (i < 0) return;
             if (input != cues[i])
             {
+                wrong[i] = true;
                 results[i] = QteResult.Miss;
                 categories[i] = QteOutcomeCategory.Failure;
             }

@@ -486,7 +486,8 @@ namespace Obscure.Tests
             var preview = session.PreviewDerivedStats;
             Assert.Greater(preview.maxMp, 0);
 
-            // Session validation passes
+            // Session validation passes once all 27 points are spent
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
             Assert.IsNull(session.Validate(), "Valid session with background should pass validation.");
         }
 

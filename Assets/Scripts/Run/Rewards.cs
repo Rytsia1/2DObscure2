@@ -174,8 +174,10 @@ namespace Obscure
         // Player-facing text for an option (shared by the reward, event and summary screens).
         public static (string label, string detail) Describe(RewardOption o) => Describe(o, null);
 
-        public static (string label, string detail) Describe(RewardOption o, DungeonModifierManager modMgr) => o.kind switch
+        // With the party, an Upgrade names the hero it actually lands on (RunState.ResolveUpgrade), not the preset key.
+        public static (string label, string detail) Describe(RewardOption o, DungeonModifierManager modMgr, IList<Unit> party = null) => o.kind switch
         {
+            RewardKind.Upgrade when party != null && party.Count > 0 => DescribeUpgrade(RunState.ResolveUpgrade(party, o.id)),
             RewardKind.Item => Database.Items.TryGetValue(o.id, out var itm) ? (itm.name, itm.description) : (o.id, ""),
             RewardKind.Equipment => Database.Equipment.TryGetValue(o.id, out var eq) ? ($"{eq.name} ({EquipmentSlots.DisplayName(eq.slot)})", eq.description) : (o.id, ""),
             RewardKind.Relic => ("Relic: " + Database.Relics[o.id].name, Database.Relics[o.id].description),
@@ -184,6 +186,9 @@ namespace Obscure
             RewardKind.Modifier => DescribeModifier(o, modMgr),
             _ => ($"{o.amount} Spoils", $"Take {o.amount} extra spoils."),
         };
+
+        static (string label, string detail) DescribeUpgrade((Unit hero, UpgradeDef up) r) =>
+            ($"{r.hero.name}: {r.up.name}", r.hero.stats.Preview(r.up.bonus));
 
         static (string label, string detail) DescribeModifier(RewardOption o, DungeonModifierManager modMgr)
         {

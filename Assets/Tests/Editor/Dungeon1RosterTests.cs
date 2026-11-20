@@ -561,6 +561,25 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void TurnOrderTagsNeverClash()
+        {
+            var cleric = new CharacterDef
+            {
+                id = "hero_cleric", name = "Cleric", classId = "cleric", raceId = "human", backgroundId = "oathsworn",
+                baseScores = AbilityScores.DefaultBase, stats = new Stats(100, 20, 10, 10, 5, 5),
+            };
+            var b = new Battle(new[] { new Unit(Database.Characters["knight"]), new Unit(cleric) },
+                new[] { Database.Enemies["crypt_leech"] }, new List<string>(), new Random(4));
+            var tags = b.All.Select(c => c.tag).ToList();
+            CollectionAssert.AllItemsAreUnique(tags);
+            Assert.AreEqual("CLR", b.Party.First(c => c.name == "Cleric").tag, "Cleric yields CLE to the Crypt Leech");
+
+            var used = new HashSet<string> { "CLE", "CLR", "CLI", "CLC" };
+            Assert.AreEqual("CL2", Battle.UniqueTag("Cleric", used));
+            Assert.AreEqual("BO", Battle.UniqueTag("Bo", used));
+        }
+
+        [Test]
         public void VitalSiphonHealsThirtyPercentOfFinalDamageDealt()
         {
             var b = NewBattle(4, "crypt_leech");

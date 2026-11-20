@@ -477,7 +477,9 @@ namespace Obscure.Tests
 
             // Enter Combat node by clicking it on the Map
             var combatItem = UitkMenu.ActiveMenu.items.First(i => i.text == "Combat");
-            yield return ClickElement(combatItem.element);
+            yield return ClickElement(combatItem.element); // pick
+            Assert.AreEqual(GameState.Map, State, "clicking a node only selects it");
+            yield return ClickElement(UitkMenu.ActiveMenu.items.First(i => i.text == "Travel").element); // confirm
             Assert.AreEqual(GameState.Combat, State);
 
             // Wait for party turn
@@ -573,7 +575,9 @@ namespace Obscure.Tests
             var firstCombatNode = Run.Available.First(n => n.IsCombat);
             firstCombatNode.encounter = "d1_e6"; // Soul Reaper, Militia, Hound, Leech
             var combatItem = UitkMenu.ActiveMenu.items.First(i => i.text == "Combat");
-            yield return ClickElement(combatItem.element);
+            yield return ClickElement(combatItem.element); // pick
+            Assert.AreEqual(GameState.Map, State, "clicking a node only selects it");
+            yield return ClickElement(UitkMenu.ActiveMenu.items.First(i => i.text == "Travel").element); // confirm
             Assert.AreEqual(GameState.Combat, State);
 
             for (float t = 0; t < 10f && (UitkMenu.ActiveMenu == null || UitkMenu.ActiveMenu.items.Count == 0); t += Time.unscaledDeltaTime)

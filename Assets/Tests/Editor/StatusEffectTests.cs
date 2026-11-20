@@ -43,6 +43,23 @@ namespace Obscure.Tests
         // =====================================================================
 
         [Test]
+        public void SkillChipsShowEffectSizeAndOnlyUncertainChances()
+        {
+            var bash = Database.Skills["shield_bash"].apply;      // Defense Down 0.25 (sure), Stun 35% chance
+            string defDown = StatusInfo.ChipText(bash.First(a => a.id == StatusId.DefenseDown));
+            StringAssert.Contains("-25%", defDown);
+            StringAssert.DoesNotContain("100%", defDown, "a certain effect shows no chance, and never as 100%");
+            StringAssert.EndsWith("· 2T", defDown);
+
+            string stun = StatusInfo.ChipText(bash.First(a => a.id == StatusId.Stun));
+            StringAssert.Contains("35% CHANCE", stun);
+
+            string bless = StatusInfo.ChipText(Database.Skills["blessing"].apply[0]); // Defense Up 0.30
+            StringAssert.Contains("+30%", bless);
+            StringAssert.DoesNotContain("100%", bless);
+        }
+
+        [Test]
         public void UniversalResistance_StacksAdditively_AndCapsAt75Percent()
         {
             var profile = new StatusResistanceProfile();

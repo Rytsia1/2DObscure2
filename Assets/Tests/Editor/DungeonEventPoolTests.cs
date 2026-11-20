@@ -117,6 +117,18 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void GoldCostChoice_ChargesListedCost_AndReportsGoldReward()
+        {
+            // Soulglass Reliquary "Stabilize": costs 35, pays back 15 -> net -20 must be explained in the outcome.
+            var run = AtD1Event("D1_EVT_007", gold: 603);
+            int idx = Array.FindIndex(run.CurrentEvent.choices, c => c.goldCost == 35);
+            Assert.AreEqual(15, run.PreviewEventGold(idx), "card preview matches what ChooseEvent pays");
+            string outcome = run.ChooseEvent(idx);
+            Assert.AreEqual(603 - 35 + 15, run.Gold);
+            StringAssert.Contains("Gained 15 spoils.", outcome);
+        }
+
+        [Test]
         public void HumanAdaptability_BorrowsOncePerDungeonAt75Percent_AndImproviseIsFreeWithoutRacialOptions()
         {
             // Party has Human only (no Elf): D1_EVT_006 has Elf option (65 gold, 2 MAT001)
@@ -265,6 +277,10 @@ namespace Obscure.Tests
             sneakRun.SneakNode(b0);
             Assert.IsTrue(sneakRun.Cleared.Contains("b0"));
             Assert.AreEqual(0, sneakRun.Gold, "Sneak gives no combat rewards.");
+            // ...and says so: the map shows this once after sneaking.
+            StringAssert.Contains($"{RunConfig.BattleGold.min}-{RunConfig.BattleGold.max} spoils", sneakRun.LastSneakNote);
+            StringAssert.Contains($"{RunConfig.BattleExp} EXP", sneakRun.LastSneakNote);
+            StringAssert.Contains("reward pick", sneakRun.LastSneakNote);
             Assert.AreEqual(0, sneakRun.HalflingSneakUsesRemaining);
             Assert.IsFalse(sneakRun.CanSneakNode(sneakMap.Get("e1")), "Cannot Sneak Elite or second time.");
         }
@@ -348,6 +364,50 @@ namespace Obscure.Tests
             Assert.AreEqual(1, run.HalflingSneakUsesRemaining);
             Assert.AreEqual(1, run.DragonbornShopDiscountUsesRemaining);
             Assert.AreEqual(1, run.ElfWeaknessRevealUsesRemaining);
+        }
+
+        [Test]
+        public void MapScreen_NodeClickOnlySelects_TravelCommitsToThePickedNode()
+        {
+            var gameGo = new UnityEngine.GameObject("MapScreenTestGame");
+            var hostGo = new UnityEngine.GameObject("MapScreenTestHost");
+            try
+            {
+                var game = gameGo.AddComponent<Game>();
+                Game.SetInstance(game);
+                var map = new MapDef
+                {
+                    name = "Fork", act = 1,
+                    nodes = new[]
+                    {
+                        new NodeDef { id = "a", type = NodeType.Event, floor = 0, lane = 0, eventId = "D1_EVT_001", next = new[] { "boss" } },
+                        new NodeDef { id = "b", type = NodeType.Rest, floor = 0, lane = 1, next = new[] { "boss" } },
+                        new NodeDef { id = "boss", type = NodeType.Boss, floor = 1, encounter = "d1_zoroa" },
+                    }
+                };
+                var run = new RunState(map, new[] { MakeHero("h0", "human") }, 3);
+                game.ApplyLoadedCampaign(new CharacterRoster(startWithEmptyParty: true), run);
+
+                var screen = new MapScreen();
+                screen.Open(hostGo.transform);
+                var menu = hostGo.GetComponentInChildren<UitkMenu>();
+                UitkMenu.Item Item(string text) => menu.items.First(i => i.text == text);
+
+                Item("Rest").onClick();                       // pick the Rest path
+                Assert.IsNull(run.Current, "clicking a node must not travel");
+                Assert.AreSame(Item("Travel"), menu.Current, "focus moves to Travel to confirm");
+
+                menu.Focus(Item("Event"), false);             // pointer drifts over the other path
+                Item("Travel").onClick();
+                Assert.AreEqual("b", run.Current?.id, "Travel goes to the picked node, not the last hovered one");
+                screen.Close();
+            }
+            finally
+            {
+                Game.SetInstance(null);
+                UnityEngine.Object.DestroyImmediate(hostGo);
+                UnityEngine.Object.DestroyImmediate(gameGo);
+            }
         }
 
         [Test]

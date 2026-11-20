@@ -316,14 +316,9 @@ namespace Obscure
                 inner.style.width = 268;
                 inner.style.height = 380;
 
-                var (rawLabel, rawDetail) = RewardGenerator.Describe(o, Run?.ModifierManager);
+                var (rawLabel, rawDetail) = RewardGenerator.Describe(o, Run?.ModifierManager, currentParty);
                 string displayTitle = FormatCardTitle(o, rawLabel);
                 string displayDetail = rawDetail;
-                if (o.kind == RewardKind.Upgrade && Database.Upgrades.TryGetValue(o.id, out var upDef))
-                {
-                    var u = currentParty.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id) ?? currentParty[0];
-                    displayDetail = u.stats.Preview(upDef.bonus);
-                }
 
                 var (catText, rarityText, rarityColor) = GetCardCategoryAndRarity(o);
                 string compareText = BuildComparisonLine(o);
@@ -473,7 +468,7 @@ namespace Obscure
             else
             {
                 var selOpt = currentOffer.choices[selectedChoiceIdx];
-                var (selLabel, selDetail) = RewardGenerator.Describe(selOpt, Run?.ModifierManager);
+                var (selLabel, selDetail) = RewardGenerator.Describe(selOpt, Run?.ModifierManager, currentParty);
 
                 if (selOpt.kind == RewardKind.Equipment && Database.Equipment.TryGetValue(selOpt.id, out var eqDef))
                 {
@@ -826,8 +821,8 @@ namespace Obscure
                 }
                 case RewardKind.Upgrade:
                 {
-                    var u = currentParty.FirstOrDefault(p => p.id == o.id || p.classDef?.id == o.id);
-                    return u != null ? $"PERMANENT BOOST FOR {u.name.ToUpperInvariant()}" : "PERMANENT PARTY BOOST";
+                    // One hero, always: the same one RunState.Upgrade will boost.
+                    return $"PERMANENT BOOST FOR {RunState.ResolveUpgrade(currentParty, o.id).hero.name.ToUpperInvariant()}";
                 }
                 default:
                     return $"+{o.amount} EXTRA SPOILS";

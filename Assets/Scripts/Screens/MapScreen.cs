@@ -27,7 +27,10 @@ namespace Obscure
         VisualElement travelInst;
         UitkMenu.Item sneakItem;
         VisualElement sneakBtn;
-        NodeDef focused;
+        // Picked by clicking (or Enter on) a node; Travel/Sneak commit to it. Hover only previews, because the menu
+        // moves focus on hover and the pointer crosses other nodes on its way to the Travel button.
+        NodeDef selected;
+        readonly List<UitkMenu.Item> nodeItems = new List<UitkMenu.Item>();
 
         VisualElement pauseOverlay;
         VisualElement effectsOverlay;
@@ -115,6 +118,8 @@ namespace Obscure
 
             nodeOf.Clear();
             nodeElOf.Clear();
+            nodeItems.Clear();
+            selected = available.Count == 1 ? available[0] : null; // one open path: nothing to choose
             foreach (var n in map.nodes)
             {
                 bool avail = available.Contains(n);
@@ -123,16 +128,18 @@ namespace Obscure
                 if (avail)
                 {
                     var nd = n;
-                    var item = menu.Add(el, TypeName(nd.type), () => Enter(nd));
+                    var item = menu.Add(el, TypeName(nd.type), () => Select(nd));
+                    nodeItems.Add(item);
                     var nodeEl = el;
                     item.visual = on =>
                     {
-                        var col = on ? Palette.Gold1 : Palette.Mist1;
+                        bool lit = on || nd == selected;
+                        var col = lit ? Palette.Gold1 : Palette.Mist1;
                         nodeEl.style.borderTopColor = col;
                         nodeEl.style.borderBottomColor = col;
                         nodeEl.style.borderLeftColor = col;
                         nodeEl.style.borderRightColor = col;
-                        nodeEl.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Palette.Ink3;
+                        nodeEl.style.backgroundColor = lit ? Palette.Hex(0x2B2210) : Palette.Ink3;
                     };
                     item.visual(false);
                     nodeOf[item] = nd;
@@ -154,7 +161,7 @@ namespace Obscure
             if (travelHost != null)
             {
                 travelInst = travelHost;
-                travelItem = menu.Add(travelHost, "Travel", () => { if (focused != null) Enter(focused); });
+                travelItem = menu.Add(travelHost, "Travel", () => { if (selected != null) Enter(selected); });
                 travelItem.visual = on =>
                 {
                     FigmaUi.SetInstanceText(travelHost, "text-0", on ? "▸" : "");
@@ -176,13 +183,14 @@ namespace Obscure
                 (UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot).Add(sneakBtn);
                 sneakItem = menu.Add(sneakBtn, "Sneak", () =>
                 {
-                    if (focused != null && Run != null && Run.CanSneakNode(focused))
+                    if (selected != null && Run != null && Run.CanSneakNode(selected))
                     {
                         Sfx.Play(Sound.MapStep);
-                        Run.SneakNode(focused);
+                        Run.SneakNode(selected);
                         Game.Go(GameState.Map);
                     }
-                }, interactable: false, tooltip: "HALFLING SMALL AND NIMBLE: BYPASS ONE NORMAL COMBAT NODE PER DUNGEON");
+                }, interactable: false,
+                tooltip: $"HALFLING SMALL AND NIMBLE: BYPASS ONE NORMAL COMBAT NODE PER DUNGEON. YOU GIVE UP {RunState.SneakForfeit.ToUpperInvariant()}.");
                 FigmaUi.ApplyDefaultFocusVisual(sneakItem, sneakBtn);
             }
 
@@ -194,6 +202,26 @@ namespace Obscure
 
             if (available.Count > 0) ShowNode(available[0], nodeElOf[available[0]]);
             else ShowNode(null, null);
+
+            // One-shot note after a sneak, in the toast slot the layout reserves.
+            if (Run?.LastSneakNote != null)
+            {
+                var toast = UiRoot.Q<VisualElement>(className: "toast-info__i-2");
+                if (toast != null)
+                {
+                    FigmaUi.SetInstanceText(toast, "text-1", Run.LastSneakNote.ToUpperInvariant());
+                    toast.style.display = DisplayStyle.Flex;
+                }
+                Run.LastSneakNote = null;
+            }
+        }
+
+        void Select(NodeDef n)
+        {
+            selected = n;
+            ShowNode(n, nodeElOf[n]);
+            foreach (var it in nodeItems) it.visual?.Invoke(it == menu.Current);
+            if (travelItem != null) menu.Focus(travelItem, false); // confirm with Travel
         }
 
         VisualElement FindPrimaryInstance()
@@ -386,7 +414,6 @@ namespace Obscure
 
         void ShowNode(NodeDef n, VisualElement view)
         {
-            focused = n;
             var hdr = UiRoot.Q<VisualElement>(className: "section-header__i-12");
             if (hdr != null) FigmaUi.SetInstanceText(hdr, "text-0", n == null ? "Select a path" : $"{TypeName(n.type)} node");
 
@@ -408,16 +435,17 @@ namespace Obscure
                 riskLbl.style.color = n != null && (n.type == NodeType.Boss || n.type == NodeType.Elite) ? Palette.Err : Palette.Mist1;
             }
 
+            // Travel/Sneak follow the picked node, not the previewed one.
             if (travelInst != null)
             {
-                string label = n == null ? "Travel" : $"Travel to {TypeName(n.type)}";
+                string label = selected == null ? "Pick a path" : $"Travel to {TypeName(selected.type)}";
                 FigmaUi.SetInstanceText(travelInst, "text-1", label);
             }
             if (travelItem != null)
-                travelItem.interactable = n != null;
+                travelItem.interactable = selected != null;
             if (sneakItem != null && sneakBtn != null)
             {
-                bool canSneak = Run != null && Run.CanSneakNode(n);
+                bool canSneak = Run != null && Run.CanSneakNode(selected);
                 sneakItem.interactable = canSneak;
                 sneakBtn.style.display = canSneak ? DisplayStyle.Flex : DisplayStyle.None;
                 sneakItem.visual?.Invoke(false);

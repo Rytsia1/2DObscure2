@@ -287,7 +287,8 @@ namespace Obscure
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(armoryBtn, "Armory", () => Game?.Go(GameState.Armory)), armoryBtn);
 
             var bagLbl = UiRoot.Q<UiLabel>(className: "bag-0-100-vars");
-            if (bagLbl != null) bagLbl.text = $"BAG {Bag.EquipmentCount} / {InventoryRuntime.MaxEquipmentCapacity}";
+            // Consumables don't use the 100 equipment slots (they cap per item), so count what this shop sells.
+            if (bagLbl != null) bagLbl.text = $"BAG {Bag.consumables.Sum(s => s.count)} ITEMS";
 
             // Hide baked static rows, headers & right detail content
             var screen = UiRoot.Q<VisualElement>(className: "_06-shop-consumables") ?? UiRoot;
@@ -331,9 +332,8 @@ namespace Obscure
                 bool canBuy = sellTab || Limit(r.id) > 0;
                 bool afford = sellTab || (Gold >= r.price && canBuy);
                 Color rc = r.def != null ? EquipmentRarities.GetColor(r.def.rarity) : Palette.Mist1;
-                int stock = HubEconomy.HubStockLeft(Run, r.id);
-                string mid = sellTab ? $"OWN {r.owned}"
-                    : stock != int.MaxValue ? $"STOCK {stock}" : (r.def?.category ?? "CONSUMABLE").ToUpperInvariant();
+                // Type column; stock and owned counts live in the detail panel.
+                string mid = (string.IsNullOrEmpty(r.def?.category) ? "CONSUMABLE" : r.def.category).ToUpperInvariant();
                 string subRight = !canBuy ? LimitReason(r.id) : Gold < r.price ? $"NEED {Money(r.price - Gold)} MORE" : null;
                 var row = CreateListRow(r.name, r.sub.ToUpperInvariant(), mid, Money(r.price), subRight, rc, afford ? Palette.Gold1 : Palette.Err, i == selected, false, () =>
                 {

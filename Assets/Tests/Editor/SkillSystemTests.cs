@@ -144,6 +144,16 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void SpPreview_NeverShowsANegativeBalance()
+        {
+            Assert.AreEqual(("NEED 1 MORE SP", true), SkillTreeScreen.SpPreview(1, 2), "the reported 1 › -1 case");
+            Assert.AreEqual(("NEED 3 MORE SP", true), SkillTreeScreen.SpPreview(0, 3));
+            Assert.AreEqual(("2 › 0 LEFT", false), SkillTreeScreen.SpPreview(2, 2), "exactly enough");
+            Assert.AreEqual(("5 › 3 LEFT", false), SkillTreeScreen.SpPreview(5, 2));
+            Assert.AreEqual(("MAX RANK", false), SkillTreeScreen.SpPreview(4, 0));
+        }
+
+        [Test]
         public void LevelUp_AwardsTwoSkillPoints()
         {
             var fighterDef = Database.Classes["fighter"];

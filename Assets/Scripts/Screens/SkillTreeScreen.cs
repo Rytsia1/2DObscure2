@@ -389,7 +389,7 @@ namespace Obscure
                 var statusRow = new VisualElement { style = { width = 346, flexShrink = 0, flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center } };
                 foreach (var ap in a.apply)
                 {
-                    var chip = IconArt.StatusChip(ap.id, $"{StatusInfo.Name(ap.id).ToUpperInvariant()} {Mathf.RoundToInt(ap.chance * 100)}% · {ap.turns}T", 1, 5f);
+                    var chip = IconArt.StatusChip(ap.id, StatusInfo.ChipText(ap), 1, 5f);
                     if (chip != null) statusRow.Add(chip);
                 }
                 host.Add(statusRow);
@@ -447,7 +447,8 @@ namespace Obscure
             bool canAct = !learned ? lo.CanUnlockSkill(selectedSkillId, hero.level, hero.classDef, out _) : rank < maxRank && sp >= cost;
             var foot = new VisualElement { style = { borderTopWidth = 2, borderTopColor = Palette.Ink4, paddingTop = 10, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
             foot.Add(new UiLabel(cost > 0 ? $"{cost} SP" : "-") { style = { fontSize = 22, color = Palette.Gold1 } });
-            foot.Add(new UiLabel(cost > 0 ? $"{sp} › {sp - cost} LEFT" : "MAX RANK") { style = { fontSize = 13, color = Palette.Mist2 } });
+            var (spText, spShort) = SpPreview(sp, cost);
+            foot.Add(new UiLabel(spText) { style = { fontSize = 13, color = spShort ? Palette.Err : Palette.Mist2 } });
             string actLbl = !learned ? "Learn" : rank < maxRank ? "Upgrade" : "Maxed";
             var actBtn = FigmaUi.CreateButton(actLbl, canAct ? "button-primary" : "button-slab", 136f);
             actBtn.SetEnabled(canAct);
@@ -455,6 +456,12 @@ namespace Obscure
             host.Add(foot);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(actBtn, actLbl, !learned ? (Action)Learn : Upgrade, interactable: canAct));
         }
+
+        // Footer next to the SP cost: what's left after paying, or how many more SP are needed (never a negative balance).
+        public static (string text, bool isShort) SpPreview(int sp, int cost) =>
+            cost <= 0 ? ("MAX RANK", false)
+            : sp < cost ? ($"NEED {cost - sp} MORE SP", true)
+            : ($"{sp} › {sp - cost} LEFT", false);
 
         void Say(string text, bool bad, Sound okSound = Sound.SkillUnlock) { feedback = text; feedbackBad = bad; Sfx.Play(bad ? Sound.Deny : okSound); Rebuild(); }
         void Learn() { var h = CurrentHero; if (h.skillLoadout.TryUnlockSkill(selectedSkillId, h.level, h.classDef, out string e)) Say($"LEARNED {NameOf(selectedSkillId, isSelectedPassive)}.", false); else Say(e ?? "CANNOT LEARN.", true); }

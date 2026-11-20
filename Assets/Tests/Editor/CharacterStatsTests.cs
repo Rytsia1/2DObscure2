@@ -398,6 +398,72 @@ namespace Obscure.Tests
         // =====================================================================
 
         [Test]
+        public void CreationGearStepHintsMatchControlsAndMouseCanChangeItems()
+        {
+            var root = new GameObject("TestUiRoot").transform;
+            try
+            {
+                var creation = new CharacterCreationScreen();
+                creation.Open(root);
+                creation.GoToPage(CharacterCreationScreen.Page.Gear);
+
+                var texts = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.Label>(creation.UiRoot).ToList().Select(l => l.text).ToList();
+                CollectionAssert.Contains(texts, "L R", "L/R changes the item, so the footer must say so");
+                CollectionAssert.Contains(texts, "CHANGE ITEM");
+                CollectionAssert.Contains(texts, "UP DN");
+                CollectionAssert.Contains(texts, "SLOT");
+
+                // Find a slot with a choice, then change it with the mouse buttons.
+                for (int i = 0; i < EquipmentSlots.All.Length && creation.Session.GetCompatibleEquipmentForSlot(creation.SelectedEquipmentSlot).Count() < 2; i++)
+                    creation.CycleEquipmentSlot(1);
+                var slot = creation.SelectedEquipmentSlot;
+                Assert.GreaterOrEqual(creation.Session.GetCompatibleEquipmentForSlot(slot).Count(), 2, "need a slot with two items");
+                var before = creation.Session.GetEquipped(slot)?.id;
+
+                var menu = root.GetComponentInChildren<UitkMenu>();
+                menu.items.First(i => i.text == "Next Item").onClick();
+                Assert.AreNotEqual(before, creation.Session.GetEquipped(slot)?.id, "Next Item changes the equipped item");
+                menu = root.GetComponentInChildren<UitkMenu>();
+                menu.items.First(i => i.text == "Prev Item").onClick();
+                Assert.AreEqual(before, creation.Session.GetEquipped(slot)?.id, "Prev Item steps back");
+                creation.Close();
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root.gameObject); }
+        }
+
+        [Test]
+        public void CreationScoreBoxesHighlightOnlyTheChosenRacesBonus()
+        {
+            var root = new GameObject("TestUiRoot").transform;
+            try
+            {
+                var creation = new CharacterCreationScreen();
+                creation.Open(root);
+                UnityEngine.UIElements.VisualElement Box(Ability a) =>
+                    UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.Label>(creation.UiRoot)
+                        .Where(l => (l.text ?? "").StartsWith(a + " ")).First().parent;
+                bool Gold(Ability a) => Box(a).style.backgroundColor.value != Palette.Ink3;
+
+                creation.Session.SelectRace("elf"); // +2 DEX only
+                creation.Refresh();
+                Assert.IsTrue(Gold(Ability.DEX), "Elf: DEX is the bonus");
+                Assert.IsFalse(Gold(Ability.STR), "STR must not stay gold from the Human mock-up");
+                Assert.IsFalse(Gold(Ability.VIT), "VIT must not stay gold from the Human mock-up");
+
+                creation.Session.SelectRace("dwarf"); // +2 VIT only
+                creation.Refresh();
+                Assert.IsTrue(Gold(Ability.VIT));
+                Assert.IsFalse(Gold(Ability.DEX));
+                Assert.IsFalse(Gold(Ability.STR));
+
+                creation.GoToPage(CharacterCreationScreen.Page.Class); // racial highlight is a Race-page cue
+                foreach (var a in AbilityScores.AllAbilities) Assert.IsFalse(Gold(a), $"{a} on Class page");
+                creation.Close();
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root.gameObject); }
+        }
+
+        [Test]
         public void CharacterCreationAndStatusUiRenderAndUpdateRealTime()
         {
             var root = new GameObject("TestUiRoot").transform;
@@ -789,9 +855,9 @@ namespace Obscure.Tests
             var builds = new (string id, string race, string cls, AbilityScores scores)[]
             {
                 ("hero_1", "human", "fighter", new AbilityScores(15, 12, 15, 8, 10, 11)),
-                ("hero_2", "halfling", "ranger", new AbilityScores(10, 15, 13, 10, 14, 9)),
-                ("hero_3", "liichtian", "wizard", new AbilityScores(8, 12, 12, 15, 14, 10)),
-                ("hero_4", "merfolk", "cleric", new AbilityScores(10, 10, 14, 10, 15, 12)),
+                ("hero_2", "halfling", "ranger", new AbilityScores(10, 15, 13, 10, 14, 10)),
+                ("hero_3", "liichtian", "wizard", new AbilityScores(8, 12, 12, 15, 14, 11)),
+                ("hero_4", "merfolk", "cleric", new AbilityScores(10, 10, 14, 10, 15, 13)),
             };
 
             var session = new CharacterCreationSession();
@@ -853,12 +919,69 @@ namespace Obscure.Tests
         // =====================================================================
 
         [Test]
+        public void RandomScoresFavourTheClassKeyAbilities()
+        {
+            var cfg = PointBuyConfig.Standard;
+            foreach (var classId in Database.PlayableClassIds)
+            {
+                var guide = ClassStatGuidance.ForClassId(classId);
+                var pri = guide.primaryAbilities ?? Array.Empty<Ability>();
+                var sec = guide.secondaryAbilities ?? Array.Empty<Ability>();
+                var rest = AbilityScores.AllAbilities.Except(pri).Except(sec).ToArray();
+                for (int seed = 0; seed < 50; seed++)
+                {
+                    var s = CharacterCreationSession.GenerateRandomPointBuy(cfg, new System.Random(seed), guide);
+                    string ctx = $"{classId} seed {seed}: {s}";
+                    Assert.AreEqual(0, cfg.RemainingPoints(s), ctx);
+                    Assert.IsNull(cfg.Validate(s), ctx);
+                    if (pri.Length > 0 && sec.Length > 0) Assert.GreaterOrEqual(pri.Min(a => s[a]), sec.Max(a => s[a]), ctx);
+                    if (sec.Length > 0 && rest.Length > 0) Assert.GreaterOrEqual(sec.Min(a => s[a]), rest.Max(a => s[a]), ctx);
+                    if (pri.Length > 0 && rest.Length > 0) Assert.GreaterOrEqual(pri.Min(a => s[a]), rest.Max(a => s[a]), ctx);
+                }
+            }
+
+            // End to end: whatever class Random rolls, its primary stats lead the base scores.
+            for (int seed = 0; seed < 40; seed++)
+            {
+                var session = new CharacterCreationSession();
+                Assert.IsTrue(session.TryRandomize(new System.Random(seed), out string err), err);
+                var g = session.GetStatGuide();
+                if (g.primaryAbilities == null || g.primaryAbilities.Length == 0) continue;
+                int top = AbilityScores.AllAbilities.Max(a => session.BaseScores[a]);
+                Assert.AreEqual(top, g.primaryAbilities.Max(a => session.BaseScores[a]), $"seed {seed} {session.Class.id}: {session.BaseScores}");
+            }
+        }
+
+        [Test]
+        public void HeroCannotBeConfirmedWithUnspentAbilityPoints()
+        {
+            var session = new CharacterCreationSession();
+            Assert.AreEqual(27, session.PointBuy.RemainingPoints, "fresh session: every stat at 8");
+            Assert.IsFalse(session.CanConfirm);
+            StringAssert.Contains("27 left", session.Validate());
+            Assert.Throws<InvalidOperationException>(() => session.Confirm(null, "lazy_hero"));
+
+            session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11)); // exactly 27
+            Assert.IsTrue(session.CanConfirm, session.Validate());
+        }
+
+        [Test]
+        public void PartyLowHpRuleMatchesTheRedGauge()
+        {
+            var u = new Unit(Database.Characters["rogue"]);
+            u.hp = (int)(u.stats.maxHp * 0.24f);
+            Assert.IsTrue(PartyScreen.IsLowHp(u), "below 25%: red gauge, not 'ready'");
+            u.hp = u.stats.maxHp / 2;
+            Assert.IsFalse(PartyScreen.IsLowHp(u));
+        }
+
+        [Test]
         public void AccuracyAndQteAreCalculatedIndependentlyAndRangerHuntersInstinctIsRangedOnly()
         {
             var session = new CharacterCreationSession();
             session.SelectRace("elf");
             session.SelectClass("ranger"); // Starter Passive: Hunter's Instinct (+10 Ranged Accuracy)
-            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 14, 10));
+            session.PointBuy.SetAllOrThrow(new AbilityScores(10, 15, 12, 10, 14, 11));
             var rangerUnit = new Unit(session.Confirm(null, "test_ranger"));
             var ranger = new Combatant(rangerUnit, Side.Party, 0, "Ranger", "RNG");
             var target = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);

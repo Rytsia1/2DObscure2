@@ -47,6 +47,14 @@ namespace Obscure
         public const float PlayerPoiseMitigatedMult = 0.5f;  // Good defensive QTE or Guarding
         public const float PlayerPoiseHeavyMult = 1.5f;
         public const int PlayerPoiseRecovery = 20;           // per turn, only if not hit since last turn
+        // GDD Bab 10 §8.11: the Break gauge drops 20 at the start of its owner's turn. Drawn as a shield that drains toward Broken,
+        // so here it refills by the same amount.
+        public const int EnemyShieldRecovery = 20;
+
+        // Player-facing explanation of an enemy's shield (its Break gauge), with this enemy's own numbers.
+        public string ShieldHelp =>
+            $"SHIELD: BREAK DAMAGE WEARS IT DOWN. AT 0 IT IS BROKEN FOR {BreakDuration} TURN{(BreakDuration == 1 ? "" : "S")} " +
+            $"AND TAKES {Math.Round(BreakDamageMultiplier * 100)}% DAMAGE. REGAINS {EnemyShieldRecovery} AT THE START OF ITS TURN.";
 
         // Racial Feat per-battle state (GDD Bab 6 & Bab 12)
         public bool DeterminationUsed;

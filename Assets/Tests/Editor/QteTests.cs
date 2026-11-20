@@ -503,12 +503,42 @@ namespace Obscure.Tests
 
             var right = Q(); Wait(right, impact); right.PressDirection(DodgeDir.Left);
             Assert.AreEqual(QteResult.Perfect, right.Result);
+            Assert.IsFalse(right.WrongInput(0));
             var key = Q(); Wait(key, impact); key.Press();
             Assert.AreEqual(QteResult.Miss, key.Result, "the QTE key on an arrow cue is the wrong input");
+            Assert.IsTrue(key.WrongInput(0), "the panel can say why it missed");
             var wrong = Q(); Wait(wrong, impact); wrong.PressDirection(DodgeDir.Up);
             Assert.AreEqual(QteResult.Miss, wrong.Result, "wrong arrow");
+            Assert.IsTrue(wrong.WrongInput(0));
             var tap = new DefenseQte(N, 1); Wait(tap, impact); tap.PressDirection(DodgeDir.Left);
             Assert.AreEqual(QteResult.Miss, tap.Result, "an arrow on a key cue is the wrong input");
+            Assert.IsTrue(tap.WrongInput(0));
+            var late = Q(); Wait(late, impact + 1f);
+            Assert.IsFalse(late.WrongInput(0), "a timeout is not a wrong input");
+        }
+
+        [Test]
+        public void WardLeadInIsFreeReadingTime()
+        {
+            float lead = N.telegraph;
+            WardQte W() => new WardQte("KLM", 3 * N.letterTime, 1, lead);
+
+            var reader = W(); Wait(reader, lead * 0.9f);
+            Assert.IsTrue(reader.InLead);
+            Assert.AreEqual(0f, reader.T, 1e-5, "the clock waits while the player reads");
+            Wait(reader, lead * 0.2f + reader.timeLimit * 0.9f);
+            Assert.IsFalse(reader.Done, "the time limit counts from the end of the lead");
+            Wait(reader, reader.timeLimit * 0.2f);
+            Assert.AreEqual(QteResult.Miss, reader.Result);
+
+            var eager = W(); Wait(eager, 0.1f); eager.Type('k');
+            Assert.IsFalse(eager.InLead, "typing early starts the clock");
+            Assert.AreEqual(1, eager.Index, "and the letter counts");
+
+            var space = W(); space.Type(' ');
+            Assert.IsTrue(space.InLead, "non-letters do not end the lead");
+
+            Assert.AreEqual(N.telegraph, WardQte.For(N, 1, new System.Random(1)).LeadLeft, 1e-5, "real wards get the tier's telegraph");
         }
 
         [Test]

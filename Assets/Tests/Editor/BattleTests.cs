@@ -28,6 +28,49 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void EnemyShieldRecoversTheGddTwentyAtTheStartOfItsOwnTurn()
+        {
+            var b = NewBattle("skeleton");
+            var sk = b.Enemies[0];
+            Assert.IsTrue(sk.HasBreakGauge);
+            int start = sk.MaxBreakGauge - 50;
+            sk.CurrentBreakGauge = start;
+            for (int i = 0; i < 20; i++)
+            {
+                var c = b.NextTurn();
+                if (c == sk) break;
+                b.Perform(BattleAction.Guard(c)); // nobody hits it
+            }
+            Assert.AreEqual(sk, b.Active, "skeleton reached its turn");
+            Assert.AreEqual(start + Combatant.EnemyShieldRecovery, sk.CurrentBreakGauge, "GDD Bab 10 §8.11: 20 per owner turn");
+            Assert.AreEqual(20, Combatant.EnemyShieldRecovery);
+
+            // The target panel explains it with this enemy's own numbers.
+            StringAssert.Contains("REGAINS 20 AT THE START OF ITS TURN", sk.ShieldHelp);
+            StringAssert.Contains("BROKEN", sk.ShieldHelp);
+            StringAssert.Contains($"{Math.Round(sk.BreakDamageMultiplier * 100)}% DAMAGE", sk.ShieldHelp);
+        }
+
+        [Test]
+        public void AllyTargetingStartsOnTheMostInjuredHero()
+        {
+            var b = NewBattle("skeleton", "skeleton");
+            var allies = b.Allies(b.Party[0]).ToList();
+            bool All(int i) => true;
+
+            Assert.AreEqual(0, CombatView.DefaultTargetIndex(allies, All), "everyone full: party order");
+
+            allies[1].unit.hp = allies[1].Stats.maxHp * 3 / 10; // 30%
+            allies[2].unit.hp = allies[2].Stats.maxHp * 6 / 10; // 60%
+            Assert.AreEqual(1, CombatView.DefaultTargetIndex(allies, All), "lowest HP % first, not the full-HP slot 1");
+            Assert.AreEqual(2, CombatView.DefaultTargetIndex(allies, i => i != 1), "skips invalid targets");
+
+            var enemies = b.Enemies.ToList();
+            enemies[1].unit.hp = 1;
+            Assert.AreEqual(0, CombatView.DefaultTargetIndex(enemies, All), "enemies keep first-valid order");
+        }
+
+        [Test]
         public void TurnOrderIsBySpeedWithDeterministicTies()
         {
             var b = NewBattle("skeleton", "skeleton");

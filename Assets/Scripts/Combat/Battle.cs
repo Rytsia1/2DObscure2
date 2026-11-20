@@ -35,7 +35,6 @@ namespace Obscure
         public Battle(IEnumerable<Unit> party, IEnumerable<EnemyDef> enemies, List<string> items, Random rng, RunState run = null)
         {
             this.run = run;
-            Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, u.name.Substring(0, Math.Min(3, u.name.Length)).ToUpperInvariant()) { run = run }).ToList();
             var defs = enemies.ToList();
             int dungeonNum = Dungeon = run != null ? (run.Map != null ? run.Map.act : run.Act) : 1;
             Enemies = defs.Select((d, i) =>
@@ -44,6 +43,8 @@ namespace Obscure
                 char letter = (char)('A' + defs.Take(i).Count(x => x == d));
                 return new Combatant(new Unit(d, dungeonNum), Side.Enemy, i, dup ? $"{d.shortName} {letter}" : d.shortName, dup ? d.tag + letter : d.tag, d);
             }).ToList();
+            var usedTags = new HashSet<string>(Enemies.Select(e => e.tag));
+            Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, UniqueTag(u.name, usedTags)) { run = run }).ToList();
             Items = items;
             Rng = rng;
 
@@ -62,6 +63,18 @@ namespace Obscure
                     }
                 }
             }
+        }
+
+        // Turn-bar tag: first 3 letters, else first 2 + a later letter (CLERIC -> CLR), else first 2 + digit. Adds the result to `used`.
+        public static string UniqueTag(string name, HashSet<string> used)
+        {
+            var n = (name ?? "").ToUpperInvariant();
+            var tag = n.Substring(0, Math.Min(3, n.Length));
+            for (int j = 3; used.Contains(tag) && j < n.Length; j++)
+                if (char.IsLetter(n[j])) tag = n.Substring(0, 2) + n[j];
+            for (int k = 2; used.Contains(tag); k++) tag = n.Substring(0, Math.Min(2, n.Length)) + k;
+            used.Add(tag);
+            return tag;
         }
 
         public IEnumerable<Combatant> All => Party.Concat(Enemies);
@@ -226,7 +239,7 @@ namespace Obscure
             // Break gauge recovers 20 at start of owner's turn (Bab 10 §5.3); player Poise only if not hit since last turn
             if (c.HasBreakGauge && !c.IsBroken && c.CurrentBreakGauge < c.MaxBreakGauge && !(c.IsPlayer && wasHitSinceLastTurn))
             {
-                int recover = c.IsPlayer ? Combatant.PlayerPoiseRecovery : 20;
+                int recover = c.IsPlayer ? Combatant.PlayerPoiseRecovery : Combatant.EnemyShieldRecovery;
                 c.CurrentBreakGauge = Math.Min(c.MaxBreakGauge, c.CurrentBreakGauge + recover);
             }
         }

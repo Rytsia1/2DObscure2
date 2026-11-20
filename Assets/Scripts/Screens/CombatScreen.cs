@@ -798,8 +798,8 @@ namespace Obscure
                     {
                         if (h.shieldLbl != null)
                         {
-                            h.shieldLbl.text = c.IsBroken ? "[BREAK!] STAGGERED (150% DMG)"
-                                : c.HasBreakGauge ? $"SHIELD {c.CurrentBreakGauge}" : "";
+                            h.shieldLbl.text = c.IsBroken ? $"[BREAK!] STAGGERED ({Math.Round(c.BreakDamageMultiplier * 100)}% DMG)"
+                                : c.HasBreakGauge ? $"SHIELD {c.CurrentBreakGauge}/{c.MaxBreakGauge}" : "";
                             h.shieldLbl.style.color = c.IsBroken ? Palette.Gold1 : Palette.Gold2;
                         }
 
@@ -1026,7 +1026,7 @@ namespace Obscure
             string vitalsText = !cand.Alive
                 ? "FALLEN (KO)"
                 : cand.IsEnemy
-                    ? $"HP {cand.unit.hp}/{cand.Stats.maxHp}" + (cand.HasBreakGauge ? $" · SHD {cand.CurrentBreakGauge}" : "")
+                    ? $"HP {cand.unit.hp}/{cand.Stats.maxHp}" + (cand.HasBreakGauge ? $" · SHD {cand.CurrentBreakGauge}/{cand.MaxBreakGauge}" : "")
                     : $"HP {cand.unit.hp}/{cand.Stats.maxHp} · MP {cand.unit.mp}/{cand.Stats.maxMp}";
             hdrRow.Add(new UiLabel(vitalsText)
             {
@@ -1047,6 +1047,11 @@ namespace Obscure
                     style = { fontSize = 11, color = Palette.Gold2, letterSpacing = 0.48f, marginBottom = 6 }
                 });
             }
+            if (cand.IsEnemy && cand.Alive && cand.HasBreakGauge)
+                topCol.Add(new UiLabel(cand.ShieldHelp)
+                {
+                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, marginBottom = 6 }
+                });
 
             // Row 3..N: Active Status rows (22b style: Figma Status-Icon badge + Name/Turns + Description)
             var active = CollectActiveStatuses(cand);
@@ -1693,7 +1698,7 @@ namespace Obscure
                 string typeText = $"{element}{sk.kind.ToString().ToUpperInvariant()}";
                 string targetText = $"TARGET: {sk.target.ToString().ToUpperInvariant()}";
                 var skChips = sk.apply != null && sk.apply.Length > 0
-                    ? sk.apply.Select(ap => (ap.id, $"{StatusInfo.Name(ap.id).ToUpperInvariant()} {Mathf.RoundToInt(ap.chance * 100)}% · {ap.turns}T"))
+                    ? sk.apply.Select(ap => (ap.id, StatusInfo.ChipText(ap)))
                     : null;
                 Option(m, $"{sk.name.ToUpperInvariant()} {costText}", () => UseSkill(c, sk),
                     cd == 0 && c.unit.mp >= effCost && hasShield && hasWeapon, sk.description.ToUpperInvariant(),
@@ -1738,13 +1743,11 @@ namespace Obscure
             if (list.Count == 0) { back(); Hint("NO VALID TARGETS"); return; } // back() refocuses and would overwrite the hint
             var m = NewMenu();
             m.onBack = back;
-            int firstValid = -1;
             for (int i = 0; i < list.Count; i++)
             {
                 var cand = list[i];
                 var h = huds[cand];
                 bool valid = Battle.Validate(make(cand)) == null;
-                if (firstValid < 0 && valid) firstValid = i;
                 string brk = cand.IsEnemy && cand.HasBreakGauge ? $" SHIELD:{cand.CurrentBreakGauge}/{cand.MaxBreakGauge}" : "";
                 string tip = cand.Alive
                     ? $"{cand.name.ToUpperInvariant()} {cand.unit.hp}/{cand.Stats.maxHp}{brk} " + (cand.IsEnemy ? cand.Affinities.Describe() : cand.StatusTags)
@@ -1796,7 +1799,25 @@ namespace Obscure
                 };
                 item.visual(false);
             }
-            if (firstValid >= 0) m.Focus(firstValid, false, true);
+            int start = DefaultTargetIndex(list, i => Battle.Validate(make(list[i])) == null);
+            if (start >= 0) m.Focus(start, false, true);
+        }
+
+        // Enemies/fallen: first valid in order. Living allies: the most injured (lowest HP %), so heals and potions
+        // start on who needs them; ties keep party order, so a full-HP party still starts on slot 1.
+        public static int DefaultTargetIndex(IList<Combatant> list, Func<int, bool> valid)
+        {
+            int best = -1;
+            float bestRatio = float.MaxValue;
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (!valid(i)) continue;
+                var c = list[i];
+                if (c.IsEnemy || !c.Alive) return best >= 0 ? best : i;
+                float ratio = (float)c.unit.hp / Math.Max(1, c.Stats.maxHp);
+                if (ratio < bestRatio) { bestRatio = ratio; best = i; }
+            }
+            return best;
         }
 
         void Choose(BattleAction action)
