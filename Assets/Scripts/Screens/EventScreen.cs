@@ -30,7 +30,7 @@ namespace Obscure
 
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
-            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} RUN GOLD");
+            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} SPOILS");
 
             var eyebrow = UiRoot.Q<UiLabel>(className: "event-vars-2");
             if (eyebrow != null)
@@ -286,7 +286,7 @@ namespace Obscure
             if (status.usesAdaptabilityBorrow) return "ADAPTABILITY 75%";
             if (c.isImprovise) return "HUMAN · IMPROVISE";
             if (!string.IsNullOrEmpty(c.requiredRace)) return c.requiredRace.ToUpperInvariant();
-            if (c.goldCost > 0) return $"-{c.goldCost} RUN GOLD";
+            if (c.goldCost > 0) return $"-{c.goldCost} SPOILS";
             if (!string.IsNullOrEmpty(c.requiredItem) && Database.Items.TryGetValue(c.requiredItem, out var reqItm))
                 return $"USE {reqItm.name.ToUpperInvariant()}";
             if (!string.IsNullOrEmpty(c.requiredMaterialId))
@@ -301,7 +301,7 @@ namespace Obscure
         static string ChoiceCostSubtitle(EventChoice c)
         {
             var parts = new List<string>();
-            if (c.goldCost > 0) parts.Add($"COST: {c.goldCost} GOLD");
+            if (c.goldCost > 0) parts.Add($"COST: {c.goldCost} SPOILS");
             if (!string.IsNullOrEmpty(c.requiredItem))
             {
                 string itemName = Database.Items.TryGetValue(c.requiredItem, out var itm) ? itm.name : c.requiredItem;
@@ -320,7 +320,7 @@ namespace Obscure
             string outcome = Run.ChooseEvent(index);
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
-            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} RUN GOLD");
+            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} SPOILS");
 
             ResetMenu();
 

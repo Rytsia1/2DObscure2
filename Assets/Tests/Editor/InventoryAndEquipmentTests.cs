@@ -15,10 +15,15 @@ namespace Obscure.Tests
             GameSave.ClearSave();
         }
 
+        // Test-only gear some tests register in the shared Database.Equipment; left behind, it breaks
+        // suites that walk the whole catalogue (e.g. IconArtTests.EveryGearPieceHasAnIcon).
+        static readonly string[] TestOnlyGearIds = { "ring_power", "val_str_ring", "val_ring_dup", "endgame_blade" };
+
         [TearDown]
         public void TearDown()
         {
             GameSave.ClearSave();
+            foreach (var id in TestOnlyGearIds) Database.Equipment.Remove(id);
         }
 
         // =====================================================================
@@ -1233,7 +1238,7 @@ namespace Obscure.Tests
             run.Gold = 1;
             var item2 = shop.items[1];
             Assert.IsFalse(EquipmentShopManager.TryBuyEquipment(run, shop, item2.shopItemId, out _, out string errNoGold));
-            StringAssert.Contains("Not enough gold", errNoGold);
+            StringAssert.Contains("Not enough spoils", errNoGold);
 
             // 4. Buying when inventory is full fails
             run.Gold = 1000;

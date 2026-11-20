@@ -57,7 +57,7 @@ namespace Obscure
                 var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
                 if (runGold != null)
                 {
-                    FigmaUi.SetInstanceText(runGold, "text-0", $"{currentRunGold:#,##0} RUN GOLD");
+                    FigmaUi.SetInstanceText(runGold, "text-0", $"{currentRunGold:#,##0} SPOILS");
                     FigmaUi.AnchorRight(runGold, 24f);
                 }
 
@@ -184,7 +184,7 @@ namespace Obscure
                         desc = item.description.ToUpperInvariant(),
                         stock = item.isUnlimitedStock ? "UNLIMITED" : $"× {item.stockCount}",
                         priceText = soldOut ? "SOLD" : hasDiscount ? $"{effectivePrice} (-15%)" : effectivePrice.ToString(),
-                        btnText = soldOut ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Run Gold",
+                        btnText = soldOut ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Spoils",
                         tagText = item.isReviveItem ? "REVIVE ITEM" : "CONSUMABLE",
                         owned = own,
                         price = effectivePrice,
@@ -210,7 +210,7 @@ namespace Obscure
                         desc = item.item?.Definition?.description?.ToUpperInvariant() ?? "",
                         stock = item.isSold ? "SOLD OUT" : "× 1",
                         priceText = item.isSold ? "—" : hasDiscount ? $"{effectivePrice} (-15%)" : effectivePrice.ToString(),
-                        btnText = item.isSold ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Run Gold",
+                        btnText = item.isSold ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Spoils",
                         tagText = "EQUIPMENT",
                         owned = 0,
                         price = effectivePrice,
@@ -232,10 +232,10 @@ namespace Obscure
                         title = item.Definition?.name ?? "Equipment",
                         icon = IconArt.Gear(item.Definition),
                         sub = item.Definition != null ? EquipmentSlots.DisplayName(item.Definition.slot).ToUpperInvariant() : "GEAR",
-                        desc = $"SELL FOR {val} RUN GOLD.",
+                        desc = $"SELL FOR {val} SPOILS.",
                         stock = "OWNED",
                         priceText = $"+{val}",
-                        btnText = $"Sell · {val} Run Gold",
+                        btnText = $"Sell · {val} Spoils",
                         tagText = item.isEquipped ? "EQUIPPED" : "BAG",
                         owned = 1,
                         price = -val,
@@ -269,8 +269,8 @@ namespace Obscure
             }
             host.Add(Line("IN STOCK", e.stock));
             host.Add(Line("YOU OWN", e.owned.ToString()));
-            host.Add(Line("PRICE", e.price >= 0 ? $"{e.price} RUN GOLD" : $"+{-e.price} RUN GOLD"));
-            host.Add(Line("RUN GOLD AFTER", $"{runGold} › {runGold - e.price}"));
+            host.Add(Line("PRICE", e.price >= 0 ? $"{e.price} SPOILS" : $"+{-e.price} SPOILS"));
+            host.Add(Line("SPOILS AFTER", $"{runGold} › {runGold - e.price}"));
 
             host.Add(new VisualElement { style = { flexGrow = 1 } });
             var btn = FigmaUi.CreateButton(e.btnText, e.canAct ? "button-primary" : "button-slab", 346f);
@@ -285,7 +285,7 @@ namespace Obscure
             if (shopData.TryBuyConsumable(Run, c.itemId, out _, out string err))
             {
                 Sfx.Play(Sound.Coin);
-                feedback = $"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} GOLD!";
+                feedback = $"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} SPOILS!";
                 feedbackBad = false;
                 Rebuild();
             }
@@ -298,7 +298,7 @@ namespace Obscure
             if (shopData.TryBuyEquipment(Run, eqItem.shopItemId, out var bought, out string err))
             {
                 Sfx.Play(Sound.Coin);
-                feedback = $"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} GOLD!";
+                feedback = $"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} SPOILS!";
                 feedbackBad = false;
                 Rebuild();
             }
@@ -311,7 +311,7 @@ namespace Obscure
             if (shopData.TrySellEquipment(Run, eq.instanceId, out int goldGained, out string err))
             {
                 Sfx.Play(Sound.Coin);
-                feedback = $"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} GOLD!";
+                feedback = $"SOLD {eq.Definition?.name.ToUpperInvariant()} FOR {goldGained} SPOILS!";
                 feedbackBad = false;
                 Rebuild();
             }

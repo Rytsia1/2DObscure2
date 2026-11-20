@@ -178,8 +178,14 @@ namespace Obscure
 
         void Update()
         {
-            if (Controls.Locked || items.Count == 0 || Time.frameCount == bornFrame) return;
+            if (Controls.Locked || Time.frameCount == bornFrame) return;
             if (ActiveMenu != null && ActiveMenu != this) return;
+            if (items.Count == 0)
+            {
+                // An empty list must still let the player leave.
+                if (Controls.Back && onBack != null) { Sfx.Play(Sound.Back); onBack(); }
+                return;
+            }
 
             if (onPrevPage != null && Controls.PrevPage)
             {

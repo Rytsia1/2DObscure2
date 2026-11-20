@@ -228,8 +228,8 @@ namespace Obscure.Tests
             int miss = OffenseDamage(QteConfig.Offense(QteResult.Miss));
             Assert.Greater(perfect, good);
             Assert.Greater(good, miss);
-            // Multiplier applies before defense: 16 Atk vs 10 Def (GDD Bab 12: Perfect is 1.5x).
-            Assert.Less(perfect, (int)Math.Ceiling(good * 1.50f) + 2, "defense still subtracts after the bonus");
+            // Multiplier applies before defense (GDD Bab 11 §2.2: Perfect is 1.2x).
+            Assert.Less(perfect, (int)Math.Ceiling(good * QteConfig.PerfectPower) + 2, "defense still subtracts after the bonus");
         }
 
         [Test]
@@ -275,6 +275,7 @@ namespace Obscure.Tests
             var action = BattleAction.Strike(warden, gaze, b.Party[0]);
             Assert.IsNull(action.target, "area attacks carry no single target");
             Assert.IsNull(b.Validate(action));
+            foreach (var p in b.Party) p.guarding = true; // a full parry needs Guard or a shield (Bab 12 §3.5)
             var hits = b.Perform(action, 1f, new[] { QteResult.Perfect });
             CollectionAssert.AreEquivalent(b.Party.Where(p => p.Alive), hits.Select(h => h.target));
             Assert.IsTrue(hits.All(h => h.blocked), "one shared reaction applies to every target");
@@ -483,7 +484,7 @@ namespace Obscure.Tests
             Wait(skipped, skipped.zoneTimes[2] - skipped.T); skipped.Press(); // zone 2 already lapsed, so this lands on zone 3
             Assert.IsTrue(skipped.Done);
             Assert.AreEqual(QteResult.Miss, skipped.ZoneResult(1));
-            Assert.AreEqual((1.5f + 0.5f + 1.5f) / 3f, skipped.AveragePower(QteConfig.Offense), 1e-4f);
+            Assert.AreEqual((QteConfig.PerfectPower + QteConfig.PoorPower + QteConfig.PerfectPower) / 3f, skipped.AveragePower(QteConfig.Offense), 1e-4f);
 
             var masher = new ComboQte(N, 3, new Random(1));
             Wait(masher, 0.05f);

@@ -66,11 +66,11 @@ namespace Obscure
                 FigmaUi.DestroyMenu(ref menu);
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
-                menu.onBack = () => Game?.Go(returnState);
+                menu.onBack = () => Game?.Back(returnState);
                 menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
 
             var backBtn = FigmaUi.FindButton(UiRoot, "Back");
-            if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
+            if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Back(returnState)));
 
             // Bag capacity bar
             int eqCount = inventory.EquipmentCount;
@@ -438,11 +438,11 @@ namespace Obscure
         {
             if (currentCategory != InventoryCategory.Equipment) return;
             var eq = GetSelectedEquipment(); if (eq == null) return;
-            int goldCost = eq.GetUpgradeCostGold(), matCost = eq.GetUpgradeCostMaterials(), playerGold = Game.I?.Run?.Gold ?? 9999, playerMat = inventory.GetMaterialCount("iron_ingot");
+            int goldCost = eq.GetUpgradeCostGold(), matCost = eq.GetUpgradeCostMaterials(), playerGold = Game.I?.Run?.HubGold ?? 9999, playerMat = inventory.GetMaterialCount("iron_ingot");
             if (!eq.CanUpgrade(out string reason)) { Sfx.Play(Sound.Deny); Say(reason); return; }
-            if (Game.I?.Run != null && Game.I.Run.Gold < goldCost) { Sfx.Play(Sound.Deny); Say($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)"); return; }
+            if (Game.I?.Run != null && Game.I.Run.HubGold < goldCost) { Sfx.Play(Sound.Deny); Say($"NEED {goldCost}G TO UPGRADE (HAVE {playerGold}G)"); return; }
             if (matCost > 0 && playerMat < matCost) { Sfx.Play(Sound.Deny); Say($"NEED {matCost} UPGRADE MATERIALS (HAVE {playerMat})"); return; }
-            if (Game.I?.Run != null) Game.I.Run.Gold -= goldCost;
+            if (Game.I?.Run != null) Game.I.Run.HubGold -= goldCost;
             inventory.RemoveMaterial("iron_ingot", matCost);
             eq.TryUpgrade(out _);
             Sfx.Play(Sound.BlacksmithForge);
@@ -463,7 +463,7 @@ namespace Obscure
             }
             int val = eq.CalculateSellValue();
             inventory.RemoveEquipment(eq.instanceId);
-            if (Game.I?.Run != null) Game.I.Run.Gold += val;
+            if (Run != null) { if (InDungeon) Run.Gold += val; else Run.HubGold += val; }
             confirmSellActive = false;
             Sfx.Play(Sound.Coin);
             Say($"SOLD {eq.Definition?.name} FOR {val} GOLD.");

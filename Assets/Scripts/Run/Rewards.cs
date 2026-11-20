@@ -8,13 +8,25 @@ namespace Obscure
     public static class RunConfig
     {
         public const float RestRecover = 0.5f;            // Recover restores this share of missing HP and MP
-        public static readonly (int min, int max) BattleGold = (10, 18), EliteGold = (30, 42), TreasureGold = (20, 35);
-        public const int BossGold = 100;
-        public const int RelicFallbackGold = 30;           // when every relic is owned
+        // Gold. Target (design decision 2026-11-20): clearing Dungeon 1 pays for about one full-party Temple Recovery
+        // (4 x 300), so after each dungeon the player chooses between healing everyone and buying gear.
+        // Old values (10-18 / 30-42 / 20-35 / 100) gave about 385 gold per Dungeon 1 path (BalanceSimulation.ExpPacingReport,
+        // 200 maps, 2026-11-20); these are roughly 3x. Starting values: re-measure with the report after changes to maps or prices.
+        public static readonly (int min, int max) BattleGold = (30, 55), EliteGold = (90, 125), TreasureGold = (60, 105);
+        public const int BossGold = 350;
+        public const int RelicFallbackGold = 90;           // when every relic is owned
 
-        // EXP (GDD: level cap 15; curve and rewards TBD, these are placeholders).
+        // Retry budget per expedition (GDD failure model C): a wipe or abandon spends one; a wipe with none left ends the expedition.
+        // Starting value, untested. Test: playtest full runs. Most testers never spend one -> lower it;
+        // testers quit right after running out -> raise it or let a retry be bought back.
+        public const int RetriesPerExpedition = 3;
+
+        // EXP. Target (design decision 2026-11-20): level 13 by the end of Dungeon 1, level 15 during Dungeon 2.
+        // Measured on 200 generated maps (BalanceSimulation.ExpPacingReport, 2026-11-20): a Dungeon 1 path has 10-13
+        // normal fights plus two Elite stage bosses and Zoroa, so even a fight-avoiding path reaches level 13 on average.
+        // Regression test: BalanceSimulation.RandomPathThroughDungeon1ReachesLevel13.
         public const int MaxLevel = 15;
-        public const int BattleExp = 35, EliteExp = 80, BossExp = 175;
+        public const int BattleExp = 150, EliteExp = 350, BossExp = 750;
         public static int ExpToNext(int level) => 100 + 25 * (Math.Max(1, level) - 1);
         public static int ExpFor(Tier tier) => tier == Tier.Boss ? BossExp : tier == Tier.Elite ? EliteExp : BattleExp;
     }
@@ -24,21 +36,37 @@ namespace Obscure
     {
         static readonly string[] CommonItems = { "draught", "draught", "ether" };
 
-        public static RewardOffer ForBattle(Tier tier, Random rng, ICollection<string> ownedRelics)
+        public static RewardOffer ForBattle(Tier tier, Random rng, ICollection<string> ownedRelics, int act = 1)
         {
             switch (tier)
             {
                 case Tier.Boss:
-                    bool canTakeBossRelic = ownedRelics == null
-                        || (!ownedRelics.Contains(Database.BossRelic) && ownedRelics.Count < RelicManager.MaxRelicCapacity);
-                    var bossChoice = canTakeBossRelic
-                        ? new RewardOption { kind = RewardKind.Relic, id = Database.BossRelic }
-                        : new RewardOption { kind = RewardKind.Gold, amount = RunConfig.RelicFallbackGold };
-                    return new RewardOffer
+                {
+                    // The biggest fight gets the biggest choice: the boss relic (another relic once it is owned), a second
+                    // relic, and Rare/Epic gear. Without a free relic slot, relic picks become gear instead of a little gold.
+                    var boss = new RewardOffer { title = "The Warden Falls", text = "The abyss shudders and goes silent.", gold = RunConfig.BossGold };
+                    bool slotFree = ownedRelics == null || ownedRelics.Count < RelicManager.MaxRelicCapacity;
+                    var offered = new HashSet<string>();
+                    if (slotFree && (ownedRelics == null || !ownedRelics.Contains(Database.BossRelic)))
+                        offered.Add(Database.BossRelic);
+                    while (slotFree && offered.Count < 2)
                     {
-                        title = "The Warden Falls", text = "The abyss shudders and goes silent.", gold = RunConfig.BossGold,
-                        choices = { bossChoice },
-                    };
+                        var pool = Database.Relics.Keys
+                            .Where(id => id != Database.BossRelic && !offered.Contains(id) && (ownedRelics == null || !ownedRelics.Contains(id)))
+                            .OrderBy(id => id).ToList();
+                        if (pool.Count == 0) break;
+                        offered.Add(pool[rng.Next(pool.Count)]);
+                    }
+                    foreach (var id in offered) boss.choices.Add(new RewardOption { kind = RewardKind.Relic, id = id });
+                    var gearIds = new HashSet<string>();
+                    while (boss.choices.Count < 3)
+                    {
+                        var gear = Gear(rng, EquipmentRarity.Rare, EquipmentRarity.Epic, gearIds);
+                        gearIds.Add(gear.id);
+                        boss.choices.Add(gear);
+                    }
+                    return boss;
+                }
                 case Tier.Elite:
                     return new RewardOffer
                     {
@@ -46,14 +74,27 @@ namespace Obscure
                         choices = { Relic(rng, ownedRelics), Upgrade(rng), new RewardOption { kind = RewardKind.Item, id = "elixir" } },
                     };
                 default:
-                    var a = CommonItems[rng.Next(CommonItems.Length)];
-                    var b = a == "ether" ? "draught" : "ether";
-                    return new RewardOffer
-                    {
-                        title = "Victory", text = "The dead lie still once more.", gold = Roll(RunConfig.BattleGold, rng),
-                        choices = { new RewardOption { kind = RewardKind.Item, id = a }, new RewardOption { kind = RewardKind.Item, id = b } },
-                    };
+                {
+                    // Three different kinds of reward: something to heal with now, gear for the build, or gold for the
+                    // Temple and shops. Gear quality rises from Dungeon 3.
+                    var normal = new RewardOffer { title = "Victory", text = "The dead lie still once more.", gold = Roll(RunConfig.BattleGold, rng) };
+                    normal.choices.Add(new RewardOption { kind = RewardKind.Item, id = CommonItems[rng.Next(CommonItems.Length)] });
+                    normal.choices.Add(Gear(rng, EquipmentRarity.Common, act >= 3 ? EquipmentRarity.Rare : EquipmentRarity.Uncommon));
+                    normal.choices.Add(new RewardOption { kind = RewardKind.Gold, amount = Roll(RunConfig.BattleGold, rng) });
+                    return normal;
+                }
             }
+        }
+
+        // A random base equipment piece in a rarity band (never cursed or unarmed), granted at its own rarity and level.
+        static RewardOption Gear(Random rng, EquipmentRarity min, EquipmentRarity max, ICollection<string> exclude = null)
+        {
+            var pool = Database.Equipment.Values
+                .Where(e => !e.isUnarmed && !e.IsCursed && e.rarity >= min && e.rarity <= max && (exclude == null || !exclude.Contains(e.id)))
+                .OrderBy(e => e.id).ToList();
+            return pool.Count == 0
+                ? new RewardOption { kind = RewardKind.Gold, amount = RunConfig.RelicFallbackGold }
+                : new RewardOption { kind = RewardKind.Equipment, id = pool[rng.Next(pool.Count)].id };
         }
 
         public static RewardOffer ForTreasure(Random rng, ICollection<string> ownedRelics) => new RewardOffer
@@ -89,8 +130,10 @@ namespace Obscure
         static int Roll((int min, int max) range, Random rng) => rng.Next(range.min, range.max + 1);
 
         // Rolls distinct Dungeon Modifier offers (Buffs, plus rare Cursed Buff+Drawback) deterministically.
-        // Already owned modifiers remain in the pool per Bab 15 §2 & §3.2 so they can be stacked or re-acquired.
-        public static List<RewardOption> GenerateModifierChoices(Random rng, int count = 3, bool includeCursed = false, ModifierCategory? categoryFilter = null)
+        // Already owned modifiers remain in the pool per Bab 15 §2 & §3.2 so they can be stacked or re-acquired,
+        // but ones already at their stack cap (isMaxed) are skipped: a pick there would add nothing.
+        public static List<RewardOption> GenerateModifierChoices(Random rng, int count = 3, bool includeCursed = false, ModifierCategory? categoryFilter = null,
+            Func<string, ElementType, bool> isMaxed = null)
         {
             var rand = rng ?? new Random();
             var pool = Database.DungeonModifiers.Values
@@ -121,6 +164,7 @@ namespace Obscure
                 ElementType elem = ElementType.None;
                 if (picked.isElementSpecific)
                     elem = ElementTypes.All[rand.Next(ElementTypes.All.Length)];
+                if (isMaxed != null && isMaxed(picked.modifierId, elem)) { i--; continue; } // try another; usedIds shrinks the pool
 
                 result.Add(new RewardOption { kind = RewardKind.Modifier, id = picked.modifierId, element = elem });
             }
@@ -138,7 +182,7 @@ namespace Obscure
             RewardKind.Upgrade => ($"{Database.Characters[o.id].name}: {Database.Upgrades[o.id].name}",
                 Database.Characters[o.id].stats.Preview(Database.Upgrades[o.id].bonus)),
             RewardKind.Modifier => DescribeModifier(o, modMgr),
-            _ => ($"{o.amount} Gold", $"Take {o.amount} extra gold."),
+            _ => ($"{o.amount} Spoils", $"Take {o.amount} extra spoils."),
         };
 
         static (string label, string detail) DescribeModifier(RewardOption o, DungeonModifierManager modMgr)

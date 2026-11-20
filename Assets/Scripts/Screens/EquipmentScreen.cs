@@ -146,7 +146,7 @@ namespace Obscure
                 FigmaUi.DestroyMenu(ref menu);
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
-                menu.onBack = () => Game?.Go(returnState);
+                menu.onBack = () => Game?.Back(returnState);
                 menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
@@ -157,7 +157,7 @@ namespace Obscure
                 if (candidateIndex >= rows.Count) candidateIndex = -1;
 
                 var backBtn = FigmaUi.FindButton(UiRoot, "Back");
-                if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
+                if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Back(returnState)));
 
                 // Header portrait switcher
                 string[] hdrFrames = { "frame-vars-18", "frame-vars-19", "frame-vars-20", "frame-vars-21" };

@@ -27,7 +27,7 @@ namespace Obscure
 
             var s = Run != null ? Run.Stats : new RunStats();
             int act = Run != null ? Run.Act : 8;
-            int total = Run != null ? Run.Gold : 0;
+            int total = Run != null ? Run.HubGold : 0;
 
             var dLbl = UiRoot.Q<UiLabel>(className: "dungeon-1-of-8-vars-2");
             if (dLbl != null) dLbl.text = "EXPEDITION COMPLETE";
@@ -42,10 +42,10 @@ namespace Obscure
             if (pipLbl != null) pipLbl.text = "◆◆◆◆◆◆◆◆";
 
             var runTags = UiRoot.Query<VisualElement>(className: "currency-tag-run").ToList();
-            if (runTags.Count > 0) FigmaUi.SetInstanceText(runTags[0], "text-0", $"{s.goldEarned} RUN GOLD");
+            if (runTags.Count > 0) FigmaUi.SetInstanceText(runTags[0], "text-0", $"{s.goldEarned} SPOILS");
 
             var hubTags = UiRoot.Query<VisualElement>(className: "currency-tag-hub").ToList();
-            if (hubTags.Count > 0) FigmaUi.SetInstanceText(hubTags[0], "text-0", $"{s.goldEarned} HUB GOLD");
+            if (hubTags.Count > 0) FigmaUi.SetInstanceText(hubTags[0], "text-0", $"+{s.goldEarned} GOLD");
 
             var totalLbl = UiRoot.Q<UiLabel>(className: "_745-vars");
             if (totalLbl != null) totalLbl.text = total.ToString("#,##0");
@@ -109,10 +109,10 @@ namespace Obscure
             if (gainedTitle != null) gainedTitle.text = $"Gained in Dungeon {act}";
 
             var runGoldTag = UiRoot.Q<VisualElement>(className: "currency-tag-run__i");
-            if (runGoldTag != null) FigmaUi.SetInstanceText(runGoldTag, "text-0", $"{s.goldEarned} RUN GOLD");
+            if (runGoldTag != null) FigmaUi.SetInstanceText(runGoldTag, "text-0", $"{s.goldEarned} SPOILS");
 
             var lostGoldNote = UiRoot.Q<UiLabel>(className: "run-gold-held-in-dungeon-1-vars");
-            if (lostGoldNote != null) lostGoldNote.text = $"RUN GOLD HELD IN DUNGEON {act}.";
+            if (lostGoldNote != null) lostGoldNote.text = $"SPOILS HELD IN DUNGEON {act}.";
 
             var equipLost = UiRoot.Q<UiLabel>(className: "equipment-found-in-dungeon-1-vars");
             if (equipLost != null) equipLost.text = $"EQUIPMENT FOUND IN DUNGEON {act}";
@@ -129,11 +129,19 @@ namespace Obscure
             }
 
             var nextNote = UiRoot.Q<UiLabel>(className: "dungeon-progress-stays-dungeon-1-is-your-next-dungeon-again-vars");
-            if (nextNote != null) nextNote.style.display = DisplayStyle.None;
+            if (nextNote != null)
+            {
+                bool lost = Run != null && Run.ExpeditionLost;
+                int retries = Run?.RetriesLeft ?? 0;
+                nextNote.text = lost
+                    ? "NO RETRIES WERE LEFT. THE EXPEDITION IS LOST — START A NEW GAME."
+                    : $"DUNGEON {act} IS YOUR NEXT DUNGEON AGAIN · {retries} {(retries == 1 ? "RETRY" : "RETRIES")} LEFT";
+                nextNote.style.color = lost ? Palette.HpLow : Palette.Mist2;
+            }
 
-            int hub = PersistenceCommitHandler.ActiveCommittedSnapshot?.hubGold ?? (Run != null ? Run.Gold : 0);
+            int hub = Run != null ? Run.HubGold : 0;
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
-            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{hub} HUB GOLD");
+            if (hubTag != null) FigmaUi.SetInstanceText(hubTag, "text-0", $"{hub} GOLD");
 
             var menuInst = UiRoot.Q<VisualElement>(className: "button-primary-2__i-10");
             if (menuInst != null)

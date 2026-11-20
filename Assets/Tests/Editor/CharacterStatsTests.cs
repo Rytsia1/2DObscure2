@@ -379,7 +379,7 @@ namespace Obscure.Tests
             Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.35f, profile, 0.25f));
             Assert.AreEqual(QteOutcomeCategory.Failure, QteConfig.JudgeCategory(0.35f, profile, 0.25f));
 
-            // Defense multipliers match GDD Terbaru values (GoodDefense = 0.5f, PartialDefense = 0.75f, Perfect = 0f, Poor = 1.0f)
+            // Defense multipliers match GDD Terbaru values (GoodDefense = 0.5f, PartialDefense = 0.75f, Perfect = 0.25f, Poor = 1.0f)
             var knight = new Combatant(new Unit(Database.Characters["knight"]), Side.Party, 0, "Knight", "KNI");
             float partialMult = QteConfig.DefenseCategory(QteOutcomeCategory.PartialSuccess, knight, Element.Physical);
             Assert.AreEqual(QteConfig.PartialDefense, partialMult);

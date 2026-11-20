@@ -71,7 +71,7 @@ namespace Obscure
 
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
-            menu.onBack = () => Game?.Go(returnState);
+            menu.onBack = () => Game?.Back(returnState);
             menu.onFocus = OnFocus;
             menu.onPrevPage = () => SwitchHero(-1);
             menu.onNextPage = () => SwitchHero(1);
@@ -216,7 +216,7 @@ namespace Obscure
         {
             var backBtn = FigmaUi.FindButton(UiRoot, "Back");
             if (backBtn != null)
-                FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState), tooltip: "RETURN TO PREVIOUS SCREEN"), backBtn);
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Back(returnState), tooltip: "RETURN TO PREVIOUS SCREEN"), backBtn);
 
             string[] frameClasses = { "frame-vars-13", "frame-vars-14", "frame-vars-15", "frame-vars-16" };
             for (int i = 0; i < frameClasses.Length; i++)
@@ -251,11 +251,10 @@ namespace Obscure
                 pItem.visual(false);
             }
 
-            int gold = Run != null ? Run.Gold : 0;
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
             if (hubTag != null)
             {
-                FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold:#,##0} HUB GOLD");
+                FigmaUi.SetInstanceText(hubTag, "text-0", InDungeon ? $"{Run?.Gold ?? 0:#,##0} SPOILS" : $"{Run?.HubGold ?? 0:#,##0} GOLD");
                 FigmaUi.AnchorRight(hubTag, 24f);
             }
         }

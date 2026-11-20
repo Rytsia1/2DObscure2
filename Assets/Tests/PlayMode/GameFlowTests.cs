@@ -359,7 +359,8 @@ namespace Obscure.Tests
             yield return WaitFor(() => q.Done, "the reaction result");
             Assert.AreNotEqual(QteResult.Miss, q.HitResult(0), "pressed as the hit landed");
             yield return WaitFor(() => b.Log.Count > logCount, "the attack to resolve");
-            Assert.IsTrue(b.Log.Skip(logCount).Any(l => l.Contains("parries") || l.Contains("(blocked)")), string.Join(" | ", b.Log.Skip(logCount)));
+            // Without Guard or a shield a Perfect only deflects (Poise rework); a full parry needs one of them.
+            Assert.IsTrue(b.Log.Skip(logCount).Any(l => l.Contains("parries") || l.Contains("(blocked)") || l.Contains("(deflected)")), string.Join(" | ", b.Log.Skip(logCount)));
         }
 
         [UnityTest]
@@ -511,7 +512,9 @@ namespace Obscure.Tests
             Game.I.Go(GameState.Talents);
             yield return Settle();
             yield return TapAndSettle(Key.Escape);
-            Assert.AreEqual(GameState.Rest, State, "Back from talents opened via the camp must return to the camp");
+            Assert.AreEqual(GameState.Skills, State, "Back from talents returns to the skill tree it was opened from");
+            yield return TapAndSettle(Key.Escape);
+            Assert.AreEqual(GameState.Rest, State, "...and Back again returns to the camp");
 
             yield return Tap(Key.Enter);            // RECOVER (first camp action) resolves the node
             yield return TapAndSettle(Key.Enter);   // CONTINUE EXPEDITION
@@ -525,13 +528,19 @@ namespace Obscure.Tests
         {
             yield return Begin();
             yield return StartRunOnMap();
-            yield return TapAndSettle(Key.Enter);   // first node is a battle
+            // Only elite and stage-boss fights offer modifiers. Dungeon 1 stage 1 has no elites, but its boss (d1_e6) is a
+            // stage boss, not the final one. No public way to jump nodes, so point the run at it as if the player walked there.
+            Assert.IsFalse(Run.IsFinalStage, "stage 1 of Dungeon 1 must not be the final stage");
+            var stageBoss = Run.Map.nodes.First(n => n.type == NodeType.Boss);
+            typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(Run, stageBoss);
+            Game.I.Go(GameState.Combat);
+            yield return Settle();
             Assert.AreEqual(GameState.Combat, State);
             yield return WinBattle();
             Assert.AreEqual(GameState.Reward, State);
 
             var mods = Run.PendingReward.modifierChoices;
-            Assert.Greater(mods.Count, 0, "a normal battle offers modifiers");
+            Assert.Greater(mods.Count, 0, "a stage-boss battle offers modifiers");
             var texts = ActiveUiTexts();
             foreach (var m in mods)
             {

@@ -90,10 +90,16 @@ namespace Obscure
                 return false;
             }
 
+            if (run.CarrySpace(entry.itemId) <= 0)
+            {
+                error = $"You can carry at most {Database.Items[entry.itemId].maxStack} {entry.name}.";
+                return false;
+            }
+
             int effectiveCost = run.GetDungeonShopDiscountedPrice(entry.cost);
             if (run.Gold < effectiveCost)
             {
-                error = $"Not enough Gold. Requires {effectiveCost} Gold, but only have {run.Gold} Gold.";
+                error = $"Not enough spoils. Requires {effectiveCost} spoils, but only have {run.Gold}.";
                 return false;
             }
 
@@ -102,9 +108,7 @@ namespace Obscure
             if (!entry.isUnlimitedStock)
                 entry.stockCount--;
 
-            run.Items.Add(entry.itemId);
-            if (run.Inventory != null)
-                run.Inventory.AddConsumable(entry.itemId, 1);
+            run.TryAddConsumable(entry.itemId);
 
             bought = entry;
             error = null;
@@ -126,30 +130,44 @@ namespace Obscure
     {
         public const int TempleReviveCost = 100;
 
-        // Retains run gold 1:1 across dungeon clears without any deductions or conversion fees (Difficulty System Section 5.1)
+        // Dungeon clear: all remaining Run Gold moves 1:1 into Hub Gold, no conversion fee (GDD Bab 16).
         public static int TransferRunGoldToHub(RunState run)
         {
             if (run == null) return 0;
-            return run.Gold;
+            int moved = run.Gold;
+            run.HubGold += moved;
+            run.Gold = 0;
+            return moved;
         }
 
-        // On run failure, all Gold is wiped (Difficulty System Section 4.3 & 5.1)
+        // On run failure, Run Gold is lost; secured Hub Gold is not affected (GDD Bab 16).
         public static void HandleRunFailure(RunState run)
         {
             if (run == null) return;
             run.Gold = 0;
         }
 
-        public static List<ConsumableShopEntry> GenerateHubShopCatalog()
+        // Hub Shop stock per limited item, refilled once per cleared dungeon (design decision 2026-11-20).
+        // Items not listed stay unlimited. Starting value: tune with playtests.
+        // Elixir (80 HP + 30 MP) gets a smaller stock than Draught/Ether because it heals about twice as much.
+        public static readonly Dictionary<string, int> HubRestock = new Dictionary<string, int> { ["draught"] = 10, ["ether"] = 10, ["elixir"] = 5 };
+
+        public static int HubStockLeft(RunState run, string itemId) =>
+            !HubRestock.TryGetValue(itemId, out int full) ? int.MaxValue
+            : run != null && run.HubShopStock.TryGetValue(itemId, out int left) ? left : full;
+
+        // How many the party can buy right now, ignoring gold: limited by shop stock and by the carry cap.
+        public static int HubBuyLimit(RunState run, string itemId) =>
+            run == null ? 0 : Math.Min(HubStockLeft(run, itemId), run.CarrySpace(itemId));
+
+        public static List<ConsumableShopEntry> GenerateHubShopCatalog(RunState run = null)
         {
-            // Hub Shop sells consumables with UNLIMITED STOCK (GDD Section 5.1 & Resolved Decision)
+            // Draught, Ether and Elixir have limited stock (HubRestock).
             // Does NOT sell Revive Item (exclusive to Dungeon Shop)
-            return new List<ConsumableShopEntry>
-            {
-                new ConsumableShopEntry(Database.Items["draught"], 20, isUnlimited: true),
-                new ConsumableShopEntry(Database.Items["ether"], 25, isUnlimited: true),
-                new ConsumableShopEntry(Database.Items["elixir"], 50, isUnlimited: true)
-            };
+            ConsumableShopEntry Entry(string id, int cost) => HubRestock.ContainsKey(id)
+                ? new ConsumableShopEntry(Database.Items[id], cost, isUnlimited: false, stock: HubStockLeft(run, id))
+                : new ConsumableShopEntry(Database.Items[id], cost, isUnlimited: true);
+            return new List<ConsumableShopEntry> { Entry("draught", 20), Entry("ether", 25), Entry("elixir", 50) };
         }
 
         public static bool TryBuyHubConsumable(RunState run, string itemId, int count, out string error)
@@ -157,7 +175,7 @@ namespace Obscure
             if (run == null) { error = "RunState is null."; return false; }
             if (count <= 0) { error = "Invalid item count."; return false; }
 
-            var catalog = GenerateHubShopCatalog();
+            var catalog = GenerateHubShopCatalog(run);
             var entry = catalog.FirstOrDefault(c => c.itemId == itemId);
             if (entry == null)
             {
@@ -165,20 +183,28 @@ namespace Obscure
                 return false;
             }
 
-            int totalCost = entry.cost * count;
-            if (run.Gold < totalCost)
+            if (count > HubStockLeft(run, itemId))
             {
-                error = $"Not enough Gold. Requires {totalCost} Gold, but party only has {run.Gold} Gold.";
+                error = HubStockLeft(run, itemId) <= 0 ? $"{entry.name} is sold out until the next dungeon is cleared."
+                    : $"Only {HubStockLeft(run, itemId)} {entry.name} left in stock.";
+                return false;
+            }
+            if (count > run.CarrySpace(itemId))
+            {
+                error = $"You can carry at most {Database.Items[itemId].maxStack} {entry.name} (room for {run.CarrySpace(itemId)}).";
                 return false;
             }
 
-            run.Gold -= totalCost;
-            for (int i = 0; i < count; i++)
+            int totalCost = entry.cost * count;
+            if (run.HubGold < totalCost)
             {
-                run.Items.Add(entry.itemId);
-                if (run.Inventory != null)
-                    run.Inventory.AddConsumable(entry.itemId, 1);
+                error = $"Not enough Gold. Requires {totalCost} Gold, but party only has {run.HubGold} Gold.";
+                return false;
             }
+
+            run.HubGold -= totalCost;
+            if (HubRestock.ContainsKey(itemId)) run.HubShopStock[itemId] = HubStockLeft(run, itemId) - count;
+            for (int i = 0; i < count; i++) run.TryAddConsumable(entry.itemId);
 
             error = null;
             return true;
@@ -203,9 +229,9 @@ namespace Obscure
                 return false;
             }
 
-            if (run.Gold < shopItem.cost)
+            if (run.HubGold < shopItem.cost)
             {
-                error = $"Not enough Gold. Requires {shopItem.cost} Gold, but party only has {run.Gold} Gold.";
+                error = $"Not enough Gold. Requires {shopItem.cost} Gold, but party only has {run.HubGold} Gold.";
                 return false;
             }
 
@@ -215,7 +241,7 @@ namespace Obscure
                 return false;
             }
 
-            run.Gold -= shopItem.cost;
+            run.HubGold -= shopItem.cost;
             shopItem.isSold = true;
             bought = shopItem.item;
 
@@ -237,13 +263,13 @@ namespace Obscure
                 return false;
 
             int cost = eq.GetUpgradeCostGold();
-            if (run.Gold < cost)
+            if (run.HubGold < cost)
             {
-                error = $"Not enough Gold. Requires {cost} Gold, but party only has {run.Gold} Gold.";
+                error = $"Not enough Gold. Requires {cost} Gold, but party only has {run.HubGold} Gold.";
                 return false;
             }
 
-            run.Gold -= cost;
+            run.HubGold -= cost;
             if (!eq.TryUpgrade(out error))
                 return false;
 
@@ -269,13 +295,13 @@ namespace Obscure
                 return false;
             }
 
-            if (run.Gold < TempleReviveCost)
+            if (run.HubGold < TempleReviveCost)
             {
-                error = $"Not enough Gold. Temple revival requires {TempleReviveCost} Gold, but party only has {run.Gold} Gold.";
+                error = $"Not enough Gold. Temple revival requires {TempleReviveCost} Gold, but party only has {run.HubGold} Gold.";
                 return false;
             }
 
-            run.Gold -= TempleReviveCost;
+            run.HubGold -= TempleReviveCost;
             unit.hp = Math.Max(1, (int)Math.Round(unit.stats.maxHp * 0.50f));
             unit.RecalculateStats();
 
@@ -291,13 +317,13 @@ namespace Obscure
             if (run == null) { error = "RunState is null."; return false; }
             if (unit == null) { error = "Target unit is null."; return false; }
             if (!unit.Alive) { error = $"{unit.name} must be revived before Recovery."; return false; }
-            if (run.Gold < TempleRecoveryCost)
+            if (run.HubGold < TempleRecoveryCost)
             {
-                error = $"Not enough Gold. Recovery requires {TempleRecoveryCost} Gold, but party only has {run.Gold} Gold.";
+                error = $"Not enough Gold. Recovery requires {TempleRecoveryCost} Gold, but party only has {run.HubGold} Gold.";
                 return false;
             }
 
-            run.Gold -= TempleRecoveryCost;
+            run.HubGold -= TempleRecoveryCost;
             unit.temporaryModifiers.Clear();
             unit.RecalculateStats();
             unit.hp = unit.stats.maxHp;

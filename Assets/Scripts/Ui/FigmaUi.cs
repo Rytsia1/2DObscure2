@@ -57,7 +57,21 @@ namespace Obscure
             if (root != null)
                 root.AddToClassList("uitk-screen-root");
             KeepRowsClear(root);
+            RenameCurrencyTerms(root);
             return root;
+        }
+
+        // The Figma screens still bake the old currency names. The game calls the carried pocket Spoils and the
+        // secured one Gold, so baked text is renamed on load. Text lookups (FindLabel, TitleRuleTags) use the new names.
+        // ponytail: runtime patch until the FELNA Figma file and its UXML export are renamed; delete it then.
+        static void RenameCurrencyTerms(VisualElement root)
+        {
+            root?.Query<TextElement>().ForEach(t =>
+            {
+                if (string.IsNullOrEmpty(t.text) || t.text.IndexOf(" GOLD", StringComparison.OrdinalIgnoreCase) < 0) return;
+                t.text = t.text.Replace("RUN GOLD IS ", "SPOILS ARE ").Replace("RUN GOLD", "SPOILS").Replace("HUB GOLD", "GOLD")
+                               .Replace("Run Gold", "Spoils").Replace("Hub Gold", "Gold");
+            });
         }
 
         // Hides baked Figma elements the game doesn't use (display: none keeps sibling indices stable).
@@ -82,9 +96,9 @@ namespace Obscure
         // Rule/descriptor tags baked beside screen titles; they only restate the title or a rule.
         public static readonly string[] TitleRuleTags =
         {
-            "HUB SHOP · CONSUMABLES · PAYS IN HUB GOLD", "EQUIPMENT · PAYS IN HUB GOLD",
-            "REVIVE · RECOVERY · PAYS IN HUB GOLD", "RELICS · PAYS IN HUB GOLD",
-            "PRICES ARE PLACEHOLDERS · TBD", "HUB ONLY", "RUN GOLD · LOST IF THE PARTY FALLS",
+            "HUB SHOP · CONSUMABLES · PAYS IN GOLD", "EQUIPMENT · PAYS IN GOLD",
+            "REVIVE · RECOVERY · PAYS IN GOLD", "RELICS · PAYS IN GOLD",
+            "PRICES ARE PLACEHOLDERS · TBD", "HUB ONLY", "SPOILS · LOST IF THE PARTY FALLS",
         };
 
         // Runs once, after the element's first layout. Use it to read exported Figma positions:
@@ -190,6 +204,7 @@ namespace Obscure
             var container = entry.uxml.CloneTree();
             var root = container.childCount == 1 ? container[0] : container;
             AttachSharedStyles(root, catalog, entry);
+            RenameCurrencyTerms(root);
             return root;
         }
 
@@ -456,7 +471,9 @@ namespace Obscure
             el.style.backgroundRepeat = new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat);
         }
 
-        public static void ShowConfirmationModal(VisualElement screenRoot, string title, string message, string confirmText, Action onConfirm, Action onCancel = null)
+        // Back/Esc runs onDismiss when given (e.g. "stay here"), otherwise the same as the cancel button.
+        public static void ShowConfirmationModal(VisualElement screenRoot, string title, string message, string confirmText, Action onConfirm, Action onCancel = null,
+            string cancelText = "CANCEL", Action onDismiss = null)
         {
             if (screenRoot == null) return;
             Sfx.Play(Sound.ModalOpen);
@@ -493,9 +510,9 @@ namespace Obscure
                 else UnityEngine.Object.DestroyImmediate(menuGo);
             }
 
-            modalMenu.onBack = () => { CloseModal(); onCancel?.Invoke(); };
+            modalMenu.onBack = () => { CloseModal(); (onDismiss ?? onCancel)?.Invoke(); };
 
-            var cancelEl = CreateButton("CANCEL", "button-slab", 200f);
+            var cancelEl = CreateButton(cancelText, "button-slab", 200f);
             cancelEl.AddToClassList("uitk-modal-btn");
             row.Add(cancelEl);
 
@@ -503,7 +520,7 @@ namespace Obscure
             confirmEl.AddToClassList("uitk-modal-btn");
             row.Add(confirmEl);
 
-            modalMenu.Add(cancelEl, "CANCEL", () => { CloseModal(); onCancel?.Invoke(); });
+            modalMenu.Add(cancelEl, cancelText, () => { CloseModal(); onCancel?.Invoke(); });
             modalMenu.Add(confirmEl, confirmText.ToUpperInvariant(), () => { CloseModal(); onConfirm?.Invoke(); });
 
             panel.Add(row);

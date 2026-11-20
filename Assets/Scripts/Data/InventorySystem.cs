@@ -1448,7 +1448,7 @@ namespace Obscure
             int effectiveCost = allowDragonbornDiscount ? run.GetDungeonShopDiscountedPrice(shopItem.cost) : shopItem.cost;
             if (run.Gold < effectiveCost)
             {
-                error = $"Not enough gold. Requires {effectiveCost} Gold, but party only has {run.Gold} Gold.";
+                error = $"Not enough spoils. Requires {effectiveCost} spoils, but party only has {run.Gold}.";
                 return false;
             }
 

@@ -168,7 +168,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Run,
                 sourceNodes = "Event / Treasure",
-                description = "Gold rewards +15% per stack (max 3 stacks)."
+                description = "Spoils rewards +15% per stack (max 3 stacks)."
             },
             new DungeonModifierDef
             {
@@ -278,7 +278,7 @@ namespace Obscure
                 categoryCapGroup = "stack_3",
                 target = ModifierTargetScope.Run,
                 sourceNodes = "Reward / Event",
-                description = "Gain +12 bonus Run Gold per stack upon winning each battle (max 3 stacks)."
+                description = "Gain +12 bonus Spoils per stack upon winning each battle (max 3 stacks)."
             },
             new DungeonModifierDef
             {

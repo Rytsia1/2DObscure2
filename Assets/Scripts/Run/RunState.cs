@@ -657,7 +657,15 @@ namespace Obscure
     public class RunState
     {
         public readonly int Seed;
+        // Seed of the current dungeon attempt: maps, node rewards and event risk rolls derive from it.
+        // Starts equal to Seed; BeginDungeonAttempt replaces it so a retry is never a replay.
+        public int DungeonSeed { get; private set; }
         public string RunId => Seed.ToString("X8");
+        // Retry budget (failure model C): ending a dungeon attempt by wipe or abandon spends one.
+        // A wipe with none left loses the expedition: its saves can no longer be loaded.
+        public int RetriesLeft { get; private set; } = RunConfig.RetriesPerExpedition;
+        public bool ExpeditionLost { get; private set; }
+        public bool CanAbandon => RetriesLeft > 0;
         public int Act => Map != null ? Map.act : 1;
         public int Stage => Map != null ? Math.Max(1, Map.stage) : 1;
         public int TotalStages => Map != null ? Math.Max(1, Map.totalStages) : 1;
@@ -673,14 +681,14 @@ namespace Obscure
         public readonly InventoryRuntime Inventory = new InventoryRuntime();
         public readonly RelicManager RelicManager = new RelicManager();
         public readonly DungeonModifierManager ModifierManager = new DungeonModifierManager();
-        public readonly Random Rng; // combat randomness
+        public Random Rng { get; private set; } // combat randomness, reseeded per dungeon attempt
         public readonly RunStats Stats = new RunStats();
         // Event blessings: applied to the party at the start of every battle until dungeon exit.
         public readonly List<StatusApply> BattleBuffs = new List<StatusApply>();
         public readonly DateTime StartedUtc = DateTime.UtcNow;
         public DateTime? EndedUtc { get; private set; }
-        public int Gold;
-        public int HubGold { get => Gold; set => Gold = value; }
+        public int Gold;    // Run Gold: earned in the dungeon, spent at the Dungeon Shop, lost on a wipe
+        public int HubGold; // Hub Gold: secured on dungeon clear, spent at Hub facilities, kept on a wipe (GDD Bab 16)
         public int RunGold => Gold;
         public DungeonShopData CurrentDungeonShop { get; set; }
 
@@ -761,11 +769,13 @@ namespace Obscure
         {
             Map = map;
             Seed = seed;
+            DungeonSeed = seed;
             Party = party.Select(c => new Unit(c)).ToList();
             Items.AddRange(Database.StartingItems);
             foreach (var itm in Database.StartingItems)
                 Inventory.AddConsumable(itm, 1);
             Rng = new Random(seed);
+            RestockHubShop();
             CurrentDungeonShop = DungeonShopData.Generate(Map?.act ?? 1, Rng);
             CurrentShop = CurrentDungeonShop.equipmentShop;
         }
@@ -790,7 +800,7 @@ namespace Obscure
             int h = 17;
             foreach (var c in n.id) h = unchecked(h * 31 + c);
             int stageSalt = (Stage - 1) * 1000003;
-            return new Random(unchecked(Seed * 486187739 + h * 31 + stageSalt + salt));
+            return new Random(unchecked(DungeonSeed * 486187739 + h * 31 + stageSalt + salt));
         }
 
         public void Enter(NodeDef n)
@@ -801,7 +811,7 @@ namespace Obscure
             if (n.type == NodeType.Treasure)
             {
                 PendingReward = RewardGenerator.ForTreasure(NodeRng(n), Relics);
-                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(n, 3), count: 3);
+                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(n, 3), count: 3, isMaxed: ModifierManager.IsAtCap);
                 PendingReward.bonusItemId = ModifierManager.TryRollScavengerBonusConsumable(NodeRng(n, 4));
             }
             if (n.type == NodeType.Shop)
@@ -832,7 +842,7 @@ namespace Obscure
                         }
                         else if (ch.randomModifier)
                         {
-                            var rolled = RewardGenerator.GenerateModifierChoices(NodeRng(n, 10 + i), count: 1, categoryFilter: ch.modifierCategoryFilter);
+                            var rolled = RewardGenerator.GenerateModifierChoices(NodeRng(n, 10 + i), count: 1, categoryFilter: ch.modifierCategoryFilter, isMaxed: ModifierManager.IsAtCap);
                             if (rolled.Count > 0) EventModifiers[i] = rolled[0];
                         }
 
@@ -918,7 +928,7 @@ namespace Obscure
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));
 
             int fortuneBonus = ModifierManager.ConsumeBattleVictoryBonusGold();
-            PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics);
+            PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics, Act);
             AwardBattleExp(enc.tier, standing);
             if (isStageBoss)
             {
@@ -930,16 +940,32 @@ namespace Obscure
                 PendingReward.bonusGoldFromModifier = fortuneBonus;
                 PendingReward.gold += fortuneBonus;
             }
-            if (!isFinalBoss)
+            // Modifiers come from elites and stage bosses (and treasure/events), not every normal fight, so each pick matters.
+            if (!isFinalBoss && enc.tier != Tier.Normal)
             {
-                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(Current, 3), count: 3);
+                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(Current, 3), count: 3, isMaxed: ModifierManager.IsAtCap);
             }
             PendingReward.bonusItemId = ModifierManager.TryRollScavengerBonusConsumable(NodeRng(Current, 4));
+        }
+
+        // Spends one retry for the attempt that just ended; with none left the expedition is lost.
+        // Mirrored into the committed baseline so a rollback restores the spent value, not the old one.
+        void SpendRetry()
+        {
+            if (RetriesLeft > 0) RetriesLeft--;
+            else ExpeditionLost = true;
+            var snap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+            if (snap != null)
+            {
+                snap.retriesLeft = RetriesLeft;
+                snap.expeditionLost = ExpeditionLost;
+            }
         }
 
         public void LoseCombat()
         {
             if (Status != RunStatus.Active) return;
+            SpendRetry();
             Status = RunStatus.Defeat;
             EndedUtc = DateTime.UtcNow;
             Gold = 0;
@@ -956,6 +982,8 @@ namespace Obscure
         // Section 5.4: Voluntary abandonment terminates active dungeon, discards uncommitted data, preserves committed progress
         public void AbandonExpedition()
         {
+            if (!CanAbandon) throw new InvalidOperationException("No retries left: the dungeon cannot be abandoned");
+            SpendRetry();
             Status = RunStatus.Defeat;
             EndedUtc = DateTime.UtcNow;
             Gold = 0;
@@ -967,7 +995,7 @@ namespace Obscure
             ResetDungeonUtilityCharges();
             PersistenceCommitHandler.RollbackUncommitted(this);
             if (Map != null && Map.stage != 1)
-                Map = MapGenerator.Generate(Seed, Act, 1);
+                Map = MapGenerator.Generate(DungeonSeed, Act, 1);
             Status = RunStatus.Active;
         }
 
@@ -1009,8 +1037,7 @@ namespace Obscure
                     }
                     else
                     {
-                        Items.Add(o.id);
-                        Inventory.AddConsumable(o.id, 1);
+                        TryAddConsumable(o.id); // at the carry cap the item is not added (the reward screen says so)
                     }
                     break;
                 case RewardKind.Equipment:
@@ -1025,6 +1052,33 @@ namespace Obscure
                 case RewardKind.Modifier: ModifierManager.AddModifier(o.id, this, o.element, Rng); break;
                 default: AddGold(o.amount); break;
             }
+        }
+
+        // ---- consumables: carry cap and Hub Shop stock (design decision 2026-11-20) ----
+        // Each consumable stacks up to its ItemDef.maxStack (Draught and Ether: 10). Items (the battle list) and Inventory
+        // (the bag) both hold consumables; the larger count is used, so a drift between them can never slip past the cap.
+        public int CarryCount(string itemId) =>
+            Math.Max(Items.Count(i => i == itemId), Inventory?.GetConsumableCount(itemId) ?? 0);
+
+        public int CarrySpace(string itemId) =>
+            Database.Items.TryGetValue(itemId, out var def) ? Math.Max(0, def.maxStack - CarryCount(itemId)) : int.MaxValue;
+
+        // Adds one consumable if there is room; false (nothing added) at the carry cap.
+        public bool TryAddConsumable(string itemId)
+        {
+            if (CarrySpace(itemId) <= 0) return false;
+            Items.Add(itemId);
+            Inventory?.AddConsumable(itemId, 1);
+            return true;
+        }
+
+        // Remaining Hub Shop stock for limited items (HubEconomy.HubRestock); refilled when a dungeon is cleared.
+        public readonly Dictionary<string, int> HubShopStock = new Dictionary<string, int>();
+
+        public void RestockHubShop()
+        {
+            HubShopStock.Clear();
+            foreach (var kv in HubEconomy.HubRestock) HubShopStock[kv.Key] = kv.Value;
         }
 
         public void AddGold(int amount)
@@ -1221,7 +1275,7 @@ namespace Obscure
             if (c.goldCost > Gold)
             {
                 status.isBlocked = true;
-                status.blockedReason = $"Need {c.goldCost} gold";
+                status.blockedReason = $"Need {c.goldCost} spoils";
                 return status;
             }
 
@@ -1338,10 +1392,9 @@ namespace Obscure
 
             if (grantSuccessRewards && !string.IsNullOrEmpty(c.item))
             {
-                Items.Add(c.item);
-                Inventory?.AddConsumable(c.item, 1);
+                bool added = TryAddConsumable(c.item);
                 if (Database.Items.TryGetValue(c.item, out var itemDef))
-                    notes.Add($"Gained {itemDef.name}.");
+                    notes.Add(added ? $"Gained {itemDef.name}." : $"No room for another {itemDef.name} (carry limit {itemDef.maxStack}).");
             }
 
             if (grantSuccessRewards && !string.IsNullOrEmpty(c.materialId))
@@ -1448,7 +1501,7 @@ namespace Obscure
         {
             if (Map == null || IsFinalStage) return false;
             int nextStage = Stage + 1;
-            var nextMap = overrideNextStageMap ?? MapGenerator.Generate(Seed, Act, nextStage);
+            var nextMap = overrideNextStageMap ?? MapGenerator.Generate(DungeonSeed, Act, nextStage);
             if (nextMap == null || nextMap.act != Act || nextMap.stage != nextStage) return false;
 
             Map = nextMap;
@@ -1464,11 +1517,22 @@ namespace Obscure
             return true;
         }
 
-        // Resets the current dungeon run cleanly back to Stage 1 floor 0 (used when re-embarking from Hub).
+        // Every entry into a dungeon from the Hub is a new attempt with its own seed: the map, node rewards,
+        // event risk rolls, dungeon shop and combat rolls all re-roll, so a retry after a wipe or abandon
+        // (or reloading a Hub save) is a fresh dungeon, not a replay of a known one.
+        public void BeginDungeonAttempt(int act, int dungeonSeed)
+        {
+            DungeonSeed = dungeonSeed;
+            Rng = new Random(dungeonSeed);
+            Gold = 0; // a new run starts with 0 Run Gold; Hub Gold stays in the Hub
+            RestartCurrentDungeon(MapGenerator.Generate(dungeonSeed, act, 1));
+        }
+
+        // Resets the current dungeon run cleanly back to Stage 1 floor 0.
         public void RestartCurrentDungeon(MapDef stageOneMap = null)
         {
             int act = Act;
-            Map = stageOneMap ?? MapGenerator.Generate(Seed, act, 1);
+            Map = stageOneMap ?? MapGenerator.Generate(DungeonSeed, act, 1);
             Current = null;
             Cleared.Clear();
             Status = RunStatus.Active;
@@ -1492,7 +1556,8 @@ namespace Obscure
         public void RestoreFromSave(GameSaveData data)
         {
             if (data == null) return;
-            Gold = data.gold != 0 ? data.gold : data.hubGold;
+            Gold = data.gold;
+            HubGold = data.hubGold;
 
             Items.Clear();
             if (data.items != null) Items.AddRange(data.items);
@@ -1630,14 +1695,23 @@ namespace Obscure
         public void RestoreFromCampaignSave(CampaignSaveData data)
         {
             if (data == null) return;
-            Gold = data.hubGold;
+            HubGold = data.hubGold;
+            Gold = 0; // the committed baseline is a Hub state: no Run Gold
+            RetriesLeft = data.retriesLeft;
+            if (data.hubShopStock != null && data.hubShopStock.Length > 0)
+            {
+                HubShopStock.Clear();
+                foreach (var s in data.hubShopStock) HubShopStock[s.itemId] = s.count;
+            }
+            else RestockHubShop(); // saves from before Hub Shop stock existed
+            ExpeditionLost = data.expeditionLost;
             Current = null;
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
             if (Map != null && Map.stage != 1)
-                Map = MapGenerator.Generate(Seed, Act, 1);
+                Map = MapGenerator.Generate(DungeonSeed, Act, 1);
 
             Relics.Clear();
             RelicManager.ClearAll();
@@ -1722,6 +1796,7 @@ namespace Obscure
             Current = null;
             PendingReward = null;
             Gold = 0;
+            HubGold = 0;
             Items.Clear();
             Items.AddRange(Database.StartingItems);
             Relics.Clear();

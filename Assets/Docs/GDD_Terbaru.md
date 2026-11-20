@@ -23,7 +23,7 @@
 | Equipment | 8 slot, 6 rarity, random affix, Legendary dan Mythic Effect |
 | Relic | Item pasif permanen milik party, maksimal 5, tanpa duplikat; dibeli dan dijual di Magic Shop |
 | Dungeon Modifier | Efek sementara yang dapat di-stack dan diambil lagi, dengan cap per efek; hilang saat dungeon clear |
-| Ekonomi | Run Gold dan Hub Gold; Dungeon Shop dan enam fasilitas Hub (Shop, Armory, Blacksmith, Training Ground, Temple, Magic Shop) |
+| Ekonomi | Spoils dan Gold; Dungeon Shop dan enam fasilitas Hub (Shop, Armory, Blacksmith, Training Ground, Temple, Magic Shop) |
 | Visual | Modern pixel art, anime JRPG, dark fantasy; kamera combat side-view |
 
 ## Cara Membaca Dokumen Ini
@@ -168,7 +168,7 @@ The difficulty is built around the following principles:
 
 -   **Tactical combat:** Turn-based individual character actions with
     reaction QTEs.
--   **Resource pressure:** HP, MP, healing supplies, and run Gold must
+-   **Resource pressure:** HP, MP, healing supplies, and spoils must
     be managed.
 -   **Roguelike risk:** Run failure ends the current expedition.
 -   **Sequential challenge:** The player must clear all 8 dungeons in a
@@ -340,7 +340,7 @@ When the party is wiped:
 
 -   The current expedition ends.
 -   The current dungeon progression is reset.
--   Run Gold is lost.
+-   Spoils are lost.
 -   The player returns to the Main Menu.
 -   A new expedition requires **New Game**.
 
@@ -644,8 +644,11 @@ There are six Ability Scores:
                                       effects, and class mechanics
   -----------------------------------------------------------------------
 
-No Ability Score affects QTE timing windows or grades; QTE measures
-player execution, while Ability Scores measure character power.
+One exception: DEX widens timing-based QTE windows by 3% per DEX
+modifier, inside the shared +25% window cap (Bab 12 §8.2). No other
+Ability Score affects QTE windows, and no Ability Score affects QTE
+grades or multipliers; QTE measures player execution, while Ability
+Scores measure character power.
 
 #### Stat Allocation
 
@@ -1224,7 +1227,7 @@ Semua caps disimpan sebagai data configurable.
 
 - Race tidak memiliki class restriction.
 - Racial Ability Bonus tidak boleh membuat class tertentu menjadi mandatory.
-- Tidak ada Ability Score yang memengaruhi QTE (Bab 12 §8.2).
+- Satu-satunya Ability Score yang memengaruhi QTE adalah DEX, lewat pelebaran window di dalam cap +25% (Bab 12 §8.2). Racial bonus DEX karena itu sedikit membantu timing, tetapi tidak boleh menjadi alasan sebuah race wajib dipilih.
 
 ### 7. Racial Feat Balance Rules
 
@@ -1855,7 +1858,7 @@ Class skills use the shared combat systems described in the related system docum
 - Offensive QTE is used only by Basic Attack and skills with direct damage. Healing, buff, debuff, and control skills without damage do not use QTE.
 - QTE grade does not change status chance.
 - Multi-hit skills use one sequence QTE: one marker per hit, maximum 6 markers; `qteProfile` may set a smaller marker count. AoE skills use one QTE per hit, applied to every target.
-- Poor has no global consequence beyond 0.5× damage and 0.5× Break Power. Additional consequences must come from a core class mechanic or be written in `qteProfile` (maximum one per skill, shown in the tooltip).
+- Poor has no global consequence beyond 0.75× damage and 0.5× Break Power (Bab 12 §2.5). Additional consequences must come from a core class mechanic or be written in `qteProfile` (maximum one per skill, shown in the tooltip).
 - Each class tree may have at most one Perfect-triggered effect in `qteProfile`. Core class mechanics (such as Martial Artist's Perfect combo bonus) are exempt.
 - Counter skills trigger only on a Defensive Perfect against a hit that targets the counter user while the counter is active. Maximum one counter per user per enemy action. Counters use no Offensive QTE and deal 1.0× unless `qteProfile` states otherwise.
 - Per-target damage coefficients of multi-target skills are at most 60% of an equivalent single-target skill.
@@ -1919,7 +1922,7 @@ Fighter is a reliable frontline combatant built around weapon mastery, tactical 
 ##### Tier 3 — Level 7
 
 **Active Skills**
-- **Counterattack** — Prepares or triggers a retaliatory strike when a defined enemy attack condition is met. Triggers on a Defensive Perfect while active (shared counter rule, §2.2); damage is TBD.
+- **Counterattack** — Prepares or triggers a retaliatory strike when a defined enemy attack condition is met. Triggers on a Defensive Perfect while active (shared counter rule, §2.2); the counter stays ready for 2 of the user's turns; damage comes from Counter Power at 1.0× (Bab 12 §6.5).
 - **Armor Break** — Deals damage and reduces the target's defense or armor for a duration. The affected defense and duration are TBD.
 - **Tactical Strike** — A precise attack that gains an additional benefit when a tactical condition is met, such as a vulnerable or controlled target. Condition and bonus are TBD.
 
@@ -3604,11 +3607,11 @@ Nilai Scaling belum ditetapkan secara universal dan akan diatur per skill.
 
 #### 2.2 QTE
 
-|**QTE Grade**|**Multiplier**|
-|---|---|
-|Perfect|1.5×|
-|Good|1.0×|
-|Poor|0.5×|
+|**QTE Grade**|**Multiplier damage**|**Multiplier Break Power (§2.5)**|
+|---|---|---|
+|Perfect|1.2× (+1 MP)|1.5×|
+|Good|1.0×|1.0×|
+|Poor|0.75×|0.5×|
 
 - QTE memengaruhi Physical, Elemental, dan Almighty direct damage.
 
@@ -3622,7 +3625,7 @@ Nilai Scaling belum ditetapkan secara universal dan akan diatur per skill.
 
 |**QTE Grade**|**Damage Reduction**|
 |---|---|
-|Perfect|100% (serangan Heavy: 50%)|
+|Perfect|75%; 100% saat Guard atau memakai shield (serangan Heavy: 50%) (Bab 12 §3.5)|
 |Good|50%|
 |Poor|0%|
 
@@ -3650,7 +3653,7 @@ D_akhir = floor(D × ∏(1 − DR_i) × (1 − R_QTE))
 
 #### 2.5 QTE dan Break Power
 
-- Break Power dari serangan pemain dikalikan multiplier grade Offensive QTE (1.5× / 1.0× / 0.5×).
+- Break Power dari serangan pemain dikalikan multiplier grade Offensive QTE (1.5× / 1.0× / 0.5×). Spread ini sengaja lebih lebar daripada spread damage (Bab 12 §2.5).
 
 - Break Power yang diterima karakter pemain dikalikan (1 − R_QTE) dari Defensive QTE.
 
@@ -3984,9 +3987,9 @@ Keputusan berikut berasal dari Master Checklist QTE yang sudah disetujui dan men
 | --- | --- |
 | Peran | QTE reaction-based menentukan kualitas eksekusi aksi dalam combat turn-based |
 | Grade | Perfect / Good / Poor ("Miss" diganti Poor agar tidak bentrok dengan miss dari Hit Chance) |
-| Offensive QTE | Perfect 1.5×, Good 1.0×, Poor 0.5× direct damage (Physical, Elemental, Almighty) dan Break Power; terpisah dari Hit Chance dan Critical; tidak memengaruhi DoT |
+| Offensive QTE | Direct damage (Physical, Elemental, Almighty): Perfect 1.2×, Good 1.0×, Poor 0.75×. Break Power: Perfect 1.5×, Good 1.0×, Poor 0.5×. Perfect juga mengembalikan 1 MP (§2.5). Terpisah dari Hit Chance dan Critical; tidak memengaruhi DoT |
 | Cakupan ofensif | Hanya Basic Attack dan skill dengan direct damage; heal, buff, debuff, dan control tanpa damage tidak memakai QTE |
-| Defensive QTE | Dipicu setiap aksi musuh dengan direct damage; Perfect 100% reduksi (Heavy 50%), Good 50%, Poor 0%; Perfect tidak menghalangi status |
+| Defensive QTE | Dipicu setiap aksi musuh dengan direct damage; Perfect 75% reduksi, atau 100% (full parry) saat Guard atau memakai shield (§3.5); Heavy 50%; Good 50%; Poor 0%; Perfect tidak menghalangi status |
 | Multi-hit | Defensif: satu QTE per hit. Ofensif: satu QTE sekuens per rangkaian |
 | AoE | Satu Shared QTE per hit, hasil seragam untuk semua target yang bisa bereaksi |
 | Urutan kalkulasi | Defensive QTE diterapkan setelah semua modifier dan sebelum rounding; Shield menyerap sisanya |
@@ -4211,13 +4214,13 @@ Semua angka bertanda *tuning* adalah nilai awal playtest. Angkanya konkret dan b
 
 #### 2.4 Konsekuensi Poor selain pengurangan damage
 
-**Keputusan: secara umum, Poor tidak punya konsekuensi tambahan di luar 0.5× damage dan 0.5× Break Power (3.1).** Konsekuensi lain hanya boleh ada sebagai mekanik class (seperti reset combo Martial Artist) atau tertulis di `qteProfile` skill.
+**Keputusan: secara umum, Poor tidak punya konsekuensi tambahan di luar 0.75× damage dan 0.5× Break Power (3.1, nilai direvisi November 2026, lihat §2.5).** Konsekuensi lain hanya boleh ada sebagai mekanik class (seperti reset combo Martial Artist) atau tertulis di `qteProfile` skill.
 
 **1. Tujuan desain.** Mencegah death spiral: kesalahan eksekusi sudah dihukum lewat damage, dan hukuman bertumpuk akan membuat pemain yang sedang tertinggal semakin sulit bangkit.
 
 **2. Aturan/mekanik.**
 
-- Poor ofensif: 0.5× damage dan 0.5× Break Power. Tidak ada efek lain secara global: MP tetap terpakai sesuai biaya skill, tidak ada self-debuff, tidak ada kehilangan giliran.
+- Poor ofensif: 0.75× damage dan 0.5× Break Power. Tidak ada efek lain secara global: MP tetap terpakai sesuai biaya skill, tidak ada self-debuff, tidak ada kehilangan giliran.
 - Konsekuensi tambahan hanya sah jika memenuhi salah satu syarat:
   1. Bagian dari mekanik inti class (contoh: Poor mereset combo Martial Artist).
   2. Tertulis eksplisit di `qteProfile` skill (contoh kandidat: Perfect Counter gagal jika Poor).
@@ -4237,6 +4240,28 @@ Semua angka bertanda *tuning* adalah nilai awal playtest. Angkanya konkret dan b
 
 - Audit data: semua skill dengan konsekuensi Poor dicek terhadap dua syarat sah di atas. Target: 0 pelanggaran.
 - Telemetri comeback: rasio menang encounter setelah pemain mendapat 3 Poor beruntun. Jika di bawah 25%, ada indikasi death spiral yang perlu ditinjau.
+
+#### 2.5 Pembayaran Perfect ofensif (revisi November 2026)
+
+**Keputusan: Perfect ofensif dibayar terutama dalam mata uang taktis (Break dan MP), bukan damage mentah.** Spread damage dipersempit menjadi Perfect 1.2×, Good 1.0×, Poor 0.75×. Spread Break Power tetap lebar: Perfect 1.5×, Good 1.0×, Poor 0.5×. Setiap Perfect ofensif mengembalikan 1 MP.
+
+**1. Tujuan desain.** Dengan spread lama (Poor 0.5× sampai Perfect 1.5×), hasil QTE menenggelamkan stat, equipment, dan pilihan build. Spread damage yang sempit membuat build tetap terlihat, sementara Perfect tetap berharga lewat Break (interrupt charge, status Broken) dan MP (lebih banyak skill class). Eksekusi menentukan seberapa baik aksi berjalan; build dan taktik menentukan apa hasilnya.
+
+**2. Aturan/mekanik.**
+
+- Damage langsung dikali grade: Perfect 1.2×, Good 1.0×, Poor 0.75×. Skill dengan `perfectPower` sendiri tetap punya Perfect yang lebih tinggi, diskalakan ×0.8 dari nilai lama: Power Strike 1.4×, Blade Tempest 1.6×, Quick Strike 1.4×, Aimed Shot 1.44×.
+- Break Power dikali grade 1.5× / 1.0× / 0.5× untuk Basic Attack dan semua skill ber-damage langsung.
+- Perfect pada Basic Attack atau skill ber-damage langsung mengembalikan 1 MP, sekali per aksi (bukan per marker), dibatasi Max MP. Heal, buff, dan counter tidak memakai Offensive QTE sehingga tidak memberi MP.
+- Auto-Good tidak pernah menghasilkan Perfect, sehingga tidak ada refund MP (sesuai aturan efek khusus Perfect).
+
+**3. Interaksi dengan sistem lain.** Bab 3 §5.2: MP tetap resource utama; refund kecil ini membuat Basic Attack yang dieksekusi baik membiayai skill class. Interrupt (6.5): Break yang lebar membuat Perfect penting untuk membatalkan serangan charge. Martial Artist (7): aturan combo per grade tidak berubah. Finisher: Perfect sekarang 1.2×, sehingga Poor pada finisher memberi sekitar 60% hasil Perfect, bukan sepertiga.
+
+**4. Status nilai.** Semua angka di bagian ini *tuning*: nilai awal, belum diukur.
+
+**5. Cara pengujian.**
+
+- Simulasi battle: bandingkan build kuat dengan QTE Good semua melawan build acak dengan QTE Perfect semua di boss Dungeon 1. Lulus: build dan eksekusi sama-sama terlihat mengubah rasio menang. Jika eksekusi masih mendominasi, persempit Perfect lagi; jika build kuat menang walau eksekusi buruk, perlebar kembali.
+- Playtest MP: hitung porsi giliran hero yang memakai Basic Attack di encounter normal. Jika masih di atas 80%, naikkan refund menjadi 2 MP. Jika MP party tidak pernah menipis sepanjang satu stage, turunkan atau hapus refund. Ambang 80% juga nilai awal.
 
 ### 3. Defensive QTE
 
@@ -4370,6 +4395,31 @@ Semua angka bertanda *tuning* adalah nilai awal playtest. Angkanya konkret dan b
 
 - Unit test urutan perhitungan: 12 kombinasi tier, Freeze, dan modifier. Target: semua sesuai clamp 66–125 ms.
 - Uji perbandingan build: tester yang sama memainkan boss dengan modifier 0% dan +25%. Target: rasio Perfect naik 10–20 poin persentase; kenaikan lebih dari 30 poin berarti cap terlalu tinggi.
+
+#### 3.5 Full parry: Guard atau shield (revisi November 2026)
+
+**Keputusan: Defensive Perfect saja hanya menangkis (75% reduksi). Full parry (0 damage) membutuhkan pilihan: Guard pada giliran sebelumnya atau shield yang terpasang.** Good dan Poor tidak berubah.
+
+**1. Tujuan desain.** Dengan aturan lama, setiap Perfect bernilai 0 damage, sehingga stat pertahanan, armor, dan aksi Guard hampir tidak berarti bagi pemain yang terampil. Full parry yang terikat pada Guard atau shield membuat keputusan taktis (siapa yang Guard sebelum serangan yang ditelegraph) dan build (shield) kembali penting, tanpa mengubah hasil pemain yang biasanya mendapat Good.
+
+**2. Aturan/mekanik.**
+
+- Damage yang diterima per grade: Perfect 0.25×, Good 0.5×, Poor 1.0×.
+- Perfect pada hit non-Heavy menjadi full parry (0 damage, tanpa Poise damage) jika target sedang Guard atau memakai shield/buckler di Second Hand.
+- Heavy tidak pernah bisa full parry: Perfect pada Heavy tetap 50% reduksi, termasuk saat Guard atau memakai shield.
+- Guard tetap menggandakan pertahanan: damage dasar dikali 0.5× sebelum QTE, lalu Perfect saat Guard menjadi 0.
+- Poise: Perfect yang hanya menangkis mengurangi Poise damage sama seperti Good (0.5×); full parry tidak memberi Poise damage.
+- Counter (6.5) tetap terpicu oleh setiap Defensive Perfect, baik full parry maupun tangkisan biasa.
+- Broken tetap membatasi Defensive QTE ke Good (3.1), sehingga full parry juga tidak mungkin saat Broken.
+
+**3. Interaksi dengan sistem lain.** Class: Fighter dan class lain yang bisa memakai shield mendapat identitas tank yang jelas. Equipment: affix shield yang menambah reduksi Perfect (contoh EQ019) perlu ditinjau ulang karena shield kini sudah memberi full parry. Difficulty: pemain yang biasanya meraih Perfect akan menerima lebih banyak damage dibanding sebelumnya kecuali memakai Guard atau shield; tuning encounter Dungeon 1 perlu dicek ulang.
+
+**4. Status nilai.** 0.25× adalah nilai *tuning*: nilai awal, belum diukur.
+
+**5. Cara pengujian.**
+
+- Playtest: catat porsi giliran yang memakai Guard sebelum serangan Heavy atau signature yang ditelegraph. Lulus jika Guard dipakai secara sengaja (bukan 0% dan bukan setiap giliran).
+- Simulasi: bandingkan damage yang diterima per stage oleh pemain dengan Perfect semua, dengan dan tanpa shield. Jika pemain tanpa shield masih hampir tidak menerima damage, naikkan 0.25×; jika party tanpa shield runtuh di encounter normal, turunkan.
 
 ### 4. Multi-hit dan AoE
 
@@ -4715,6 +4765,14 @@ Nilai dasar (dungeon 1–3, *tuning*):
 - Maksimal 1 counter per pengguna per aksi musuh, terpicu pada hit Perfect pertama.
 - Counter dijalankan setelah aksi musuh selesai.
 - Serangan counter tidak memakai Offensive QTE. Multiplier-nya tetap 1.0×, kecuali `qteProfile` skill menyatakan lain (kandidat: Perfect Counter 1.5×).
+- Skill counter menyiapkan counter selama sejumlah giliran pengguna: Counterattack 2, Counterstrike 2, Perfect Counter 1. Durasi berkurang di awal giliran pengguna, sama seperti status.
+- Damage counter = damage fisik biasa pengguna (Physical Power, variance, dan mitigasi DEF musuh seperti serangan setara Good) dengan power = M × (1 + Counter Power / 100).
+  - M = multiplier counter: Counterattack 1.0, Counterstrike 1.0, Perfect Counter 1.5; dikali 1.25 selama Draconic Overdrive.
+  - Counter Power = 10 + 2 × (modifier STR + modifier DEX), dibaca sebagai persen. Contoh: Fighter STR 16, DEX 12 punya Counter Power 18, sehingga counter-nya 1.18× serangan dasar Good.
+  - Karena memakai Physical Power, counter ikut naik bersama weapon, level, dan Attack Up, sehingga tidak tertinggal di dungeon akhir.
+- Alasan angka: skill counter memakan satu giliran dan MP, dan baru membayar jika pengguna diserang lalu meraih Perfect. Satu counter minimal setara satu serangan dasar Good agar stance tidak pernah lebih buruk daripada menyerang biasa, dan Counter Power memberi alasan untuk build STR/DEX.
+- Status nilai: *tuning*, belum diukur. Uji: hitung porsi giliran Fighter dan Martial Artist yang dipakai untuk stance counter dalam playtest. Jika lebih dari 40%, stance terlalu kuat: turunkan M atau skala Counter Power. Jika kurang dari 5%, counter terlalu lemah: naikkan M. Ambang 40% dan 5% juga nilai awal.
+- Combo Martial Artist: Counterstrike +1 dan Perfect Counter +2 setiap kali counter terpicu, dibatasi Maximum Combo. Counter tidak dihitung sebagai "menyerang" untuk aturan reset combo (Bab 8 §5.1).
 - Counter tetap terpicu oleh Perfect pada serangan Heavy, walaupun reduksinya hanya 50%.
 - Break Power counter dihitung dengan multiplier 1.0×, sehingga counter bisa ikut membantu interrupt.
 - Musuh tidak punya counter berbasis QTE. Bahaya dari musuh hanya datang di giliran musuh sendiri.
@@ -4865,11 +4923,11 @@ Nilai dasar (dungeon 1–3, *tuning*):
 
 **3. Interaksi dengan sistem lain.** Damage calculation: F dan bonus pasif adalah Damage Bonus multiplicative, sehingga tetap tunduk pada Defense dan affinity sesuai urutan yang ada (finisher dikecualikan dari Critical). 7.3: tabel memakai rentang 0–12. 3.1: Broken mereset combo, sehingga menahan combo penuh saat Break gauge tinggi adalah keputusan berisiko.
 
-**4. Kurva kesulitan dan sumber tantangan.** Finisher punya taruhan ganda: combo yang dibangun beberapa giliran dipertaruhkan pada satu QTE, dan Poor membuat hasilnya hanya sepertiga dari Perfect. Ini sengaja menjadikan finisher momen paling menegangkan bagi Martial Artist.
+**4. Kurva kesulitan dan sumber tantangan.** Finisher punya taruhan ganda: combo yang dibangun beberapa giliran dipertaruhkan pada satu QTE, dan Poor membuat hasilnya sekitar 60% dari Perfect (0.75× lawan 1.2×, §2.5), ditambah kehilangan Break dan refund MP. Ini sengaja menjadikan finisher momen paling menegangkan bagi Martial Artist.
 
 **5. Risiko.**
 
-- Final Technique dengan Perfect dan Critical bisa memberi lonjakan damage sangat besar (100 × 3.4 × 1.5 × 3.0 Critical maksimal = 1530). Mitigasi (Fase 3): finisher tidak bisa Critical, sehingga hasil maksimalnya 100 × 3.4 × 1.5 = 510.
+- Final Technique dengan Perfect dan Critical bisa memberi lonjakan damage sangat besar (100 × 3.4 × 1.2 × 3.0 Critical maksimal = 1224). Mitigasi (Fase 3): finisher tidak bisa Critical, sehingga hasil maksimalnya 100 × 3.4 × 1.2 = 408 (multiplier Perfect 1.2×, §2.5).
 - Pemain bisa merasa Poor pada finisher terlalu menghukum. Diterima sebagai identitas class; Lucky dan modifier window adalah alat mitigasi.
 
 **6. Cara pengujian.**
@@ -4969,30 +5027,33 @@ Class lain (kandidat, mengikuti dua jalur yang diizinkan):
 
 #### 8.2 Atribut karakter dan QTE
 
-**Keputusan: tidak ada atribut (STR, DEX, VIT, INT, WIS, CHA) yang memengaruhi QTE.** QTE mengukur keterampilan pemain; atribut mengukur kekuatan karakter. Keduanya dipisahkan agar sumber keberhasilan selalu jelas.
+**Keputusan (direvisi November 2026): DEX adalah satu-satunya atribut yang memengaruhi QTE, dan hanya lewat lebar window.** Atribut lain (STR, VIT, INT, WIS, CHA) tidak memengaruhi QTE. Tidak ada atribut yang mengubah grade, multiplier, atau T\_lead. Keputusan sebelumnya ("tidak ada atribut yang memengaruhi QTE") diganti karena implementasi sudah memakai bonus DEX dan tema "agility" DEX memang diharapkan pemain.
 
-**1. Tujuan desain.** Mencegah QTE menjadi stat yang bisa dibeli lewat Point Buy, sekaligus mencegah atribut tertentu (terutama DEX) menjadi pilihan wajib bagi semua build.
+**1. Tujuan desain.** Memberi build DEX sedikit bantuan timing yang terasa, tanpa membuat QTE menjadi stat yang bisa dibeli lewat Point Buy, dan tanpa membuat DEX wajib bagi semua build.
 
 **2. Aturan/mekanik.**
 
-- Window, T\_lead, grade, dan multiplier QTE tidak membaca atribut apa pun.
-- DEX tetap memengaruhi Accuracy dan Evasion (Character Creation System), yang terpisah dari QTE.
-- Satu-satunya cara karakter memengaruhi QTE adalah lewat modifier window dari equipment, talent, dan passive (3.4), dengan cap +25%.
+- Window Perfect dan Good dikali (1 + 3% × modifier DEX). Modifier negatif menyempitkan window: DEX 8 (modifier −1) berarti −3%.
+- Berlaku untuk QTE berbasis timing: timing bar, Charge, Moving Target, Combo, dan defensive tap/dodge. Tidak berlaku untuk QTE typing (incantation dan Ward).
+- Bonus DEX ditumpuk additive dengan modifier window dari equipment, talent, dan passive (3.4), di dalam cap bersama +25%. Batas bawah total −15% dari atribut; W\_P minimum 66 ms tetap berlaku.
+- Dengan batas atribut 20 (modifier +5), DEX paling banyak memberi +15%, sehingga masih ada ruang 10% untuk modifier lain sebelum cap.
+- Grade, multiplier, dan T\_lead tidak membaca atribut apa pun. DEX tetap juga memengaruhi Accuracy dan Evasion (Character Creation System).
+- STR dan DEX memengaruhi damage counter lewat Counter Power (6.5). Ini kekuatan karakter, bukan QTE: atribut menentukan seberapa keras counter memukul, bukan apakah counter terpicu.
 - Pengaturan accessibility (Bagian 10) bukan atribut dan tidak dihitung dalam cap.
 
-**3. Interaksi dengan sistem lain.** Character Creation: Point Buy tetap fokus pada damage, HP, dan stat turunan lainnya. Hit Chance: prinsip "QTE terpisah dari Hit Chance" diperluas menjadi "QTE terpisah dari atribut". 3.4: jalur modifier tetap satu, sehingga balancing tetap terpusat.
+**3. Interaksi dengan sistem lain.** Character Creation dan Race (Bab 6 §6.3): racial bonus DEX ikut sedikit membantu timing. 3.4: jalur modifier window tetap satu cap +25%, sehingga balancing tetap terpusat. Hit Chance: QTE tetap terpisah dari Hit Chance.
 
-**4. Kurva kesulitan dan sumber tantangan.** Kesulitan QTE untuk karakter level 1 dan level 15 sama di tier dan dungeon yang sama. Peningkatan karakter memengaruhi seberapa besar hasil QTE (lewat damage dan HP), bukan seberapa mudah QTE dieksekusi.
+**4. Kurva kesulitan dan sumber tantangan.** Karakter dengan DEX tinggi mendapat window sedikit lebih lebar, tetapi tier musuh dan dungeon tetap menjadi sumber utama kesulitan. Kenaikan DEX lewat ASI (level 4, 8, 12, 14) memberi progresi timing kecil yang terlihat.
 
 **5. Risiko.**
 
-- Pemain mengharapkan DEX membantu timing karena tema "agility". Mitigasi: tooltip DEX menyebutkan cakupannya secara eksplisit.
-- Tidak ada progresi QTE dari leveling bisa terasa datar. Diterima, karena progresi sudah datang dari keterampilan pemain dan dari equipment/talent.
+- DEX menjadi pilihan wajib untuk semua build. Mitigasi: bonus maksimal +15% di dalam cap bersama +25%, dan DEX bersaing dengan atribut utama class lain di Point Buy.
+- Sumber keberhasilan QTE menjadi kurang jelas. Mitigasi: tooltip DEX dan layar stat menampilkan bonus window secara eksplisit.
 
 **6. Cara pengujian.**
 
-- Uji regresi: QTE dijalankan dengan dua karakter yang atributnya ekstrem berbeda. Target: window dan T\_lead identik.
-- Survei: "Apa yang membuat QTE-mu lebih mudah?" Target: tidak ada lebih dari 10% tester yang menyebut atribut.
+- Uji regresi: QTE timing dijalankan dengan karakter DEX 8 dan DEX 20. Target: lebar window berbeda tepat sesuai rumus, T\_lead identik, dan QTE typing identik.
+- Uji build (nilai *tuning*, belum diukur): tester yang sama memainkan boss yang sama dengan DEX 8 dan DEX 20. Target: rasio Perfect naik maksimal 15 poin persentase. Jika lebih, turunkan 3% per modifier.
 
 #### 8.3 Equipment yang memodifikasi QTE
 
@@ -5737,7 +5798,7 @@ Keseimbangan antara ekonomi resource survival (HP, MP, Gold) dan durasi pertarun
 | 7.4 Finisher | Direvisi | Finisher tidak bisa Critical |
 | 7.5 Passive dan talent | Selesai | Class lain hanya lewat dua jalur yang diizinkan |
 | 8.1 Retry Lucky ofensif | Selesai | Alur identik dengan defensif |
-| 8.2 Atribut | Selesai | Tidak ada atribut yang memengaruhi QTE |
+| 8.2 Atribut | Selesai (direvisi November 2026) | Hanya DEX yang memengaruhi QTE, lewat lebar window di dalam cap +25% |
 | 8.3 Equipment | Direvisi | Batas efek Perfect untuk pemulihan resource |
 | 8.4 Talent lain | Selesai | Quick Reflex dan Steady Hand |
 | 9.1 Animasi per grade | Selesai | Hit-stop per grade di dalam 350 ms |
@@ -6283,7 +6344,7 @@ Contoh:
 
 Angka merupakan contoh balancing values.
 
-Upgrade menggunakan Hub Gold dan materials.
+Upgrade menggunakan Gold dan materials.
 
 Upgrade tidak mengubah Affix Values.
 
@@ -6305,13 +6366,13 @@ Equipment yang diperoleh melalui:
 
 tetap dimiliki pemain meskipun run gagal.
 
-Equipment yang diperoleh selama run tidak dihapus ketika Run Gold hilang.
+Equipment yang diperoleh selama run tidak dihapus ketika Spoils hilang.
 
 #### 10.1 Run Failure
 
 Ketika seluruh party mati:
 
-- Run Gold dihapus.
+- Spoils dihapus.
 - Dungeon progression di-reset sesuai run failure rules.
 - Run state di-reset.
 - Equipment yang diperoleh selama run tetap persistent.
@@ -6321,7 +6382,7 @@ Ketika seluruh party mati:
 
 Ketika dungeon berhasil diselesaikan:
 
-- Run Gold yang tersisa ditransfer ke Hub Gold.
+- Spoils yang tersisa ditransfer ke Gold.
 - Equipment yang diperoleh selama run tetap persistent.
 - Equipment yang dibeli selama run tetap persistent.
 - Dungeon progression berlanjut sesuai sequential progression rules.
@@ -6704,7 +6765,7 @@ Revisi ini menggantikan aturan lama yang menyatakan relic hilang saat layer sele
 | Duplikat | Tidak boleh memiliki lebih dari satu relic dengan ID yang sama |
 | Penggantian di Hub | Boleh kapan saja |
 | Penjualan | Hanya melalui Magic Shop (Bab 16 §11) |
-| Pembelian | Melalui Magic Shop dengan Hub Gold |
+| Pembelian | Melalui Magic Shop dengan Gold |
 | Layer transition | Relic tetap dimiliki dan aktif |
 | Dungeon clear | Relic tetap dimiliki |
 | Run failure | Relic tetap dimiliki (lihat konflik di Bab 21 §21.1) |
@@ -6785,7 +6846,7 @@ Rarity relic memakai tingkatan sendiri, terpisah dari rarity equipment: Common, 
 | --- | --- |
 | Equipment (Bab 13) | Relic tidak memakai equipment slot, affix, atau Blacksmith Upgrade |
 | Magic Shop (Bab 16 §11) | Relic dapat dibeli di sini dan hanya dapat dijual di sini |
-| Hub Gold (Bab 16) | Mata uang transaksi relic; harga TBD |
+| Gold (Bab 16) | Mata uang transaksi relic; harga TBD |
 | QTE (Bab 12) | Relic yang dipicu Perfect mengikuti batas Bab 12 §8.3: pemulihan resource maksimal 2% Max HP atau Max MP per pemicu dan maksimal satu pemicu per giliran karakter. Efek ini tidak aktif saat Auto-Good (Bab 12 §10.1). Relic yang mengubah timing window masuk cap bersama +25% |
 | Damage (Bab 11) | Bonus dan pengurangan damage dari relic adalah modifier multiplicative pada step yang sesuai di Bab 11 §7, sebelum Defensive QTE |
 | Status (Bab 11) | Bonus Status Effect Resistance dari relic additive dengan sumber lain dan tunduk pada cap 75% |
@@ -6832,7 +6893,7 @@ Relic Layer 1 bertema kerajaan kuno yang runtuh dan Zoroa, The Harvester of Soul
 | R004 | Gravekeeper's Thread | Survival | Setelah battle, karakter dengan HP terendah memulihkan 3% Max HP | Common | Pasif |
 | R005 | Warden's Broken Key | Utility | Pada event bertag `hidden` atau `trap`, tampilkan satu petunjuk tambahan jika tersedia | Rare | Pasif |
 | R006 | Crown of the Unremembered | Offensive | Damage terhadap musuh yang terkena status effect +7% | Rare | Pasif |
-| R007 | Mourner's Coin | Economy | Run Gold yang ditemukan +10% (dibulatkan ke bawah) | Uncommon | Pasif |
+| R007 | Mourner's Coin | Economy | Spoils yang ditemukan +10% (dibulatkan ke bawah) | Uncommon | Pasif |
 | R008 | Pale Lantern | Exploration | Saat memilih jalur, tampilkan tipe satu node tersembunyi di depan | Rare | Pasif |
 | R009 | Soul-Tether Ring | Defensive | Sekali per battle, damage yang akan membuat karakter Down menyisakan 1 HP | Epic | 1/battle |
 | R010 | Executioner's Bell | Offensive | Serangan pertama party di setiap battle mendapat Break Power +15% | Uncommon | Per battle |
@@ -7033,9 +7094,9 @@ Character death is individual rather than immediately run-ending. A run can cont
 
 ### 2. Design Goals
 
-- Give Dungeon Shop purchases meaningful risk because Run Gold is lost on a failed run.
+- Give Dungeon Shop purchases meaningful risk because Spoils are lost on a failed run.
 
-- Reward successful dungeon completion by carrying all remaining Run Gold into the Hub without a conversion penalty.
+- Reward successful dungeon completion by carrying all remaining Spoils into the Hub without a conversion penalty.
 
 - Separate Hub services by purpose so players can quickly identify where to shop, upgrade, train, or revive.
 
@@ -7047,7 +7108,7 @@ Character death is individual rather than immediately run-ending. A run can cont
 
 #### 3.1 Dungeon Shop
 
-The Dungeon Shop is encountered inside a dungeon run. It uses Run Gold and is intended to help the party respond to current-run needs. Its exact appearance, placement frequency, inventory size, stock rules, and refresh rules have not yet been defined.
+The Dungeon Shop is encountered inside a dungeon run. It uses Spoils and is intended to help the party respond to current-run needs. Its exact appearance, placement frequency, inventory size, stock rules, and refresh rules have not yet been defined.
 
 - May offer consumables.
 
@@ -7059,7 +7120,7 @@ The Dungeon Shop is encountered inside a dungeon run. It uses Run Gold and is in
 
 #### 3.2 Hub Shops and Facilities
 
-The Hub contains six distinct facilities. Hub purchases and services use the persistent Hub Gold balance.
+The Hub contains six distinct facilities. Hub purchases and services use the persistent Gold balance.
 
 |**Facility Name**|**Primary Function**|**Confirmed Scope**|
 |---|---|---|
@@ -7076,12 +7137,12 @@ The Hub contains six distinct facilities. Hub purchases and services use the per
 
 |**Balance**|**Description**|**Persistence**|
 |---|---|---|
-|Run Gold|Gold acquired and held during the current dungeon run; spent at Dungeon Shop.|Temporary; cleared on run failure.|
-|Hub Gold|Gold secured by completing a dungeon; spent at Hub facilities.|Persistent between runs, subject to the game's overall reset rules.|
+|Spoils|Gold acquired and held during the current dungeon run; spent at Dungeon Shop.|Temporary; cleared on run failure.|
+|Gold|Gold secured by completing a dungeon; spent at Hub facilities.|Persistent between runs, subject to the game's overall reset rules.|
 
 #### 4.2 Successful Dungeon Completion
 
-- All remaining Run Gold is transferred to Hub Gold.
+- All remaining Spoils are transferred to Gold.
 
 - The transfer is 1:1; there is no fee, loss, or conversion deduction.
 
@@ -7089,15 +7150,15 @@ The Hub contains six distinct facilities. Hub purchases and services use the per
 
 #### 4.3 Failed Run
 
-- All Run Gold remaining at the time of failure is lost.
+- All Spoils remaining at the time of failure are lost.
 
-- Previously secured Hub Gold is not affected by the Run Gold loss.
+- Previously secured Gold is not affected by the Spoils loss.
 
 - The run failure and dungeon reset follow the game's established run-failure rules.
 
 #### 4.4 Example
 
-The party earns 500 Run Gold and spends 150 at the Dungeon Shop. If the dungeon is completed, the remaining 350 Gold is transferred in full to Hub Gold. If the entire party dies before completion, the remaining 350 Run Gold is lost.
+The party earns 500 Spoils and spends 150 at the Dungeon Shop. If the dungeon is completed, the remaining 350 Spoils are converted in full to 350 Gold. If the entire party dies before completion, the remaining 350 Spoils are lost.
 
 ### 5. Character Death and Run Failure
 
@@ -7117,7 +7178,7 @@ The player must complete the dungeon while keeping at least one party character 
 
 #### 5.3 Run Failure Condition
 
-If every party character dies during the dungeon run, the run is considered failed. Under the game's established rule, the player returns to the Main Menu and the dungeon progression/run is reset; a new game is required to begin again. Run Gold is lost.
+If every party character dies during the dungeon run, the run is considered failed. Under the game's established rule, the player returns to the Main Menu and the dungeon progression/run is reset; a new game is required to begin again. Spoils are lost.
 
 ### 6. Revive System
 
@@ -7139,17 +7200,17 @@ Temple costs, requirements, and the Recovery service are defined in §10.
 
 1. Prepare the party in the Hub using Shop, Armory, Blacksmith, Training Ground, and Temple as needed.
 
-2. Enter a dungeon; the run begins with its Run Gold balance.
+2. Enter a dungeon; the run begins with no spoils.
 
-3. Acquire and spend Run Gold at Dungeon Shop(s), including the option to purchase a rare revive item.
+3. Acquire and spend Spoils at Dungeon Shop(s), including the option to purchase a rare revive item.
 
 4. Continue through the dungeon while at least one party character remains alive.
 
-5. If the dungeon is completed, transfer all remaining Run Gold to Hub Gold and return to the Hub.
+5. If the dungeon is completed, transfer all remaining Spoils to Gold and return to the Hub.
 
 6. Use Hub facilities to buy, upgrade, manage skills, and revive dead characters before the next run.
 
-7. If all party characters die, the run fails and remaining Run Gold is lost; apply the game's run reset rules.
+7. If all party characters die, the run fails and remaining Spoils are lost; apply the game's run reset rules.
 
 ### 8. Confirmed Rules and Open Design Items
 
@@ -7159,9 +7220,9 @@ Temple costs, requirements, and the Recovery service are defined in §10.
 
 - Hub facilities are named Shop, Armory, Blacksmith, Training Ground, Temple, and Magic Shop.
 
-- Run Gold is temporary; all remaining Run Gold transfers to Hub Gold after successful dungeon completion.
+- Spoils are temporary; all remaining Spoils transfer to Gold after successful dungeon completion.
 
-- Run Gold is lost if the run fails.
+- Spoils are lost if the run fails.
 
 - A character's death does not end the run if at least one party character remains alive.
 
@@ -7183,7 +7244,7 @@ Temple costs, requirements, and the Recovery service are defined in §10.
 
 - Training Ground skill management and upgrade costs/rules.
 
-- Whether Hub Gold persists across all new-game/reset cases beyond the currently established run-failure handling.
+- Whether Gold persists across all new-game/reset cases beyond the currently established run-failure handling.
 
 ### 9. Terminology
 
@@ -7191,8 +7252,8 @@ Temple costs, requirements, and the Recovery service are defined in §10.
 |---|---|
 |Dungeon Shop|Shopencountered duringa dungeon run.|
 |Hub|Town/base area between dungeon runs.|
-|Run Gold|TemporaryGold held duringa dungeon run.|
-|Hub Gold|Gold secured after successful dungeon completion.|
+|Spoils|Temporary gold held during a dungeon run.|
+|Gold|Gold secured after successful dungeon completion.|
 |Revive|Restore a dead character to a living/active state.|
 |Dead|Character state in which the character cannot participate in<br>combat until revived.|
 |Run Failure|Allpartycharacters are dead.|
@@ -7201,13 +7262,13 @@ Temple costs, requirements, and the Recovery service are defined in §10.
 
 #### 10.1 Overview
 
-Temple adalah fasilitas di Hub yang menyediakan layanan **Revive** dan **Recovery** bagi karakter party setelah kembali dari dungeon. Kondisi karakter tidak otomatis dipulihkan ketika pemain kembali ke Hub; pemain harus memakai layanan Temple dan membayarnya dengan **Hub Gold**.
+Temple adalah fasilitas di Hub yang menyediakan layanan **Revive** dan **Recovery** bagi karakter party setelah kembali dari dungeon. Kondisi karakter tidak otomatis dipulihkan ketika pemain kembali ke Hub; pemain harus memakai layanan Temple dan membayarnya dengan **Gold**.
 
 #### 10.2 Revive
 
 Revive menghidupkan kembali karakter yang telah mati.
 
-- Biaya Revive pertama dalam satu kunjungan Temple adalah **500 Hub Gold**.
+- Biaya Revive pertama dalam satu kunjungan Temple adalah **500 Gold**.
 - Setiap Revive berikutnya dalam kunjungan yang sama naik **50% secara majemuk** dari biaya Revive sebelumnya.
 - Pemain bebas menentukan urutan karakter yang di-Revive.
 - Perhitungan biaya kembali ke biaya dasar setiap kali pemain memulai kunjungan Temple yang baru.
@@ -7220,11 +7281,11 @@ C_n = ceil(500 × 1.5^(n − 1))
 
 |**Urutan Revive**|**Biaya**|
 |---|---|
-|Pertama|500 Hub Gold|
-|Kedua|750 Hub Gold|
-|Ketiga|1.125 Hub Gold|
-|Keempat|1.688 Hub Gold|
-|Kelima|2.532 Hub Gold|
+|Pertama|500 Gold|
+|Kedua|750 Gold|
+|Ketiga|1.125 Gold|
+|Keempat|1.688 Gold|
+|Kelima|2.532 Gold|
 
 #### 10.3 Recovery
 
@@ -7236,7 +7297,7 @@ Satu layanan Recovery untuk karakter yang masih hidup mencakup:
 
 Biaya dan aturan:
 
-- **300 Hub Gold per karakter**, flat, tidak bergantung pada jumlah HP/MP yang hilang atau jumlah status yang dihapus.
+- **300 Gold per karakter**, flat, tidak bergantung pada jumlah HP/MP yang hilang atau jumlah status yang dihapus.
 - Pemain memilih karakter yang ingin di-Recovery; tidak wajib memulihkan seluruh party.
 - Karakter harus hidup untuk memakai Recovery. Karakter yang mati harus di-Revive terlebih dahulu.
 
@@ -7248,10 +7309,10 @@ Contoh: dua karakter mati dan tiga karakter perlu Recovery.
 
 |**Layanan**|**Biaya**|
 |---|---|
-|Revive karakter pertama|500 Hub Gold|
-|Revive karakter kedua|750 Hub Gold|
-|Recovery tiga karakter|3 × 300 = 900 Hub Gold|
-|**Total**|**2.150 Hub Gold**|
+|Revive karakter pertama|500 Gold|
+|Revive karakter kedua|750 Gold|
+|Recovery tiga karakter|3 × 300 = 900 Gold|
+|**Total**|**2.150 Gold**|
 
 #### 10.5 Belum Ditentukan
 
@@ -7272,15 +7333,15 @@ Jenis item non-relic yang termasuk kategori kedua (equipment, consumable, materi
 
 #### 11.2 Currency
 
-- Currency: **Hub Gold**.
+- Currency: **Gold**.
 - Harga beli setiap item dan relic: TBD.
 - Nilai jual relic: TBD.
 
 #### 11.3 Pembelian
 
-- Tampilkan nama, rarity, deskripsi atau efek, dan harga barang, beserta saldo Hub Gold.
+- Tampilkan nama, rarity, deskripsi atau efek, dan harga barang, beserta saldo Gold.
 - Saat membeli relic, tampilkan kapasitas relic yang sedang terpakai.
-- Tampilkan feedback jika Hub Gold tidak mencukupi.
+- Tampilkan feedback jika Gold tidak mencukupi.
 - Setelah transaksi berhasil, perbarui saldo dan kepemilikan.
 - Relic yang dibeli menjadi milik permanen dan tunduk pada batas lima relic. Jika kapasitas penuh, pemain perlu mengosongkan slot dengan menjual atau mengganti relic terlebih dahulu. Detail UX saat kapasitas penuh: TBD.
 
@@ -7900,13 +7961,13 @@ The interface should support a party-based, turn-based roguelike RPG with clear 
 - Equipment inventory capacity: 100 slots. Consumables and materials are stackable.
 - Dungeon progression consists of **8 sequential dungeons**.
 - Run failure returns to the Main Menu and resets dungeon progression; a new game is required to begin again.
-- Run Gold is lost on failure. Gold from a cleared dungeon is retained and transferred 1:1 into Hub Gold.
+- Spoils are lost on failure. Spoils from a cleared dungeon convert 1:1 into Gold.
 - Equipment acquired during a run persists after failure.
 
 #### 2.2 Currency and persistence communication
 The UI must distinguish these resource states visually and textually:
-- **Run Gold:** temporary currency held during the current run.
-- **Hub Gold:** persistent currency available in the hub.
+- **Spoils:** gold the party is carrying inside a dungeon; secured as Gold on dungeon clear, lost on a wipe or abandon. Temporary currency held during the current run.
+- **Gold:** persistent currency available in the hub.
 - **Run progress:** current sequential dungeon progress, reset when the run fails.
 - **Persistent equipment:** equipment acquired during a run remains owned even if the run fails.
 
@@ -8080,7 +8141,7 @@ Provide a safe location for preparation between dungeon attempts.
 - Hub scene/background.
 - Facility selection or navigation menu.
 - Party summary.
-- Hub Gold display.
+- Gold display.
 - Current progression summary and Dungeon Entrance.
 
 ##### Facility destinations
@@ -8206,8 +8267,8 @@ Buy and sell items where the relevant shop rules permit.
 - Transaction confirmation.
 
 ##### Currency display
-- Hub Shop: Hub Gold.
-- Dungeon Shop: Run Gold.
+- Hub Shop: Gold.
+- Dungeon Shop: Spoils.
 
 ##### Feedback
 - Show insufficient currency clearly.
@@ -8294,7 +8355,7 @@ Show the player’s route and available next choices.
 - Available next nodes.
 - Locked/unavailable nodes.
 - Node type icon and short label.
-- Current party status and Run Gold.
+- Current party status and Spoils.
 - Proceed/Confirm action.
 
 ##### Node information
@@ -8318,7 +8379,7 @@ Keep essential run information visible while exploring.
 
 ##### Components
 - Party HP/resource summary.
-- Run Gold.
+- Spoils.
 - Current dungeon and node.
 - Map access.
 - Relevant interaction prompt.
@@ -8406,18 +8467,18 @@ Make reaction input readable and fair during combat.
 - Damage/result multiplier feedback.
 
 ##### Known result values
-| Result | Multiplier |
-|---|---:|
-| Perfect | 1.5× |
-| Good | 1.0× |
-| Poor | 0.5× |
+| Result | Damage | Break Power | Extra |
+|---|---:|---:|---|
+| Perfect | 1.2× | 1.5× | +1 MP |
+| Good | 1.0× | 1.0× | — |
+| Poor | 0.75× | 0.5× | — |
 
 These values should be displayed only where they apply in the final rules. QTE feedback should clarify that the multiplier affects direct damage, not damage-over-time effects.
 
 ##### Defensive result values
 | Result | Damage reduction |
 |---|---:|
-| Perfect | 100% (Heavy: 50%) |
+| Perfect | 75%; 100% with Guard or a shield (Heavy: 50%) |
 | Good | 50% |
 | Poor | 0% |
 
@@ -8496,14 +8557,14 @@ Communicate successful completion of a dungeon and the transfer of retained rewa
 - Dungeon clear heading.
 - Dungeon number/name.
 - Reward summary.
-- Run Gold transfer summary.
+- Spoils transfer summary.
 - Next dungeon / return to hub action, according to progression flow.
 
 ##### Currency message
 Show the exact transfer clearly:
-- Run Gold cleared.
-- Hub Gold gained at a 1:1 rate.
-- New Hub Gold total.
+- Spoils cleared.
+- Gold gained at a 1:1 rate.
+- New Gold total.
 
 Dungeon progression is sequential across eight dungeons.
 
@@ -8517,7 +8578,7 @@ Explain the failure outcome and give the player a clear exit.
 ##### Components
 - Defeat heading.
 - Run summary.
-- Run Gold lost.
+- Spoils lost.
 - Progress reset explanation.
 - Persistent equipment retention message.
 - Return to Main Menu action.
@@ -8527,7 +8588,7 @@ The UI must state that:
 - The failed run ends.
 - Dungeon progression resets.
 - A new game is required to begin again.
-- Run Gold is lost.
+- Spoils are lost.
 - Equipment acquired during the run remains persistent.
 
 This screen should not offer a Continue Run or Resume Dungeon action unless the game rules change.
@@ -8659,7 +8720,7 @@ Each screen should receive its displayed values from game state rather than main
 - Selected character/target/item/skill.
 - Inventory contents, slot usage, and stack counts.
 - Equipped gear.
-- Hub Gold and Run Gold.
+- Gold and Spoils.
 - Current dungeon, node, and progression state.
 - Combat turn order, actor, targets, actions, and results.
 - Status instances, durations, and stacks.
@@ -8776,8 +8837,8 @@ These items should be finalized before implementation:
 - [ ] Resource costs and currency type are shown before transactions.
 - [ ] Inventory capacity and stack counts are visible.
 - [ ] Equipment comparison shows both gains and losses.
-- [ ] Run Gold and Hub Gold are visually distinct.
-- [ ] Dungeon clear communicates the 1:1 Run Gold transfer.
+- [ ] Spoils and Gold are visually distinct.
+- [ ] Dungeon clear communicates the 1:1 Spoils transfer.
 - [ ] Run failure communicates reset rules and persistent equipment retention.
 - [ ] Invalid actions are disabled or explain why they cannot be used.
 - [ ] Important information is not communicated by color alone.
@@ -8841,6 +8902,14 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Tema dungeon TBD (Bab 17 §13.11, Bab 18 §20) | Identitas delapan layer dan boss-nya sudah ditetapkan di Bab 4 §6. Palet, arsitektur, dan prop per layer tetap perlu dirancang |
 | Jumlah equipment slot belum pasti | 8 slot: Main Hand, Second Hand, Head, Body, Leg, Foot, Accessory 1, Accessory 2. Weapon two-handed hanya menempati Main Hand (Bab 13) |
 | Nama grade QTE belum pasti | Perfect / Good / Poor (Bab 12) |
+| Tidak ada atribut yang memengaruhi QTE (Bab 12 §8.2 lama) | DEX melebarkan window QTE timing 3% per modifier, di dalam cap +25%; atribut lain tetap tidak memengaruhi QTE (Bab 12 §8.2, November 2026) |
+| Offensive QTE 1.5× / 1.0× / 0.5× untuk damage dan Break | Damage 1.2× / 1.0× / 0.75×; Break tetap 1.5× / 1.0× / 0.5×; Perfect mengembalikan 1 MP (Bab 12 §2.5) |
+| Gold reward run (placeholder 10–18 / 30–42 / treasure 20–35 / boss 100) | Battle 30–55, Elite 90–125, Treasure 60–105, Boss 350, relic fallback 90. Target (November 2026): clear Dungeon 1 cukup untuk sekitar satu Temple Recovery penuh untuk party (4 × 300), sehingga setelah tiap dungeon pemain memilih antara memulihkan seluruh party atau membeli gear. Diukur pada 200 map (`ExpPacingReport`): rata-rata sekitar 1.270 gold per jalur Dungeon 1 dengan elite aktif (dulu 385), sekitar 600 di Dungeon 2. Hanya fight dan treasure yang dihitung; memilih opsi gold di reward normal menambah lebih banyak |
+| Pilihan reward lemah: fight normal Draught atau Ether plus 3 modifier tiap fight; boss hanya 1 opsi (relic boss atau 30 gold); Dungeon 1 tanpa node Elite | Fight normal: pilih 1 dari consumable (Draught/Ether), equipment (Common–Uncommon; sampai Rare mulai Dungeon 3), atau gold tambahan (30–55). Modifier hanya ditawarkan dari Elite, stage boss, treasure, dan event, bukan setiap fight; modifier yang sudah mencapai cap tidak ditawarkan. Boss: pilih 1 dari relic boss (atau relic lain jika sudah dimiliki), relic kedua, dan equipment Rare/Epic; jika slot relic penuh, opsi relic diganti equipment. Dungeon 1: node Elite opsional di stage 2 dan 3; karena Dungeon 1 belum punya elite khusus, stage boss sebelumnya muncul kembali sebagai elite (stage 2: Reaper's Passage; stage 3: keduanya), dan boss stage yang sama atau berikutnya tidak pernah muncul lebih awal. Pacing tetap: median level 13–14 setelah Dungeon 1 |
+| Consumable tanpa batas di Hub Shop dan inventory | Batas bawaan per item (`maxStack`): Draught dan Ether maksimal 10, juga item lain sesuai `maxStack` katalognya. Stok Hub Shop: Draught 10, Ether 10, dan Elixir 5 (Elixir memulihkan sekitar dua kali lipat Draught), diisi ulang setiap kali dungeon clear. Hadiah item saat bawaan penuh tidak ditambahkan (layar reward menampilkan batasnya); pembelian yang melewati batas ditolak tanpa memotong gold |
+| EXP per encounter dan kurva TBD (placeholder 35 / 80 / 175) | EXP: Normal 150, Elite 350, Boss 750; kurva tetap 100 + 25 × (level − 1), cap 15. Target (November 2026): level 13 saat Dungeon 1 selesai, level 15 di Dungeon 2. Diukur pada 200 map (`BalanceSimulation.ExpPacingReport`): median level setelah Dungeon 1 adalah 13 (jalur menghindari fight) sampai 14 (jalur mencari fight); median level 15 setelah Dungeon 2. Konsekuensi: Dungeon 3–8 tidak memberi level; progresi di sana datang dari equipment, skill rank, dan relic |
+| Defensive Perfect = 100% reduksi | Perfect 75% reduksi; full parry (100%) hanya saat Guard atau memakai shield; Heavy tetap 50% (Bab 12 §3.5) |
+| Damage counter TBD (Bab 8) | Damage fisik setara Good dengan power M × (1 + Counter Power / 100); durasi counter dan combo gain per skill (Bab 12 §6.5) |
 | Arah rounding belum dikonfirmasi | Floor, sekali per hit (Bab 11 §7) |
 | Nilai combo Martial Artist TBD | Ditetapkan di Bab 8 §5.1 dan Bab 12 §7 |
 | Detail race TBD | Ditetapkan di Bab 6 |
@@ -8848,7 +8917,7 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Persistence dan stacking modifier masih Open (draft Modifier List) | Modifier hilang saat dungeon clear; dapat di-stack dan diambil lagi, dengan cap per efek (Bab 15 §2). Relic sekarang permanen, tetapi modifier tetap sementara |
 | Enemy turn order, initiative, action economy, dan enemy stat scaling TBD | Ditetapkan: Dynamic Initiative Queue berbasis Effective SPD tanpa RNG, satu giliran per unit per round, dan Linear Tier-Weighted Scaling (Bab 10 §7–8) |
 | Struktur pemilihan talent dan respec belum ditentukan | Pemilihan manual di level 3, 6, 9, 12, 15 tanpa kuota kategori; respec memakai Scroll of Emptiness (Bab 9 §2 dan §5) |
-| Biaya dan aturan Temple TBD | Revive 500 Hub Gold, naik 50% majemuk per Revive dalam satu kunjungan; Recovery 300 Hub Gold per karakter (Bab 16 §10) |
+| Biaya dan aturan Temple TBD | Revive 500 Gold, naik 50% majemuk per Revive dalam satu kunjungan; Recovery 300 Gold per karakter (Bab 16 §10) |
 | Filosofi difficulty hanya tercatat di Difficulty Design Supplement | Relentless Tactical Survival, lima pilar, prinsip operasional, serta arah Brutal but Recoverable, Limited Recovery, dan Controlled RNG dikonfirmasi (Bab 3 §2.1–2.4). Proposal enemy difficulty di supplement masih menunggu review |
 | Status bisa dirantai tanpa batas (jumlah instance status tidak dibatasi) | Control Effect (Stun, Sleep, Mind Control, Madness, Silence) tidak dapat di-stack per status dan memberi Control Immunity per status; Control Effect berbeda tetap dapat masuk; berlaku untuk semua unit; tidak ada bad-luck protection (Bab 11 §8.1, Bab 3 §2.4) |
 

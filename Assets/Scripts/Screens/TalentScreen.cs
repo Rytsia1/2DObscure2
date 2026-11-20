@@ -79,7 +79,7 @@ namespace Obscure
                 FigmaUi.DestroyMenu(ref menu);
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
-                menu.onBack = () => { if (respecOpen) { respecOpen = false; Rebuild(); } else Game?.Go(returnState); };
+                menu.onBack = () => { if (respecOpen) { respecOpen = false; Rebuild(); } else Game?.Back(returnState); };
                 menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
@@ -128,7 +128,7 @@ namespace Obscure
         void BuildHeader(Unit hero)
         {
             var backBtn = FigmaUi.FindButton(UiRoot, "Back");
-            if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Go(returnState)));
+            if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Back(returnState)));
 
             string[] frames = { "frame-vars-27", "frame-vars-28", "frame-vars-29", "frame-vars-30" };
             for (int i = 0; i < frames.Length; i++)

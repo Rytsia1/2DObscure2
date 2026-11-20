@@ -18,7 +18,7 @@ namespace Obscure
         protected int focusIndex;
         protected bool rebuilding;
 
-        protected static int Gold => Run != null ? Run.Gold : 0;
+        protected static int Gold => Run != null ? Run.HubGold : 0;
         protected static InventoryRuntime Bag => Run?.Inventory ?? new InventoryRuntime();
         protected static List<Unit> Party => Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
 
@@ -88,7 +88,7 @@ namespace Obscure
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
             if (hubTag != null)
             {
-                FigmaUi.SetInstanceText(hubTag, "text-0", $"{Money(Gold)} HUB GOLD");
+                FigmaUi.SetInstanceText(hubTag, "text-0", $"{Money(Gold)} GOLD");
                 FigmaUi.AnchorRight(hubTag, 24f);
             }
         }
@@ -248,7 +248,14 @@ namespace Obscure
 
         protected override string FigmaScreenKey => "06---Shop---Consumables";
         protected override Sound SuccessSound => Sound.Coin;
-        protected override void Init() => catalog = HubEconomy.GenerateHubShopCatalog();
+        protected override void Init() => catalog = HubEconomy.GenerateHubShopCatalog(Run);
+
+        // Buy limit ignoring gold: shop stock and the carry cap (Draught/Ether 10).
+        int Limit(string id) => sellTab ? int.MaxValue : HubEconomy.HubBuyLimit(Run, id);
+
+        string LimitReason(string id) =>
+            HubEconomy.HubStockLeft(Run, id) <= 0 ? "SOLD OUT · RESTOCKS AFTER THE NEXT DUNGEON"
+            : $"CARRY LIMIT {Database.Items[id].maxStack} REACHED";
 
         protected override void AfterRebuild()
         {
@@ -321,10 +328,13 @@ namespace Obscure
             {
                 int idx = i;
                 var r = rows[i];
-                bool afford = sellTab || Gold >= r.price;
+                bool canBuy = sellTab || Limit(r.id) > 0;
+                bool afford = sellTab || (Gold >= r.price && canBuy);
                 Color rc = r.def != null ? EquipmentRarities.GetColor(r.def.rarity) : Palette.Mist1;
-                string mid = sellTab ? $"OWN {r.owned}" : (r.def?.category ?? "CONSUMABLE").ToUpperInvariant();
-                string subRight = !afford ? $"NEED {Money(r.price - Gold)} MORE" : null;
+                int stock = HubEconomy.HubStockLeft(Run, r.id);
+                string mid = sellTab ? $"OWN {r.owned}"
+                    : stock != int.MaxValue ? $"STOCK {stock}" : (r.def?.category ?? "CONSUMABLE").ToUpperInvariant();
+                string subRight = !canBuy ? LimitReason(r.id) : Gold < r.price ? $"NEED {Money(r.price - Gold)} MORE" : null;
                 var row = CreateListRow(r.name, r.sub.ToUpperInvariant(), mid, Money(r.price), subRight, rc, afford ? Palette.Gold1 : Palette.Err, i == selected, false, () =>
                 {
                     if (selected != idx) { selected = idx; Rebuild(); }
@@ -364,12 +374,16 @@ namespace Obscure
 
             var desc = new UiLabel((r.def?.description ?? r.sub).ToUpperInvariant()) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 14 } };
             host.Add(desc);
-            host.Add(StatLine("YOU OWN", r.owned.ToString()));
-            host.Add(StatLine(sellTab ? "SELLS FOR" : "PRICE EACH", $"{Money(r.price)} HUB GOLD", Palette.Gold2));
+            host.Add(StatLine("YOU OWN", r.def != null && r.def.maxStack < 99 ? $"{r.owned} / {r.def.maxStack}" : r.owned.ToString()));
+            host.Add(StatLine(sellTab ? "SELLS FOR" : "PRICE EACH", $"{Money(r.price)} GOLD", Palette.Gold2));
+            if (!sellTab && HubEconomy.HubStockLeft(Run, r.id) != int.MaxValue)
+                host.Add(StatLine("IN STOCK", $"{HubEconomy.HubStockLeft(Run, r.id)} · RESTOCKS AFTER EACH DUNGEON"));
             if (r.def?.target != null) host.Add(StatLine("TARGET", r.def.target.ToUpperInvariant()));
 
-            if (!sellTab && Gold < r.price)
-                host.Add(CreateToast($"{r.name}: NOT ENOUGH HUB GOLD — NEED {Money(r.price - Gold)} MORE.", true));
+            if (!sellTab && Limit(r.id) <= 0)
+                host.Add(CreateToast($"{r.name}: {LimitReason(r.id)}.", true));
+            else if (!sellTab && Gold < r.price)
+                host.Add(CreateToast($"{r.name}: NOT ENOUGH GOLD — NEED {Money(r.price - Gold)} MORE.", true));
 
             var fbToast = CreateFeedbackToast();
             if (fbToast != null) host.Add(fbToast);
@@ -377,7 +391,7 @@ namespace Obscure
             var spacer = new VisualElement { style = { flexGrow = 1 } };
             host.Add(spacer);
 
-            bool canAct = sellTab || Gold >= r.price;
+            bool canAct = sellTab || (Gold >= r.price && Limit(r.id) > 0);
             var actBtn = FigmaUi.CreateButton(sellTab ? $"Sell for {Money(r.price)}" : "Buy...", canAct ? "button-primary" : "button-slab", 346f);
             actBtn.SetEnabled(canAct);
             host.Add(actBtn);
@@ -386,7 +400,7 @@ namespace Obscure
 
         void BuildDialog((string id, string name, string sub, ItemDef def, int price, int owned) r)
         {
-            int maxQty = Math.Max(1, Math.Min(99, Gold / Math.Max(1, r.price)));
+            int maxQty = Math.Max(1, Math.Min(Math.Min(99, Gold / Math.Max(1, r.price)), Limit(r.id)));
             qty = Mathf.Clamp(qty, 1, maxQty);
             int total = qty * r.price;
 
@@ -400,7 +414,7 @@ namespace Obscure
             card.style.borderRightColor = Palette.Gold3;
 
             card.Add(new UiLabel($"Buy {r.name}?") { style = { fontSize = 24, color = Palette.Gold1, marginBottom = 8 } });
-            card.Add(new UiLabel($"YOU OWN {r.owned} · PRICE {Money(r.price)} HUB GOLD EACH") { style = { fontSize = 13, color = Palette.Mist2, marginBottom = 16 } });
+            card.Add(new UiLabel($"YOU OWN {r.owned} · PRICE {Money(r.price)} GOLD EACH") { style = { fontSize = 13, color = Palette.Mist2, marginBottom = 16 } });
 
             var qtyRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 16 } };
             qtyRow.Add(new UiLabel("QTY") { style = { fontSize = 14, color = Palette.Mist3, width = 60 } });
@@ -413,8 +427,8 @@ namespace Obscure
             card.Add(qtyRow);
 
             var summary = new VisualElement { style = { backgroundColor = Palette.Ink0, paddingLeft = 12, paddingRight = 12, paddingTop = 8, paddingBottom = 8, marginBottom = 16, borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1, borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4 } };
-            summary.Add(StatLine("TOTAL", $"{Money(total)} HUB GOLD", Palette.Gold1));
-            summary.Add(StatLine("HUB GOLD AFTER", $"{Money(Gold)} › {Money(Gold - total)}"));
+            summary.Add(StatLine("TOTAL", $"{Money(total)} GOLD", Palette.Gold1));
+            summary.Add(StatLine("GOLD AFTER", $"{Money(Gold)} › {Money(Gold - total)}"));
             card.Add(summary);
 
             var btnRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd } };
@@ -443,7 +457,9 @@ namespace Obscure
         {
             dialogOpen = false;
             dialogFocusIndex = -1;
-            if (HubEconomy.TryBuyHubConsumable(Run, id, count, out string err)) Say($"BOUGHT {count} X {name}.", false);
+            bool ok = HubEconomy.TryBuyHubConsumable(Run, id, count, out string err);
+            catalog = HubEconomy.GenerateHubShopCatalog(Run); // refresh stock shown in the list
+            if (ok) Say($"BOUGHT {count} X {name}.", false);
             else Say(err, true);
         }
 
@@ -452,8 +468,8 @@ namespace Obscure
             if (Run == null || Bag.GetConsumableCount(id) <= 0) { Say("NOTHING TO SELL.", true); return; }
             Bag.RemoveConsumable(id, 1);
             Run.Items.Remove(id);
-            Run.Gold += value;
-            Say($"SOLD 1 FOR {value} HUB GOLD.", false);
+            Run.HubGold += value;
+            Say($"SOLD 1 FOR {value} GOLD.", false);
         }
     }
 
@@ -637,7 +653,7 @@ namespace Obscure
             if (fbToast != null) host.Add(fbToast);
 
             host.Add(new VisualElement { style = { flexGrow = 1 } });
-            host.Add(new UiLabel($"HUB GOLD {Money(Gold)} › {Money(Gold - s.cost)}") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 8 } });
+            host.Add(new UiLabel($"GOLD {Money(Gold)} › {Money(Gold - s.cost)}") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 8 } });
             bool canBuy = !s.isSold && Gold >= s.cost;
             var buyBtn = FigmaUi.CreateButton(s.isSold ? "Sold out" : $"Buy · {Money(s.cost)}", canBuy ? "button-primary" : "button-slab", 346f);
             buyBtn.SetEnabled(canBuy);
@@ -803,9 +819,9 @@ namespace Obscure
             int cost = e.GetUpgradeCostGold();
             bool canUp = e.CanUpgrade(out _), afford = Gold >= cost;
             var list = new VisualElement { style = { marginTop = 14 } };
-            list.Add(StatLine("HUB GOLD", canUp ? $"{Money(cost)} {(afford ? "✓" : "X")}" : "-", afford ? Palette.Gold1 : Palette.Err));
+            list.Add(StatLine("GOLD", canUp ? $"{Money(cost)} {(afford ? "✓" : "X")}" : "-", afford ? Palette.Gold1 : Palette.Err));
             host.Add(list);
-            host.Add(CreateToast(canUp ? $"SPENDS {Money(cost)} HUB GOLD. HUB GOLD AFTER: {Money(Gold - cost)}" : "AT MAXIMUM UPGRADE LEVEL.", canUp && !afford, "!"));
+            host.Add(CreateToast(canUp ? $"SPENDS {Money(cost)} GOLD. GOLD AFTER: {Money(Gold - cost)}" : "AT MAXIMUM UPGRADE LEVEL.", canUp && !afford, "!"));
 
             var fbToast = CreateFeedbackToast();
             if (fbToast != null) host.Add(fbToast);
@@ -943,7 +959,7 @@ namespace Obscure
             if (revive.Count + recover.Count == 0)
                 billLines.Add(new UiLabel("NOTHING SELECTED YET.") { style = { fontSize = 14, color = Palette.Mist3, marginBottom = 8 } });
             billLines.Add(StatLine("Total", Money(Total), Palette.Gold1));
-            billLines.Add(new UiLabel($"HUB GOLD {Money(Gold)} › {Money(Gold - Total)}") { style = { fontSize = 13, color = Total > Gold ? Palette.Err : Palette.Mist2, marginTop = 10 } });
+            billLines.Add(new UiLabel($"GOLD {Money(Gold)} › {Money(Gold - Total)}") { style = { fontSize = 13, color = Total > Gold ? Palette.Err : Palette.Mist2, marginTop = 10 } });
             rightHost.Add(billLines);
 
             var fbToast = CreateFeedbackToast();
@@ -1054,7 +1070,7 @@ namespace Obscure
             bool owned = Owned.Contains(r.id), full = count >= RelicManager.MaxRelicCapacity;
             var stats = new VisualElement();
             stats.Add(StatLine("RELIC SLOTS", owned ? $"{count} / 5" : $"{count} / 5 › {Math.Min(5, count + 1)} / 5"));
-            stats.Add(StatLine("HUB GOLD", $"{Money(Gold)} › {Money(Gold - r.buyPrice)}", Palette.Gold2));
+            stats.Add(StatLine("GOLD", $"{Money(Gold)} › {Money(Gold - r.buyPrice)}", Palette.Gold2));
             right.Add(stats);
 
             bool canBuy = !owned && !full && Gold >= r.buyPrice;
@@ -1107,9 +1123,9 @@ namespace Obscure
             if (Run == null) return;
             if (Owned.Contains(r.id)) { Say("YOU ALREADY OWN THIS RELIC.", true); return; }
             if (Run.RelicManager.IsFull) { Say("RELIC SLOTS ARE FULL.", true); return; }
-            if (Run.Gold < r.buyPrice) { Say($"NEED {Money(r.buyPrice - Run.Gold)} MORE HUB GOLD.", true); return; }
+            if (Run.HubGold < r.buyPrice) { Say($"NEED {Money(r.buyPrice - Run.HubGold)} MORE GOLD.", true); return; }
             if (!Run.TryAddRelic(r.id, out string err)) { Say(err, true); return; }
-            Run.Gold -= r.buyPrice;
+            Run.HubGold -= r.buyPrice;
             Say($"BOUGHT {r.name}. IT NOW EMPOWERS THE WHOLE PARTY.", false);
         }
 
@@ -1118,8 +1134,8 @@ namespace Obscure
             if (Run == null) return;
             Run.RelicManager.RemoveRelic(r.id);
             Run.Relics.Remove(r.id);
-            Run.Gold += r.sellPrice;
-            Say($"SOLD {r.name} FOR {Money(r.sellPrice)} HUB GOLD.", false);
+            Run.HubGold += r.sellPrice;
+            Say($"SOLD {r.name} FOR {Money(r.sellPrice)} GOLD.", false);
         }
     }
 }

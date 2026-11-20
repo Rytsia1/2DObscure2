@@ -348,7 +348,7 @@ namespace Obscure.Tests
             AssertActiveMenuAudit("Hub");
 
             // Give plenty of gold & materials for shop/blacksmith/inventory tests
-            Run.Gold = 5000;
+            Run.HubGold = 5000;
             Run.Inventory.AddMaterial("iron_ingot", 3);
 
             // 1. HubShop: Buy modal + / - keeps focus on +/- instead of jumping to Buy
@@ -422,6 +422,9 @@ namespace Obscure.Tests
             AssertActiveMenuAudit("Talents-RespecModal", checkOrphanButtons: false);
             yield return ClickMenuItem("Cancel");
             yield return ClickMenuItem("Back");
+            Assert.AreEqual(GameState.Skills, State, "Back from Talents returns to the Skills screen it was opened from");
+            yield return ClickMenuItem("Back");
+            Assert.AreEqual(GameState.Hub, State);
 
             yield return ClickMenuItem("Save");
             Assert.AreEqual(GameState.Save, State);
@@ -498,6 +501,66 @@ namespace Obscure.Tests
             for (float t = 0; t < 10f && cb.Log.Count == logBefore; t += Time.unscaledDeltaTime)
                 yield return null;
             Assert.Greater(cb.Log.Count, logBefore, "Clicking ATTACK + Enemy target must execute attack");
+        }
+
+        // Regression: Save/Load screens used to be rejected because the gate only allowed State == Hub / MainMenu,
+        // and Load's Back always went to the Main Menu.
+        [UnityTest]
+        public IEnumerator SaveAndLoadScreens_WriteReadAndReturnToHub()
+        {
+            yield return Begin();
+            Game.I.StartRun();
+            yield return Settle();
+            Game.I.Go(GameState.Hub);
+            yield return Settle();
+
+            yield return ClickMenuItem("Save");
+            Assert.AreEqual(GameState.Save, State);
+            yield return ClickMenuItem("SAVE GAME");
+            Assert.IsTrue(SaveManager.GetSlotMetadata(SaveSlotId.Slot1).isOccupied, "SAVE GAME on the Save screen must write Manual Slot 1");
+            yield return ClickMenuItem("BACK");
+            Assert.AreEqual(GameState.Hub, State);
+
+            yield return ClickMenuItem("Load");
+            Assert.AreEqual(GameState.Load, State);
+            yield return Tap(Key.Escape);
+            yield return Settle();
+            Assert.AreEqual(GameState.Hub, State, "Load opened from the Hub must go back to the Hub");
+
+            yield return ClickMenuItem("Load");
+            yield return ClickMenuItem("MANUAL SLOT 1");
+            yield return ClickMenuItem("LOAD CAMPAIGN");
+            yield return ClickMenuItem("CONFIRM LOAD"); // a run is active, so Load asks first
+            yield return Settle();
+            Assert.AreEqual(GameState.Hub, State, "Loading from the Load screen must restore the campaign into the Hub");
+        }
+
+        // Regression: nested service screens only remembered one level, so Back skipped the Party screen.
+        [UnityTest]
+        public IEnumerator NestedServiceScreens_BackUnwindsOneLevelAtATime()
+        {
+            yield return Begin();
+            Game.I.StartRun();
+            yield return Settle();
+            Game.I.Go(GameState.Hub);
+            yield return Settle();
+
+            yield return ClickMenuItem("Character / Party");
+            Assert.AreEqual(GameState.Party, State);
+            yield return ClickMenuItem("View Status");
+            Assert.AreEqual(GameState.CharacterStatus, State);
+            yield return ClickMenuItem("Equipment");
+            Assert.AreEqual(GameState.Equipment, State);
+
+            yield return Tap(Key.Escape);
+            yield return Settle();
+            Assert.AreEqual(GameState.CharacterStatus, State);
+            yield return Tap(Key.Escape);
+            yield return Settle();
+            Assert.AreEqual(GameState.Party, State);
+            yield return Tap(Key.Escape);
+            yield return Settle();
+            Assert.AreEqual(GameState.Hub, State);
         }
 
         [UnityTest]

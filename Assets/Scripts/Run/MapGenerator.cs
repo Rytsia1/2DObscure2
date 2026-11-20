@@ -33,9 +33,12 @@ namespace Obscure
                 name = DungeonNames[0],
                 stages = new[]
                 {
+                    // Optional Elite nodes from stage 2 on: Dungeon 1 has no dedicated elites, so earlier stage bosses
+                    // return as avoidable elites (stage 2: Reaper's Passage; stage 3: both). PickEncounter never uses a
+                    // boss of the current or a later stage.
                     new DungeonStageDef { stage = 1, stageName = "Outer Crypt", bossEncounterId = "d1_e6", allowEliteNodes = false },
-                    new DungeonStageDef { stage = 2, stageName = "Ossuary Gate", bossEncounterId = "d1_e7", allowEliteNodes = false },
-                    new DungeonStageDef { stage = 3, stageName = "Inner Sanctum", bossEncounterId = "d1_boss", allowEliteNodes = false },
+                    new DungeonStageDef { stage = 2, stageName = "Ossuary Gate", bossEncounterId = "d1_e7", allowEliteNodes = true },
+                    new DungeonStageDef { stage = 3, stageName = "Inner Sanctum", bossEncounterId = "d1_boss", allowEliteNodes = true },
                 }
             },
             DefaultSingleStagePlan(2, DungeonNames[1]),
@@ -104,12 +107,14 @@ namespace Obscure
                 eventPool = Database.Events.Values.ToList();
             var events = eventPool.OrderBy(_ => rng.Next()).ToList();
             int nextEvent = 0;
+            // Bosses of this stage and later ones stay out of the regular pools, so they are never met early.
+            var laterBosses = new HashSet<string>(GetDungeonPlan(act).stages.Where(s => s.stage >= stage).Select(s => s.bossEncounterId));
             for (int f = 0; f < Floors; f++)
                 foreach (var n in floors[f])
                 {
                     var parents = f == 0 ? new List<NodeDef>() : floors[f - 1].Where(p => p.next.Contains(n.id)).ToList();
                     n.type = PickType(f, parents, rng, allowEliteNodes);
-                    if (n.IsCombat) n.encounter = PickEncounter(n, rng, stageDef);
+                    if (n.IsCombat) n.encounter = PickEncounter(n, rng, stageDef, laterBosses);
                     if (n.type == NodeType.Event) n.eventId = events[nextEvent++ % events.Count].id; // spread events before repeating
                 }
             string dungeonName = (act >= 1 && act <= DungeonNames.Length) ? DungeonNames[act - 1] : $"Dungeon {act}";
@@ -161,13 +166,14 @@ namespace Obscure
             return NodeType.Battle;
         }
 
-        static string PickEncounter(NodeDef n, Random rng, DungeonStageDef stageDef)
+        static string PickEncounter(NodeDef n, Random rng, DungeonStageDef stageDef, ICollection<string> laterBosses)
         {
             if (n.type == NodeType.Boss && !string.IsNullOrEmpty(stageDef?.bossEncounterId) && Database.Encounters.ContainsKey(stageDef.bossEncounterId))
                 return stageDef.bossEncounterId;
 
             var tier = n.type == NodeType.Boss ? Tier.Boss : n.type == NodeType.Elite ? Tier.Elite : Tier.Normal;
-            var pool = Database.Encounters.Values.Where(e => e.tier == tier && e.minFloor <= n.floor).ToList();
+            var pool = Database.Encounters.Values
+                .Where(e => e.tier == tier && e.minFloor <= n.floor && (n.type == NodeType.Boss || !laterBosses.Contains(e.id))).ToList();
             return pool[rng.Next(pool.Count)].id;
         }
 

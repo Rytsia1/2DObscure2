@@ -453,10 +453,10 @@ namespace Obscure
                     ? $"TOTAL: HEALING RECEIVED +{Math.Round(d.valuePerStack * s * 100)}%"
                     : $"TOTAL: HEALING RECEIVED {Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.SkillMpCostPercent => $"TOTAL: SKILL MP COST -{Math.Round(d.valuePerStack * s * 100)}% (MIN 1)",
-                ModifierEffectType.GoldRewardBonus => $"TOTAL: GOLD REWARDS +{Math.Round(d.valuePerStack * s * 100)}%",
+                ModifierEffectType.GoldRewardBonus => $"TOTAL: SPOILS REWARDS +{Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.ConsumableDropChance => $"TOTAL: BONUS CONSUMABLE CHANCE +{Math.Round(d.valuePerStack * s * 100)}%",
                 ModifierEffectType.ElementalDamageTakenReduction => $"TOTAL: {g.element.ToString().ToUpperInvariant()} DMG TAKEN -{Math.Round(d.valuePerStack * s * 100)}%",
-                ModifierEffectType.BattleVictoryBonusGold => $"TOTAL: +{Math.Round(d.valuePerStack * s)} BONUS GOLD AFTER WIN",
+                ModifierEffectType.BattleVictoryBonusGold => $"TOTAL: +{Math.Round(d.valuePerStack * s)} BONUS SPOILS AFTER WIN",
                 ModifierEffectType.OffenseDamageAndHealingDrawback =>
                     $"TOTAL: PHYS & ELEM DMG +{Math.Round(d.valuePerStack * s * 100)}%, HEALING {Math.Round(d.drawbackValuePerStack * s * 100)}%",
                 ModifierEffectType.AllDamageAndTakenDrawback =>

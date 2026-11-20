@@ -7,60 +7,6 @@ using UnityEngine.UIElements;
 namespace Obscure
 {
     using UiLabel = UnityEngine.UIElements.Label;
-    // Legacy sprite confirmation modal retained while remaining screens migrate in Phases 2-4.
-    public class ConfirmationModal
-    {
-        readonly GameObject root;
-
-        public ConfirmationModal(Transform parent, string title, string message, string confirmText, Action onConfirm, Action onCancel = null)
-        {
-            root = new GameObject("ConfirmationModal");
-            root.transform.SetParent(parent, false);
-
-            var blocker = Ui.Image(root.transform, PixelArt.Pixel, 0, 0, Ui.Overlay - 1, Palette.Hex(0x04060C, 230));
-            blocker.transform.localScale = new Vector3(Ui.Width, Ui.Height, 1);
-
-            int pw = 420, ph = 150;
-            int px = (Ui.Width - pw) / 2;
-            int py = (Ui.Height - ph) / 2;
-
-            Ui.Panel(root.transform, px, py, pw, ph, Palette.DeepCharcoal, Palette.AntiqueGold);
-            Ui.Label(root.transform, title.ToUpperInvariant(), px + pw / 2, py + 14, Palette.AntiqueGoldBright, Align.Center, 1, FontKind.Serif, Ui.Overlay);
-            Ui.Divider(root.transform, px + 20, py + 34, pw - 40, Palette.DarkBorder, Palette.AntiqueGoldDim);
-
-            string wrapped = PixelFont.Wrap(message, pw - 40);
-            Ui.Label(root.transform, wrapped, px + 20, py + 46, Palette.WarmIvory, Align.Left, 1, FontKind.Interface, Ui.Overlay);
-
-            var menu = root.AddComponent<Menu>();
-            int btnW = 140, btnH = 22;
-            int by = py + ph - 34;
-
-            var cancelBtn = Ui.Button(root.transform, "CANCEL", px + 40, by, btnW, () =>
-            {
-                Close();
-                onCancel?.Invoke();
-            }, btnH, showCursor: false);
-
-            var confirmBtn = Ui.Button(root.transform, confirmText.ToUpperInvariant(), px + pw - btnW - 40, by, btnW, () =>
-            {
-                Close();
-                onConfirm?.Invoke();
-            }, btnH, showCursor: false, style: ButtonStyle.Danger);
-
-            menu.Add(cancelBtn);
-            menu.Add(confirmBtn);
-        }
-
-        public void Close()
-        {
-            if (root != null)
-            {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(root);
-                else UnityEngine.Object.DestroyImmediate(root);
-            }
-        }
-    }
-
     static class SaveSlotUitkHelper
     {
         static readonly string[] SlotDefaultLabels =
@@ -111,7 +57,7 @@ namespace Obscure
                 }
                 if (detailLbl != null)
                 {
-                    detailLbl.text = $"{meta.lastSavedAtIso} · {meta.hubGold:#,##0} HUB GOLD · {meta.GetFormattedPlaytime()}".ToUpperInvariant();
+                    detailLbl.text = $"{meta.lastSavedAtIso} · {meta.hubGold:#,##0} GOLD · {meta.GetFormattedPlaytime()}".ToUpperInvariant();
                     detailLbl.style.color = Palette.Mist3;
                 }
             }
@@ -358,7 +304,7 @@ namespace Obscure
             else
             {
                 if (detailBodyLbl != null)
-                    detailBodyLbl.text = $"Campaign: {meta.committedDungeonName}\nParty: {meta.partySummary}\nGold: {meta.hubGold:#,##0} Hub Gold";
+                    detailBodyLbl.text = $"Campaign: {meta.committedDungeonName}\nParty: {meta.partySummary}\nGold: {meta.hubGold:#,##0}";
                 AddAction("LOAD CAMPAIGN", "button-primary", OnLoadClicked);
                 AddAction("BACK", "button-slab", () => Game?.Go(returnState));
             }

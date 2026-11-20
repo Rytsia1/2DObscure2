@@ -71,7 +71,7 @@ namespace Obscure
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
             if (runGold != null)
             {
-                FigmaUi.SetInstanceText(runGold, "text-0", $"{gold:#,##0} RUN GOLD");
+                FigmaUi.SetInstanceText(runGold, "text-0", $"{gold:#,##0} SPOILS");
                 FigmaUi.AnchorRight(runGold, 24f);
             }
 
@@ -80,7 +80,8 @@ namespace Obscure
             var watcher = Root.gameObject.AddComponent<TabWatcher>();
             watcher.onTab = () =>
             {
-                if (pauseOverlay != null) return;
+                // Not over the pause menu or a confirmation dialog (Abandon / No Retries).
+                if (pauseOverlay != null || (UitkMenu.ActiveMenu != null && UitkMenu.ActiveMenu != menu && UitkMenu.ActiveMenu != effectsModalMenu)) return;
                 ToggleRunEffectsModal();
             };
 
@@ -395,7 +396,7 @@ namespace Obscure
             var curLbl = UiRoot.Q<UiLabel>(className: "node-vars-7");
             if (curLbl != null)
             {
-                curLbl.text = n != null && n.type == NodeType.Shop ? "RUN GOLD" : "—";
+                curLbl.text = n != null && n.type == NodeType.Shop ? "SPOILS" : "—";
                 curLbl.style.color = n != null && n.type == NodeType.Shop ? Palette.Ember1 : Palette.Mist3;
                 curLbl.style.left = n != null && n.type == NodeType.Shop ? 1152 : 1226;
             }
@@ -920,7 +921,7 @@ namespace Obscure
             int gold = Run != null ? Run.Gold : 0;
             var footer = new VisualElement { style = { marginTop = 10, paddingTop = 8, borderTopWidth = 1, borderTopColor = Palette.Ink4 } };
             string stageText = Run != null && Run.TotalStages > 1 ? $" · STAGE {Run.Stage}/{Run.TotalStages}" : "";
-            footer.Add(new UiLabel($"DUNGEON {Run?.Act ?? 1} OF 8{stageText} · NODE {Run?.Floor ?? 1} · {gold} RUN GOLD")
+            footer.Add(new UiLabel($"DUNGEON {Run?.Act ?? 1} OF 8{stageText} · NODE {Run?.Floor ?? 1} · {gold} SPOILS")
             {
                 style = { fontSize = 12, color = Palette.Mist2, marginBottom = 4 }
             });
@@ -932,10 +933,17 @@ namespace Obscure
 
         void OpenAbandon()
         {
-            int act = Run?.Act ?? 1, gold = Run != null ? Run.Gold : 0;
-            string body = $"DUNGEON {act} ENDS AND CAN'T BE RESUMED.\n\n" +
-                $"LOST: RUN GOLD {gold}, EXP, SP, SKILLS AND ITEMS GAINED IN THIS DUNGEON.\n" +
-                (act > 1 ? $"KEPT: EVERYTHING COMMITTED BY DUNGEONS 1-{act - 1}, HUB GOLD AND RELICS." : "KEPT: HUB GOLD AND RELICS.");
+            int act = Run?.Act ?? 1, gold = Run != null ? Run.Gold : 0, retries = Run?.RetriesLeft ?? 0;
+            if (Run != null && !Run.CanAbandon)
+            {
+                FigmaUi.ShowConfirmationModal(UiRoot, "No Retries Left",
+                    $"THE EXPEDITION HAS NO RETRIES LEFT.\n\nDUNGEON {act} CAN ONLY BE CLEARED OR LOST.",
+                    "Back", OpenPause, OpenPause);
+                return;
+            }
+            string body = $"DUNGEON {act} ENDS AND CAN'T BE RESUMED. COSTS 1 RETRY ({retries} LEFT).\n\n" +
+                $"LOST: SPOILS {gold}, EXP, SP, SKILLS AND ITEMS GAINED IN THIS DUNGEON.\n" +
+                (act > 1 ? $"KEPT: EVERYTHING COMMITTED BY DUNGEONS 1-{act - 1}, GOLD AND RELICS." : "KEPT: GOLD AND RELICS.");
 
             FigmaUi.ShowConfirmationModal(
                 UiRoot,
@@ -945,6 +953,7 @@ namespace Obscure
                 () =>
                 {
                     Run?.AbandonExpedition();
+                    SaveManager.SyncRetryState(Run);
                     Game.Go(GameState.Hub);
                 },
                 OpenPause);
@@ -985,7 +994,7 @@ namespace Obscure
 
         string Describe(NodeDef n) => n.type switch
         {
-            NodeType.Shop => "A WANDERING MERCHANT HAS SET UP CAMP. BUY SUPPLIES WITH RUN GOLD.",
+            NodeType.Shop => "A WANDERING MERCHANT HAS SET UP CAMP. BUY SUPPLIES WITH SPOILS.",
             NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
             NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
             NodeType.Rest => "A QUIET ALCOVE. RECOVER THE PARTY OR IMPROVE A HERO.",

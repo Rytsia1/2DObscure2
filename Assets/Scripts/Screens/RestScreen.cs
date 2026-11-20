@@ -84,6 +84,15 @@ namespace Obscure
             }
 
             var screen = UiRoot.Q<VisualElement>(className: "_19-rest-campfire-sanctuary") ?? UiRoot;
+
+            // The layout's flat 96px flame icon (left 892, top 172) becomes a live campfire standing on the same spot,
+            // tucked behind the section header so its embers drift under the text.
+            var flameIcon = screen.Children().FirstOrDefault(e => e.style.left.value.value == 892f && e.style.top.value.value == 172f);
+            if (flameIcon != null) flameIcon.style.display = DisplayStyle.None;
+            var campfire = Fx.Spawn(screen, "campfire", 940f, 268f, 2f, loops: 0);
+            var header = UiRoot.Q<VisualElement>(className: "section-header__i-22");
+            if (campfire != null && header != null && header.parent == screen) campfire.PlaceBehind(header);
+
             actionHost = new VisualElement { name = "CampActionHost" };
             actionHost.style.position = Position.Absolute;
             actionHost.style.left = 676;

@@ -271,20 +271,149 @@ namespace Obscure.Tests
         [Test]
         public void GoodDefensiveQteHalvesPoiseDamageAndPerfectParryDealsNone()
         {
-            int PoiseLost(QteResult r)
+            int PoiseLost(QteResult r, bool guard = false)
             {
                 var b = NewBattle("warden");
                 var knight = P(b, "Knight");
                 knight.MaxBreakGauge = knight.CurrentBreakGauge = 10000; // never breaks, so the whole amount shows
                 var warden = b.Enemies[0];
                 AdvanceTo(b, warden);
+                knight.guarding = guard;
                 b.Perform(BattleAction.Attack(warden, knight), 1f, new[] { r });
                 return 10000 - knight.CurrentBreakGauge;
             }
-            int poor = PoiseLost(QteResult.Poor), good = PoiseLost(QteResult.Good), perfect = PoiseLost(QteResult.Perfect);
+            int poor = PoiseLost(QteResult.Poor), good = PoiseLost(QteResult.Good);
             Assert.Greater(poor, 1);
             Assert.AreEqual(poor / 2f, good, 1f);
-            Assert.AreEqual(0, perfect);
+            Assert.AreEqual(0, PoiseLost(QteResult.Perfect, guard: true), "a full parry takes no Poise damage");
+            Assert.LessOrEqual(PoiseLost(QteResult.Perfect), good, "a plain Perfect is never worse than Good");
+        }
+
+        [Test]
+        public void FullParryNeedsGuardOrShield_PlainPerfectOnlyDeflects()
+        {
+            Hit Struck(QteResult r, Action<Combatant> setup)
+            {
+                var b = NewBattle("warden");
+                var warden = b.Enemies[0];
+                AdvanceTo(b, warden);
+                var target = b.Party.First(p => !p.unit.HasEquippedShield());
+                target.unit.hp = 9999;
+                target.guarding = false; // AdvanceTo makes everyone Guard while waiting
+                setup?.Invoke(target);
+                return b.Perform(BattleAction.Attack(warden, target), 1f, new[] { r })[0];
+            }
+            var poor = Struck(QteResult.Poor, null);
+            var plain = Struck(QteResult.Perfect, null);
+            Assert.IsFalse(plain.blocked, "a Perfect alone is no longer a full parry");
+            Assert.Greater(plain.amount, 0);
+            Assert.AreEqual(poor.amount * QteConfig.PerfectDefense, plain.amount, 1.01f);
+
+            Assert.IsTrue(Struck(QteResult.Perfect, t => t.guarding = true).blocked, "Guard + Perfect fully parries");
+            var shielded = Struck(QteResult.Perfect, t => t.unit.Equip(Database.Equipment["EQ019"]));
+            Assert.IsTrue(shielded.blocked, "a shield + Perfect fully parries");
+            Assert.AreEqual(0, shielded.amount);
+        }
+
+        [Test]
+        public void ReadyCounterRetaliatesOnlyOnDefensivePerfect()
+        {
+            int WardenHpLost(QteResult r, int counterTurns)
+            {
+                var b = NewBattle("warden");
+                var knight = P(b, "Knight");
+                knight.CounterTurns = counterTurns;
+                var warden = b.Enemies[0];
+                AdvanceTo(b, warden);
+                int before = warden.unit.hp;
+                b.Perform(BattleAction.Attack(warden, knight), 1f, new[] { r });
+                return before - warden.unit.hp;
+            }
+            Assert.Greater(WardenHpLost(QteResult.Perfect, 1), 0, "a ready counter strikes back after a Perfect");
+            Assert.AreEqual(0, WardenHpLost(QteResult.Good, 1), "Good never triggers a counter");
+            Assert.AreEqual(0, WardenHpLost(QteResult.Perfect, 0), "no counter skill active, no counter");
+            Assert.Greater(Database.Skills["counterattack"].counterMultiplier, 0f);
+            Assert.Greater(Database.Skills["perfect_counter"].counterMultiplier, Database.Skills["counterstrike"].counterMultiplier);
+        }
+
+        [Test]
+        public void OffensivePerfectPaysInBreakAndMp_NotMuchExtraDamage()
+        {
+            (int dmg, int brk, int mp) Hit(float power)
+            {
+                var b = NewBattle("warden");
+                var knight = P(b, "Knight");
+                var warden = b.Enemies[0];
+                AdvanceTo(b, knight);
+                warden.MaxBreakGauge = warden.CurrentBreakGauge = 100000; // never breaks, so the whole Break amount shows
+                knight.unit.mp = 0;
+                int hp = warden.unit.hp;
+                b.Perform(BattleAction.Attack(knight, warden), power);
+                return (hp - warden.unit.hp, 100000 - warden.CurrentBreakGauge, knight.unit.mp);
+            }
+            var perfect = Hit(QteConfig.PerfectPower);
+            var good = Hit(QteConfig.GoodPower);
+            var poor = Hit(QteConfig.PoorPower);
+
+            Assert.Greater(perfect.dmg, good.dmg);
+            Assert.LessOrEqual(perfect.dmg, (int)Math.Ceiling(good.dmg * 1.25f), "damage spread stays narrow");
+            Assert.Greater(perfect.brk, good.brk, "Break keeps the wide spread");
+            Assert.Greater(good.brk, poor.brk);
+            Assert.AreEqual(QteConfig.PerfectMpRefund, perfect.mp, "Perfect refunds MP");
+            Assert.AreEqual(0, good.mp);
+        }
+
+        [Test]
+        public void CounterHitsAtLeastAsHardAsAGoodBasicAttack_AndScalesWithMultiplier()
+        {
+            var b = NewBattle("warden");
+            var knight = P(b, "Knight");
+            var warden = b.Enemies[0];
+            int basicGood = Rules.Physical(knight, warden, 1f, null);
+            int counter = QteConfig.CalculateCounterDamage(knight, warden, 1f, null);
+            int perfectCounter = QteConfig.CalculateCounterDamage(knight, warden, 1.5f, null);
+            Assert.GreaterOrEqual(counter, basicGood, "Counter Power only ever adds on top of a Good-equivalent strike");
+            Assert.Greater(perfectCounter, counter);
+        }
+
+        [Test]
+        public void MartialArtistCounterGrantsComboWithoutCountingAsAttacking()
+        {
+            var ma = new Unit(new CharacterDef { id = "ma", name = "Ma", raceId = "human", classId = "martial_artist", backgroundId = "guard", baseScores = AbilityScores.DefaultBase });
+            var b = new Battle(new[] { ma }, new[] { Database.Enemies["warden"] }, new List<string>(), new Random(1));
+            var hero = b.Party[0];
+            var warden = b.Enemies[0];
+            AdvanceTo(b, warden);
+
+            hero.CounterTurns = 1;
+            hero.CounterComboGain = Database.Skills["perfect_counter"].counterComboGain;
+            hero.CurrentCombo = 3;
+            hero.AttackedThisTurn = false;
+            b.Perform(BattleAction.Attack(warden, hero), 1f, new[] { QteResult.Perfect });
+
+            Assert.AreEqual(5, hero.CurrentCombo, "Perfect Counter grants +2 combo");
+            Assert.IsFalse(hero.AttackedThisTurn, "a counter is not an attack on the Martial Artist's own turn");
+            Assert.AreEqual(1, Database.Skills["counterstrike"].counterComboGain);
+
+            AdvanceTo(b, warden);
+            hero.CurrentCombo = Combatant.MaxComboNormal;
+            hero.CounterTurns = 1;
+            b.Perform(BattleAction.Attack(warden, hero), 1f, new[] { QteResult.Perfect });
+            Assert.AreEqual(Combatant.MaxComboNormal, hero.CurrentCombo, "gain above the cap is lost");
+        }
+
+        [Test]
+        public void SupportBuffsScaleWithCasterCha_OtherStatusesDoNot()
+        {
+            var b = NewBattle("warden");
+            var caster = b.Party[0];
+            var attackUp = new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.25f };
+            var evasion = new StatusApply { id = StatusId.Evasion, turns = 2, magnitude = 1.5f };
+            caster.unit.AddPermanentAbilityBonus(Ability.CHA, 20 - caster.unit.Score(Ability.CHA)); // CHA 20 -> +5 modifier
+
+            Assert.Greater(Battle.SupportScaled(attackUp, caster).magnitude, 0.25f);
+            Assert.LessOrEqual(Battle.SupportScaled(attackUp, caster).magnitude, 0.25f * 1.2001f, "capped by the CHA maxBonus");
+            Assert.AreSame(evasion, Battle.SupportScaled(evasion, caster), "QTE window statuses stay data-driven");
         }
     }
 }

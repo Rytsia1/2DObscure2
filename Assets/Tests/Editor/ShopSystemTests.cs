@@ -37,20 +37,21 @@ namespace Obscure.Tests
             int transferred = run.TransferRunGoldToHub();
 
             Assert.AreEqual(1250, transferred, "Transferred amount must equal exact remaining Gold.");
-            Assert.AreEqual(1250, run.Gold, "Gold is retained 100% across dungeon clears.");
-            Assert.AreEqual(1250, run.HubGold, "HubGold alias matches Gold.");
+            Assert.AreEqual(0, run.Gold, "Run Gold is emptied into the Hub.");
+            Assert.AreEqual(1250, run.HubGold, "Hub Gold gains 100% of the Run Gold.");
         }
 
         [Test]
         public void Economy_RunFailure_WipesAllGold()
         {
             var run = CreateTestRun();
+            run.HubGold = 200;
             run.Gold = 850;
 
             run.LoseCombat();
 
-            Assert.AreEqual(0, run.Gold, "Gold must be completely lost on run failure.");
-            Assert.AreEqual(0, run.HubGold, "HubGold alias must also be wiped on run failure.");
+            Assert.AreEqual(0, run.Gold, "Run Gold must be completely lost on run failure.");
+            Assert.AreEqual(200, run.HubGold, "Secured Hub Gold must survive run failure.");
             Assert.AreEqual(RunStatus.Defeat, run.Status);
         }
 
@@ -101,7 +102,7 @@ namespace Obscure.Tests
             // Attempt buy with insufficient Run Gold
             ok = shop.TryBuyConsumable(run, "elixir", out _, out err); // Elixir costs 50, run has 30
             Assert.IsFalse(ok, "Buy with insufficient gold should fail.");
-            StringAssert.Contains("not enough gold", err.ToLowerInvariant());
+            StringAssert.Contains("not enough spoils", err.ToLowerInvariant());
         }
 
         [Test]
@@ -128,29 +129,103 @@ namespace Obscure.Tests
         // =====================================================================
 
         [Test]
-        public void HubShop_ConsumablesHaveUnlimitedStock_UsesHubGold()
+        public void HubShop_DraughtAndEtherHaveLimitedStockAndACarryCap_UsesHubGold()
         {
             var run = CreateTestRun();
-            run.HubGold = 500;
+            run.HubGold = 1000;
 
-            // Verify catalog has no revive item
-            var catalog = HubEconomy.GenerateHubShopCatalog();
+            var catalog = HubEconomy.GenerateHubShopCatalog(run);
             Assert.IsFalse(catalog.Any(c => c.itemId == "phoenix_down"), "Hub Shop must NOT sell the Revive Item.");
+            Assert.IsFalse(catalog.First(c => c.itemId == "draught").isUnlimitedStock);
+            Assert.IsFalse(catalog.First(c => c.itemId == "ether").isUnlimitedStock);
+            Assert.IsFalse(catalog.First(c => c.itemId == "elixir").isUnlimitedStock);
+            Assert.AreEqual(5, catalog.First(c => c.itemId == "elixir").stockCount);
 
-            // Buy 3 Draughts (20G each = 60G)
-            bool ok = HubEconomy.TryBuyHubConsumable(run, "draught", 3, out string err);
-            Assert.IsTrue(ok, $"Hub buy should succeed: {err}");
-            Assert.AreEqual(440, run.HubGold, "Hub Shop purchases must deduct Hub Gold.");
+            int start = run.CarryCount("draught"); // starting items
+            Assert.IsTrue(HubEconomy.TryBuyHubConsumable(run, "draught", 3, out string err), err);
+            Assert.AreEqual(940, run.HubGold, "Hub Shop purchases must deduct Hub Gold.");
+            Assert.AreEqual(HubEconomy.HubRestock["draught"] - 3, HubEconomy.HubStockLeft(run, "draught"));
 
-            // Buy another 10 Draughts (unlimited stock)
-            ok = HubEconomy.TryBuyHubConsumable(run, "draught", 10, out err);
-            Assert.IsTrue(ok, "Hub Shop stock is unlimited, repeated purchase must succeed.");
-            Assert.AreEqual(240, run.HubGold);
+            int room = run.CarrySpace("draught");
+            Assert.AreEqual(10 - start - 3, room, "carry cap is 10");
+            Assert.IsFalse(HubEconomy.TryBuyHubConsumable(run, "draught", room + 1, out err), "cannot buy past the carry cap");
+            Assert.AreEqual(940, run.HubGold, "a refused purchase costs nothing");
+            Assert.IsTrue(HubEconomy.TryBuyHubConsumable(run, "draught", room, out err), err);
+            Assert.AreEqual(10, run.CarryCount("draught"));
 
-            // Rejects if insufficient Hub Gold
-            ok = HubEconomy.TryBuyHubConsumable(run, "elixir", 10, out err); // 50 * 10 = 500 > 240
-            Assert.IsFalse(ok);
+            run.HubGold = 10;
+            Assert.IsFalse(HubEconomy.TryBuyHubConsumable(run, "elixir", 1, out err));
             StringAssert.Contains("not enough gold", err.ToLowerInvariant());
+        }
+
+        [Test]
+        public void HubShop_SellsOutThenRestocksOnDungeonClear_StockSurvivesSave()
+        {
+            var run = CreateTestRun();
+            run.HubGold = 5000;
+            void Drink() // empty the bag so stock, not the carry cap, is what runs out
+            {
+                run.Items.RemoveAll(i => i == "draught");
+                run.Inventory.RemoveConsumable("draught", run.Inventory.GetConsumableCount("draught"));
+            }
+
+            Drink();
+            Assert.IsTrue(HubEconomy.TryBuyHubConsumable(run, "draught", 10, out string err), err);
+            Drink();
+            Assert.AreEqual(0, HubEconomy.HubStockLeft(run, "draught"));
+            Assert.IsFalse(HubEconomy.TryBuyHubConsumable(run, "draught", 1, out err));
+            StringAssert.Contains("sold out", err.ToLowerInvariant());
+
+            try
+            {
+                var snapshot = PersistenceCommitHandler.CreateCommittedSnapshot(run);
+                var reloaded = CreateTestRun();
+                reloaded.RestoreFromCampaignSave(snapshot);
+                Assert.AreEqual(0, HubEconomy.HubStockLeft(reloaded, "draught"), "sold-out stock survives a save");
+
+                PersistenceCommitHandler.CommitDungeonClear(run);
+                Assert.AreEqual(HubEconomy.HubRestock["draught"], HubEconomy.HubStockLeft(run, "draught"), "restocked when a dungeon is cleared");
+            }
+            finally
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(null);
+            }
+        }
+
+        [Test]
+        public void CarryCapAppliesToRewardsAndTheDungeonShop()
+        {
+            var run = CreateTestRun();
+            run.Gold = 1000;
+            for (int i = 0; i < 20; i++) run.Grant(new RewardOption { kind = RewardKind.Item, id = "ether" });
+            Assert.AreEqual(10, run.Items.Count(i => i == "ether"));
+            Assert.AreEqual(10, run.Inventory.GetConsumableCount("ether"));
+
+            var shop = DungeonShopData.Generate(1);
+            Assert.IsFalse(shop.TryBuyConsumable(run, "ether", out _, out string err));
+            StringAssert.Contains("carry at most", err.ToLowerInvariant());
+            Assert.AreEqual(1000, run.Gold, "a refused purchase costs nothing");
+        }
+
+        [Test]
+        public void UsingAnItemInBattleAlsoRemovesItFromTheBag()
+        {
+            var run = CreateTestRun();
+            var b = new Battle(run.Party, new[] { Database.Enemies["warden"] }, run.Items, new System.Random(1), run);
+            Combatant hero = null;
+            for (int i = 0; i < 50 && hero == null; i++)
+            {
+                var c = b.NextTurn();
+                if (c.IsPlayer) hero = c;
+                else b.Perform(BattleAction.Guard(c));
+            }
+            hero.unit.hp -= 10;
+            int listBefore = run.Items.Count(i => i == "draught"), bagBefore = run.Inventory.GetConsumableCount("draught");
+
+            b.Perform(BattleAction.Item(hero, Database.Items["draught"], hero));
+
+            Assert.AreEqual(listBefore - 1, run.Items.Count(i => i == "draught"));
+            Assert.AreEqual(bagBefore - 1, run.Inventory.GetConsumableCount("draught"), "bag and battle list stay in step");
         }
 
         [Test]
@@ -308,7 +383,7 @@ namespace Obscure.Tests
 
             // On victory, Gold is retained 1:1
             run.TransferRunGoldToHub();
-            Assert.AreEqual(600, run.Gold);
+            Assert.AreEqual(0, run.Gold);
             Assert.AreEqual(600, run.HubGold);
         }
 
@@ -321,16 +396,17 @@ namespace Obscure.Tests
         {
             var run = CreateTestRun(seed: 77);
             run.Gold = 340;
+            run.HubGold = 560;
 
             var saved = GameSave.SaveRunState(run);
             Assert.AreEqual(340, saved.gold);
-            Assert.AreEqual(340, saved.hubGold);
+            Assert.AreEqual(560, saved.hubGold);
 
             var freshRun = CreateTestRun(seed: 77);
             freshRun.RestoreFromSave(saved);
 
             Assert.AreEqual(340, freshRun.Gold);
-            Assert.AreEqual(340, freshRun.HubGold);
+            Assert.AreEqual(560, freshRun.HubGold);
         }
 
         // =====================================================================

@@ -202,6 +202,11 @@ namespace Obscure
         public SkillDifficulty difficulty = SkillDifficulty.Medium; // typing QTE difficulty
         public int cooldown;      // own turns before reuse (0 = none)
         public float perfectPower; // overrides the Perfect QTE multiplier (critical hits), 0 = default
+        // Counter skill (Bab 12 §6.5): > 0 readies a counter for counterTurns of the user's turns; a Defensive Perfect
+        // while ready retaliates with this multiplier after the enemy action.
+        public float counterMultiplier;
+        public int counterTurns;
+        public int counterComboGain; // Martial Artist combo gained each time the counter fires (Bab 8 §5.1)
         public StatusApply[] apply;
 
         // Skill Progression & Equipment integration

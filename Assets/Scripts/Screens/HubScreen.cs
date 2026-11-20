@@ -23,7 +23,7 @@ namespace Obscure
                 PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(Run));
                 SaveManager.AutoSave(out _);
             }
-            else if (Run != null && Game?.PreviousState == GameState.Map)
+            else if (Run != null && (Game?.PreviousState == GameState.Map || Game?.PreviousState == GameState.CharacterCreation))
             {
                 SaveManager.AutoSave(out _);
             }
@@ -53,11 +53,11 @@ namespace Obscure
                 FigmaUi.SetInstanceText(autoTag, "text-0", $"AUTO SAVED · {when}");
             }
 
-            int gold = Run != null ? Run.Gold : 0;
-            var goldTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "0 HUB GOLD");
+            int gold = Run != null ? Run.HubGold : 0;
+            var goldTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "0 GOLD");
             if (goldTag != null)
             {
-                FigmaUi.SetInstanceText(goldTag, "text-0", $"{gold:#,##0} HUB GOLD");
+                FigmaUi.SetInstanceText(goldTag, "text-0", $"{gold:#,##0} GOLD");
                 FigmaUi.AnchorRight(goldTag, 24f);
             }
 
@@ -79,8 +79,8 @@ namespace Obscure
             BindFacilityRow("Character / Party", () => Game?.Go(GameState.Party), "VIEW THE PARTY, STATUS AND LINEUP.");
             BindFacilityRow("Equipment", () => Game?.Go(GameState.Equipment), "EQUIP GEAR ON EACH MEMBER AND COMPARE STATS.");
             BindFacilityRow("Inventory", () => Game?.Go(GameState.Inventory), "EQUIPMENT BAG, CONSUMABLES, MATERIALS AND KEY ITEMS.");
-            BindFacilityRow("Shop", () => Game?.Go(GameState.HubShop), "CONSUMABLES FOR HUB GOLD. UNLIMITED STOCK.");
-            BindFacilityRow("Armory", () => Game?.Go(GameState.Armory), "WEAPONS AND ARMOR FOR HUB GOLD.");
+            BindFacilityRow("Shop", () => Game?.Go(GameState.HubShop), "CONSUMABLES FOR GOLD. UNLIMITED STOCK.");
+            BindFacilityRow("Armory", () => Game?.Go(GameState.Armory), "WEAPONS AND ARMOR FOR GOLD.");
             BindFacilityRow("Blacksmith", () => Game?.Go(GameState.Blacksmith), "UPGRADE GEAR. UPGRADES RAISE BASE STATS ONLY.");
             BindFacilityRow("Training Ground", () => Game?.Go(GameState.Skills), "SPEND SKILL POINTS AND CHOOSE TALENTS.",
                 badgeText: sp > 0 ? $"{sp} SP" : null, badgeClass: "uitk-badge-ok");
@@ -90,7 +90,7 @@ namespace Obscure
                 replaceRightText: $"RELICS {relics}/5");
 
             tipTitleLbl = UiRoot.Q<UiLabel>(className: "dungeon-entrance-vars");
-            tipBodyLbl = FigmaUi.FindLabel(UiRoot, "BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.");
+            tipBodyLbl = FigmaUi.FindLabel(UiRoot, "BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 SPOILS.");
             var tipPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-2");
             if (tipPanel != null) tipPanel.style.height = 128;
 
@@ -98,7 +98,9 @@ namespace Obscure
             var gate = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "Dungeon Entrance");
             if (gate != null)
             {
-                string tip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR." : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH 0 RUN GOLD.";
+                int retries = Run?.RetriesLeft ?? RunConfig.RetriesPerExpedition;
+                string tip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR."
+                    : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH NO SPOILS.\nRETRIES LEFT: {retries}. A WIPE OR ABANDON SPENDS ONE.";
                 var gateItem = menu.Add(gate, "Dungeon Entrance", OnEmbarkClicked, tooltip: tip);
                 menu.Focus(gateItem, false, true);
             }
@@ -234,15 +236,7 @@ namespace Obscure
                 return;
             }
 
-            if (Run.Map == null || Run.Map.act < targetAct)
-            {
-                var nextMap = MapGenerator.Generate(Run.Seed + targetAct, targetAct, 1);
-                Run.AdvanceToNextDungeon(nextMap);
-            }
-            else if (Run.Stage != 1 || Run.Status != RunStatus.Active || Run.Current != null || Run.Cleared.Count > 0)
-            {
-                Run.RestartCurrentDungeon(MapGenerator.Generate(Run.Seed + targetAct, targetAct, 1));
-            }
+            Run.BeginDungeonAttempt(targetAct, System.Environment.TickCount);
             Game?.Go(GameState.Map);
         }
 

@@ -453,9 +453,9 @@ namespace Obscure
                 triggerType = RelicTriggerType.Reward,
                 activationLimit = RelicActivationLimit.Passive,
                 gameplayEffect = "EXP earned by the party during the dungeon increases by 15%.",
-                designIntent = "Speeds up character growth at the cost of Run Gold income.",
+                designIntent = "Speeds up character growth at the cost of spoils.",
                 description = "EXP earned by the party during the dungeon increases by 15%.",
-                demerit = "Run Gold earned during the dungeon is reduced by 15%.",
+                demerit = "Spoils earned during the dungeon are reduced by 15%.",
                 buyPrice = 2800,
                 sellPrice = 1400
             },
@@ -467,9 +467,9 @@ namespace Obscure
                 proposedRarity = RelicProposedRarity.Rare,
                 triggerType = RelicTriggerType.Reward,
                 activationLimit = RelicActivationLimit.Passive,
-                gameplayEffect = "Run Gold earned by the party during the dungeon increases by 15%.",
+                gameplayEffect = "Spoils earned by the party during the dungeon increase by 15%.",
                 designIntent = "Strengthens the expedition economy and buying power for the run, at the cost of character growth.",
-                description = "Run Gold earned by the party during the dungeon increases by 15%.",
+                description = "Spoils earned by the party during the dungeon increase by 15%.",
                 demerit = "EXP earned by the party during the dungeon is reduced by 15%.",
                 buyPrice = 2800,
                 sellPrice = 1400

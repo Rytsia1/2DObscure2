@@ -254,7 +254,7 @@ namespace Obscure.Tests
         {
             var b = NewBattle(1, "skeleton");
             var rogue = b.Party[1];
-            Assert.AreEqual(1.75f, Battle.QtePower(BattleAction.Skill(rogue, S("quick_strike"), b.Enemies[0]), QteResult.Perfect));
+            Assert.AreEqual(1.4f, Battle.QtePower(BattleAction.Skill(rogue, S("quick_strike"), b.Enemies[0]), QteResult.Perfect));
             Assert.AreEqual(1f, Battle.QtePower(BattleAction.Skill(rogue, S("quick_strike"), b.Enemies[0]), QteResult.Good));
             Assert.AreEqual(QteConfig.PerfectPower, Battle.QtePower(BattleAction.Attack(rogue, b.Enemies[0]), QteResult.Perfect));
         }

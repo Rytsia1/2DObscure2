@@ -158,20 +158,19 @@ namespace Obscure.Tests
         public void DungeonClear_RetainsGold_ForHubAndNextDungeonWithoutDeduction()
         {
             var run = CreateTestRun(seed: 123, act: 1);
+            run.HubGold = 100;
             run.Gold = 650;
 
-            // On dungeon clear, remaining Gold is retained 1:1
+            // On dungeon clear, remaining Run Gold moves 1:1 into Hub Gold
             int transferred = run.TransferRunGoldToHub();
             Assert.AreEqual(650, transferred);
-            Assert.AreEqual(650, run.Gold, "Gold is retained for Hub and subsequent dungeons.");
-            Assert.AreEqual(650, run.HubGold);
+            Assert.AreEqual(0, run.Gold, "Run Gold is emptied into the Hub on clear.");
+            Assert.AreEqual(750, run.HubGold, "Hub Gold gains the full Run Gold, no fee.");
 
-            // Advance to Dungeon 2
-            var act2Map = MapGenerator.Generate(run.Seed + 2, act: 2);
-            run.AdvanceToNextDungeon(act2Map);
-
-            Assert.AreEqual(650, run.Gold, "Gold must be retained across sequential dungeons.");
-            Assert.AreEqual(650, run.HubGold);
+            // Entering the next dungeon starts a new run at 0 Run Gold; Hub Gold stays put
+            run.BeginDungeonAttempt(2, 2);
+            Assert.AreEqual(0, run.Gold, "A new run starts with 0 Run Gold.");
+            Assert.AreEqual(750, run.HubGold);
         }
 
         // =====================================================================
@@ -287,12 +286,13 @@ namespace Obscure.Tests
         public void RunFailure_ClearsRunBasedGold_PerDifficultySystem()
         {
             var run = CreateTestRun(seed: 99);
+            run.HubGold = 560;
             run.Gold = 950;
 
             run.LoseCombat();
 
-            Assert.AreEqual(0, run.Gold, "Gold must be completely cleared to 0 on failure.");
-            Assert.AreEqual(0, run.HubGold, "HubGold alias must also be 0 on failure.");
+            Assert.AreEqual(0, run.Gold, "Run Gold must be cleared to 0 on failure.");
+            Assert.AreEqual(560, run.HubGold, "Secured Hub Gold is not affected by the Run Gold loss.");
         }
 
         // =====================================================================

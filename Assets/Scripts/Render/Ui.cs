@@ -159,7 +159,7 @@ namespace Obscure
             return go;
         }
 
-        static string CurrencyText(int amount, bool isHubGold) => $"{amount:#,##0} " + (isHubGold ? "HUB GOLD" : "RUN GOLD");
+        static string CurrencyText(int amount, bool isHubGold) => $"{amount:#,##0} " + (isHubGold ? "GOLD" : "SPOILS");
 
         // 16px coin gutter + text + 6px right padding.
         public static int CurrencyTagWidth(int amount, bool isHubGold) =>
@@ -480,10 +480,15 @@ namespace Obscure
 
         void Update()
         {
-            if (Controls.Locked || items.Count == 0 || Time.frameCount == bornFrame) return;
+            if (Controls.Locked || Time.frameCount == bornFrame) return;
 
             // Only the currently active menu processes keyboard / gamepad navigation
             if (ActiveMenu != null && ActiveMenu != this) return;
+            if (items.Count == 0)
+            {
+                if (Controls.Back && onBack != null) { Sfx.Play(Sound.Back); onBack(); }
+                return;
+            }
 
             var adjust = Current?.onAdjust;
             if (adjust != null && (Controls.Left || Controls.Right)) { adjust(Controls.Left ? -1 : 1); Sfx.Play(Sound.Move); }

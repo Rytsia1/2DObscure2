@@ -41,18 +41,17 @@ namespace Obscure
         {
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
-            menu.onBack = () => Game?.Go(BackTo);
+            menu.onBack = () => Game?.Back(BackTo);
 
             // Header
             string size = party.Count >= CharacterRoster.PartySize ? $"{party.Count} / 4 · PARTY FULL" : $"{party.Count} / 4";
             var sizeTag = UiRoot.Q<VisualElement>(className: "tag-keep");
             if (sizeTag != null) FigmaUi.SetInstanceText(sizeTag, "text-0", size);
 
-            int gold = Run != null ? Run.Gold : 0;
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
             if (hubTag != null)
             {
-                FigmaUi.SetInstanceText(hubTag, "text-0", $"{gold:#,##0} HUB GOLD");
+                FigmaUi.SetInstanceText(hubTag, "text-0", InDungeon ? $"{Run?.Gold ?? 0:#,##0} SPOILS" : $"{Run?.HubGold ?? 0:#,##0} GOLD");
                 FigmaUi.AnchorRight(hubTag, 24f);
             }
 
@@ -61,7 +60,7 @@ namespace Obscure
             {
                 if (btn.text == "Back")
                 {
-                    var item = menu.Add(btn, "Back", () => Game?.Go(BackTo));
+                    var item = menu.Add(btn, "Back", () => Game?.Back(BackTo));
                     FigmaUi.ApplyDefaultFocusVisual(item, btn);
                 }
             }
@@ -233,7 +232,7 @@ namespace Obscure
             var confirmBtn = FigmaUi.FindButton(UiRoot, "Confirm Party");
             if (confirmBtn != null)
             {
-                var item = menu.Add(confirmBtn, "Confirm Party", () => Game?.Go(BackTo));
+                var item = menu.Add(confirmBtn, "Confirm Party", () => Game?.Back(BackTo));
                 item.visual = on =>
                 {
                     confirmBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;

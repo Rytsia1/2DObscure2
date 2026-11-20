@@ -1403,7 +1403,7 @@ namespace Obscure
             string err = inReview ? null : Session.Validate();
             var statusLbl = new UiLabel(err != null
                 ? err.ToUpperInvariant()
-                : (inReview ? "CONFIRM THE PARTY TO RECEIVE 600 HUB GOLD AND ENTER GEISTWALD CITY." : "READY. ADD THIS HERO TO THE PARTY."));
+                : (inReview ? "CONFIRM THE PARTY TO RECEIVE 600 GOLD AND ENTER GEISTWALD CITY." : "READY. ADD THIS HERO TO THE PARTY."));
             statusLbl.style.fontSize = 15;
             statusLbl.style.color = err != null ? Palette.HpLow : Palette.Hp;
             statusLbl.style.whiteSpace = WhiteSpace.Normal;
@@ -1722,7 +1722,10 @@ namespace Obscure
         {
             if (IsBackgroundModalOpen) { CloseBackgroundDetailsModal(); return; }
             if (CurrentPage > Page.Race && !InReview) { GoToPage((Page)((int)CurrentPage - 1)); return; }
-            Game?.Go(GameState.MainMenu);
+            if (Builder.PendingParty.Count == 0) { Game?.Go(GameState.MainMenu); return; }
+            FigmaUi.ShowConfirmationModal(UiRoot, "ABANDON PARTY?",
+                $"Return to the Main Menu?\nThe {Builder.PendingParty.Count} hero(es) created so far will be lost.",
+                "LEAVE", () => Game?.Go(GameState.MainMenu));
         }
 
         public void ConfirmAndAddToParty()

@@ -19,6 +19,10 @@ namespace Obscure
 
         public bool guarding;   // halves incoming damage until this combatant's next turn starts
         public int stunTurns;   // turns to skip; the skip consumes the turn
+        public int CounterTurns;          // counter skill readiness, ticks at the start of own turn (Bab 12 §6.5)
+        public float CounterMultiplier = 1f;
+        public int CounterComboGain;
+        public bool perfectDefenseThisAction; // set by Battle.Deal, consumed when the enemy action ends
         public int phase = 1;   // boss phase
         public readonly List<StatusEffect> statuses = new List<StatusEffect>();
         public readonly Dictionary<string, int> cooldowns = new Dictionary<string, int>();

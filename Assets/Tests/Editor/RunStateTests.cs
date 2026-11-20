@@ -25,6 +25,12 @@ namespace Obscure.Tests
 
         static RunState LineRun(params NodeType[] types) => NewRun(Line(null, types));
 
+        // Max level means no EXP, so a level-up (which raises HP) cannot blur HP and healing checks.
+        static void PinLevels(RunState run)
+        {
+            foreach (var u in run.Party) u.level = RunConfig.MaxLevel;
+        }
+
         static RunState AtEvent(string id, int gold = 0)
         {
             var run = NewRun(Line(id, NodeType.Event, NodeType.Boss));
@@ -58,8 +64,11 @@ namespace Obscure.Tests
                     Assert.AreEqual(stage, map.stage);
                     Assert.AreEqual(3, map.totalStages);
                     Assert.AreEqual(stage == 3, map.IsFinalStage);
-                    Assert.IsFalse(map.allowEliteNodes);
-                    Assert.AreEqual(0, map.nodes.Count(n => n.type == NodeType.Elite), $"seed {seed} stage {stage}: D1 has no mid-map elites");
+                    Assert.AreEqual(stage >= 2, map.allowEliteNodes, "D1 elites from stage 2 on");
+                    if (stage == 1)
+                        Assert.AreEqual(0, map.nodes.Count(n => n.type == NodeType.Elite), $"seed {seed} stage 1 has no mid-map elites");
+                    foreach (var elite in map.nodes.Where(n => n.type == NodeType.Elite))
+                        CollectionAssert.DoesNotContain(d1Bosses.Skip(stage - 1), elite.encounter, $"seed {seed} stage {stage}: a boss still ahead is never met early");
                     Assert.GreaterOrEqual(Paths(map), 3, $"seed {seed} stage {stage}: needs real route choices");
 
                     var boss = map.nodes.Single(n => n.type == NodeType.Boss);
@@ -82,7 +91,7 @@ namespace Obscure.Tests
                             if (n.type == NodeType.Boss)
                                 Assert.AreEqual(stage == 3 ? Tier.Boss : Tier.Elite, enc.tier, $"seed {seed} stage {stage}: {n.id}");
                             else
-                                Assert.AreEqual(Tier.Normal, enc.tier, $"seed {seed} stage {stage}: {n.id}");
+                                Assert.AreEqual(n.type == NodeType.Elite ? Tier.Elite : Tier.Normal, enc.tier, $"seed {seed} stage {stage}: {n.id}");
                             Assert.LessOrEqual(enc.minFloor, n.floor);
                         }
                     }
@@ -337,8 +346,9 @@ namespace Obscure.Tests
             run.WinCombat();
             var offer = run.PendingReward;
             Assert.Greater(offer.gold, 0);
-            Assert.AreEqual(2, offer.choices.Count);
-            Assert.IsTrue(offer.choices.All(c => c.kind == RewardKind.Item), "normal battles: modest consumables");
+            CollectionAssert.AreEqual(new[] { RewardKind.Item, RewardKind.Equipment, RewardKind.Gold }, offer.choices.Select(c => c.kind),
+                "normal battles: a consumable, gear or gold");
+            CollectionAssert.IsEmpty(offer.modifierChoices, "modifiers come from elites, stage bosses and treasure, not every fight");
             int items = run.Items.Count;
 
             run.ClaimReward(0);
@@ -364,6 +374,57 @@ namespace Obscure.Tests
             }
             Assert.AreEqual(Offer(7, 0), Offer(7, 13));
             Assert.AreNotEqual(Offer(7, 0), Offer(8, 0));
+        }
+
+        [Test]
+        public void EachDungeonAttemptRerollsTheDungeon()
+        {
+            string Signature(RunState r) => string.Join(",", r.Map.nodes.Select(n => $"{n.id}{n.type}{n.encounter}{n.eventId}"));
+            var run = NewRun(MapGenerator.Generate(5), seed: 5);
+
+            run.BeginDungeonAttempt(1, 100);
+            string first = Signature(run);
+            run.BeginDungeonAttempt(1, 100);
+            Assert.AreEqual(first, Signature(run), "the same attempt seed rebuilds the same dungeon");
+
+            run.BeginDungeonAttempt(1, 101);
+            Assert.AreNotEqual(first, Signature(run), "a retry must not replay the previous attempt's dungeon");
+            Assert.AreEqual(101, run.DungeonSeed);
+            Assert.AreEqual(1, run.Stage);
+
+            run.BeginDungeonAttempt(2, 102);
+            Assert.AreEqual(2, run.Act, "embarking to the next dungeon uses the same entry point");
+        }
+
+        [Test]
+        public void WipesAndAbandonsSpendRetriesUntilTheExpeditionIsLost()
+        {
+            var run = NewRun(MapGenerator.Generate(5), seed: 5);
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateNewGameCommittedSnapshot(Party.ToList(), 5));
+            try
+            {
+                Assert.AreEqual(RunConfig.RetriesPerExpedition, run.RetriesLeft);
+                run.AbandonExpedition();
+                Assert.AreEqual(RunConfig.RetriesPerExpedition - 1, run.RetriesLeft, "abandon spends a retry, and the rollback keeps it spent");
+
+                while (run.RetriesLeft > 0)
+                {
+                    run.BeginDungeonAttempt(1, 200 + run.RetriesLeft);
+                    run.LoseCombat();
+                }
+                Assert.IsFalse(run.ExpeditionLost, "spending the last retry still lets the expedition continue");
+                Assert.IsFalse(run.CanAbandon);
+                Assert.Throws<InvalidOperationException>(() => run.AbandonExpedition());
+
+                run.BeginDungeonAttempt(1, 300);
+                run.LoseCombat();
+                Assert.IsTrue(run.ExpeditionLost, "a wipe with no retries left loses the expedition");
+                Assert.IsTrue(PersistenceCommitHandler.ActiveCommittedSnapshot.expeditionLost);
+            }
+            finally
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(null);
+            }
         }
 
         [Test]
@@ -449,7 +510,7 @@ namespace Obscure.Tests
         public void EventChoicesApplyTheirConsequencesOnce()
         {
             var shrine = AtEvent("shrine", gold: 0);
-            Assert.AreEqual("Need 30 gold", shrine.EventBlocked(shrine.CurrentEvent.choices[0]));
+            Assert.AreEqual("Need 30 spoils", shrine.EventBlocked(shrine.CurrentEvent.choices[0]));
             Assert.Throws<InvalidOperationException>(() => shrine.ChooseEvent(0));
             Assert.IsFalse(shrine.Cleared.Contains("n0"), "a refused choice changes nothing");
 
@@ -503,13 +564,27 @@ namespace Obscure.Tests
             Assert.IsTrue(run.Stats.bossReached);
             run.WinCombat();
             Assert.AreEqual(RunConfig.BossGold, run.PendingReward.gold);
-            Assert.AreEqual(Database.BossRelic, run.PendingReward.choices.Single().id);
+            var choices = run.PendingReward.choices;
+            Assert.AreEqual(3, choices.Count, "the boss offers a real choice");
+            Assert.AreEqual(Database.BossRelic, choices[0].id);
+            Assert.AreEqual(RewardKind.Relic, choices[1].kind);
+            Assert.AreEqual(RewardKind.Equipment, choices[2].kind);
+            Assert.GreaterOrEqual(Database.Equipment[choices[2].id].rarity, EquipmentRarity.Rare, "boss gear is Rare or better");
             Assert.AreEqual(RunStatus.Active, run.Status, "not over until the reward is taken");
             run.ClaimReward(0);
             Assert.AreEqual(RunStatus.Victory, run.Status);
             Assert.IsTrue(run.Won && run.Stats.bossDefeated);
             CollectionAssert.IsEmpty(run.Available);
             Assert.IsNotNull(run.EndedUtc);
+        }
+
+        [Test]
+        public void ModifierOffersSkipModifiersAlreadyAtTheirCap()
+        {
+            var allowed = Database.DungeonModifiers.Values.First(m => m.polarity == ModifierPolarity.Buff).modifierId;
+            var offers = RewardGenerator.GenerateModifierChoices(new Random(1), count: 3, isMaxed: (id, _) => id != allowed);
+            Assert.AreEqual(1, offers.Count, "every other modifier is maxed, so only one can be offered");
+            Assert.AreEqual(allowed, offers[0].id);
         }
 
         [Test]
@@ -528,6 +603,7 @@ namespace Obscure.Tests
         public void PartyHpResourcesAndItemsPersistBetweenNodes()
         {
             var run = LineRun(NodeType.Battle, NodeType.Battle, NodeType.Boss);
+            PinLevels(run);
             run.Party[0].hp = 50;
             run.Party[2].mp = 10;
             run.Items.Remove("ether");
@@ -546,6 +622,7 @@ namespace Obscure.Tests
         public void FallenRiseAndEmberHeartHealsAfterVictory()
         {
             var run = LineRun(NodeType.Battle, NodeType.Boss);
+            PinLevels(run);
             run.Grant(new RewardOption { kind = RewardKind.Relic, id = "ember_heart" });
             run.Party[2].hp = 0;
             run.Party[0].hp = 50;
@@ -630,11 +707,14 @@ namespace Obscure.Tests
             var offer = run.PendingReward;
             Assert.AreEqual(run.Party.Count, offer.expGained.Length);
             Assert.AreEqual(RunConfig.BattleExp, offer.expGained[0]);
-            Assert.AreEqual(RunConfig.BattleExp, run.Party[0].exp);
+            int levels = 0, remainder = RunConfig.BattleExp;
+            while (remainder >= RunConfig.ExpToNext(1 + levels)) remainder -= RunConfig.ExpToNext(1 + levels++);
+            Assert.AreEqual(remainder, run.Party[0].exp, "remainder after any level-ups");
+            Assert.AreEqual(levels, offer.levelsGained[0]);
             Assert.AreEqual(0, offer.expGained[1]);
             Assert.AreEqual(0, run.Party[1].exp);
+            Assert.AreEqual(0, offer.levelsGained[1], "a fallen hero gains nothing");
             Assert.IsTrue(run.Party[1].Alive, "fallen heroes still rise at 1 HP after a normal battle");
-            CollectionAssert.AreEqual(new int[run.Party.Count], offer.levelsGained, "35 EXP is not a level");
         }
 
         [Test]
@@ -644,7 +724,8 @@ namespace Obscure.Tests
             run.AddRelic("R031"); // EXP +15%
             run.Enter(run.Map.Get("n0"));
             run.WinCombat();
-            Assert.AreEqual(40, run.PendingReward.expGained[0], "35 x 1.15 = 40.25, rounded");
+            int baseExp = RunConfig.BattleExp; // a local, so the bonus is computed at runtime in float like RelicManager does
+            Assert.AreEqual(baseExp + (int)Math.Round(baseExp * 0.15f), run.PendingReward.expGained[0], "EXP x 1.15, bonus rounded");
         }
     }
 }

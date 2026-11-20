@@ -79,7 +79,7 @@ namespace Obscure
             if (goldDeltaLbl != null)
             {
                 string extra = currentOffer.bonusGoldFromModifier > 0 ? $" (+{currentOffer.bonusGoldFromModifier})" : "";
-                goldDeltaLbl.text = $"◆ +{currentOffer.gold} RUN GOLD{extra}";
+                goldDeltaLbl.text = $"◆ +{currentOffer.gold} SPOILS{extra}";
             }
 
             var goldTotalLbl = UiRoot.Q<UiLabel>(className: "_120-144-vars");
@@ -135,7 +135,18 @@ namespace Obscure
                 int levels = i < currentOffer.levelsGained.Length ? currentOffer.levelsGained[i] : 0;
                 // KO'd heroes earn nothing (they may already have risen at 1 HP). No EXP data = preview offer, not a KO.
                 bool fell = i < currentOffer.expGained.Length && gained == 0 && !u.IsMaxLevel;
-                if (levels > 0) leveled.Add(u);
+                if (levels > 0)
+                {
+                    leveled.Add(u);
+                    // Gold arrows climb the hero once the screen has laid out, one hero after another.
+                    if (fig != null)
+                        fig.schedule.Execute(() =>
+                        {
+                            var r = fig.ChangeCoordinatesTo(screen, fig.contentRect);
+                            Fx.Spawn(screen, "buff", r.center.x, r.yMax, 2f, loops: 2);
+                            Sfx.Play(Sound.SkillUnlock);
+                        }).StartingIn(300 + leveled.Count * 200);
+                }
 
                 if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = fell ? Palette.Mist3 : Palette.Mist1; }
                 if (dLbl != null)
@@ -423,7 +434,7 @@ namespace Obscure
                 var topRow = new VisualElement { style = { flexDirection = FlexDirection.Column } };
                 var prompt = new UiLabel(choiceCount > 0
                     ? "SELECT A REWARD CARD ABOVE TO PREVIEW & CONFIRM"
-                    : "NO PRIZE AVAILABLE — COLLECT YOUR GOLD AND CONTINUE")
+                    : "NO PRIZE AVAILABLE — COLLECT YOUR SPOILS AND CONTINUE")
                 {
                     style = { fontSize = 13, color = Palette.Gold2, letterSpacing = 0.5f, marginBottom = 6 }
                 };
@@ -435,7 +446,7 @@ namespace Obscure
                 }
                 else if (choiceCount > 0)
                 {
-                    var subNote = new UiLabel("PRESS ENTER ON A CARD TO SELECT IT, THEN CONFIRM BELOW. OR SKIP TO TAKE ONLY GOLD.")
+                    var subNote = new UiLabel("PRESS ENTER ON A CARD TO SELECT IT, THEN CONFIRM BELOW. OR SKIP TO TAKE ONLY THE SPOILS.")
                     {
                         style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
                     };
@@ -796,9 +807,9 @@ namespace Obscure
                 }
                 case RewardKind.Item:
                 {
-                    int owned = Run?.Inventory != null
-                        ? Run.Inventory.GetConsumableCount(o.id)
-                        : (Run?.Items.Count(x => x == o.id) ?? 0);
+                    int owned = Run?.CarryCount(o.id) ?? 0;
+                    if (Run != null && Run.CarrySpace(o.id) <= 0)
+                        return $"CARRY LIMIT {owned}/{Database.Items[o.id].maxStack} · NOTHING ADDED";
                     return $"YOU OWN {owned} › {owned + 1}";
                 }
                 case RewardKind.Equipment:
@@ -819,7 +830,7 @@ namespace Obscure
                     return u != null ? $"PERMANENT BOOST FOR {u.name.ToUpperInvariant()}" : "PERMANENT PARTY BOOST";
                 }
                 default:
-                    return $"+{o.amount} EXTRA RUN GOLD";
+                    return $"+{o.amount} EXTRA SPOILS";
             }
         }
 
@@ -957,7 +968,7 @@ namespace Obscure
 
             int act = Run != null ? Run.Act : 1;
             var stats = Run != null ? Run.Stats : new RunStats();
-            int earned = stats.goldEarned, total = Run != null ? Run.Gold : 0;
+            int earned = stats.goldEarned, total = Run != null ? Run.HubGold : 0;
 
             var dLbl = UiRoot.Q<UiLabel>(className: "dungeon-1-of-8-vars-2");
             if (dLbl != null) dLbl.text = $"DUNGEON {act} OF 8";
@@ -969,10 +980,10 @@ namespace Obscure
             if (pipLbl != null) pipLbl.text = string.Concat(Enumerable.Range(1, 8).Select(i => i <= act ? "◆" : "◇"));
 
             var runTags = UiRoot.Query<VisualElement>(className: "currency-tag-run").ToList();
-            if (runTags.Count > 0) FigmaUi.SetInstanceText(runTags[0], "text-0", $"{earned} RUN GOLD");
+            if (runTags.Count > 0) FigmaUi.SetInstanceText(runTags[0], "text-0", $"{earned} SPOILS");
 
             var hubTags = UiRoot.Query<VisualElement>(className: "currency-tag-hub").ToList();
-            if (hubTags.Count > 0) FigmaUi.SetInstanceText(hubTags[0], "text-0", $"{earned} HUB GOLD");
+            if (hubTags.Count > 0) FigmaUi.SetInstanceText(hubTags[0], "text-0", $"+{earned} GOLD");
 
             var totalLbl = UiRoot.Q<UiLabel>(className: "_745-vars");
             if (totalLbl != null) totalLbl.text = total.ToString("#,##0");

@@ -4444,7 +4444,7 @@ namespace Obscure
 
             new SkillDef { id = "power_strike", name = "Power Strike", classId = "fighter", branchIndex = 0, tier = 1, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 3, power = 1.35f,
 
-                scalingAbility = Ability.STR, breakMultiplier = 1.15f, perfectPower = 1.75f, critChanceBonus = 0.10f, cooldown = 0,
+                scalingAbility = Ability.STR, breakMultiplier = 1.15f, perfectPower = 1.4f, critChanceBonus = 0.10f, cooldown = 0,
 
                 description = "Committed weapon strike dealing heavy Physical damage with high critical potential." },
 
@@ -4493,6 +4493,7 @@ namespace Obscure
             // Tier 3 (Level 7)
 
             new SkillDef { id = "counterattack", name = "Counterattack", classId = "fighter", branchIndex = 2, tier = 3, kind = SkillKind.Support, target = TargetType.Self, mpCost = 5, cooldown = 2,
+                counterMultiplier = 1.0f, counterTurns = 2, // Bab 12 §6.5: counter at 1.0x
 
                 scalingAbility = Ability.STR, prerequisites = new[] { "weapon_disarm" },
 
@@ -4544,7 +4545,7 @@ namespace Obscure
 
             new SkillDef { id = "blade_tempest", name = "Blade Tempest", classId = "fighter", branchIndex = 0, tier = 5, kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 12, power = 0.6f, hits = 5,
 
-                scalingAbility = Ability.STR, breakMultiplier = 1.6f, perfectPower = 2.0f, cooldown = 3, prerequisites = new[] { "whirlwind" },
+                scalingAbility = Ability.STR, breakMultiplier = 1.6f, perfectPower = 1.6f, cooldown = 3, prerequisites = new[] { "whirlwind" },
 
                 description = "Unleash a flurry of 5 rapid, devastating weapon strikes with high critical multiplier." },
 
@@ -4582,7 +4583,7 @@ namespace Obscure
 
             // Rogue
 
-            new SkillDef { id = "quick_strike", name = "Quick Strike", kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 3, power = 0.9f, perfectPower = 1.75f,
+            new SkillDef { id = "quick_strike", name = "Quick Strike", kind = SkillKind.Physical, target = TargetType.Enemy, mpCost = 3, power = 0.9f, perfectPower = 1.4f,
 
                 scalingAbility = Ability.STR, breakMultiplier = 1.0f, bonusVsBroken = 0.3f,
 
@@ -4604,7 +4605,7 @@ namespace Obscure
 
             // Ranger (Ranged Active Skills)
 
-            new SkillDef { id = "aimed_shot", name = "Aimed Shot", kind = SkillKind.Physical, isRanged = true, target = TargetType.Enemy, mpCost = 4, power = 1.25f, perfectPower = 1.8f,
+            new SkillDef { id = "aimed_shot", name = "Aimed Shot", kind = SkillKind.Physical, isRanged = true, target = TargetType.Enemy, mpCost = 4, power = 1.25f, perfectPower = 1.44f,
 
                 scalingAbility = Ability.DEX, breakMultiplier = 1.15f, tags = new[] { "Ranged", "HuntMark" },
 
@@ -4712,13 +4713,13 @@ namespace Obscure
 
             new SkillDef { id = "spinning_kick", name = "Spinning Kick", classId = "martial_artist", branchIndex = 0, tier = 3, kind = SkillKind.Physical, element = Element.Physical, target = TargetType.Enemy, scalingAbility = Ability.DEX, mpCost = 5, power = 1.55f, breakMultiplier = 1.50f, maxRank = 3, critChanceBonus = 0.10f, cooldown = 1, prerequisites = new[] { "flowing_combo" }, tags = new[] { "Unarmed", "Combo" }, description = "Whirling roundhouse kick with high critical timing window." },
 
-            new SkillDef { id = "counterstrike", name = "Counterstrike", classId = "martial_artist", branchIndex = 1, tier = 3, kind = SkillKind.Support, element = Element.Physical, target = TargetType.Self, scalingAbility = Ability.DEX, mpCost = 5, power = 0.00f, breakMultiplier = 0.00f, maxRank = 3, cooldown = 2, apply = new[] { Status(StatusId.Evasion, 2, 1.5f) }, prerequisites = new[] { "palm_strike" }, tags = new[] { "Unarmed" }, description = "Adopt an evasive counter stance ready to retaliate." },
+            new SkillDef { id = "counterstrike", name = "Counterstrike", classId = "martial_artist", branchIndex = 1, tier = 3, kind = SkillKind.Support, element = Element.Physical, target = TargetType.Self, scalingAbility = Ability.DEX, mpCost = 5, power = 0.00f, breakMultiplier = 0.00f, maxRank = 3, cooldown = 2, counterMultiplier = 1.0f, counterTurns = 2, counterComboGain = 1, apply = new[] { Status(StatusId.Evasion, 2, 1.5f) }, prerequisites = new[] { "palm_strike" }, tags = new[] { "Unarmed" }, description = "Adopt an evasive counter stance ready to retaliate." },
 
             new SkillDef { id = "dragon_fist", name = "Dragon Fist", classId = "martial_artist", branchIndex = 2, tier = 3, kind = SkillKind.Physical, element = Element.Physical, target = TargetType.Enemy, scalingAbility = Ability.STR, mpCost = 6, power = 1.85f, breakMultiplier = 1.90f, maxRank = 3, critChanceBonus = 0.10f, cooldown = 1, apply = new[] { Status(StatusId.Stun, 1, 1f, chance: 0.30f) }, prerequisites = new[] { "sweep_kick" }, tags = new[] { "Unarmed", "Combo" }, description = "Devastating direct punch infused with dragon spirit." },
 
             new SkillDef { id = "hundred_fists", name = "Hundred Fists", classId = "martial_artist", branchIndex = 0, tier = 4, kind = SkillKind.Physical, element = Element.Physical, target = TargetType.Enemy, scalingAbility = Ability.DEX, mpCost = 8, power = 2.25f, breakMultiplier = 1.85f, maxRank = 3, critChanceBonus = 0.15f, cooldown = 2, prerequisites = new[] { "spinning_kick" }, tags = new[] { "Unarmed", "Combo" }, description = "Blinding flurry of punches delivering relentless hits." },
 
-            new SkillDef { id = "perfect_counter", name = "Perfect Counter", classId = "martial_artist", branchIndex = 1, tier = 4, kind = SkillKind.Support, element = Element.Physical, target = TargetType.Self, scalingAbility = Ability.DEX, mpCost = 6, power = 0.00f, breakMultiplier = 0.00f, maxRank = 3, cooldown = 3, apply = new[] { Status(StatusId.Evasion, 1, 2.0f) }, prerequisites = new[] { "counterstrike" }, tags = new[] { "Unarmed" }, description = "Supreme evasion technique guaranteeing counter-reaction." },
+            new SkillDef { id = "perfect_counter", name = "Perfect Counter", classId = "martial_artist", branchIndex = 1, tier = 4, kind = SkillKind.Support, element = Element.Physical, target = TargetType.Self, scalingAbility = Ability.DEX, mpCost = 6, power = 0.00f, breakMultiplier = 0.00f, maxRank = 3, cooldown = 3, counterMultiplier = 1.5f, counterTurns = 1, counterComboGain = 2, /* 1.5x is the GDD Bab 12 §6.5 candidate value */ apply = new[] { Status(StatusId.Evasion, 1, 2.0f) }, prerequisites = new[] { "counterstrike" }, tags = new[] { "Unarmed" }, description = "Supreme evasion technique guaranteeing counter-reaction." },
 
             new SkillDef { id = "flying_knee", name = "Flying Knee", classId = "martial_artist", branchIndex = 2, tier = 4, kind = SkillKind.Physical, element = Element.Physical, target = TargetType.Enemy, scalingAbility = Ability.STR, mpCost = 7, power = 2.10f, breakMultiplier = 2.20f, maxRank = 3, critChanceBonus = 0.10f, cooldown = 1, prerequisites = new[] { "dragon_fist" }, tags = new[] { "Unarmed", "Combo" }, description = "Acrobatic leap delivering a crushing knee to the skull." },
 
@@ -4940,9 +4941,10 @@ namespace Obscure
 
         {
 
-            new ItemDef { id = "draught", name = "Draught", heal = 40, description = "Restores 40 HP." },
+            // maxStack = carry cap (RunState.CarrySpace): at most 10 of each (design decision 2026-11-20).
+            new ItemDef { id = "draught", name = "Draught", heal = 40, maxStack = 10, description = "Restores 40 HP." },
 
-            new ItemDef { id = "ether", name = "Ether", mana = 20, description = "Restores 20 MP." },
+            new ItemDef { id = "ether", name = "Ether", mana = 20, maxStack = 10, description = "Restores 20 MP." },
 
             new ItemDef { id = "elixir", name = "Grave Elixir", heal = 80, mana = 30, description = "Restores 80 HP and 30 MP." },
 

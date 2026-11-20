@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "skills": {
+    "game-qa": {
+      "source": "zenstory-ai/novel-to-game",
+      "commit": "46f55ed7ed15ac9c5630a6202b2e38dad94f365b",
+      "sourceType": "github",
+      "skillPath": "skills/game-qa/SKILL.md",
+      "computedHash": "6a0b4814ebf76f3b215b6eb6b092fcb3d29e93e0cab036b6b26e5720d4e91128"
+    }
+  }
+}

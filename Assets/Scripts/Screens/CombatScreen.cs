@@ -74,13 +74,6 @@ namespace Obscure
             public bool fallen;      // KO played and held until the hero is revived
         }
 
-        class ActiveFx
-        {
-            public VisualElement el;
-            public Fx.Clip clip;
-            public float age;
-        }
-
         class ActivePopup
         {
             public UiLabel lbl;
@@ -91,7 +84,6 @@ namespace Obscure
         readonly Dictionary<Combatant, (UitkMenu.Item item, Action choose)> activeTargets = new Dictionary<Combatant, (UitkMenu.Item, Action)>();
         readonly List<UiLabel> logLabels = new List<UiLabel>();
         readonly List<string> logLines = new List<string>();
-        readonly List<ActiveFx> activeFxs = new List<ActiveFx>();
         readonly List<ActivePopup> activePopups = new List<ActivePopup>();
 
         VisualElement screenRoot, turnBar, stageHost, menuHost, dossierBox, dossierStatusRow, dossierTargetBox, qteHost, outcomeOverlay;
@@ -311,7 +303,12 @@ namespace Obscure
 
             battle.Logged += AddLog;
             battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
-            battle.StatusApplied += (_, _, isBuff) => Sfx.Play(isBuff ? Sound.Buff : Sound.Debuff);
+            battle.StatusApplied += (target, id, isBuff) =>
+            {
+                Sfx.Play(isBuff ? Sound.Buff : Sound.Debuff);
+                var fx = StatusFx(id, isBuff);
+                if (fx != null) PlayFxOn(target, fx, head: fx is "st_stun" or "st_sleep" or "st_charm" or "st_confuse", flip: fx == "guard" && target.IsEnemy);
+            };
             AddLog(isBossHud ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
         }
@@ -927,7 +924,7 @@ namespace Obscure
                     var ko = UnitArt.HeroClip(c.unit.sprite, "ko");
                     if (ko != null) StartCoroutine(PlayClip(h, ko));
                 }
-                if (h.fallen && c.Alive) { h.fallen = false; h.idleFrame = -1; }
+                if (h.fallen && c.Alive) { h.fallen = false; h.idleFrame = -1; PlayFxOn(c, "revive"); }
                 if (h.idle == null || h.spriteEl == null || !c.Alive || h.busy) continue;
                 int f = UnitArt.FrameAt(Time.time + h.idleOffset);
                 if (f == h.idleFrame) continue;
@@ -935,22 +932,6 @@ namespace Obscure
                 h.spriteEl.style.backgroundImage = new StyleBackground(h.idle[f]);
             }
 
-            // Advance UITK sprite-sheet VFX
-            for (int i = activeFxs.Count - 1; i >= 0; i--)
-            {
-                var fx = activeFxs[i];
-                fx.age += Time.deltaTime;
-                int frame = (int)(fx.age * fx.clip.fps);
-                if (frame >= fx.clip.frames.Length)
-                {
-                    fx.el.RemoveFromHierarchy();
-                    activeFxs.RemoveAt(i);
-                }
-                else
-                {
-                    fx.el.style.backgroundImage = new StyleBackground(fx.clip.frames[frame]);
-                }
-            }
 
             // Advance floating combat popups
             for (int i = activePopups.Count - 1; i >= 0; i--)
@@ -1071,7 +1052,7 @@ namespace Obscure
             var active = CollectActiveStatuses(cand);
             if (active.Count == 0)
             {
-                topCol.Add(new UiLabel(cand.guarding ? "GUARDING — INCOMING DAMAGE HALVED" : "NO ACTIVE STATUS EFFECTS")
+                topCol.Add(new UiLabel(cand.guarding ? "GUARDING — DAMAGE HALVED, PERFECT FULLY PARRIES" : "NO ACTIVE STATUS EFFECTS")
                 {
                     style = { fontSize = 12, color = Palette.Mist2, marginTop = 6 }
                 });
@@ -1237,12 +1218,18 @@ namespace Obscure
             ClearPhase();
             Hint("");
             HideDossier();
-            if (action.kind == ActionKind.Guard) Sfx.Play(Sound.Guard);
+            var actor = action.actor;
+            if (action.kind == ActionKind.Guard) { Sfx.Play(Sound.Guard); PlayFxOn(actor, "guard", flip: actor != null && actor.IsEnemy); }
+            // Spellcasters gather power while they wind up (gone on the strike); an enemy charging a big move glows red.
+            bool attacking = action.kind == ActionKind.Attack || action.kind == ActionKind.Skill;
+            bool magic = action.skill != null ? action.skill.kind != SkillKind.Physical
+                : action.attack != null && action.attack.element != Element.Physical;
+            bool enemyFx = actor != null && actor.IsEnemy;
+            var castFx = !attacking ? null : action.charging ? PlayFxOn(actor, "charge", flip: enemyFx) : magic ? PlayFxOn(actor, "cast", flip: enemyFx) : null;
             // The actor swings, shoots, casts, pounces or reaps first; the blows land on the clip's strike frame.
             // Melee and pouncing attackers slide toward the other side (heroes face right, enemies left).
             // An enemy that only charges this turn does not attack yet.
-            var actor = action.actor;
-            if (actor != null && !action.charging && (action.kind == ActionKind.Attack || action.kind == ActionKind.Skill)
+            if (actor != null && !action.charging && attacking
                 && huds.TryGetValue(actor, out var actorHud)
                 && (actor.IsEnemy ? UnitArt.EnemyClip(actor.enemy?.id, actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act")) is UnitArt.Clip act)
             {
@@ -1250,13 +1237,18 @@ namespace Obscure
                 StartCoroutine(PlayClip(actorHud, act, lunge));
                 yield return new WaitForSeconds(act.TimeTo(act.strike));
             }
+            else if (castFx != null && !action.charging) yield return new WaitForSeconds(0.4f);
+            if (!action.charging) castFx?.RemoveFromHierarchy();
             int idx = 0;
+            Combatant critTarget = null;
             foreach (var h in Battle.Perform(action, power, defense))
             {
                 var defGrade = defense != null && idx < defense.Count ? defense[idx] : (QteResult?)null;
                 Feedback(h, action, defGrade);
+                if (critTarget == null && h.critical && !h.blocked && h.amount > 0) critTarget = h.target;
                 idx++;
             }
+            if (critTarget != null) yield return CritImpact(critTarget);
             Refresh();
             if (pendingPhaseTransitionBoss != null)
             {
@@ -1281,6 +1273,7 @@ namespace Obscure
             {
                 hud.phase = boss.phase;
                 StartCoroutine(Flash(hud, boss));
+                PlayFxOn(boss, "phase");
             }
             MusicManager.I?.PlayZoroaPhaseTransition(() =>
             {
@@ -1369,14 +1362,32 @@ namespace Obscure
                 if (h.targetArrow != null) h.targetArrow.style.display = DisplayStyle.None;
         }
 
-        void OnDestroy() => activeQte?.Cancel();
+        void OnDestroy()
+        {
+            activeQte?.Cancel();
+            Time.timeScale = 1f; // never leave the game frozen if the screen goes mid hit-stop
+        }
+
+        // A critical hit, once per action and on top of its normal crit burst: a full-screen manga impact frame aimed at
+        // the struck unit, while the whole battle (swing, popups, other FX) freezes under it for a beat.
+        const float CritHitStop = 0.15f;
+        IEnumerator CritImpact(Combatant target)
+        {
+            if (!huds.TryGetValue(target, out var h)) yield break;
+            // 640x360 frame at 4x centred on the hit always covers the 1280x720 screen; added last, so it sits over the HUD.
+            var p = stageHost.ChangeCoordinatesTo(screenRoot, new Vector2(h.pos.x + h.size.x / 2f, h.pos.y + h.size.y / 2f));
+            Fx.Spawn(screenRoot, "impact", p.x, p.y, 4f, unscaled: true);
+            Time.timeScale = 0f;
+            yield return new WaitForSecondsRealtime(CritHitStop);
+            Time.timeScale = 1f;
+        }
 
         void Feedback(Hit hit, BattleAction action, QteResult? defGrade = null)
         {
             if (!huds.TryGetValue(hit.target, out var h)) return;
             float cx = h.pos.x + h.size.x / 2f;
             bool immune = hit.effect == Effectiveness.Immune;
-            PlayHitFx(hit, action, h, cx, defGrade);
+            PlayHitFx(hit, action, defGrade);
 
             SpawnPopup(hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 10f,
                 hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : Palette.CrimsonBright, 20);
@@ -1430,32 +1441,82 @@ namespace Obscure
             activePopups.Add(new ActivePopup { lbl = lbl, startY = y });
         }
 
-        void PlayHitFx(Hit hit, BattleAction action, Hud h, float cx, QteResult? defGrade = null)
+        // Plays a VFX sheet on a combatant at 2x: grounded effects stand on its feet, the rest sit at its centre.
+        // Head effects (stars, Zzz, hearts) are drawn round a 38 px stock figure, so they are lifted until its
+        // head (76 UI px above the feet at 2x) meets the top of the sprite box, whatever the unit's size.
+        VisualElement PlayFxOn(Combatant c, string name, bool head = false, bool flip = false, bool centerX = false, float startAt = 0f)
         {
-            float cy = h.pos.y + h.size.y / 2f, feet = h.pos.y + h.size.y;
+            if (c == null || !huds.TryGetValue(c, out var h)) return null;
+            var clip = Fx.Load(name);
+            if (clip == null) return null;
+            float y = head ? h.pos.y + 80f : clip.grounded ? h.pos.y + h.size.y : h.pos.y + h.size.y / 2f;
+            return Fx.Spawn(stageHost, name, h.pos.x + h.size.x / 2f, y, 2f, flip, centerX: centerX, startAt: startAt);
+        }
+
+        // The move sheet a damaging hit plays, from the skill or enemy attack and the attacker's swing (its clip style).
+        // startAt skips a spell's lead-in so its impact lands with the damage number. null = no signature move:
+        // the element's sheet (or the plain hit spark) plays instead.
+        static (string fx, float startAt)? MoveFx(BattleAction a)
+        {
+            if (a == null || (a.skill == null && a.attack == null)) return null;
+            string key = ($"{a.skill?.id} {a.skill?.name ?? a.attack?.name}").ToLowerInvariant();
+            bool Has(params string[] words) => words.Any(key.Contains);
+            var element = a.skill?.element ?? a.attack?.element ?? Element.Physical;
+            var tags = a.skill?.tags ?? Array.Empty<string>();
+            var actor = a.actor;
+            string style = actor?.unit == null ? null
+                : (actor.IsEnemy ? UnitArt.EnemyClip(actor.enemy?.id, actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act"))?.style;
+
+            // Signature spells
+            if (element == Element.Fire && Has("meteor", "inferno", "cataclysm")) return ("meteor", 0.52f);
+            if (element == Element.Ice && Has("nova", "blizzard", "apocalypse", "zero")) return ("frost", 0.2f);
+            if (element == Element.Lightning && Has("lightning_strike")) return ("bolt", 0.66f);
+            if (element == Element.Holy && Has("heaven", "judgment")) return ("revive", 0.3f);
+            if (element == Element.Dark && Has("nightfall", "apocalypse", "damnation", "annihilation", "soulstorm", "collapse")) return ("phase", 0.4f);
+            if (tags.Contains("Nature"))
+                return Has("root", "prison", "thorn") ? ("thorns", 0f)
+                    : Has("wrath", "overgrowth", "forest", "primal", "dominion") ? ("spike", 0.26f)
+                    : ("vine", 0f);
+            if (element != Element.Physical) return null;
+
+            // Weapons and fists
+            if (tags.Contains("Unarmed"))
+                return Has("kick", "knee", "rising", "ascendant") ? ("kick", 0f) : Has("hundred", "combo", "fury", "flowing") ? ("flurry", 0f) : ("earth", 0f);
+            if (a.skill?.isRanged == true || style == "shoot" || Has("shot", "arrow", "volley", "snipe", "deadeye")) return ("pierce", 0f);
+            if (style == "reap" || Has("reap")) return ("reap", 0f);
+            if (style == "pounce" || Has("claw", "bite", "rend", "snarl", "maul", "savage")) return ("claw", 0f);
+            if (Has("lash", "whip", "chain")) return ("whip", 0f);
+            if (Has("whirl", "tempest", "spin", "sweep")) return ("spin", 0f);
+            if (Has("bash", "grip")) return ("earth", 0f);
+            if (Has("cleave", "smash", "crush", "slam", "execution", "verdict", "carnage", "rampage", "power", "brutal", "reckless", "cataclysm", "heavy", "charge"))
+                return ("cleave", 0f);
+            if (Has("stab", "assassin", "weakpoint", "thrust", "lance", "ambush", "expose", "pierc")) return ("pierce", 0f);
+            if (Has("thousand", "cuts", "dance", "quick", "twin", "flurry", "frenzy", "phantom")) return ("flurry", 0f);
+            return ("slash", 0f);
+        }
+
+        static string StatusFx(StatusId id, bool isBuff) => id switch
+        {
+            StatusId.Poison => "st_poison",
+            StatusId.Burn => "st_burn",
+            StatusId.Bleed => "st_bleed",
+            StatusId.Freeze => "st_freeze",
+            StatusId.Shock => "st_shock",
+            StatusId.Curse or StatusId.Fear or StatusId.Despair => "st_curse",
+            StatusId.Stun => "st_stun",
+            StatusId.Sleep => "st_sleep",
+            StatusId.Charm => "st_charm",
+            StatusId.Confusion or StatusId.Madness or StatusId.MindControl => "st_confuse",
+            StatusId.Slow => "st_slow",
+            StatusId.Guardian or StatusId.DefenseUp or StatusId.MagicDefenseUp => "guard",
+            StatusId.Broken => null, // the breaking hit already bursts
+            _ => isBuff ? "buff" : "debuff",
+        };
+
+        void PlayHitFx(Hit hit, BattleAction action, QteResult? defGrade = null)
+        {
             bool flip = !hit.target.IsEnemy;
-            void Play(string name)
-            {
-                var clip = Fx.Load(name);
-                if (clip == null || clip.frames.Length == 0) return;
-                float fw = clip.frames[0].rect.width * 2f;
-                float fh = clip.frames[0].rect.height * 2f;
-                var fxEl = new VisualElement
-                {
-                    style =
-                    {
-                        position = Position.Absolute,
-                        left = cx - fw / 2f,
-                        top = (clip.grounded ? feet - fh * 0.85f : cy - fh / 2f),
-                        width = fw,
-                        height = fh,
-                        backgroundImage = new StyleBackground(clip.frames[0]),
-                    }
-                };
-                if (flip) fxEl.style.scale = new Scale(new Vector2(-1, 1));
-                stageHost.Add(fxEl);
-                activeFxs.Add(new ActiveFx { el = fxEl, clip = clip });
-            }
+            void Play(string name) => PlayFxOn(hit.target, name, flip: flip);
 
             if (hit.blocked) { Play("parry"); Sfx.Play(Sound.Parry); }
             else if (hit.effect == Effectiveness.Immune) { Sfx.Play(Sound.Immune); }
@@ -1478,7 +1539,11 @@ namespace Obscure
                         Element.Water => ("water", Sound.Water),
                         _ => ("hit", Sound.Hit),
                     };
-                Play(fxName);
+                // The move itself (a slash, an arrow, a meteor), then the element/hit burst only when there is no
+                // signature move or the hit is critical.
+                var move = MoveFx(action);
+                if (move is (string moveFx, float startAt)) PlayFxOn(hit.target, moveFx, flip: flip, centerX: true, startAt: startAt);
+                if (move == null || hit.critical) Play(fxName);
                 Sfx.Play(defGrade == QteResult.Good ? Sound.Block : sfx);
             }
             if (hit.brokeTarget) { Play("break"); Sfx.Play(Sound.Break); }
@@ -1670,7 +1735,7 @@ namespace Obscure
         void ChooseTarget(IEnumerable<Combatant> candidates, Func<Combatant, BattleAction> make, Action back)
         {
             var list = candidates.ToList();
-            if (list.Count == 0) { Hint("NO VALID TARGETS"); back(); return; }
+            if (list.Count == 0) { back(); Hint("NO VALID TARGETS"); return; } // back() refocuses and would overwrite the hint
             var m = NewMenu();
             m.onBack = back;
             int firstValid = -1;
@@ -1784,7 +1849,7 @@ namespace Obscure
             var contItem = m.Add(contBtn, "CONTINUE", () =>
             {
                 if (won) { Game.I.Run.WinCombat(); Game.I.Go(GameState.Reward); }
-                else { Game.I.Run.LoseCombat(); Game.I.Go(GameState.GameOver); }
+                else { Game.I.Run.LoseCombat(); SaveManager.SyncRetryState(Game.I.Run); Game.I.Go(GameState.GameOver); }
             });
             contItem.visual = on =>
             {

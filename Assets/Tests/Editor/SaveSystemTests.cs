@@ -49,6 +49,44 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void SpentRetriesReachEverySaveOfTheExpedition_AndALostExpeditionCannotBeLoaded()
+        {
+            var party = new List<CharacterDef>
+            {
+                new CharacterDef { id = "hero1", name = "A", raceId = "human", classId = "fighter", backgroundId = "guard", baseScores = AbilityScores.DefaultBase },
+                new CharacterDef { id = "hero2", name = "B", raceId = "elf", classId = "ranger", backgroundId = "sage", baseScores = AbilityScores.DefaultBase },
+                new CharacterDef { id = "hero3", name = "C", raceId = "dwarf", classId = "cleric", backgroundId = "acolyte", baseScores = AbilityScores.DefaultBase },
+                new CharacterDef { id = "hero4", name = "D", raceId = "human", classId = "wizard", backgroundId = "sage", baseScores = AbilityScores.DefaultBase },
+            };
+            void Write(SaveSlotId slot, int seed, long ticks) => SaveManager.Storage.WriteSlotRaw(slot, JsonUtility.ToJson(new SaveFileData
+            {
+                metadata = new SaveSlotMetadata { slotId = slot, slotType = SaveSlotType.Manual, isOccupied = true, lastSavedTicks = ticks, partySummary = "P" },
+                campaign = PersistenceCommitHandler.CreateNewGameCommittedSnapshot(party, seed),
+            }), out _);
+            Write(SaveSlotId.Slot1, 42, 300); // an older save of this expedition
+            Write(SaveSlotId.Slot2, 7, 100);  // a different expedition
+
+            var run = new RunState(MapGenerator.Generate(42), party, 42);
+            run.LoseCombat();
+            SaveManager.SyncRetryState(run);
+            var camp1 = JsonUtility.FromJson<SaveFileData>(SaveManager.Storage.ReadSlotRaw(SaveSlotId.Slot1)).campaign;
+            Assert.AreEqual(RunConfig.RetriesPerExpedition - 1, camp1.retriesLeft, "reloading the older save must not refund the retry");
+            Assert.AreEqual(RunConfig.RetriesPerExpedition,
+                JsonUtility.FromJson<SaveFileData>(SaveManager.Storage.ReadSlotRaw(SaveSlotId.Slot2)).campaign.retriesLeft, "other expeditions untouched");
+
+            while (run.RetriesLeft > 0) { run.BeginDungeonAttempt(1, run.RetriesLeft); run.LoseCombat(); }
+            run.BeginDungeonAttempt(1, 99);
+            run.LoseCombat();
+            SaveManager.SyncRetryState(run);
+
+            Assert.IsTrue(SaveManager.GetSlotMetadata(SaveSlotId.Slot1).expeditionLost);
+            Assert.IsFalse(SaveManager.Load(SaveSlotId.Slot1, out var error));
+            StringAssert.Contains("lost", error);
+            Assert.IsTrue(SaveManager.HasAnySave(out var best));
+            Assert.AreEqual(SaveSlotId.Slot2, best, "Continue skips the lost expedition");
+        }
+
+        [Test]
         public void Criterion1_ExposesExactlyFiveSlots_OneAutoAndFourManual()
         {
             var slots = Enum.GetValues(typeof(SaveSlotId)).Cast<SaveSlotId>().ToList();
@@ -277,7 +315,8 @@ namespace Obscure.Tests
             run.AbandonExpedition();
 
             // Restored to committed baseline
-            Assert.AreEqual(200, run.Gold, "Hub gold must be preserved on abandonment.");
+            Assert.AreEqual(200, run.HubGold, "Hub gold must be preserved on abandonment.");
+            Assert.AreEqual(0, run.Gold, "Uncommitted Run Gold is discarded on abandonment.");
             Assert.IsNull(run.Current, "Current dungeon node must be discarded.");
             Assert.AreEqual(0, run.Cleared.Count, "Dungeon cleared nodes must be discarded.");
         }
@@ -366,25 +405,29 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void Criterion15_ConfirmationModal_ConfirmAndCancelCallbacks_ExecuteProperly()
+        public void Criterion15_ConfirmationModal_BackDismissesWithoutCancel_WhenOnDismissGiven()
         {
-            var hostGo = new GameObject("ModalHost");
+            var root = new UnityEngine.UIElements.VisualElement();
+            bool confirmed = false, cancelled = false, dismissed = false;
+            FigmaUi.ShowConfirmationModal(root, "TITLE", "Message body", "CONFIRM",
+                () => confirmed = true, () => cancelled = true, cancelText: "DISCARD", onDismiss: () => dismissed = true);
+            var go = GameObject.Find("UitkConfirmationModalMenu");
             try
             {
-                bool confirmed = false;
-                bool cancelled = false;
+                Assert.IsNotNull(go, "Modal menu must be created.");
+                var m = go.GetComponent<UitkMenu>();
+                Assert.AreEqual("DISCARD", m.items[0].text);
+                Assert.IsNotNull(UnityEngine.UIElements.UQueryExtensions.Q(root, "UitkConfirmationModal"), "Modal must be mounted.");
 
-                var modal = new ConfirmationModal(hostGo.transform, "TITLE", "Message body", "CONFIRM",
-                    () => confirmed = true,
-                    () => cancelled = true);
-
-                Assert.IsNotNull(hostGo.transform.Find("ConfirmationModal"), "Modal must be instantiated.");
-                modal.Close();
-                Assert.IsNull(hostGo.transform.Find("ConfirmationModal"), "Modal must be destroyed on close.");
+                m.onBack();
+                Assert.IsTrue(dismissed, "Back must run onDismiss");
+                Assert.IsFalse(cancelled, "Back must not run the cancel action when onDismiss is given");
+                Assert.IsFalse(confirmed);
+                Assert.IsNull(UnityEngine.UIElements.UQueryExtensions.Q(root, "UitkConfirmationModal"), "Modal must close on Back.");
             }
             finally
             {
-                UnityEngine.Object.DestroyImmediate(hostGo);
+                if (go != null) UnityEngine.Object.DestroyImmediate(go);
             }
         }
 
@@ -672,8 +715,8 @@ namespace Obscure.Tests
 
                 Assert.AreEqual(GameState.Hub, game.State, "Must transition directly to Sanctuary Hub after character creation.");
                 Assert.IsNotNull(game.Run, "RunState must be initialized.");
-                Assert.AreEqual(600, game.Run.Gold, "Player must possess exactly 600 starter gold.");
-                Assert.AreEqual(600, game.Run.HubGold, "HubGold alias must be 600.");
+                Assert.AreEqual(600, game.Run.HubGold, "Player must possess exactly 600 starter Hub Gold.");
+                Assert.AreEqual(0, game.Run.Gold, "No Run Gold before the first dungeon.");
                 Assert.AreEqual(1, game.Run.Act, "Initial expedition map must be Act 1 (Dungeon 1).");
                 Assert.AreEqual(600, PersistenceCommitHandler.ActiveCommittedSnapshot.hubGold);
                 Assert.AreEqual(1, PersistenceCommitHandler.ActiveCommittedSnapshot.nextDungeonAct);

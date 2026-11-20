@@ -373,6 +373,7 @@ namespace Obscure.Tests
             var b = NewBattle(seed, "zoroa_p1");
             var z = AdvanceTo(b, c => c.IsEnemy);
             b.Party[0].unit.hp = 9999;
+            b.Party[0].guarding = true; // a full parry needs Guard or a shield (Bab 12 §3.5)
             return b.Perform(BattleAction.Strike(z, Move("zoroa_p1", "Final Reaping"), b.Party[0]), 1f, Enumerable.Repeat(reaction, 4).ToList());
         }
 
@@ -573,6 +574,7 @@ namespace Obscure.Tests
             var b2 = NewBattle(4, "crypt_leech");
             var leech2 = AdvanceTo(b2, c => c.IsEnemy);
             leech2.unit.hp = 50;
+            b2.Party[2].guarding = true; // full parry needs Guard or a shield (Bab 12 §3.5)
             b2.Perform(BattleAction.Strike(leech2, Move("crypt_leech", "Vital Siphon"), b2.Party[2]), 1f, new[] { QteResult.Perfect });
             Assert.AreEqual(50, leech2.unit.hp, "nothing dealt, nothing healed");
         }
@@ -582,6 +584,7 @@ namespace Obscure.Tests
         {
             var b = NewBattle(1, "zoroa_p2");
             var z = AdvanceTo(b, c => c.IsEnemy);
+            foreach (var p in b.Party) p.guarding = true; // full parry needs Guard or a shield (Bab 12 §3.5)
             var hits = b.Perform(BattleAction.Strike(z, Move("zoroa_p2", "Soulstorm"), null), 1f, new[] { QteResult.Perfect });
             CollectionAssert.AreEquivalent(b.Party, hits.Select(h => h.target));
             Assert.IsTrue(hits.All(h => h.blocked), "one shared QTE result for every target");
@@ -878,8 +881,9 @@ namespace Obscure.Tests
 
             var b2 = NewBattle(9, "royal_ossuary_knight");
             var k2 = AdvanceTo(b2, c => c.IsEnemy);
+            b2.Party[0].guarding = true; // a full parry needs Guard or a shield (Bab 12 §3.5)
             var slam = b2.Perform(BattleAction.Strike(k2, Move("royal_ossuary_knight", "Ossuary Slam"), b2.Party[0]), 1f, new[] { QteResult.Perfect })[0];
-            Assert.IsTrue(slam.blocked, "non-Heavy Perfect still negates");
+            Assert.IsTrue(slam.blocked, "non-Heavy Perfect while guarding still negates");
             Assert.AreEqual(0, slam.amount);
         }
 

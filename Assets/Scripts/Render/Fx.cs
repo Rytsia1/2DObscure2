@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
-// One-shot pixel VFX played from sprite sheets in Resources/Fx (exported from pixelfx with --sheet).
+// Pixel VFX played from sprite sheets in Resources/Fx (exported from pixelfx with --sheet).
 // Each sheet has a sibling .json; only meta.pixelfx is read (fps, frame size, columns, pivot).
 namespace Obscure
 {
@@ -42,33 +43,45 @@ namespace Obscure
             return cache[name] = new Clip { frames = frames, fps = m.fps, grounded = m.pivot[1] > h * 0.6f };
         }
 
-        // x, y in UI pixels (top-left origin, y down), given as the target's center and feet; flip mirrors right-facing effects.
-        public static GameObject Play(Transform parent, string name, int x, int centerY, int feetY, bool flip = false, int order = Ui.Widget + 8)
+        // Plays a sheet as a UI Toolkit element with the effect's pivot at (x, y) in the parent's px, scaled `scale` times.
+        // flip mirrors right-facing effects about the pivot. loops: plays it that many times, 0 = until the element is removed.
+        // centerX: put the frame's horizontal middle at x instead of the pivot (attack effects are drawn from the attacker's
+        // feet, so this lands their arc on a target). startAt skips that many seconds of a slow wind-up.
+        // It runs on game time, so a hit-stop (Time.timeScale = 0) holds it on its frame; unscaled keeps it playing through one.
+        // The element animates and removes itself; it never takes clicks.
+        public static VisualElement Spawn(VisualElement parent, string name, float x, float y, float scale = 2f, bool flip = false, int loops = 1,
+            bool centerX = false, float startAt = 0f, bool unscaled = false)
         {
             var clip = Load(name);
-            if (clip == null || clip.frames.Length == 0) return null;
-            var sr = Ui.Image(parent, clip.frames[0], x, clip.grounded ? feetY : centerY, order);
-            sr.gameObject.name = "Fx:" + name;
-            if (flip) sr.transform.localScale = new Vector3(-1, 1, 1);
-            sr.gameObject.AddComponent<FxPlayer>().clip = clip;
-            return sr.gameObject;
-        }
-    }
+            if (parent == null || clip == null || clip.frames.Length == 0) return null;
+            var f0 = clip.frames[0];
+            float px = centerX ? f0.rect.width * scale / 2f : f0.pivot.x * scale, py = (f0.rect.height - f0.pivot.y) * scale; // pivot from the top-left
+            var el = new VisualElement { name = "Fx:" + name, pickingMode = PickingMode.Ignore };
+            el.style.position = Position.Absolute;
+            el.style.left = x - px;
+            el.style.top = y - py;
+            el.style.width = f0.rect.width * scale;
+            el.style.height = f0.rect.height * scale;
+            el.style.backgroundImage = new StyleBackground(f0);
+            if (flip)
+            {
+                el.style.transformOrigin = new TransformOrigin(px, py);
+                el.style.scale = new Scale(new Vector2(-1, 1));
+            }
+            parent.Add(el);
 
-    public class FxPlayer : MonoBehaviour
-    {
-        public Fx.Clip clip;
-        SpriteRenderer sr;
-        float age;
-
-        void Awake() => sr = GetComponent<SpriteRenderer>();
-
-        void Update()
-        {
-            age += Time.deltaTime;
-            int i = (int)(age * clip.fps);
-            if (i >= clip.frames.Length) { Destroy(gameObject); return; }
-            sr.sprite = clip.frames[i];
+            float age = startAt, last = unscaled ? Time.unscaledTime : Time.time;
+            long total = loops > 0 ? (long)clip.frames.Length * loops : long.MaxValue;
+            el.schedule.Execute(() =>
+            {
+                float now = unscaled ? Time.unscaledTime : Time.time;
+                age += now - last;
+                last = now;
+                long i = (long)(age * clip.fps);
+                if (i >= total) { el.RemoveFromHierarchy(); return; }
+                el.style.backgroundImage = new StyleBackground(clip.frames[i % clip.frames.Length]);
+            }).Every(16).Until(() => el.parent == null);
+            return el;
         }
     }
 }

@@ -1735,7 +1735,7 @@ namespace Obscure
             activeRoster.CommitConfirmedParty(PendingParty);
             FlowState = NewGameFlowState.FirstExpedition;
             var run = activeRoster.BeginExpedition(seed);
-            run.Gold = GameSave.StarterGold;
+            run.HubGold = GameSave.StarterGold;
             GameSave.SaveRunState(run, PendingParty);
             Changed?.Invoke();
             return run;
@@ -1993,7 +1993,7 @@ namespace Obscure
                 act = isDefeated ? 1 : run.Act,
                 stage = isDefeated ? 1 : run.Stage,
                 gold = isDefeated ? 0 : run.Gold,
-                hubGold = isDefeated ? 0 : run.Gold,
+                hubGold = run.HubGold, // secured gold survives a wipe (GDD Bab 16)
                 currentNodeId = isDefeated ? "" : (run.Current?.id ?? ""),
                 clearedNodeIds = isDefeated ? Array.Empty<string>() : run.Cleared.ToArray(),
                 items = run.Items.ToArray(),

@@ -380,11 +380,11 @@ namespace Obscure.Tests
                 StringAssert.Contains("LEAVE THE CHAPEL", joined);
 
                 // Upfront costs & blocked requirements remain visible
-                StringAssert.Contains("20 GOLD", joined);
+                StringAssert.Contains("20 SPOILS", joined);
                 StringAssert.Contains("REQUIRES LIICHTIAN", joined);
 
                 // Outputs / rewards / consequences are strictly hidden before choosing
-                Assert.IsFalse(joined.Contains("+30 GOLD"), "Gold gain must be hidden before selection: " + joined);
+                Assert.IsFalse(joined.Contains("+30 SPOILS"), "Spoils gain must be hidden before selection: " + joined);
                 Assert.IsFalse(joined.Contains("HEAL"), "Heal output must be hidden before selection: " + joined);
                 Assert.IsFalse(joined.Contains("NEXT BATTLE"), "Battle buff output must be hidden before selection: " + joined);
                 Assert.IsFalse(joined.Contains("ARCANE CURRENT"), "Modifier reward must be hidden before selection: " + joined);

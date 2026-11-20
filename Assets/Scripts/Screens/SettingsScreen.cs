@@ -484,9 +484,10 @@ namespace Obscure
         void Leave()
         {
             if (DirtyCount == 0) { GoBack(); return; }
-            FigmaUi.ShowConfirmationModal(UiRoot, "UNSAVED CHANGES", "Apply your changes before leaving?\nCancel discards them.", "APPLY",
+            FigmaUi.ShowConfirmationModal(UiRoot, "UNSAVED CHANGES", "Apply your changes before leaving?\nDiscard drops them. Esc keeps editing.", "APPLY",
                 () => { s.Save(); GoBack(); },
-                () => { Restore(saved); GoBack(); });
+                () => { Restore(saved); GoBack(); },
+                cancelText: "DISCARD", onDismiss: () => { });
         }
 
         static void GoBack()

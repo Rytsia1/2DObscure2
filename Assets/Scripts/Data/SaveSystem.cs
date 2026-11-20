@@ -37,6 +37,8 @@ namespace Obscure
         public int hubGold = 0;
         public float playtimeSeconds = 0f;
         public bool isOccupied = false;
+        public int retriesLeft = RunConfig.RetriesPerExpedition;
+        public bool expeditionLost;
 
         public static string FormatSlotName(SaveSlotId slot) => slot switch
         {
@@ -78,6 +80,10 @@ namespace Obscure
         public int hubGold = 0;
         public float playtimeSeconds = 0f;
 
+        // Retry budget. Saves written before this field existed load with a full budget.
+        public int retriesLeft = RunConfig.RetriesPerExpedition;
+        public bool expeditionLost;
+
         // Character Roster (exact 4 confirmed heroes)
         public SavedCharacterData[] party = Array.Empty<SavedCharacterData>();
 
@@ -93,6 +99,7 @@ namespace Obscure
 
         // Hub State
         public ShopItemSaveData[] hubArmoryStock = Array.Empty<ShopItemSaveData>();
+        public ConsumableStackSaveData[] hubShopStock = Array.Empty<ConsumableStackSaveData>(); // limited Hub Shop items left
     }
 
     [Serializable]
@@ -341,7 +348,9 @@ namespace Obscure
                 seed = run.Seed,
                 committedAct = comAct,
                 nextDungeonAct = nextAct,
-                hubGold = run.Gold,
+                hubGold = run.HubGold,
+                retriesLeft = run.RetriesLeft,
+                expeditionLost = run.ExpeditionLost,
                 playtimeSeconds = SaveManager.TotalPlaytimeSeconds,
                 party = defs.Select((d, i) => SavedCharacterData.FromCharacterDef(d, i < run.Party.Count ? run.Party[i] : null)).ToArray(),
                 inventoryEquipment = invData.equipment ?? Array.Empty<EquipmentInstanceSaveData>(),
@@ -352,7 +361,8 @@ namespace Obscure
                 relicInstances = run.RelicManager != null ? run.RelicManager.ToSaveData() : Array.Empty<RelicInstanceSaveData>(),
                 hubArmoryStock = run.CurrentShop != null && run.CurrentShop.items != null
                     ? run.CurrentShop.items.Select(i => i.ToSaveData()).ToArray()
-                    : Array.Empty<ShopItemSaveData>()
+                    : Array.Empty<ShopItemSaveData>(),
+                hubShopStock = run.HubShopStock.Select(kv => new ConsumableStackSaveData { itemId = kv.Key, count = kv.Value }).ToArray()
             };
         }
 
@@ -390,6 +400,8 @@ namespace Obscure
             run.ModifierManager?.ClearAll();
             // 1. Convert Run Gold to Hub Gold 1:1
             run.TransferRunGoldToHub();
+            // Hub Shop restocks its limited items (Draught, Ether) once per cleared dungeon.
+            run.RestockHubShop();
 
             // 2. Build new committed baseline from current run state
             activeCommittedSnapshot = CreateCommittedSnapshot(run);
@@ -434,14 +446,15 @@ namespace Obscure
             if (delta > 0) TotalPlaytimeSeconds += delta;
         }
 
+        // The Save/Load screens are only reachable from the Hub / Main Menu, so being on them counts as being there.
         public static bool CanSaveCurrentState()
         {
-            return Game.I != null && Game.I.State == GameState.Hub;
+            return Game.I != null && (Game.I.State == GameState.Hub || Game.I.State == GameState.Save);
         }
 
         public static bool CanLoadCurrentState()
         {
-            return Game.I == null || Game.I.State == GameState.MainMenu || Game.I.State == GameState.Hub;
+            return Game.I == null || Game.I.State == GameState.MainMenu || Game.I.State == GameState.Hub || Game.I.State == GameState.Load;
         }
 
         public static SaveSlotMetadata GetSlotMetadata(SaveSlotId slot)
@@ -507,7 +520,7 @@ namespace Obscure
             foreach (SaveSlotId slot in Enum.GetValues(typeof(SaveSlotId)))
             {
                 var meta = GetSlotMetadata(slot);
-                if (meta.isOccupied && meta.saveVersion <= CurrentVersion && meta.partySummary != "[CORRUPTED SAVE]")
+                if (meta.isOccupied && !meta.expeditionLost && meta.saveVersion <= CurrentVersion && meta.partySummary != "[CORRUPTED SAVE]")
                 {
                     if (meta.lastSavedTicks > latestTicks)
                     {
@@ -594,6 +607,8 @@ namespace Obscure
                 partyAverageLevel = avgLevel,
                 hubGold = campaignData.hubGold,
                 playtimeSeconds = TotalPlaytimeSeconds,
+                retriesLeft = campaignData.retriesLeft,
+                expeditionLost = campaignData.expeditionLost,
                 isOccupied = true
             };
 
@@ -646,6 +661,12 @@ namespace Obscure
             if (!SaveValidator.ValidateSave(saveFile, out error))
                 return false;
 
+            if (saveFile.campaign.expeditionLost)
+            {
+                error = "This expedition was lost. Start a New Game.";
+                return false;
+            }
+
             // Restore campaign state
             var camp = saveFile.campaign;
             TotalPlaytimeSeconds = camp.playtimeSeconds;
@@ -665,6 +686,31 @@ namespace Obscure
             }
 
             return true;
+        }
+
+        // Writes the run's retry state into every save slot of the same expedition (matched by seed),
+        // so loading an older Hub save can't refund a spent retry or revive a lost expedition.
+        public static void SyncRetryState(RunState run)
+        {
+            if (run == null) return;
+            foreach (SaveSlotId slot in Enum.GetValues(typeof(SaveSlotId)))
+            {
+                if (!Storage.SlotExists(slot)) continue;
+                SaveFileData file;
+                try { file = JsonUtility.FromJson<SaveFileData>(Storage.ReadSlotRaw(slot)); }
+                catch (Exception) { continue; } // corrupted slots are reported by GetSlotMetadata
+                if (file?.campaign == null || file.campaign.seed != run.Seed) continue;
+
+                file.campaign.retriesLeft = Math.Min(file.campaign.retriesLeft, run.RetriesLeft);
+                file.campaign.expeditionLost |= run.ExpeditionLost;
+                if (file.metadata != null)
+                {
+                    file.metadata.retriesLeft = file.campaign.retriesLeft;
+                    file.metadata.expeditionLost = file.campaign.expeditionLost;
+                }
+                if (!Storage.WriteSlotRaw(slot, JsonUtility.ToJson(file, true), out var error))
+                    Debug.LogWarning($"[SaveManager] Could not update retries in {slot}: {error}");
+            }
         }
 
         public static bool Delete(SaveSlotId slot, out string error)

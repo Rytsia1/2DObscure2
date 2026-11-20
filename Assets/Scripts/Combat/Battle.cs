@@ -143,6 +143,7 @@ namespace Obscure
 
             foreach (var id in c.cooldowns.Keys.ToList())
                 if (--c.cooldowns[id] <= 0) c.cooldowns.Remove(id);
+            if (c.CounterTurns > 0 && --c.CounterTurns == 0) Say($"{c.name}'s counter stance ends.");
 
             // Process DoTs and status lifecycle via StatusController (GDD Section 8, 10, 11, 12)
             c.StatusController.ProcessTurnStart(this, c, Say);
@@ -329,6 +330,7 @@ namespace Obscure
                     if (actor.IsPlayer)
                     {
                         run?.RelicManager?.OnQteResolved(actor, true, attackQte, this);
+                        if (attackQte == QteResult.Perfect && actor.unit.mp < actor.Stats.maxMp) RestoreMp(actor, QteConfig.PerfectMpRefund);
                     }
                     if (a.charging)
                     {
@@ -364,7 +366,7 @@ namespace Obscure
                             // Elemental moves scale from MATK vs MDEF, physical from ATK vs DEF (Bab 10 §7.7).
                             float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
                             int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng, physPen);
-                            var hit = Deal(actor, t, raw, element, reaction, null, heavy);
+                            var hit = Deal(actor, t, raw, element, reaction, null, heavy, attackQte);
                             hits.Add(hit);
                             if (move != null && move.drain > 0f && actor.Alive)
                             {
@@ -376,6 +378,7 @@ namespace Obscure
                     // Statuses roll once per target per attack and are not blocked by a Perfect parry (Bab 11 §2.3, Bab 12 §4.3).
                     foreach (var t in targets.Where(c => c != null && c.Alive))
                         foreach (var ap in move?.apply ?? Array.Empty<StatusApply>()) Apply(t, ap, actor, 1f);
+                    TriggerCounters(actor, targets, hits);
                     break;
 
                 case ActionKind.Guard:
@@ -413,7 +416,10 @@ namespace Obscure
                     {
                         actor.ApplyMartialArtistCombo(mappedQte, s.isFinisher);
                         if (actor.IsPlayer)
+                        {
                             run?.RelicManager?.OnQteResolved(actor, true, mappedQte, this);
+                            if (mappedQte == QteResult.Perfect && actor.unit.mp < actor.Stats.maxMp) RestoreMp(actor, QteConfig.PerfectMpRefund);
+                        }
                     }
 
                     foreach (var t in Targets(actor, s.target, a.target))
@@ -478,10 +484,10 @@ namespace Obscure
                                     case SkillKind.Physical:
                                         float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
                                         int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng, physPen) : Rules.Physical(actor, t, skillPwr, Rng, physPen);
-                                        hits.Add(Deal(actor, t, pDmg, s.element, null, s));
+                                        hits.Add(Deal(actor, t, pDmg, s.element, null, s, offenseQte: mappedQte));
                                         break;
                                     case SkillKind.Magic:
-                                        hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s));
+                                        hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s, offenseQte: mappedQte));
                                         break;
                                     case SkillKind.Heal:
                                         hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng), actor));
@@ -490,13 +496,22 @@ namespace Obscure
                             }
                         }
                         // Self-applied statuses link to the target (Interpose remembers whom it guards).
-                        foreach (var ap in s.apply ?? Array.Empty<StatusApply>()) Apply(ap.onSelf ? actor : t, ap, ap.onSelf ? t : actor, power);
+                        foreach (var ap in s.apply ?? Array.Empty<StatusApply>())
+                            Apply(ap.onSelf ? actor : t, s.kind == SkillKind.Support ? SupportScaled(ap, actor) : ap, ap.onSelf ? t : actor, power);
+                    }
+                    if (s.counterMultiplier > 0f)
+                    {
+                        actor.CounterTurns = Math.Max(1, s.counterTurns);
+                        actor.CounterMultiplier = s.counterMultiplier;
+                        actor.CounterComboGain = s.counterComboGain;
+                        Say($"{actor.name} readies a counter.");
                     }
                     break;
 
                 case ActionKind.Item:
                     var item = a.item;
                     Items.Remove(item.id);
+                    run?.Inventory?.RemoveConsumable(item.id, 1); // keep the bag in step with the battle list
                     Say($"{actor.name} uses {item.name} on {a.target.name}.");
                     float consumableHealMult = 1f;
                     run?.RelicManager?.ModifyConsumableHeal(ref consumableHealMult);
@@ -541,6 +556,38 @@ namespace Obscure
             a.actor.StatusController.DecrementControlImmunities();
             Active = null;
             return hits;
+        }
+
+        // CHA (Command Presence): a Support skill's stat buffs grow with the caster's CHA modifier
+        // (Database.QteStatInteractions[CHA]). Other statuses keep their data magnitude.
+        public static StatusApply SupportScaled(StatusApply ap, Combatant caster)
+        {
+            if (ap.id != StatusId.AttackUp && ap.id != StatusId.DefenseUp && ap.id != StatusId.MagicDefenseUp) return ap;
+            float mult = QteConfig.SupportPotencyMultiplier(caster);
+            if (mult <= 1f) return ap;
+            return new StatusApply { id = ap.id, turns = ap.turns, magnitude = ap.magnitude * mult, chance = ap.chance, onSelf = ap.onSelf };
+        }
+
+        // Draconic Overdrive raises the counter multiplier 1.0x -> 1.25x (GDD Bab 6 §5.5, Bab 12 §8.5).
+        public const float OverdriveCounterMult = 1.25f;
+
+        // Bab 12 §6.5: a ready counter retaliates once per enemy action, after the action resolves, if the user made a
+        // Defensive Perfect on any hit (Heavy included). No Offensive QTE; damage from QteConfig.CalculateCounterDamage,
+        // Break at 1.0x through Deal. Martial Artist counters add combo but do not count as attacking (Bab 8 §5.1).
+        void TriggerCounters(Combatant enemy, IEnumerable<Combatant> defenders, List<Hit> hits)
+        {
+            foreach (var d in defenders.Where(c => c != null).Distinct().ToList())
+            {
+                bool perfect = d.perfectDefenseThisAction;
+                d.perfectDefenseThisAction = false;
+                if (!perfect || d.CounterTurns <= 0 || !d.Alive || !enemy.Alive || !d.IsPlayer) continue;
+                float mult = d.CounterMultiplier * (d.DraconicOverdriveTurns > 0 ? OverdriveCounterMult : 1f);
+                int dmg = QteConfig.CalculateCounterDamage(d, enemy, mult, Rng);
+                Say($"{d.name} counters {enemy.name}!");
+                hits.Add(Deal(d, enemy, dmg, Element.Physical, null, null));
+                if (d.CounterComboGain > 0 && d.unit?.classDef?.id == "martial_artist")
+                    d.CurrentCombo = Math.Min(Combatant.MaxComboNormal, d.CurrentCombo + d.CounterComboGain);
+            }
         }
 
         IEnumerable<Combatant> Targets(Combatant actor, TargetType type, Combatant chosen) => type switch
@@ -616,7 +663,9 @@ namespace Obscure
         }
 
         // All damage goes through here: reaction, then element, then HP, then Break Gauge reduction.
-        Hit Deal(Combatant attacker, Combatant t, int amount, Element element, QteResult? reaction, SkillDef skill, bool heavy = false)
+        // offenseQte: the attacker's Offensive QTE grade; it scales Break Power 1.5 / 1.0 / 0.5 (Bab 11 §2.5).
+        Hit Deal(Combatant attacker, Combatant t, int amount, Element element, QteResult? reaction, SkillDef skill, bool heavy = false,
+            QteResult offenseQte = QteResult.Good)
         {
             // GDD Bab 11 & 12: Broken cannot achieve Perfect on Defensive QTE (caps at Good / 50% reduction)
             if (t.IsBroken && reaction == QteResult.Perfect)
@@ -634,11 +683,13 @@ namespace Obscure
             {
                 run?.RelicManager?.OnQteResolved(t, false, reaction.Value, this);
             }
+            if (reaction == QteResult.Perfect) t.perfectDefenseThisAction = true; // after Broken/Stun downgrades
 
             // Heavy attack check (Bab 12)
             bool isHeavy = heavy || skill != null && (skill.HasTag("Heavy") || (attacker?.enemy?.attacks != null && attacker.enemy.attacks.Any(a => a.name == skill.name && a.isHeavy)));
 
-            if (reaction == QteResult.Perfect && !isHeavy)
+            // Full parry needs a choice: Guarding this round or a shield equipped. A plain Perfect only deflects (below).
+            if (reaction == QteResult.Perfect && !isHeavy && (t.guarding || (t.unit?.HasEquippedShield() ?? false)))
             {
                 Say($"{t.name} perfectly parries!");
                 return new Hit { target = t, amount = 0, blocked = true };
@@ -759,6 +810,11 @@ namespace Obscure
                 amount = Math.Max(1, (int)Math.Round(amount * QteConfig.HeavyPerfectDefense));
                 Say($"{t.name} parries the Heavy attack for 50% damage reduction!");
             }
+            else if (reaction == QteResult.Perfect)
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.PerfectDefense));
+                note += " (deflected)";
+            }
             else if (reaction == QteResult.Good)
             {
                 amount = Math.Max(1, (int)Math.Round(amount * QteConfig.GoodDefense));
@@ -799,7 +855,7 @@ namespace Obscure
             // Break Gauge reduction on enemy targets when struck by an attack or offensive skill.
             if (t.Alive && t.HasBreakGauge && attacker != null && attacker.side != t.side)
             {
-                int rawBreak = Rules.BreakDamage(attacker, skill, effect);
+                int rawBreak = Rules.BreakDamage(attacker, skill, effect, offenseQte);
                 if (attacker.IsPlayer && run?.RelicManager != null && run.RelicManager.HasRelic("R010"))
                 {
                     var r010 = run.RelicManager.GetInstance("R010");
@@ -813,7 +869,7 @@ namespace Obscure
                 if (t.IsPlayer)
                 {
                     float poiseMult = 1f;
-                    if (reaction == QteResult.Good || t.guarding) poiseMult *= Combatant.PlayerPoiseMitigatedMult;
+                    if (reaction == QteResult.Good || reaction == QteResult.Perfect || t.guarding) poiseMult *= Combatant.PlayerPoiseMitigatedMult;
                     if (isHeavy) poiseMult *= Combatant.PlayerPoiseHeavyMult;
                     rawBreak = Math.Max(1, (int)Math.Round(rawBreak * poiseMult));
                 }

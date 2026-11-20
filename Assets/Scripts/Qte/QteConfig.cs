@@ -51,10 +51,17 @@ namespace Obscure
         // Relaxed assist: wider windows and more time. Never touches unit stats.
         public const float RelaxedWindow = 1.6f, RelaxedTime = 1.35f;
 
-        // Result -> multiplier (GDD Terbaru Bab 12). Offense: Perfect 1.5x, Good 1.0x, Poor 0.5x.
-        // Defense: Perfect 0x (Heavy 0.5x), Good 0.5x, Poor 1.0x damage taken.
-        public const float PerfectPower = 1.5f, GoodPower = 1.0f, PartialPower = 0.75f, PoorPower = 0.5f, MissPower = 0.5f;
-        public const float PerfectDefense = 0f, GoodDefense = 0.5f, HeavyPerfectDefense = 0.5f, PartialDefense = 0.75f, PoorDefense = 1f, MissDefense = 1f;
+        // Result -> multiplier (GDD Bab 11 §2.2, Bab 12). Offense damage: Perfect 1.2x, Good 1.0x, Poor 0.75x.
+        // The damage spread is narrow so build stats stay visible; a Perfect pays in tactical currencies instead:
+        // Break keeps the wide 1.5 / 1.0 / 0.5 spread (DamageCalculator.Qte*Multiplier) and Perfect refunds MP.
+        // Starting values, untested: GDD Bab 12 §2.4 has the test and the tuning direction.
+        public const float PerfectPower = 1.2f, GoodPower = 1.0f, PartialPower = 0.875f, PoorPower = 0.75f, MissPower = 0.75f;
+        public const int PerfectMpRefund = 1; // MP back on an offensive Perfect (basic attack or damaging skill)
+
+        // Defense damage taken: Perfect 0.25x, Good 0.5x, Poor 1.0x; Heavy Perfect 0.5x.
+        // A full parry (0 damage, Perfect on a non-Heavy hit) needs a choice: Guarding or a shield equipped (GDD Bab 12 §3.5).
+        // PerfectDefense is a starting value, untested: the GDD section has the test and the tuning direction.
+        public const float PerfectDefense = 0.25f, GoodDefense = 0.5f, HeavyPerfectDefense = 0.5f, PartialDefense = 0.75f, PoorDefense = 1f, MissDefense = 1f;
         public const float PartialWindowMultiplier = 1.35f;
 
         // Typing: Perfect = no mistakes and finished within this fraction of the time limit.
@@ -164,14 +171,15 @@ namespace Obscure
             };
         }
 
-        // Calculates physical counterattack damage on a Perfect reaction (scales with STR + DEX CounterPower).
-        public static int CalculateCounterDamage(Combatant defender, Combatant attacker)
+        // Counter damage (Bab 12 §6.5): a physical strike at Good-equivalent power, times the counter multiplier,
+        // raised by Counter Power read as a percentage (Counter Power 18 = +18%). It goes through Physical Power, so
+        // weapon, level and Attack Up all scale it; enemy DEF mitigates it as usual.
+        // Starting values, untested: see GDD Bab 12 §6.5 for the pass/fail test and tuning direction.
+        public static int CalculateCounterDamage(Combatant defender, Combatant attacker, float multiplier = 1f, Random rng = null)
         {
             if (defender == null || attacker == null) return 0;
-            int counterPwr = defender.unit.Derived.counterPower;
-            int strBonus = Math.Max(0, defender.unit.Mod(Ability.STR)) * 2;
-            float raw = counterPwr + strBonus;
-            return Math.Max(1, (int)Math.Round(StatCalculator.MitigateByDefense(raw, attacker.Def, defender.ArmorPen)));
+            float counterBonus = Math.Max(0, defender.unit.Derived.counterPower) / 100f;
+            return Rules.Physical(defender, attacker, multiplier * (1f + counterBonus), rng);
         }
 
         // Calculates CHA command/support reaction multiplier for support skills and buffs.

@@ -1,0 +1,259 @@
+{
+ "frames": [
+  {
+   "filename": "impact-frame-wide 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 1",
+   "frame": {
+    "x": 640,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 2",
+   "frame": {
+    "x": 1280,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 3",
+   "frame": {
+    "x": 0,
+    "y": 360,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 4",
+   "frame": {
+    "x": 640,
+    "y": 360,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 5",
+   "frame": {
+    "x": 1280,
+    "y": 360,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 6",
+   "frame": {
+    "x": 0,
+    "y": 720,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 7",
+   "frame": {
+    "x": 640,
+    "y": 720,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 8",
+   "frame": {
+    "x": 1280,
+    "y": 720,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  },
+  {
+   "filename": "impact-frame-wide 9",
+   "frame": {
+    "x": 0,
+    "y": 1080,
+    "w": 640,
+    "h": 360
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 640,
+    "h": 360
+   },
+   "sourceSize": {
+    "w": 640,
+    "h": 360
+   },
+   "duration": 33
+  }
+ ],
+ "meta": {
+  "app": "https://github.com/patch-gg/pixelfx",
+  "version": "1",
+  "image": "impact-frame-wide.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 1920,
+   "h": 1440
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "impact-frame-wide",
+    "from": 0,
+    "to": 9,
+    "direction": "forward"
+   }
+  ],
+  "pixelfx": {
+   "id": "impacts/impact-frame-wide",
+   "name": "Impact frame (wide)",
+   "fps": 30,
+   "loop": false,
+   "frames": 10,
+   "frameSize": [
+    640,
+    360
+   ],
+   "pivot": [
+    320,
+    180
+   ],
+   "columns": 3
+  }
+ }
+}

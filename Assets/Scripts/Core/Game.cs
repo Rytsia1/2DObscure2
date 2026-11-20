@@ -15,6 +15,8 @@ namespace Obscure
         public VisualElement UiRoot { get; protected set; }
         protected static Game Game => Game.I;
         protected static RunState Run => Game.I != null ? Game.I.Run : null;
+        // Service screens (Party, Status, Bag) open from both the Hub and the dungeon map; this says which gold pocket is live.
+        protected static bool InDungeon => Game.I != null && Game.I.LastBase == GameState.Map;
 
         protected VisualElement MountFigma(string screenKey, int sortingOrder = 10)
             => UiRoot = FigmaUi.Mount(Root.gameObject, screenKey, sortingOrder);
@@ -170,12 +172,11 @@ namespace Obscure
                     : Database.Party.Select(id => Database.Characters[id]).ToList());
 
             Run = new RunState(MapGenerator.Generate(s, 1), party, s);
-            Run.Gold = PersistenceCommitHandler.StarterGold;
+            Run.HubGold = PersistenceCommitHandler.StarterGold;
 
             var snapshot = PersistenceCommitHandler.CreateNewGameCommittedSnapshot(party, s, starterGold: PersistenceCommitHandler.StarterGold);
             PersistenceCommitHandler.SetActiveCommittedSnapshot(snapshot);
-            Go(GameState.Hub);
-            SaveManager.AutoSave(out _);
+            Go(GameState.Hub); // HubScreen auto-saves on arrival from Character Creation (Go is async, so saving here is rejected)
         }
 
         // Transitions from confirmed party creation to the Opening Sequence before the first expedition (Section 2 & 12).
@@ -224,12 +225,38 @@ namespace Obscure
             Go(GameState.MainMenu);
         }
 
+        // Service screens can nest (Party > Status > Equipment > Bag); Back unwinds them one level at a time.
+        static readonly System.Collections.Generic.HashSet<GameState> ServiceStates = new System.Collections.Generic.HashSet<GameState>
+        {
+            GameState.Party, GameState.CharacterStatus, GameState.Equipment, GameState.Inventory, GameState.Skills, GameState.Talents,
+        };
+        readonly System.Collections.Generic.Stack<GameState> backStack = new System.Collections.Generic.Stack<GameState>();
+        bool goingBack;
+
+        // Returns to the screen this service screen was opened from; fallback when it wasn't opened through Go.
+        public void Back(GameState fallback)
+        {
+            if (transitioning) return;
+            goingBack = true;
+            Go(backStack.Count > 0 ? backStack.Peek() : fallback);
+        }
+
+        void TrackHistory(GameState from, GameState next)
+        {
+            bool back = goingBack;
+            goingBack = false;
+            if (!ServiceStates.Contains(next)) backStack.Clear();
+            else if (back) { if (backStack.Count > 0 && backStack.Peek() == next) backStack.Pop(); }
+            else backStack.Push(from);
+        }
+
         // Every state change goes through here: lock input, fade out, swap screen, fade in.
         public void Go(GameState next)
         {
             if (!Application.isPlaying)
             {
                 screen?.Close();
+                TrackHistory(State, next);
                 PreviousState = State;
                 State = next;
                 if (next == GameState.Hub || next == GameState.Map) LastBase = next;
@@ -249,6 +276,7 @@ namespace Obscure
         {
             yield return Fade(0, 1);
             screen?.Close();
+            TrackHistory(State, next);
             PreviousState = State;
             State = next;
             if (next == GameState.Hub || next == GameState.Map) LastBase = next;
@@ -301,7 +329,8 @@ namespace Obscure
             GameState.Temple => new TempleScreen(),
             GameState.MagicShop => new MagicShopScreen(),
             GameState.DungeonClear => new DungeonClearScreen(),
-            GameState.Load => new LoadScreen(Game.I != null && Game.I.State == GameState.Hub ? GameState.Hub : GameState.MainMenu),
+            // Create runs after State is already Load, so the screen we came from is PreviousState.
+            GameState.Load => new LoadScreen(Game.I != null && Game.I.PreviousState == GameState.Hub ? GameState.Hub : GameState.MainMenu),
             _ => new EndScreen(true),
         };
 
