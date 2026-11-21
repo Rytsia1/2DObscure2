@@ -30,6 +30,7 @@ namespace Obscure
             var continueSub = FigmaUi.FindLabel(UiRoot, "AUTO SAVE · GEISTWALD CITY · 0 OF 8 CLEARED");
             if (continueSub != null)
             {
+                continueSub.style.left = 117f;
                 if (hasSave)
                 {
                     var m = SaveManager.GetSlotMetadata(best);
@@ -49,7 +50,7 @@ namespace Obscure
                 ContinueButton = menu.Add(continueInst, "CONTINUE", () => Game?.ContinueGame(), interactable: canContinue, visual: focused =>
                 {
                     var arrow = continueInst.Q<UiLabel>("text-0");
-                    if (arrow != null) arrow.style.visibility = focused ? Visibility.Visible : Visibility.Hidden;
+                    if (arrow != null) arrow.style.display = focused ? DisplayStyle.Flex : DisplayStyle.None;
                     FigmaUi.ApplyDefaultFocusVisual(continueInst, focused, false, canContinue);
                 });
             }

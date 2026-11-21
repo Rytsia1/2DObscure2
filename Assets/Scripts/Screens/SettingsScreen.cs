@@ -171,7 +171,7 @@ namespace Obscure
                     {
                         inner.EnableInClassList("uitk-unfocused", !focused && !sel);
                         var arrow = inner.Q<UiLabel>("text-0");
-                        if (arrow != null) arrow.style.visibility = (focused || sel) ? Visibility.Visible : Visibility.Hidden;
+                        if (arrow != null) arrow.style.display = (focused || sel) ? DisplayStyle.Flex : DisplayStyle.None;
                     }
                     else if (el is Button b)
                     {

@@ -324,7 +324,7 @@ Button,
 }
 
 .button-flat.uitk-unfocused > .button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e {
-    visibility: hidden;
+    display: none;
 }
 
 .button-flat > .button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2,

@@ -394,7 +394,7 @@ namespace Obscure
             var (k0, t0, k1, t1) = CurrentPage switch
             {
                 Page.Race => ("UP DN", "BROWSE", "ENTER", PresetMode ? "LOCK PRESET" : "LOCK RACE"),
-                Page.Class => ("ARROWS", "BROWSE", "ENTER", "LOCK CLASS"),
+                Page.Class => ("UP DN", "BROWSE", "ENTER", "LOCK CLASS"),
                 Page.Abilities => ("UP DN", "STAT", "L R", "ADJUST SCORE"),
                 Page.Gear => ("UP DN", "SLOT", "L R", "CHANGE ITEM"),
                 Page.Review => ("UP DN", "BROWSE", "ENTER", "SELECT HERO"),
@@ -847,55 +847,18 @@ namespace Obscure
 
         void BuildClassPage()
         {
-            pageListColumns = 2;
             AddColumnHeader(middleBody, "Choose a Class", $"{ClassIds.Length} CLASSES");
             var midScroll = CreateColumnScroll(middleBody);
-            var grid = new VisualElement();
-            grid.style.flexDirection = FlexDirection.Row;
-            grid.style.flexWrap = Wrap.Wrap;
-            grid.style.justifyContent = Justify.SpaceBetween;
-            midScroll.Add(grid);
-
             for (int i = 0; i < ClassIds.Length; i++)
             {
                 var c = Database.Classes[ClassIds[i]];
-                bool isSel = c.id == Session.Class.id;
-                var card = new VisualElement();
-                card.AddToClassList("uitk-card");
-                card.style.width = 124;
-                card.style.marginBottom = 6;
-
-                var hdrRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
-                var cursor = new UiLabel("▸") { name = "uitkCursor" };
-                cursor.AddToClassList("uitk-card-cursor");
-                cursor.AddToClassList("uitk-cursor-hidden");
-                hdrRow.Add(cursor);
-
-                var titleLbl = new UiLabel(c.name);
-                titleLbl.AddToClassList("uitk-card-title");
-                titleLbl.style.fontSize = 14;
-                titleLbl.style.flexGrow = 1;
-                titleLbl.style.flexShrink = 1;
-                titleLbl.style.overflow = Overflow.Hidden;
-                hdrRow.Add(titleLbl);
-
-                if (isSel)
-                {
-                    var check = new UiLabel("✓");
-                    check.AddToClassList("uitk-locked-badge");
-                    hdrRow.Add(check);
-                }
-
-                var roleLbl = new UiLabel((c.role ?? "").ToUpperInvariant());
-                roleLbl.AddToClassList("uitk-card-sub");
-                roleLbl.style.fontSize = 10;
-                roleLbl.style.marginLeft = 16;
-                card.Add(hdrRow);
-                card.Add(roleLbl);
-                grid.Add(card);
-                string tip = isSel ? $"LOCKED IN: {c.name.ToUpperInvariant()}" : $"CLICK OR PRESS ENTER TO LOCK IN {c.name.ToUpperInvariant()}";
-                var item = menu.Add(card, c.name, () => SelectClassById(c.id), selected: isSel, tooltip: tip);
-                pageListItems.Add(item);
+                AddCard(
+                    midScroll,
+                    c.name,
+                    (c.role ?? "").ToUpperInvariant(),
+                    FirstClause(c.description).ToUpperInvariant(),
+                    c.id == Session.Class.id,
+                    () => SelectClassById(c.id));
             }
 
             var cls = Session.Class;
