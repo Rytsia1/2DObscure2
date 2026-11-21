@@ -221,6 +221,7 @@ namespace Obscure
                     cardBtn.style.borderBottomColor = col;
                     cardBtn.style.borderLeftColor = col;
                     cardBtn.style.borderRightColor = col;
+                    cardBtn.style.backgroundColor = on ? new Color(0.95f, 0.76f, 0.36f, 0.08f) : Color.clear;
                 });
             }
 
@@ -230,21 +231,16 @@ namespace Obscure
             // Bottom action buttons
             var viewBtn = FigmaUi.FindButton(UiRoot, "View Status");
             if (viewBtn != null)
+            {
+                viewBtn.style.marginRight = 10;
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(viewBtn, "View Status", () => Game?.Go(GameState.CharacterStatus)), viewBtn);
+            }
 
             var confirmBtn = FigmaUi.FindButton(UiRoot, "Confirm Party");
             if (confirmBtn != null)
             {
                 confirmBtn.text = "Done"; // nothing to confirm: party order is fixed and placement is automatic
-                var item = menu.Add(confirmBtn, "Done", () => Game?.Back(BackTo));
-                item.visual = on =>
-                {
-                    confirmBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
-                    confirmBtn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
-                    confirmBtn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
-                    confirmBtn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
-                };
-                item.visual(false);
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(confirmBtn, "Done", () => Game?.Back(BackTo)), confirmBtn);
             }
 
             menu.onFocus = item =>
@@ -397,12 +393,26 @@ namespace Obscure
                 noteLbl.style.maxWidth = 350;
                 noteLbl.style.color = ko.Count > 0 ? Palette.Err : low.Count > 0 ? Palette.Ember1 : Palette.Ok;
 
-                // Placement is automatic and cosmetic (CombatView.StagePositions); say so, so I-IV doesn't read as rows.
+                // Placement is automatic and cosmetic (CombatView.StagePositions); anchor directly under noteLbl inside Party Overview.
                 var rowsLbl = new UiLabel("IN BATTLE: MELEE STAND IN FRONT, RANGED IN BACK, ROGUE FILLS IN. ROWS DON'T CHANGE WHO GETS HIT.")
                 {
-                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, maxWidth = 350, marginTop = 6 }
+                    style =
+                    {
+                        position = Position.Absolute,
+                        left = 876,
+                        top = 564,
+                        width = 350,
+                        fontSize = 11,
+                        color = Palette.Mist2,
+                        whiteSpace = WhiteSpace.Normal,
+                    }
                 };
-                noteLbl.parent?.Insert(noteLbl.parent.IndexOf(noteLbl) + 1, rowsLbl);
+                noteLbl.parent?.Add(rowsLbl);
+                FigmaUi.OnFirstLayout(noteLbl, () =>
+                {
+                    rowsLbl.style.left = noteLbl.layout.x;
+                    rowsLbl.style.top = Mathf.Min(noteLbl.layout.yMax + 8f, 594f);
+                });
             }
         }
     }

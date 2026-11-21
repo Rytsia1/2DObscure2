@@ -142,7 +142,6 @@ namespace Obscure
             var el = FigmaUi.CreateButton(text, styleClass, actionEls.Count > 0 ? 160f : 190f);
             el.style.marginRight = 12;
             el.userData = text;
-            el.RegisterCallback<PointerEnterEvent>(_ => { });
             actionRow.Add(el);
             actionEls.Add(el);
             el.pickingMode = PickingMode.Position;

@@ -63,9 +63,17 @@ namespace Obscure
             }
 
             var saveBtn = FigmaUi.FindButton(UiRoot, "Save");
-            if (saveBtn != null) menu.Add(saveBtn, "Save", () => Game?.Go(GameState.Save), tooltip: "SAVE COMMITTED CAMPAIGN PROGRESS TO A SLOT.");
+            if (saveBtn != null)
+            {
+                saveBtn.style.marginRight = 8;
+                menu.Add(saveBtn, "Save", () => Game?.Go(GameState.Save), tooltip: "SAVE COMMITTED CAMPAIGN PROGRESS TO A SLOT.");
+            }
             var loadBtn = FigmaUi.FindButton(UiRoot, "Load");
-            if (loadBtn != null) menu.Add(loadBtn, "Load", () => Game?.Go(GameState.Load), tooltip: "LOAD A SAVED CAMPAIGN.");
+            if (loadBtn != null)
+            {
+                loadBtn.style.marginRight = 8;
+                menu.Add(loadBtn, "Load", () => Game?.Go(GameState.Load), tooltip: "LOAD A SAVED CAMPAIGN.");
+            }
             var mainMenuBtn = FigmaUi.FindButton(UiRoot, "Main Menu");
             if (mainMenuBtn != null) menu.Add(mainMenuBtn, "Main Menu", OnTitleClicked, tooltip: "RETURN TO THE TITLE SCREEN.");
         }
@@ -93,7 +101,17 @@ namespace Obscure
             tipTitleLbl = UiRoot.Q<UiLabel>(className: "dungeon-entrance-vars");
             tipBodyLbl = FigmaUi.FindLabel(UiRoot, "BEGIN DUNGEON 1 OF 8. A NEW RUN STARTS WITH 0 SPOILS.");
             var tipPanel = UiRoot.Q<VisualElement>(className: "panel-gold__i-2");
-            if (tipPanel != null) tipPanel.style.height = 128;
+            if (tipPanel != null)
+            {
+                tipPanel.style.width = 280;
+                tipPanel.style.height = 152;
+                tipPanel.style.overflow = Overflow.Hidden;
+            }
+            if (tipBodyLbl != null)
+            {
+                tipBodyLbl.style.width = 252;
+                tipBodyLbl.style.whiteSpace = WhiteSpace.Normal;
+            }
 
             int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
             var gate = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "Dungeon Entrance");
@@ -121,12 +139,16 @@ namespace Obscure
             lbl.AddToClassList("uitk-flat-label");
 
             if (!string.IsNullOrEmpty(replaceRightText) && row.childCount > 2 && row[2] is UiLabel rightLbl)
+            {
                 rightLbl.text = replaceRightText;
+                rightLbl.style.marginLeft = 8;
+            }
 
             if (!string.IsNullOrEmpty(badgeText))
             {
                 var badge = new UiLabel(badgeText);
                 badge.AddToClassList(badgeClass);
+                badge.style.marginLeft = 8;
                 row.Add(badge);
             }
 
@@ -179,8 +201,12 @@ namespace Obscure
                 var u = party[i];
 
                 var portraitBox = card[0];
-                if (portraitBox != null && portraitBox.childCount > 0 && u.sprite != null)
-                    FigmaUi.SetBackgroundContain(portraitBox[0], FigmaUi.GetSpriteTexture(u.sprite, "unit_" + (u.classDef?.id ?? u.name)));
+                if (portraitBox != null)
+                {
+                    portraitBox.style.marginRight = 10;
+                    if (portraitBox.childCount > 0 && u.sprite != null)
+                        FigmaUi.SetBackgroundContain(portraitBox[0], FigmaUi.GetSpriteTexture(u.sprite, "unit_" + (u.classDef?.id ?? u.name)));
+                }
 
                 var infoCol = card.childCount > 1 ? card[1] : null;
                 if (infoCol == null) continue;
@@ -198,6 +224,8 @@ namespace Obscure
 
                 var hpGauge = infoCol.Q<VisualElement>(className: "gauge-hp");
                 var mpGauge = infoCol.Q<VisualElement>(className: "gauge-mp");
+                if (hpGauge != null) hpGauge.style.marginTop = 4;
+                if (mpGauge != null) mpGauge.style.marginTop = 4;
                 float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
                 float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
                 FigmaUi.SetGaugeFill(hpGauge, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);

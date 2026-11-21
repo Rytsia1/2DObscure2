@@ -241,14 +241,15 @@ namespace Obscure
             if (!isBossHud)
                 modifierStrip = ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
 
-            // Command menu column inside right console panel
-            menuHost = new VisualElement { name = "CombatCommandMenu" };
-            menuHost.style.position = Position.Absolute;
-            menuHost.style.left = 676;
-            menuHost.style.top = 492;
-            menuHost.style.width = 236;
-            menuHost.style.height = 218;
-            menuHost.style.flexDirection = FlexDirection.Column;
+            // Command menu column inside right console panel (scrollable when 5+ items/skills/targets exist)
+            var menuScroll = FigmaUi.CreateVerticalScrollView();
+            menuScroll.name = "CombatCommandMenu";
+            menuScroll.style.position = Position.Absolute;
+            menuScroll.style.left = 676;
+            menuScroll.style.top = 492;
+            menuScroll.style.width = 236;
+            menuScroll.style.height = 218;
+            menuHost = menuScroll;
             screenRoot.Add(menuHost);
 
             // Right Dossier / Log box over panel-raised
@@ -1678,7 +1679,8 @@ namespace Obscure
 
         void Option(UitkMenu m, string text, Action onClick, bool enabled = true, string tooltip = null, string costType = null, string target = null, string rawTitle = null, Texture2D icon = null, IEnumerable<(StatusId id, string label)> statusChips = null)
         {
-            var btn = FigmaUi.CreateButton(text, "button-slab", 236f);
+            var btn = FigmaUi.CreateButton(text, "button-slab", null);
+            btn.style.width = Length.Percent(100);
             btn.style.height = 46;
             btn.style.marginBottom = 6;
             btn.style.paddingLeft = icon != null ? 44 : 10;
@@ -1818,11 +1820,13 @@ namespace Obscure
 
                 // Add target row in command menu
                 var activeStatuses = CollectActiveStatuses(cand);
-                var btn = FigmaUi.CreateButton(cand.name.ToUpperInvariant(), "button-slab", 236f);
+                var btn = FigmaUi.CreateButton(cand.name.ToUpperInvariant(), "button-slab", null);
+                btn.style.width = Length.Percent(100);
                 btn.style.height = 46;
                 btn.style.marginBottom = 6;
                 btn.style.fontSize = 16;
                 btn.style.overflow = Overflow.Hidden;
+                var tgtLbl = btn.Q<UiLabel>("uitkLabel");
                 if (activeStatuses.Count > 0)
                 {
                     var iconStrip = new VisualElement
@@ -1848,7 +1852,9 @@ namespace Obscure
                     btn.style.backgroundColor = !valid ? Palette.Ink1 : on ? Palette.Hex(0x2B2210) : Palette.Ink2;
                     var b = on ? Palette.Gold1 : Palette.Ink4;
                     btn.style.borderTopColor = b; btn.style.borderBottomColor = b; btn.style.borderLeftColor = b; btn.style.borderRightColor = b;
-                    btn.style.color = !valid ? Palette.Mist3 : on ? Palette.Gold1 : Palette.Mist1;
+                    var col = !valid ? Palette.Mist3 : on ? Palette.Gold1 : Palette.Mist1;
+                    btn.style.color = col;
+                    if (tgtLbl != null) tgtLbl.style.color = col;
                     if (h.targetArrow != null)
                     {
                         h.targetArrow.style.color = Palette.Gold1;

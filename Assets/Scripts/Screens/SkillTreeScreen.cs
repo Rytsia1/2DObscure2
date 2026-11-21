@@ -168,18 +168,35 @@ namespace Obscure
             if (backBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", () => Game?.Back(returnState)));
 
             string[] frames = { "frame-vars-22", "frame-vars-23", "frame-vars-24", "frame-vars-25" };
+            VisualElement switcherRow = null;
             for (int i = 0; i < frames.Length; i++)
             {
                 var fr = UiRoot.Q<VisualElement>(className: frames[i]);
                 if (fr == null) continue;
+                switcherRow ??= fr.parent;
                 if (i >= party.Count) { fr.style.display = DisplayStyle.None; continue; }
+                fr.AddToClassList("uitk-portrait-btn");
+                fr.style.marginRight = 6;
                 int idx = i; var u = party[i]; bool on = i == heroIndex;
                 if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "sk_hdr_" + (u.classDef?.id ?? u.name)));
                 var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d => SwitchHero(d));
                 portraitItems[it] = idx;
-                it.visual = f => { var b = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = b; fr.style.borderBottomColor = b; fr.style.borderLeftColor = b; fr.style.borderRightColor = b; };
+                it.visual = f =>
+                {
+                    fr.EnableInClassList("uitk-focus", f);
+                    fr.EnableInClassList("uitk-selected", on);
+                    var b = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5;
+                    fr.style.borderTopColor = b; fr.style.borderBottomColor = b; fr.style.borderLeftColor = b; fr.style.borderRightColor = b;
+                };
                 it.visual(false);
+            }
+            if (switcherRow != null && party.Count > 1)
+            {
+                var qCap = FigmaUi.FindLabel(switcherRow, "Q")?.parent;
+                var eCap = FigmaUi.FindLabel(switcherRow, "E")?.parent;
+                if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
+                if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
             }
 
             var heroLbl = UiRoot.Q<UiLabel>(className: "knight-knight-lv-1-vars");
@@ -195,15 +212,15 @@ namespace Obscure
         void BuildTree(VisualElement screen, List<Node> nodes)
         {
             var hero = CurrentHero;
-            var host = new VisualElement { style = { position = Position.Absolute, left = 40, top = 84, width = 806, height = 602, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 40, top = 84, width = 806, height = 602, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
 
-            var topBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
+            var topBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 0 } };
             topBar.Add(FigmaUi.CreateSectionHeader($"{hero.classDef?.name ?? "Class"} skill tree", 580f));
             topBar.Add(new UiLabel("□ ACTIVE   ◇ PASSIVE") { style = { fontSize = 13, color = Palette.Mist2 } });
             host.Add(topBar);
 
-            var canvas = new VisualElement { style = { flexGrow = 1, marginTop = 8, marginBottom = 8 } };
+            var canvas = new VisualElement { style = { flexGrow = 1, marginTop = 8, marginBottom = 8, overflow = Overflow.Hidden } };
             host.Add(canvas);
 
             int maxTier = SkillLoadout.GetMaxUnlockedTier(hero.level);
@@ -358,7 +375,7 @@ namespace Obscure
         void BuildDetail(VisualElement screen)
         {
             var hero = CurrentHero;
-            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 602, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 602, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             if (string.IsNullOrEmpty(selectedSkillId)) { host.Add(FigmaUi.CreateSectionHeader("Select a skill", 346f)); return; }
 
@@ -373,7 +390,16 @@ namespace Obscure
             var node = hero.classDef?.skillUnlockProgression?.FirstOrDefault(n => n.skillId == selectedSkillId);
 
             host.Add(FigmaUi.CreateSectionHeader(name, 346f));
-            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginTop = 10, marginBottom = 10 } };
+
+            var detailScroll = FigmaUi.CreateVerticalScrollView();
+            detailScroll.style.flexGrow = 1;
+            detailScroll.style.flexBasis = 0;
+            detailScroll.style.minHeight = 0;
+            detailScroll.style.marginTop = 8;
+            detailScroll.style.marginBottom = 8;
+            host.Add(detailScroll);
+
+            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 10 } };
             var tType = FigmaUi.InstantiateTemplate("Tag-Cls"); if (tType != null) { FigmaUi.SetInstanceText(tType, "text-0", isSelectedPassive ? "PASSIVE" : "ACTIVE"); tType.style.marginRight = 6; tagRow.Add(tType); }
             var tTier = FigmaUi.InstantiateTemplate("Tag-Cls"); if (tTier != null) { FigmaUi.SetInstanceText(tTier, "text-0", $"TIER {tier}"); tTier.style.marginRight = 6; tagRow.Add(tTier); }
             if (a != null)
@@ -383,9 +409,9 @@ namespace Obscure
                 if (chip != null) { FigmaUi.SetInstanceText(chip, "text-0", code); chip.style.marginRight = 6; tagRow.Add(chip); }
                 tagRow.Add(new UiLabel(a.element.ToString().ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist2 } });
             }
-            host.Add(tagRow);
+            detailScroll.Add(tagRow);
 
-            host.Add(new UiLabel(((a?.description ?? pv?.description) ?? "").ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 12 } });
+            detailScroll.Add(new UiLabel(((a?.description ?? pv?.description) ?? "").ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 12 } });
 
             VisualElement Line(string l, string r)
             {
@@ -397,38 +423,36 @@ namespace Obscure
             int shown = Math.Max(1, rank);
             if (a != null)
             {
-                host.Add(Line("MP COST", a.GetMpCost(shown).ToString()));
-                host.Add(Line("TARGET", Palette.FormatTarget(a.target)));
-                host.Add(Line("POWER", $"{a.GetPower(shown):0.##}X"));
-                if (a.cooldown > 0) host.Add(Line("COOLDOWN", $"{a.cooldown} {(a.cooldown == 1 ? "TURN" : "TURNS")}"));
+                detailScroll.Add(Line("MP COST", a.GetMpCost(shown).ToString()));
+                detailScroll.Add(Line("TARGET", Palette.FormatTarget(a.target)));
+                detailScroll.Add(Line("POWER", $"{a.GetPower(shown):0.##}X"));
+                if (a.cooldown > 0) detailScroll.Add(Line("COOLDOWN", $"{a.cooldown} {(a.cooldown == 1 ? "TURN" : "TURNS")}"));
             }
-            host.Add(Line("RANK", learned ? $"{rank} / {maxRank}" : $"LOCKED · MAX {maxRank}"));
+            detailScroll.Add(Line("RANK", learned ? $"{rank} / {maxRank}" : $"LOCKED · MAX {maxRank}"));
 
             if (a?.apply != null && a.apply.Length > 0)
             {
-                host.Add(new UiLabel("STATUS EFFECTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 8, marginBottom = 4 } });
-                var statusRow = new VisualElement { style = { width = 346, flexShrink = 0, flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center } };
+                detailScroll.Add(new UiLabel("STATUS EFFECTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 8, marginBottom = 4 } });
+                var statusRow = new VisualElement { style = { flexShrink = 0, flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center } };
                 foreach (var ap in a.apply)
                 {
                     var chip = IconArt.StatusChip(ap.id, StatusInfo.ChipText(ap), 1, 5f);
                     if (chip != null) statusRow.Add(chip);
                 }
-                host.Add(statusRow);
+                detailScroll.Add(statusRow);
             }
 
-            host.Add(new UiLabel("REQUIREMENTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 10, marginBottom = 4 } });
+            detailScroll.Add(new UiLabel("REQUIREMENTS") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 10, marginBottom = 4 } });
             int req = node?.requiredLevel ?? TierLevel[Mathf.Clamp(tier - 1, 0, 4)];
             bool lvOk = hero.level >= req;
-            host.Add(new UiLabel($"{(lvOk ? "✓" : "X")} LEVEL {req} · {hero.name.ToUpperInvariant()} IS LV {hero.level}") { style = { fontSize = 12, color = lvOk ? Palette.Ok : Palette.Err } });
+            detailScroll.Add(new UiLabel($"{(lvOk ? "✓" : "X")} LEVEL {req} · {hero.name.ToUpperInvariant()} IS LV {hero.level}") { style = { fontSize = 12, color = lvOk ? Palette.Ok : Palette.Err, whiteSpace = WhiteSpace.Normal } });
             foreach (var pre in node?.prerequisites ?? Array.Empty<string>())
             {
                 bool met = lo.UnlockedActiveSkills.Contains(pre) || lo.UnlockedPassiveSkills.Contains(pre);
-                host.Add(new UiLabel($"{(met ? "✓" : "X")} {NameOf(pre, !Database.Skills.ContainsKey(pre)).ToUpperInvariant()} LEARNED") { style = { fontSize = 12, color = met ? Palette.Ok : Palette.Err } });
+                detailScroll.Add(new UiLabel($"{(met ? "✓" : "X")} {NameOf(pre, !Database.Skills.ContainsKey(pre)).ToUpperInvariant()} LEARNED") { style = { fontSize = 12, color = met ? Palette.Ok : Palette.Err, whiteSpace = WhiteSpace.Normal } });
             }
 
-            host.Add(new VisualElement { style = { flexGrow = 1 } });
-
-            var utilRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 10 } };
+            var utilRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 8, flexShrink = 0 } };
             var respecBtn = FigmaUi.CreateButton(confirmRespecActive ? "Confirm?" : "Respec SP", confirmRespecActive ? "button-danger" : "button-slab", 160f);
             utilRow.Add(respecBtn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(respecBtn, "Respec SP", Respec));
@@ -445,7 +469,7 @@ namespace Obscure
 
             if (learned)
             {
-                var eqRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 10 } };
+                var eqRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8, flexShrink = 0 } };
                 eqRow.Add(new UiLabel(equipped ? "EQUIPPED" : "EQUIP TO") { style = { fontSize = 12, color = Palette.Mist3, width = 92 } });
                 var slotArr = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots;
                 for (int i = 0; i < 3; i++)
@@ -461,12 +485,12 @@ namespace Obscure
             }
 
             if (!string.IsNullOrEmpty(feedback))
-                host.Add(new UiLabel(feedback.ToUpperInvariant()) { style = { fontSize = 12, color = feedbackBad ? Palette.Err : Palette.Ok, whiteSpace = WhiteSpace.Normal, marginBottom = 8 } });
+                host.Add(new UiLabel(feedback.ToUpperInvariant()) { style = { fontSize = 12, color = feedbackBad ? Palette.Err : Palette.Ok, whiteSpace = WhiteSpace.Normal, marginBottom = 8, flexShrink = 0 } });
 
             int sp = lo.SkillPoints;
             int cost = !learned ? node?.skillPointCost ?? 1 : rank < maxRank ? lo.GetUpgradeCost(selectedSkillId, rank) : 0;
             bool canAct = !learned ? lo.CanUnlockSkill(selectedSkillId, hero.level, hero.classDef, out _) : rank < maxRank && sp >= cost;
-            var foot = new VisualElement { style = { borderTopWidth = 2, borderTopColor = Palette.Ink4, paddingTop = 10, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
+            var foot = new VisualElement { style = { borderTopWidth = 2, borderTopColor = Palette.Ink4, paddingTop = 10, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 0 } };
             foot.Add(new UiLabel(cost > 0 ? $"{cost} SP" : "-") { style = { fontSize = 22, color = Palette.Gold1 } });
             var (spText, spShort) = SpPreview(sp, cost);
             foot.Add(new UiLabel(spText) { style = { fontSize = 13, color = spShort ? Palette.Err : Palette.Mist2 } });

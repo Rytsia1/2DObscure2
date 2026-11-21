@@ -64,7 +64,9 @@ namespace Obscure
         VisualElement previewSpriteEl, previewRaceTag;
         readonly VisualElement[] stepChips = new VisualElement[7];
         readonly VisualElement[] abilityPreviewTags = new VisualElement[6];
-        readonly Dictionary<UitkMenu.Item, Action> focusActions = new Dictionary<UitkMenu.Item, Action>();
+        readonly List<UitkMenu.Item> pageListItems = new List<UitkMenu.Item>();
+        int pageListColumns = 1;
+        UitkMenu.Item footerBackItem, footerNextItem;
 
         Ability focusedAbility = Ability.STR;
         int templateIndex = -1;
@@ -142,6 +144,7 @@ namespace Obscure
             middleBody.style.top = 78;
             middleBody.style.width = 272;
             middleBody.style.height = 550;
+            middleBody.style.flexDirection = FlexDirection.Column;
             middleBody.style.overflow = Overflow.Hidden;
             screenContainer.Add(middleBody);
 
@@ -151,6 +154,7 @@ namespace Obscure
             rightBody.style.top = 78;
             rightBody.style.width = 606;
             rightBody.style.height = 550;
+            rightBody.style.flexDirection = FlexDirection.Column;
             rightBody.style.overflow = Overflow.Hidden;
             screenContainer.Add(rightBody);
 
@@ -202,6 +206,8 @@ namespace Obscure
                 if (stepChips[i] != null)
                 {
                     int pageIdx = i;
+                    stepChips[i].AddToClassList("uitk-step-chip");
+                    stepChips[i].style.marginRight = 6;
                     stepChips[i].pickingMode = PickingMode.Position;
                     stepChips[i].RegisterCallback<ClickEvent>(_ =>
                     {
@@ -267,7 +273,10 @@ namespace Obscure
         void Rebuild()
         {
             menu.Clear();
-            focusActions.Clear();
+            pageListItems.Clear();
+            pageListColumns = 1;
+            footerBackItem = null;
+            footerNextItem = null;
             middleBody.Clear();
             rightBody.Clear();
             abilitiesHost?.Clear();
@@ -301,6 +310,7 @@ namespace Obscure
             }
 
             UpdateFooter();
+            WirePageNavigation();
             FillBindings();
 
             if (menu.items.Count > 0)
@@ -377,18 +387,18 @@ namespace Obscure
         void UpdateFooter()
         {
             if (backBtn != null)
-                menu.Add(backBtn, "Back", OnBackPressed, tooltip: "PREVIOUS STEP OR RETURN TO TITLE SCREEN");
+                footerBackItem = menu.Add(backBtn, "Back", OnBackPressed, tooltip: "PREVIOUS STEP OR RETURN TO TITLE SCREEN");
 
             // Two key hints. Lists browse with UP/DN; on Abilities and Gear UP/DN picks the row and L/R changes it (onAdjust),
             // so those pages name both keys instead of crediting UP/DN with the change.
             var (k0, t0, k1, t1) = CurrentPage switch
             {
-                Page.Race => ("UP", "", "DN", PresetMode ? "BROWSE PRESETS" : "BROWSE RACES"),
-                Page.Class => ("UP", "", "DN", "BROWSE CLASSES"),
+                Page.Race => ("UP DN", "BROWSE", "ENTER", PresetMode ? "LOCK PRESET" : "LOCK RACE"),
+                Page.Class => ("ARROWS", "BROWSE", "ENTER", "LOCK CLASS"),
                 Page.Abilities => ("UP DN", "STAT", "L R", "ADJUST SCORE"),
                 Page.Gear => ("UP DN", "SLOT", "L R", "CHANGE ITEM"),
-                Page.Review => ("UP", "", "DN", "SELECT HERO"),
-                _ => ("UP", "", "DN", "BROWSE"),
+                Page.Review => ("UP DN", "BROWSE", "ENTER", "SELECT HERO"),
+                _ => ("UP DN", "BROWSE", "ENTER", "LOCK CHOICE"),
             };
             if (keyHintUp != null) { FigmaUi.SetInstanceText(keyHintUp, "text-0", k0); FigmaUi.SetInstanceText(keyHintUp, "text-1", t0); }
             if (keyHintDn != null) { FigmaUi.SetInstanceText(keyHintDn, "text-0", k1); FigmaUi.SetInstanceText(keyHintDn, "text-1", t1); }
@@ -400,7 +410,7 @@ namespace Obscure
                     bool canDo = InReview ? Builder.CanConfirmParty : Session.CanConfirm;
                     nb.text = InReview ? "Confirm Party" : "Add Hero";
                     nb.SetEnabled(canDo);
-                    menu.Add(nb, nb.text, InReview ? () => TryConfirmPartyAndBegin(out _) : (Action)ConfirmAndAddToParty, interactable: canDo);
+                    footerNextItem = menu.Add(nb, nb.text, InReview ? () => TryConfirmPartyAndBegin(out _) : (Action)ConfirmAndAddToParty, interactable: canDo);
                 }
                 return;
             }
@@ -411,7 +421,7 @@ namespace Obscure
                 bool canAdd = IsActivePreset(Session.ActiveTemplateId) && Session.CanConfirm;
                 addBtn.text = "Add Hero";
                 addBtn.SetEnabled(canAdd);
-                menu.Add(addBtn, "Add Hero", ConfirmAndAddToParty, interactable: canAdd, tooltip: "ADD THIS PRESET HERO TO THE PARTY");
+                footerNextItem = menu.Add(addBtn, "Add Hero", ConfirmAndAddToParty, interactable: canAdd, tooltip: "ADD THIS PRESET HERO TO THE PARTY");
                 return;
             }
 
@@ -420,7 +430,105 @@ namespace Obscure
                 string nextText = "Next: " + (CurrentPage == Page.Background ? "Starter Passive" : ((Page)((int)CurrentPage + 1)).ToString());
                 nxt.text = nextText;
                 nxt.SetEnabled(true);
-                menu.Add(nxt, nextText, () => GoToPage((Page)((int)CurrentPage + 1)), tooltip: "CONTINUE TO THE NEXT STEP");
+                footerNextItem = menu.Add(nxt, nextText, () => GoToPage((Page)((int)CurrentPage + 1)), tooltip: "CONTINUE TO THE NEXT STEP");
+            }
+        }
+
+        // Deterministic keyboard navigation: pressing Down through a list lands cleanly on Next (never jumping invisibly
+        // to Back), while Left/Right between Back and Next stays obvious and predictable.
+        void WirePageNavigation()
+        {
+            int backIdx = footerBackItem != null ? menu.items.IndexOf(footerBackItem) : -1;
+            int nextIdx = footerNextItem != null ? menu.items.IndexOf(footerNextItem) : -1;
+
+            int listCount = pageListItems.Count;
+            if (listCount > 0)
+            {
+                int firstListIdx = menu.items.IndexOf(pageListItems[0]);
+                int lastListIdx = menu.items.IndexOf(pageListItems[listCount - 1]);
+                int cols = Mathf.Max(1, pageListColumns);
+                int topTabIdx = CurrentPage == Page.Race ? (PresetMode ? 1 : 0) : -1;
+                int afterListIdx = CurrentPage == Page.Abilities
+                    ? menu.items.FindIndex(it => it.text == "Reset")
+                    : (nextIdx >= 0 ? nextIdx : backIdx);
+
+                for (int i = 0; i < listCount; i++)
+                {
+                    int localIdx = i;
+                    var it = pageListItems[i];
+                    int myIdx = menu.items.IndexOf(it);
+                    if (myIdx < 0) continue;
+
+                    it.onNavigate = dir =>
+                    {
+                        if (cols == 1)
+                        {
+                            if (dir == 0) // Up
+                                return localIdx > 0 ? menu.items.IndexOf(pageListItems[localIdx - 1])
+                                    : (topTabIdx >= 0 ? topTabIdx : myIdx);
+                            if (dir == 2) // Down
+                                return localIdx + 1 < listCount ? menu.items.IndexOf(pageListItems[localIdx + 1])
+                                    : (afterListIdx >= 0 ? afterListIdx : myIdx);
+                            if (dir == 1) // Right
+                                return nextIdx >= 0 ? nextIdx : myIdx;
+                            if (dir == 3) // Left
+                                return backIdx >= 0 ? backIdx : myIdx;
+                        }
+                        else
+                        {
+                            if (dir == 0) // Up
+                                return localIdx >= cols ? menu.items.IndexOf(pageListItems[localIdx - cols]) : myIdx;
+                            if (dir == 2) // Down
+                                return localIdx + cols < listCount ? menu.items.IndexOf(pageListItems[localIdx + cols])
+                                    : (afterListIdx >= 0 ? afterListIdx : myIdx);
+                            if (dir == 1) // Right
+                                return (localIdx % cols) + 1 < cols && localIdx + 1 < listCount
+                                    ? menu.items.IndexOf(pageListItems[localIdx + 1])
+                                    : (nextIdx >= 0 ? nextIdx : myIdx);
+                            if (dir == 3) // Left
+                                return (localIdx % cols) > 0
+                                    ? menu.items.IndexOf(pageListItems[localIdx - 1])
+                                    : (backIdx >= 0 ? backIdx : myIdx);
+                        }
+                        return -1;
+                    };
+                }
+
+                if (CurrentPage == Page.Race && menu.items.Count >= 2)
+                {
+                    menu.items[0].onNavigate = dir => dir == 1 ? 1 : dir == 2 ? firstListIdx : 0;
+                    menu.items[1].onNavigate = dir => dir == 3 ? 0 : dir == 2 ? firstListIdx : 1;
+                }
+
+                if (CurrentPage == Page.Abilities && afterListIdx >= 0 && afterListIdx < menu.items.Count)
+                {
+                    menu.items[afterListIdx].onNavigate = dir =>
+                        dir == 0 ? lastListIdx :
+                        dir == 2 ? (nextIdx >= 0 ? nextIdx : afterListIdx) :
+                        dir == 3 ? (backIdx >= 0 ? backIdx : afterListIdx) :
+                        (nextIdx >= 0 ? nextIdx : afterListIdx);
+                }
+
+                if (footerBackItem != null)
+                {
+                    footerBackItem.onNavigate = dir =>
+                        dir == 0 ? lastListIdx :
+                        dir == 1 ? (nextIdx >= 0 ? nextIdx : backIdx) :
+                        backIdx;
+                }
+
+                if (footerNextItem != null)
+                {
+                    footerNextItem.onNavigate = dir =>
+                        dir == 0 ? (CurrentPage == Page.Abilities && afterListIdx >= 0 ? afterListIdx : lastListIdx) :
+                        dir == 3 ? (backIdx >= 0 ? backIdx : nextIdx) :
+                        nextIdx;
+                }
+            }
+            else if (footerBackItem != null && footerNextItem != null)
+            {
+                footerBackItem.onNavigate = dir => dir == 1 ? nextIdx : -1;
+                footerNextItem.onNavigate = dir => dir == 3 ? backIdx : -1;
             }
         }
 
@@ -472,7 +580,7 @@ namespace Obscure
             parent.Add(hdr);
         }
 
-        UitkMenu.Item AddCard(VisualElement parent, string title, string rightText, string subText, bool selected, Action select, Action<int> onAdjust = null, bool selectOnFocus = true)
+        UitkMenu.Item AddCard(VisualElement parent, string title, string rightText, string subText, bool selected, Action select, Action<int> onAdjust = null, bool trackInList = true)
         {
             var card = new VisualElement();
             card.AddToClassList("uitk-card");
@@ -487,16 +595,32 @@ namespace Obscure
             top.style.alignItems = UnityEngine.UIElements.Align.Center;
             top.style.flexShrink = 0;
 
+            var leftGroup = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, flexGrow = 1, flexShrink = 1, overflow = Overflow.Hidden } };
+            var cursor = new UiLabel("▸") { name = "uitkCursor" };
+            cursor.AddToClassList("uitk-card-cursor");
+            cursor.AddToClassList("uitk-cursor-hidden");
+            leftGroup.Add(cursor);
+
             var titleLbl = new UiLabel(title);
             titleLbl.AddToClassList("uitk-card-title");
             titleLbl.style.fontSize = 16;
-            top.Add(titleLbl);
+            leftGroup.Add(titleLbl);
+
+            if (selected)
+            {
+                var check = new UiLabel("✓");
+                check.AddToClassList("uitk-locked-badge");
+                leftGroup.Add(check);
+            }
+            top.Add(leftGroup);
 
             if (!string.IsNullOrEmpty(rightText))
             {
                 var rightLbl = new UiLabel(rightText);
                 rightLbl.style.fontSize = 13;
                 rightLbl.style.color = Palette.Gold2;
+                rightLbl.style.flexShrink = 0;
+                rightLbl.style.marginLeft = 4;
                 top.Add(rightLbl);
             }
 
@@ -507,13 +631,15 @@ namespace Obscure
                 var sub = new UiLabel(subText);
                 sub.AddToClassList("uitk-card-sub");
                 sub.style.fontSize = 11;
+                sub.style.marginLeft = 16;
                 sub.style.flexShrink = 0;
                 card.Add(sub);
             }
 
             parent.Add(card);
-            var item = menu.Add(card, title, select, selected: selected, onAdjust: onAdjust);
-            if (select != null && selectOnFocus) focusActions[item] = select;
+            string tip = selected ? $"LOCKED IN: {title.ToUpperInvariant()}" : $"CLICK OR PRESS ENTER TO LOCK IN {title.ToUpperInvariant()}";
+            var item = menu.Add(card, title, select, selected: selected, onAdjust: onAdjust, tooltip: tip);
+            if (trackInList) pageListItems.Add(item);
             return item;
         }
 
@@ -572,6 +698,11 @@ namespace Obscure
         {
             if (PresetMode == on) return;
             PresetMode = on;
+            if (!on && Session.Method != CreationMethod.Manual)
+            {
+                Session.SetCreationMethod(CreationMethod.Manual);
+                Session.PointBuy.Reset();
+            }
             focusIndex = on ? 1 : 0;
             SetHint(on ? "PICK A PRESET HERO, THEN ADD HERO" : "BUILD THIS HERO STEP BY STEP");
             Refresh();
@@ -585,41 +716,58 @@ namespace Obscure
             Refresh();
         }
 
+        static ScrollView CreateColumnScroll(VisualElement col)
+        {
+            var sv = FigmaUi.CreateVerticalScrollView();
+            sv.style.flexGrow = 1;
+            sv.style.flexBasis = 0;
+            sv.style.minHeight = 0;
+            col.Add(sv);
+            return sv;
+        }
+
         void AddModeTabs()
         {
             var row = new VisualElement();
             row.style.flexDirection = FlexDirection.Row;
             row.style.marginBottom = 6;
             row.style.flexShrink = 0;
-            var customBtn = FigmaUi.CreateButton("Custom", "button-slab", 132f);
-            var presetBtn = FigmaUi.CreateButton("Presets", "button-slab", 132f);
+            var customBtn = FigmaUi.CreateTabButton("Custom", !PresetMode, 132f, 34f, 16f);
+            var presetBtn = FigmaUi.CreateTabButton("Presets", PresetMode, 132f, 34f, 16f);
             customBtn.style.marginRight = 8;
             row.Add(customBtn);
             row.Add(presetBtn);
             middleBody.Add(row);
-            menu.Add(customBtn, "Custom", () => SetPresetMode(false), selected: !PresetMode, tooltip: "BUILD THIS HERO STEP BY STEP");
-            menu.Add(presetBtn, "Presets", () => SetPresetMode(true), selected: PresetMode, tooltip: "PICK A READY-MADE HERO");
+            var cItem = menu.Add(customBtn, "Custom", () => SetPresetMode(false), selected: !PresetMode, tooltip: "BUILD THIS HERO STEP BY STEP");
+            cItem.visual = on => FigmaUi.ApplyTabVisual(customBtn, !PresetMode, on, true);
+            cItem.visual(false);
+            var pItem = menu.Add(presetBtn, "Presets", () => SetPresetMode(true), selected: PresetMode, tooltip: "PICK A READY-MADE HERO");
+            pItem.visual = on => FigmaUi.ApplyTabVisual(presetBtn, PresetMode, on, true);
+            pItem.visual(false);
         }
 
         void BuildPresetList()
         {
             AddColumnHeader(middleBody, "Choose a Preset", $"{TemplateIds.Length} HEROES");
+            var midScroll = CreateColumnScroll(middleBody);
             foreach (var id in TemplateIds)
             {
                 var t = Database.Templates[id];
                 string sub = $"{Database.Races[t.raceId].name} · {Database.Classes[t.classId].name}".ToUpperInvariant();
-                AddCard(middleBody, t.name, null, sub, IsActivePreset(id), () => ApplyPreset(id));
+                AddCard(midScroll, t.name, null, sub, IsActivePreset(id), () => ApplyPreset(id));
             }
 
             if (!IsActivePreset(Session.ActiveTemplateId) || !Database.Templates.TryGetValue(Session.ActiveTemplateId, out var tpl))
             {
                 AddColumnHeader(rightBody, "Presets");
-                AddParagraph(rightBody, "Pick a ready-made hero from the list. Add it as-is, or press Customize to tweak it in the full editor.");
+                var emptyScroll = CreateColumnScroll(rightBody);
+                AddParagraph(emptyScroll, "Pick a ready-made hero from the list. Add it as-is, or press Customize to tweak it in the full editor.");
                 return;
             }
 
             AddColumnHeader(rightBody, tpl.name, $"{Session.Race.name} · {Session.Class.name}".ToUpperInvariant());
-            AddParagraph(rightBody, tpl.description);
+            var rightScroll = CreateColumnScroll(rightBody);
+            AddParagraph(rightScroll, tpl.description);
             foreach (var (k, v) in new[]
             {
                 ("BACKGROUND", Session.Background.name),
@@ -628,11 +776,11 @@ namespace Obscure
                 ("MAIN HAND", Session.GetEquipped(EquipmentSlot.MainHand)?.name ?? "-"),
                 ("OFF HAND", Session.GetEquipped(EquipmentSlot.SecondHand)?.name ?? "-"),
             })
-                AddStatRow(rightBody, k, v.ToUpperInvariant());
+                AddStatRow(rightScroll, k, v.ToUpperInvariant());
 
             var customizeBtn = FigmaUi.CreateButton("Customize", "button-slab", 140f);
             customizeBtn.style.marginTop = 10;
-            rightBody.Add(customizeBtn);
+            rightScroll.Add(customizeBtn);
             menu.Add(customizeBtn, "Customize", () => { PresetMode = false; GoToPage(Page.Race); },
                 tooltip: "EDIT THIS PRESET IN THE FULL EDITOR");
         }
@@ -643,24 +791,27 @@ namespace Obscure
             if (PresetMode) { BuildPresetList(); return; }
 
             AddColumnHeader(middleBody, "Choose a Race", $"{RaceIds.Length} RACES");
+            var midScroll = CreateColumnScroll(middleBody);
             for (int i = 0; i < RaceIds.Length; i++)
             {
                 var r = Database.Races[RaceIds[i]];
-                AddCard(middleBody, r.name, BonusText(r), FirstClause(r.description).ToUpperInvariant(), r.id == Session.Race.id, () => SelectRaceById(r.id));
+                AddCard(midScroll, r.name, BonusText(r), FirstClause(r.description).ToUpperInvariant(), r.id == Session.Race.id, () => SelectRaceById(r.id));
             }
 
             var race = Session.Race;
             AddColumnHeader(rightBody, race.name, BonusText(race));
-            AddParagraph(rightBody, race.description);
+            var rightScroll = CreateColumnScroll(rightBody);
+            AddParagraph(rightScroll, race.description);
 
             var bonusTitle = new UiLabel("RACIAL ABILITY BONUS");
             bonusTitle.style.fontSize = 14;
             bonusTitle.style.color = Palette.Gold2;
             bonusTitle.style.marginBottom = 6;
-            rightBody.Add(bonusTitle);
+            rightScroll.Add(bonusTitle);
 
             var bonusRow = new VisualElement();
             bonusRow.style.flexDirection = FlexDirection.Row;
+            bonusRow.style.flexWrap = Wrap.Wrap;
             bonusRow.style.alignItems = UnityEngine.UIElements.Align.Center;
             bonusRow.style.marginBottom = 14;
             foreach (var a in AbilityScores.AllAbilities.Where(a => race.abilityModifiers[a] != 0))
@@ -674,15 +825,15 @@ namespace Obscure
             afterLbl.style.fontSize = 13;
             afterLbl.style.color = Palette.Mist3;
             bonusRow.Add(afterLbl);
-            rightBody.Add(bonusRow);
+            rightScroll.Add(bonusRow);
 
             var feat = race.racialFeat;
             var featHeader = new UiLabel($"RACIAL FEAT · {feat?.name ?? "None"}");
             featHeader.style.fontSize = 18;
             featHeader.style.color = Palette.Gold1;
             featHeader.style.marginBottom = 6;
-            rightBody.Add(featHeader);
-            AddParagraph(rightBody, feat?.description ?? "");
+            rightScroll.Add(featHeader);
+            AddParagraph(rightScroll, feat?.description ?? "");
 
             var util = race.racialUtility;
             var utilHeader = new UiLabel($"RACIAL UTILITY · {util?.name ?? "None"}");
@@ -690,43 +841,68 @@ namespace Obscure
             utilHeader.style.color = Palette.Gold1;
             utilHeader.style.marginTop = 8;
             utilHeader.style.marginBottom = 6;
-            rightBody.Add(utilHeader);
-            AddParagraph(rightBody, util?.description ?? "");
+            rightScroll.Add(utilHeader);
+            AddParagraph(rightScroll, util?.description ?? "");
         }
 
         void BuildClassPage()
         {
+            pageListColumns = 2;
             AddColumnHeader(middleBody, "Choose a Class", $"{ClassIds.Length} CLASSES");
+            var midScroll = CreateColumnScroll(middleBody);
             var grid = new VisualElement();
             grid.style.flexDirection = FlexDirection.Row;
             grid.style.flexWrap = Wrap.Wrap;
             grid.style.justifyContent = Justify.SpaceBetween;
-            middleBody.Add(grid);
+            midScroll.Add(grid);
 
             for (int i = 0; i < ClassIds.Length; i++)
             {
                 var c = Database.Classes[ClassIds[i]];
+                bool isSel = c.id == Session.Class.id;
                 var card = new VisualElement();
                 card.AddToClassList("uitk-card");
-                card.style.width = 130;
+                card.style.width = 124;
                 card.style.marginBottom = 6;
+
+                var hdrRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+                var cursor = new UiLabel("▸") { name = "uitkCursor" };
+                cursor.AddToClassList("uitk-card-cursor");
+                cursor.AddToClassList("uitk-cursor-hidden");
+                hdrRow.Add(cursor);
+
                 var titleLbl = new UiLabel(c.name);
                 titleLbl.AddToClassList("uitk-card-title");
-                titleLbl.style.fontSize = 15;
+                titleLbl.style.fontSize = 14;
+                titleLbl.style.flexGrow = 1;
+                titleLbl.style.flexShrink = 1;
+                titleLbl.style.overflow = Overflow.Hidden;
+                hdrRow.Add(titleLbl);
+
+                if (isSel)
+                {
+                    var check = new UiLabel("✓");
+                    check.AddToClassList("uitk-locked-badge");
+                    hdrRow.Add(check);
+                }
+
                 var roleLbl = new UiLabel((c.role ?? "").ToUpperInvariant());
                 roleLbl.AddToClassList("uitk-card-sub");
-                roleLbl.style.fontSize = 11;
-                card.Add(titleLbl);
+                roleLbl.style.fontSize = 10;
+                roleLbl.style.marginLeft = 16;
+                card.Add(hdrRow);
                 card.Add(roleLbl);
                 grid.Add(card);
-                var item = menu.Add(card, c.name, () => SelectClassById(c.id), selected: c.id == Session.Class.id);
-                focusActions[item] = () => SelectClassById(c.id);
+                string tip = isSel ? $"LOCKED IN: {c.name.ToUpperInvariant()}" : $"CLICK OR PRESS ENTER TO LOCK IN {c.name.ToUpperInvariant()}";
+                var item = menu.Add(card, c.name, () => SelectClassById(c.id), selected: isSel, tooltip: tip);
+                pageListItems.Add(item);
             }
 
             var cls = Session.Class;
             var guide = Session.GetStatGuide();
             AddColumnHeader(rightBody, cls.name, (cls.role ?? "").ToUpperInvariant());
-            AddParagraph(rightBody, cls.description);
+            var rightScroll = CreateColumnScroll(rightBody);
+            AddParagraph(rightScroll, cls.description);
 
             var keySection = new VisualElement { name = "ClassKeyAbilitiesSection", style = { flexDirection = FlexDirection.Column, marginBottom = 8 } };
             keySection.Add(new UiLabel("KEY ABILITIES FOR THIS CLASS")
@@ -763,24 +939,24 @@ namespace Obscure
                     style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
                 });
             }
-            rightBody.Add(keySection);
+            rightScroll.Add(keySection);
 
             var dsHead = new UiLabel("DERIVED STATS WITH THIS CLASS");
             dsHead.style.fontSize = 14;
             dsHead.style.color = Palette.Gold2;
             dsHead.style.marginBottom = 6;
-            rightBody.Add(dsHead);
+            rightScroll.Add(dsHead);
 
             var preview = Session.PreviewDerivedStats;
             foreach (var st in new[] { DerivedStatId.MaxHP, DerivedStatId.MaxMP, DerivedStatId.PhysicalPower, DerivedStatId.MagicPower, DerivedStatId.PhysicalDefense })
-                AddStatRow(rightBody, Database.DerivedStatDefs[st].shortName, preview.FormatValue(st));
+                AddStatRow(rightScroll, Database.DerivedStatDefs[st].shortName, preview.FormatValue(st));
 
             var skillHead = new UiLabel("STARTER LOADOUT · PASSIVE IN STEP 5");
             skillHead.style.fontSize = 14;
             skillHead.style.color = Palette.Gold2;
             skillHead.style.marginTop = 10;
             skillHead.style.marginBottom = 6;
-            rightBody.Add(skillHead);
+            rightScroll.Add(skillHead);
 
             var skillWrap = new VisualElement();
             skillWrap.style.flexDirection = FlexDirection.Row;
@@ -794,7 +970,7 @@ namespace Obscure
                 chip.style.marginBottom = 6;
                 skillWrap.Add(chip);
             }
-            rightBody.Add(skillWrap);
+            rightScroll.Add(skillWrap);
         }
 
         static VisualElement MakePriorityBadge(string text, AbilityPriority priority, bool large = false)
@@ -1008,11 +1184,14 @@ namespace Obscure
                 style = { position = Position.Absolute, left = 620, top = 74, width = 2, height = 434, backgroundColor = Palette.Ink4 }
             });
 
-            nextPreviewHost = new VisualElement
-            {
-                name = "NextPointPreviewHost",
-                style = { position = Position.Absolute, left = 636, top = 74, width = 304, height = 390, flexDirection = FlexDirection.Column }
-            };
+            var nextPreviewSv = FigmaUi.CreateVerticalScrollView();
+            nextPreviewSv.name = "NextPointPreviewHost";
+            nextPreviewSv.style.position = Position.Absolute;
+            nextPreviewSv.style.left = 636;
+            nextPreviewSv.style.top = 74;
+            nextPreviewSv.style.width = 304;
+            nextPreviewSv.style.height = 432;
+            nextPreviewHost = nextPreviewSv;
             abilitiesHost.Add(nextPreviewHost);
 
             var bases = Session.BaseScores; var race = Session.RacialModifiers; var fin = Session.FinalScores; var mods = Session.AbilityModifiers;
@@ -1110,6 +1289,8 @@ namespace Obscure
                 var minusEl = stepper.Q<UiLabel>("text-0")?.parent;
                 if (minusEl != null)
                 {
+                    minusEl.AddToClassList("uitk-stepper-btn");
+                    minusEl.EnableInClassList("uitk-disabled", atMin);
                     minusEl.pickingMode = PickingMode.Position;
                     minusEl.RegisterCallback<ClickEvent>(evt =>
                     {
@@ -1120,6 +1301,8 @@ namespace Obscure
                 var plusEl = stepper.Q<UiLabel>("text-2")?.parent;
                 if (plusEl != null)
                 {
+                    plusEl.AddToClassList("uitk-stepper-btn");
+                    plusEl.EnableInClassList("uitk-disabled", atMax || !canAfford);
                     plusEl.pickingMode = PickingMode.Position;
                     plusEl.RegisterCallback<ClickEvent>(evt =>
                     {
@@ -1180,6 +1363,7 @@ namespace Obscure
 
                 var item = menu.Add(row, ab.ToString(), () => AdjustAbility(ab, 1), onAdjust: d => AdjustAbility(ab, d),
                     tooltip: $"{AbilityFullName(ab)}: LEFT/RIGHT OR CLICK -/+ TO ADJUST");
+                pageListItems.Add(item);
                 item.visual = on =>
                 {
                     row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
@@ -1207,34 +1391,14 @@ namespace Obscure
                 }
             });
 
-            // Bottom-right controls inside Gold Panel (Mode + Reset + Use Recommended)
-            var modeBtn = FigmaUi.CreateButton(MethodText(), "button-slab", 304f);
-            modeBtn.style.position = Position.Absolute;
-            modeBtn.style.left = 636;
-            modeBtn.style.top = 468;
-            modeBtn.style.height = 36;
-            abilitiesHost.Add(modeBtn);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(modeBtn, "MODE", OnActivateCreationMethodButton, onAdjust: CycleCreationMethodOrTemplate,
-                tooltip: "L/R: MANUAL, TEMPLATE OR RANDOM. ENTER: REROLL"), modeBtn);
-
-            var resetBtn = FigmaUi.CreateButton("Reset", "button-slab", 108f);
+            // Custom characters allocate all 27 ability points manually (no Mode selector or auto-fill here)
+            var resetBtn = FigmaUi.CreateButton("Reset", "button-slab", 304f);
             resetBtn.style.position = Position.Absolute;
             resetBtn.style.left = 636;
             resetBtn.style.top = 514;
             resetBtn.style.height = 38;
             abilitiesHost.Add(resetBtn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(resetBtn, "Reset", OnResetOrEditClicked, tooltip: "REFUND ALL ABILITY POINTS TO BASE 8"), resetBtn);
-
-            var recBtn = FigmaUi.CreateButton("Use Recommended", "button-slab", 188f);
-            recBtn.style.position = Position.Absolute;
-            recBtn.style.left = 752;
-            recBtn.style.top = 514;
-            recBtn.style.height = 38;
-            var recLbl = recBtn.Q<UiLabel>("uitkLabel");
-            if (recLbl != null) recLbl.style.fontSize = 15;
-            abilitiesHost.Add(recBtn);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(recBtn, "Use Recommended", ApplyRecommendedPointBuy,
-                tooltip: $"APPLY RECOMMENDED {clsUpper} SPREAD ({guide.FormatSpreadSummary()})"), recBtn);
 
             UpdateNextPointPreview();
         }
@@ -1356,7 +1520,7 @@ namespace Obscure
                 if (toast != null)
                 {
                     toast.style.marginTop = 10;
-                    toast.style.width = 300;
+                    toast.style.width = Length.Percent(100);
                     FigmaUi.SetInstanceText(toast, "text-0", "!");
                     FigmaUi.SetInstanceText(toast, "text-1", toastMsg);
                     nextPreviewHost.Add(toast);
@@ -1367,10 +1531,7 @@ namespace Obscure
         void BuildBackgroundPage()
         {
             AddColumnHeader(middleBody, "Background", $"{BackgroundIds.Length} TOTAL");
-            var bgList = FigmaUi.CreateVerticalScrollView();
-            bgList.style.flexGrow = 1;
-            bgList.style.height = 516;
-            middleBody.Add(bgList);
+            var bgList = CreateColumnScroll(middleBody);
 
             for (int i = 0; i < BackgroundIds.Length; i++)
             {
@@ -1395,13 +1556,14 @@ namespace Obscure
 
             var bg = Session.Background;
             AddColumnHeader(rightBody, $"{bg.name} · {bg.perkName}", "5 RANKS · LV 1–13");
-            AddParagraph(rightBody, bg.description);
+            var rightScroll = CreateColumnScroll(rightBody);
+            AddParagraph(rightScroll, bg.description);
 
             var perkHead = new UiLabel("PERK RANKS · UNLOCK BY LEVEL");
             perkHead.style.fontSize = 14;
             perkHead.style.color = Palette.Gold2;
             perkHead.style.marginBottom = 6;
-            rightBody.Add(perkHead);
+            rightScroll.Add(perkHead);
 
             string[] numerals = { "I", "II", "III", "IV", "V" };
             for (int r = 1; r <= 5; r++)
@@ -1419,7 +1581,7 @@ namespace Obscure
                 desc.style.whiteSpace = WhiteSpace.Normal;
                 box.Add(rowTitle);
                 box.Add(desc);
-                rightBody.Add(box);
+                rightScroll.Add(box);
             }
         }
 
@@ -1432,64 +1594,70 @@ namespace Obscure
         {
             selectedTraitIndex = Math.Clamp(selectedTraitIndex, 0, 2);
             AddColumnHeader(middleBody, "Level 1 Traits", "AUTO-GRANTED");
+            var midScroll = CreateColumnScroll(middleBody);
             var sp = Session.StarterPassive;
-            AddCard(middleBody, sp?.name ?? "None", "CLASS", (sp?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 0, () => SelectTrait(0));
+            AddCard(midScroll, sp?.name ?? "None", "CLASS", (sp?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 0, () => SelectTrait(0));
 
             var also = new UiLabel("ALSO ACTIVE AT LEVEL 1");
             also.style.fontSize = 13;
             also.style.color = Palette.Mist3;
             also.style.marginTop = 8;
             also.style.marginBottom = 6;
-            middleBody.Add(also);
+            midScroll.Add(also);
 
             var feat = Session.Race?.racialFeat;
-            AddCard(middleBody, feat?.name ?? "None", "RACE", (feat?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 1, () => SelectTrait(1));
+            AddCard(midScroll, feat?.name ?? "None", "RACE", (feat?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 1, () => SelectTrait(1));
 
             var bgRank = Session.Background?.GetRank(1);
             string perkName = bgRank?.perkName ?? Session.Background?.perkName ?? "None";
             string perkDesc = bgRank?.perkDescription ?? "";
-            AddCard(middleBody, perkName, "RANK I", perkDesc.ToUpperInvariant(), selectedTraitIndex == 2, () => SelectTrait(2));
+            AddCard(midScroll, perkName, "RANK I", perkDesc.ToUpperInvariant(), selectedTraitIndex == 2, () => SelectTrait(2));
 
             if (selectedTraitIndex == 1)
             {
                 AddColumnHeader(rightBody, feat?.name ?? "Racial Feat", $"{Session.Race?.name?.ToUpperInvariant() ?? "RACE"} FEAT");
-                AddParagraph(rightBody, feat?.description ?? "No racial feat.");
-                AddParagraph(rightBody, "AUTOMATICALLY ACTIVE AT LEVEL 1 FOR THIS RACE.", Palette.Mist3);
+                var rightScroll = CreateColumnScroll(rightBody);
+                AddParagraph(rightScroll, feat?.description ?? "No racial feat.");
+                AddParagraph(rightScroll, "AUTOMATICALLY ACTIVE AT LEVEL 1 FOR THIS RACE.", Palette.Mist3);
             }
             else if (selectedTraitIndex == 2)
             {
                 AddColumnHeader(rightBody, perkName, "BACKGROUND · RANK I");
-                AddParagraph(rightBody, string.IsNullOrEmpty(perkDesc) ? "No background perk." : perkDesc);
-                AddParagraph(rightBody, $"STARTING PERK FROM {Session.Background?.name?.ToUpperInvariant() ?? "BACKGROUND"}. HIGHER RANKS UNLOCK AT LEVELS 4, 7, 10, AND 13.", Palette.Mist3);
+                var rightScroll = CreateColumnScroll(rightBody);
+                AddParagraph(rightScroll, string.IsNullOrEmpty(perkDesc) ? "No background perk." : perkDesc);
+                AddParagraph(rightScroll, $"STARTING PERK FROM {Session.Background?.name?.ToUpperInvariant() ?? "BACKGROUND"}. HIGHER RANKS UNLOCK AT LEVELS 4, 7, 10, AND 13.", Palette.Mist3);
             }
             else
             {
                 AddColumnHeader(rightBody, sp?.name ?? "Starter Passive", $"{Session.Class?.name?.ToUpperInvariant() ?? "CLASS"} PASSIVE");
-                AddParagraph(rightBody, sp?.description ?? "No starter passive.");
-                AddParagraph(rightBody, "FIXED AT LEVEL 1 BY YOUR CLASS. ADDITIONAL PASSIVE NODES UNLOCK VIA THE SKILL TREE.", Palette.Mist3);
+                var rightScroll = CreateColumnScroll(rightBody);
+                AddParagraph(rightScroll, sp?.description ?? "No starter passive.");
+                AddParagraph(rightScroll, "FIXED AT LEVEL 1 BY YOUR CLASS. ADDITIONAL PASSIVE NODES UNLOCK VIA THE SKILL TREE.", Palette.Mist3);
             }
         }
 
         void BuildGearPage()
         {
             AddColumnHeader(middleBody, "Starting Gear", "8 SLOTS");
+            var midScroll = CreateColumnScroll(middleBody);
             foreach (var slot in EquipmentSlots.All)
             {
                 var s = slot;
                 var eq = Session.GetEquipped(s);
-                AddCard(middleBody, EquipmentSlots.DisplayName(s), null, eq != null ? eq.name.ToUpperInvariant() : "EMPTY",
+                AddCard(midScroll, EquipmentSlots.DisplayName(s), null, eq != null ? eq.name.ToUpperInvariant() : "EMPTY",
                     s == SelectedEquipmentSlot, () => SelectSlot(s), d => { SelectedEquipmentSlot = s; CycleEquipmentItem(d); });
             }
 
             var sel = Session.GetEquipped(SelectedEquipmentSlot);
             AddColumnHeader(rightBody, EquipmentSlots.DisplayName(SelectedEquipmentSlot));
+            var rightScroll = CreateColumnScroll(rightBody);
             var itemTitle = new UiLabel(sel != null ? sel.name : "Empty");
             itemTitle.style.fontSize = 22;
             itemTitle.style.color = sel != null ? Palette.Gold1 : Palette.Mist3;
             itemTitle.style.marginBottom = 8;
-            rightBody.Add(itemTitle);
+            rightScroll.Add(itemTitle);
 
-            AddParagraph(rightBody, sel?.description ?? "NOTHING EQUIPPED IN THIS SLOT.");
+            AddParagraph(rightScroll, sel?.description ?? "NOTHING EQUIPPED IN THIS SLOT.");
             int count = Session.GetCompatibleEquipmentForSlot(SelectedEquipmentSlot).Count();
 
             // Mouse path for what L R does on the slot list.
@@ -1501,11 +1669,11 @@ namespace Obscure
             nextItemBtn.SetEnabled(count > 1);
             cycleRow.Add(prevBtn);
             cycleRow.Add(nextItemBtn);
-            rightBody.Add(cycleRow);
+            rightScroll.Add(cycleRow);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(prevBtn, "Prev Item", () => CycleEquipmentItem(-1), interactable: count > 1), prevBtn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(nextItemBtn, "Next Item", () => CycleEquipmentItem(1), interactable: count > 1), nextItemBtn);
 
-            AddParagraph(rightBody, $"{count} COMPATIBLE ITEMS · L R ON A SLOT OR PREV / NEXT TO CHANGE. TWO-HANDED WEAPONS USE MAIN HAND ONLY.", Palette.Mist3);
+            AddParagraph(rightScroll, $"{count} COMPATIBLE ITEMS · L R ON A SLOT OR PREV / NEXT TO CHANGE. TWO-HANDED WEAPONS USE MAIN HAND ONLY.", Palette.Mist3);
         }
 
         static void AddReadOnlyPartyCard(VisualElement parent, string title, string subText, bool selected)
@@ -1537,6 +1705,7 @@ namespace Obscure
         {
             bool inReview = InReview;
             AddColumnHeader(middleBody, "Party", $"{Builder.PendingParty.Count} / {CharacterRoster.PartySize}");
+            var midScroll = CreateColumnScroll(middleBody);
 
             for (int i = 0; i < CharacterRoster.PartySize; i++)
             {
@@ -1548,18 +1717,18 @@ namespace Obscure
                     string cl = Database.Classes.TryGetValue(c.classId ?? "", out var cd) ? cd.name : c.classId;
                     if (inReview)
                     {
-                        AddCard(middleBody, c.name, null, $"{r} · {cl}".ToUpperInvariant(), i == Builder.SelectedReviewIndex,
+                        AddCard(midScroll, c.name, null, $"{r} · {cl}".ToUpperInvariant(), i == Builder.SelectedReviewIndex,
                             () => { if (Builder.SelectedReviewIndex != idx) { Builder.SelectReviewMember(idx); Session.LoadFromCharacterDef(Builder.PendingParty[idx]); Refresh(); } });
                     }
                     else
                     {
-                        AddReadOnlyPartyCard(middleBody, c.name, $"{r} · {cl}".ToUpperInvariant(), false);
+                        AddReadOnlyPartyCard(midScroll, c.name, $"{r} · {cl}".ToUpperInvariant(), false);
                     }
                 }
                 else
                 {
                     bool isCurrentHero = i == Builder.PendingParty.Count && !inReview;
-                    AddReadOnlyPartyCard(middleBody, isCurrentHero ? $"THIS HERO · {HeroName}" : "EMPTY SLOT",
+                    AddReadOnlyPartyCard(midScroll, isCurrentHero ? $"THIS HERO · {HeroName}" : "EMPTY SLOT",
                         isCurrentHero ? $"{Session.Race.name} · {Session.Class.name}".ToUpperInvariant() : "CONFIGURE AND ADD HERO", isCurrentHero);
                 }
             }
@@ -1568,6 +1737,7 @@ namespace Obscure
             btnRow.style.flexDirection = FlexDirection.Row;
             btnRow.style.justifyContent = Justify.SpaceBetween;
             btnRow.style.marginTop = 8;
+            btnRow.style.flexShrink = 0;
             var editBtn = FigmaUi.CreateButton(inReview ? "Edit" : "Reset", "button-slab", 84f);
             var randBtn = FigmaUi.CreateButton(inReview ? "Reroll" : "Random", "button-slab", 88f);
             var randAllBtn = FigmaUi.CreateButton("Rand All", "button-slab", 92f);
@@ -1580,6 +1750,7 @@ namespace Obscure
             menu.Add(randAllBtn, "Rand All", () => RandomizeAll());
 
             AddColumnHeader(rightBody, HeroName);
+            var rightScroll = CreateColumnScroll(rightBody);
             foreach (var (k, v) in new[]
             {
                 ("RACE", Session.Race.name),
@@ -1589,7 +1760,7 @@ namespace Obscure
                 ("PASSIVE", Session.StarterPassive?.name ?? "-"),
                 ("POINTS LEFT", Session.PointBuy.RemainingPoints.ToString()),
             })
-                AddStatRow(rightBody, k, v.ToUpperInvariant());
+                AddStatRow(rightScroll, k, v.ToUpperInvariant());
 
             string err = inReview ? null : Session.Validate();
             var statusLbl = new UiLabel(err != null
@@ -1599,7 +1770,7 @@ namespace Obscure
             statusLbl.style.color = err != null ? Palette.HpLow : Palette.Hp;
             statusLbl.style.whiteSpace = WhiteSpace.Normal;
             statusLbl.style.marginTop = 12;
-            rightBody.Add(statusLbl);
+            rightScroll.Add(statusLbl);
         }
 
         string MethodText() =>
@@ -1643,7 +1814,6 @@ namespace Obscure
             if (rebuilding || s == null) return;
             focusIndex = menu.items.IndexOf(s);
             if (!string.IsNullOrEmpty(s.tooltip)) SetHint(s.tooltip);
-            if (!s.selected && focusActions.TryGetValue(s, out var select)) select();
         }
 
         public void GoToPage(Page p)
@@ -1788,11 +1958,18 @@ namespace Obscure
             backgroundModalEl.pickingMode = PickingMode.Position;
             var panel = new VisualElement();
             panel.AddToClassList("uitk-modal-panel");
+            panel.style.maxHeight = 620;
+            panel.style.flexDirection = FlexDirection.Column;
+            panel.style.overflow = Overflow.Hidden;
             var title = new UiLabel($"{bg.name} · {bg.perkName}");
             title.AddToClassList("uitk-modal-title");
             panel.Add(title);
-            panel.Add(new UiLabel((bg.narrativeIdentity ?? "").ToUpperInvariant()) { style = { color = Palette.Mist2, marginBottom = 10, fontSize = 14 } });
+            panel.Add(new UiLabel((bg.narrativeIdentity ?? "").ToUpperInvariant()) { style = { color = Palette.Mist2, marginBottom = 10, fontSize = 14, flexShrink = 0 } });
 
+            var rankScroll = FigmaUi.CreateVerticalScrollView();
+            rankScroll.style.flexGrow = 1;
+            rankScroll.style.maxHeight = 420;
+            rankScroll.style.marginBottom = 14;
             string[] numerals = { "I", "II", "III", "IV", "V" };
             for (int r = 1; r <= 5; r++)
             {
@@ -1801,11 +1978,13 @@ namespace Obscure
                 line.style.fontSize = 13;
                 line.style.whiteSpace = WhiteSpace.Normal;
                 line.style.color = r == 1 ? Palette.Gold1 : Palette.Mist2;
-                line.style.marginBottom = 6;
-                panel.Add(line);
+                line.style.marginBottom = 8;
+                rankScroll.Add(line);
             }
+            panel.Add(rankScroll);
 
             var closeBtn = FigmaUi.CreateButton("CLOSE", "button-slab", 160f);
+            closeBtn.style.flexShrink = 0;
             panel.Add(closeBtn);
             backgroundModalEl.Add(panel);
             UiRoot.Add(backgroundModalEl);

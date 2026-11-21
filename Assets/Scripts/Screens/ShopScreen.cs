@@ -82,19 +82,29 @@ namespace Obscure
                     if (tag != null)
                     {
                         FigmaUi.SetInstanceText(tag, "text-0", lbl);
+                        tag.AddToClassList("uitk-filter-chip");
+                        tag.EnableInClassList("uitk-filter-active", active);
                         tag.style.marginRight = 8;
                         tabRow.Add(tag);
                         var it = menu.Add(tag, lbl, () => SwitchTab(t), selected: active);
-                        it.visual = on => tag.style.opacity = on || active ? 1f : 0.72f;
+                        it.visual = on =>
+                        {
+                            tag.EnableInClassList("uitk-focus", on);
+                            tag.EnableInClassList("uitk-selected", active);
+                            tag.EnableInClassList("uitk-filter-active", active);
+                        };
+                        it.visual(false);
                     }
                 }
                 screen.Add(tabRow);
 
-                var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 802, height = 560, flexDirection = FlexDirection.Column } };
+                var listHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 802, height = 560, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
                 screen.Add(listHost);
 
                 var scroll = FigmaUi.CreateVerticalScrollView();
-                scroll.style.maxHeight = 490;
+                scroll.style.flexGrow = 1;
+                scroll.style.flexBasis = 0;
+                scroll.style.minHeight = 0;
                 listHost.Add(scroll);
 
                 var entries = BuildEntries();
@@ -111,18 +121,19 @@ namespace Obscure
                         {
                             height = 56, marginBottom = 6, paddingLeft = 12, paddingRight = 12,
                             flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                            overflow = Overflow.Hidden,
                             borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                         }
                     };
-                    row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2 } });
+                    row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2, flexShrink = 0 } });
                     var icon = IconArt.Inline(e.icon, 3);
                     if (icon != null) { if (e.dim) icon.style.opacity = 0.5f; row.Add(icon); }
-                    var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
+                    var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden, marginRight = 8 } };
                     col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : Palette.Mist1 } });
                     col.Add(new UiLabel(e.sub) { style = { fontSize = 12, color = Palette.Mist3 } });
                     row.Add(col);
-                    row.Add(new UiLabel(e.stock) { style = { width = 100, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
-                    row.Add(new UiLabel(e.priceText) { style = { width = 90, fontSize = 16, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
+                    row.Add(new UiLabel(e.stock) { style = { width = 100, flexShrink = 0, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
+                    row.Add(new UiLabel(e.priceText) { style = { width = 94, flexShrink = 0, fontSize = 16, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
                     scroll.Add(row);
 
                     var it = menu.Add(row, e.title, () =>
@@ -250,15 +261,24 @@ namespace Obscure
 
         void BuildDetail(VisualElement screen, Entry e, int runGold)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             if (e == null) return;
 
             host.Add(FigmaUi.CreateSectionHeader(e.title, 346f));
-            var t = FigmaUi.InstantiateTemplate("Tag-Temp");
-            if (t != null) { FigmaUi.SetInstanceText(t, "text-0", e.tagText); t.style.marginTop = 10; t.style.marginBottom = 10; host.Add(t); }
 
-            host.Add(new UiLabel(e.desc) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 18 } });
+            var detailScroll = FigmaUi.CreateVerticalScrollView();
+            detailScroll.style.flexGrow = 1;
+            detailScroll.style.flexBasis = 0;
+            detailScroll.style.minHeight = 0;
+            detailScroll.style.marginTop = 8;
+            detailScroll.style.marginBottom = 10;
+            host.Add(detailScroll);
+
+            var t = FigmaUi.InstantiateTemplate("Tag-Temp");
+            if (t != null) { FigmaUi.SetInstanceText(t, "text-0", e.tagText); t.style.marginBottom = 10; detailScroll.Add(t); }
+
+            detailScroll.Add(new UiLabel(e.desc) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 18 } });
 
             VisualElement Line(string l, string r)
             {
@@ -267,13 +287,13 @@ namespace Obscure
                 v.Add(new UiLabel(r) { style = { fontSize = 13, color = Palette.Mist1 } });
                 return v;
             }
-            host.Add(Line("IN STOCK", e.stock));
-            host.Add(Line("YOU OWN", e.owned.ToString()));
-            host.Add(Line("PRICE", e.price >= 0 ? $"{e.price} SPOILS" : $"+{-e.price} SPOILS"));
-            host.Add(Line("SPOILS AFTER", $"{runGold} › {runGold - e.price}"));
+            detailScroll.Add(Line("IN STOCK", e.stock));
+            detailScroll.Add(Line("YOU OWN", e.owned.ToString()));
+            detailScroll.Add(Line("PRICE", e.price >= 0 ? $"{e.price} SPOILS" : $"+{-e.price} SPOILS"));
+            detailScroll.Add(Line("SPOILS AFTER", $"{runGold} › {runGold - e.price}"));
 
-            host.Add(new VisualElement { style = { flexGrow = 1 } });
             var btn = FigmaUi.CreateButton(e.btnText, e.canAct ? "button-primary" : "button-slab", 346f);
+            btn.style.flexShrink = 0;
             btn.SetEnabled(e.canAct);
             host.Add(btn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(btn, e.btnText, e.action, interactable: e.canAct));

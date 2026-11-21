@@ -57,9 +57,9 @@ namespace Obscure
             if (title != null) title.text = currentEvent.title;
 
             var body = UiRoot.Q<UiLabel>(className: "a-cracked-shrine-hums-candles-relight-as-you-approach-and-a-voice-asks-what-you-will-give-vars");
-            if (body != null) body.text = currentEvent.text.ToUpperInvariant();
+            if (body != null) body.style.display = DisplayStyle.None;
 
-            // Clear baked static choice rows and replace with dynamic choice host
+            // Clear baked static choice rows and replace with a unified right-column layout inside panel-gold__i-14
             foreach (var cls in new[] { "choice-1-vars", "choice-2-vars", "choice-3-vars" })
             {
                 var c = UiRoot.Q<VisualElement>(className: cls);
@@ -67,31 +67,59 @@ namespace Obscure
             }
 
             var screen = UiRoot.Q<VisualElement>(className: "_18-event-whispering-shrine") ?? UiRoot;
-            BuildTagAndInsightArea(screen);
 
-            choiceHost = new VisualElement { name = "EventChoiceHost" };
-            choiceHost.style.position = Position.Absolute;
-            choiceHost.style.left = 544;
-            choiceHost.style.top = 334;
-            choiceHost.style.width = 622;
-            choiceHost.style.height = 322;
-            choiceHost.style.flexDirection = FlexDirection.Column;
-            screen.Add(choiceHost);
+            var rightCol = new VisualElement
+            {
+                name = "EventRightColumn",
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 544,
+                    top = 172,
+                    width = 622,
+                    height = 478,
+                    flexDirection = FlexDirection.Column,
+                    overflow = Overflow.Hidden
+                }
+            };
+            screen.Add(rightCol);
+
+            var bodyCopy = new UiLabel(currentEvent.text.ToUpperInvariant())
+            {
+                style =
+                {
+                    fontSize = 15,
+                    color = Palette.Mist1,
+                    whiteSpace = WhiteSpace.Normal,
+                    marginBottom = 10,
+                    flexShrink = 0
+                }
+            };
+            rightCol.Add(bodyCopy);
+
+            BuildTagAndInsightArea(rightCol);
+
+            var choiceScroll = FigmaUi.CreateVerticalScrollView();
+            choiceScroll.name = "EventChoiceHost";
+            choiceScroll.style.flexGrow = 1;
+            choiceScroll.style.flexBasis = 0;
+            choiceScroll.style.minHeight = 0;
+            choiceHost = choiceScroll;
+            rightCol.Add(choiceHost);
 
             ShowChoices();
         }
 
-        void BuildTagAndInsightArea(VisualElement screen)
+        void BuildTagAndInsightArea(VisualElement container)
         {
             var metaHost = new VisualElement { name = "EventMetaHost" };
-            metaHost.style.position = Position.Absolute;
-            metaHost.style.left = 544;
-            metaHost.style.top = 236;
-            metaHost.style.width = 622;
             metaHost.style.flexDirection = FlexDirection.Column;
+            metaHost.style.flexShrink = 0;
+            bool hasMeta = false;
 
             if (currentEvent.tags != null && currentEvent.tags.Length > 0)
             {
+                hasMeta = true;
                 var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 6 } };
                 foreach (var rawTag in currentEvent.tags)
                 {
@@ -121,11 +149,13 @@ namespace Obscure
             var insights = GatherInsights();
             if (insights.Count > 0)
             {
+                hasMeta = true;
                 var box = new VisualElement();
                 box.style.paddingLeft = 10;
                 box.style.paddingRight = 10;
                 box.style.paddingTop = 6;
                 box.style.paddingBottom = 6;
+                box.style.marginBottom = 6;
                 box.style.backgroundColor = Palette.Ink2;
                 box.style.borderLeftWidth = 3;
                 box.style.borderLeftColor = Palette.Gold2;
@@ -141,7 +171,11 @@ namespace Obscure
                 metaHost.Add(box);
             }
 
-            screen.Add(metaHost);
+            if (hasMeta)
+            {
+                metaHost.style.marginBottom = 6;
+                container.Add(metaHost);
+            }
         }
 
         List<string> GatherInsights()
@@ -230,6 +264,7 @@ namespace Obscure
             card.style.paddingBottom = compact ? 4 : 6;
             card.style.flexDirection = FlexDirection.Row;
             card.style.alignItems = UnityEngine.UIElements.Align.Center;
+            card.style.overflow = Overflow.Hidden;
             card.style.borderTopWidth = 2;
             card.style.borderBottomWidth = 2;
             card.style.borderLeftWidth = 2;

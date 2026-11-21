@@ -60,9 +60,13 @@ namespace Obscure
                         ? $"STAGE {Run.Stage}/{Run.TotalStages} CLEARED"
                         : (Run != null && Run.TotalStages > 1 ? $"ACT {Run.Act} · S{Run.Stage}/{Run.TotalStages}" : $"ACT {Run?.Act ?? 1}");
                 FigmaUi.SetInstanceText(topTags[0], "text-0", firstTag);
+                topTags[0].style.marginRight = 8;
             }
             if (topTags.Count >= 2)
+            {
                 FigmaUi.SetInstanceText(topTags[1], "text-0", standing == currentParty.Count ? "NO HERO FELL" : $"{standing}/{currentParty.Count} STANDING");
+                topTags[1].style.marginRight = 8;
+            }
             if (topTags.Count >= 3)
             {
                 string thirdTag = currentOffer.bonusGoldFromModifier > 0
@@ -241,7 +245,8 @@ namespace Obscure
                 style =
                 {
                     position = Position.Absolute, left = 428, top = 528, width = 812, height = 150,
-                    flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween
+                    flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween,
+                    overflow = Overflow.Hidden
                 }
             };
             screen.Add(confirmHost);
@@ -492,7 +497,8 @@ namespace Obscure
                     };
                     int bestHeroIdx = FindBestHeroForEquipment(eqDef);
 
-                    for (int h = 0; h < currentParty.Count && h < 4; h++)
+                    int heroCount = Mathf.Min(currentParty.Count, 4);
+                    for (int h = 0; h < heroCount; h++)
                     {
                         int hIdx = h;
                         var u = currentParty[h];
@@ -505,8 +511,10 @@ namespace Obscure
                             style =
                             {
                                 flexDirection = FlexDirection.Row, alignItems = UiAlign.Center,
-                                paddingTop = 5, paddingBottom = 5, paddingLeft = 8, paddingRight = 10,
-                                marginRight = 8, minWidth = 178, height = 52,
+                                paddingTop = 5, paddingBottom = 5, paddingLeft = 8, paddingRight = 8,
+                                marginRight = h < heroCount - 1 ? 8 : 0,
+                                flexGrow = 1, flexBasis = 0, minWidth = 0, maxWidth = 197, height = 52,
+                                overflow = Overflow.Hidden,
                                 borderTopWidth = isPicked ? 3 : 2, borderBottomWidth = isPicked ? 3 : 2,
                                 borderLeftWidth = isPicked ? 3 : 2, borderRightWidth = isPicked ? 3 : 2,
                                 backgroundColor = isPicked ? Palette.Hex(0x2B2210) : Palette.Ink2,
@@ -720,15 +728,7 @@ namespace Obscure
             btn.style.paddingRight = 14;
             btn.style.marginRight = marginRight;
             btn.style.fontSize = 14;
-            var item = menu.Add(btn, label, onClick);
-            item.visual = on =>
-            {
-                btn.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Palette.Ink2;
-                var b = on ? Palette.Gold2 : Palette.Ink5;
-                btn.style.borderTopColor = b; btn.style.borderBottomColor = b;
-                btn.style.borderLeftColor = b; btn.style.borderRightColor = b;
-            };
-            item.visual(false);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(btn, label, onClick), btn);
             return btn;
         }
 
@@ -745,9 +745,7 @@ namespace Obscure
                 item.visual = on =>
                 {
                     FigmaUi.SetInstanceText(tpl, "text-0", on ? "▸" : "");
-                    var b = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderTopColor = b; btn.style.borderBottomColor = b;
-                    btn.style.borderLeftColor = b; btn.style.borderRightColor = b;
+                    FigmaUi.ApplyDefaultFocusVisual(btn, on, false, true);
                 };
                 item.visual(false);
                 return tpl;
@@ -1039,10 +1037,7 @@ namespace Obscure
                 item.visual = on =>
                 {
                     FigmaUi.SetInstanceText(retInst, "text-0", on ? "▸" : "");
-                    btn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
+                    FigmaUi.ApplyDefaultFocusVisual(btn, on, false, true);
                 };
                 item.visual(false);
             }

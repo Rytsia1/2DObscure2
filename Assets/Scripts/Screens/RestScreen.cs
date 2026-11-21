@@ -93,13 +93,14 @@ namespace Obscure
             var header = UiRoot.Q<VisualElement>(className: "section-header__i-22");
             if (campfire != null && header != null && header.parent == screen) campfire.PlaceBehind(header);
 
-            actionHost = new VisualElement { name = "CampActionHost" };
-            actionHost.style.position = Position.Absolute;
-            actionHost.style.left = 676;
-            actionHost.style.top = 286;
-            actionHost.style.width = 528;
-            actionHost.style.height = 288;
-            actionHost.style.flexDirection = FlexDirection.Column;
+            var actionScroll = FigmaUi.CreateVerticalScrollView();
+            actionScroll.name = "CampActionHost";
+            actionScroll.style.position = Position.Absolute;
+            actionScroll.style.left = 676;
+            actionScroll.style.top = 286;
+            actionScroll.style.width = 528;
+            actionScroll.style.height = 286;
+            actionHost = actionScroll;
             screen.Add(actionHost);
 
             feedbackLbl = new UiLabel { name = "CampFeedback" };
@@ -157,6 +158,7 @@ namespace Obscure
             actionHost.Add(row);
 
             var inner = row.Q<VisualElement>(className: "list-row-2") ?? row;
+            inner.style.width = Length.Percent(100);
             if (inner.childCount > 0) inner[0].style.display = DisplayStyle.None;
             var item = menu.Add(row, title, onClick, tooltip: sub ?? "");
             item.visual = on =>

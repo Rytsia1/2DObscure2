@@ -109,31 +109,19 @@ namespace Obscure
             {
                 var c = cat;
                 bool active = currentCategory == c;
-                var btn = FigmaUi.CreateButton($"{name} {CategoryCount(c)}", "button-slab", null);
-                btn.style.height = 38;
+                var btn = FigmaUi.CreateTabButton($"{name} {CategoryCount(c)}", active, null, 38f, 18f);
                 btn.style.paddingLeft = 14;
                 btn.style.paddingRight = 14;
-                btn.style.marginRight = 4;
-                btn.style.fontSize = 18;
-                btn.style.borderTopWidth = active ? 3 : 2;
-                btn.style.borderBottomWidth = active ? 0 : 2;
+                btn.style.marginRight = 6;
                 tabRow.Add(btn);
                 var it = menu.Add(btn, name, () => SelectCategory(c), selected: active);
-                it.visual = on =>
-                {
-                    btn.style.backgroundColor = on || active ? Palette.Ink3 : Palette.Ink2;
-                    btn.style.borderTopColor = on ? Palette.Gold1 : active ? Palette.Gold2 : Palette.Ink4;
-                    var side = on ? Palette.Gold1 : active ? Palette.Gold3 : Palette.Ink4;
-                    btn.style.borderLeftColor = side; btn.style.borderRightColor = side;
-                    btn.style.borderBottomColor = active ? Palette.Ink3 : side;
-                    btn.style.color = on || active ? Palette.Gold1 : Palette.Mist2;
-                };
+                it.visual = on => FigmaUi.ApplyTabVisual(btn, active, on, true);
                 it.visual(false);
             }
             screen.Add(tabRow);
 
             // Sort / Filter bar
-            var leftHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 798, height = 560, flexDirection = FlexDirection.Column } };
+            var leftHost = new VisualElement { style = { position = Position.Absolute, left = 44, top = 122, width = 798, height = 560, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(leftHost);
 
             bool isEqTab = currentCategory == InventoryCategory.Equipment;
@@ -195,6 +183,7 @@ namespace Obscure
                         var border = on ? Palette.Gold1 : sel ? Palette.Gold2 : (info.tint ?? Palette.Ink4);
                         cell.style.borderTopColor = border; cell.style.borderBottomColor = border;
                         cell.style.borderLeftColor = border; cell.style.borderRightColor = border;
+                        cell.style.backgroundColor = on ? Palette.Hex(0x2B2210) : StyleKeyword.Null;
                     };
                     it.visual(false);
                 }
@@ -259,7 +248,7 @@ namespace Obscure
 
         void BuildDetailPanel(VisualElement screen, int selIdx)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             host.Add(FigmaUi.CreateSectionHeader("Item details", 346f));
 
@@ -329,34 +318,40 @@ namespace Obscure
                 }
             }
 
+            var detailScroll = FigmaUi.CreateVerticalScrollView();
+            detailScroll.style.flexGrow = 1;
+            detailScroll.style.flexBasis = 0;
+            detailScroll.style.minHeight = 0;
+            detailScroll.style.marginTop = 8;
+            detailScroll.style.marginBottom = 10;
+            host.Add(detailScroll);
+
             if (dName != "")
             {
-                host.Add(new UiLabel(dName) { style = { fontSize = 20, color = nameCol, whiteSpace = WhiteSpace.Normal, marginTop = 14 } });
-                host.Add(new UiLabel(dSub) { style = { fontSize = 12, color = Palette.Mist3, marginBottom = 10 } });
+                detailScroll.Add(new UiLabel(dName) { style = { fontSize = 20, color = nameCol, whiteSpace = WhiteSpace.Normal, marginTop = 4 } });
+                detailScroll.Add(new UiLabel(dSub) { style = { fontSize = 12, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginBottom = 10 } });
                 foreach (var (k, v) in stats)
                 {
                     var row = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, height = 26, borderBottomWidth = 2, borderBottomColor = Palette.Ink3 } };
                     row.Add(new UiLabel(k) { style = { fontSize = 13, color = Palette.Mist2 } });
                     row.Add(new UiLabel(v) { style = { fontSize = 13, color = Palette.Mist1 } });
-                    host.Add(row);
+                    detailScroll.Add(row);
                 }
-                if (dAffix != "") host.Add(new UiLabel(dAffix) { style = { fontSize = 13, color = Palette.Xp, whiteSpace = WhiteSpace.Normal, marginTop = 12 } });
-                if (dSpec != "") host.Add(new UiLabel(dSpec) { style = { fontSize = 13, color = Palette.Gold2, whiteSpace = WhiteSpace.Normal, marginTop = 6 } });
-                if (dRest != "") host.Add(new UiLabel(dRest) { style = { fontSize = 12, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginTop = 8 } });
-                if (dVal != "") host.Add(new UiLabel(dVal) { style = { fontSize = 13, color = Palette.Gold1, marginTop = 6 } });
+                if (dAffix != "") detailScroll.Add(new UiLabel(dAffix) { style = { fontSize = 13, color = Palette.Xp, whiteSpace = WhiteSpace.Normal, marginTop = 12 } });
+                if (dSpec != "") detailScroll.Add(new UiLabel(dSpec) { style = { fontSize = 13, color = Palette.Gold2, whiteSpace = WhiteSpace.Normal, marginTop = 6 } });
+                if (dRest != "") detailScroll.Add(new UiLabel(dRest) { style = { fontSize = 12, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginTop = 8 } });
+                if (dVal != "") detailScroll.Add(new UiLabel(dVal) { style = { fontSize = 13, color = Palette.Gold1, marginTop = 6 } });
             }
             else
             {
-                host.Add(new UiLabel("SELECT AN ITEM.") { style = { fontSize = 14, color = Palette.Mist3, marginTop = 20 } });
+                detailScroll.Add(new UiLabel("SELECT AN ITEM.") { style = { fontSize = 14, color = Palette.Mist3, marginTop = 20 } });
             }
-
-            host.Add(new VisualElement { style = { flexGrow = 1 } });
 
             bool hasSel = dName != "";
             bool isEq = hasSel && currentCategory == InventoryCategory.Equipment;
             bool canDiscard = hasSel && currentCategory != InventoryCategory.KeyItems;
             bool canUse = hasSel && currentCategory == InventoryCategory.Consumables;
-            var r1 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 8 } };
+            var r1 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 8, flexShrink = 0 } };
             var eqBtn = FigmaUi.CreateButton("Equip", "button-slab", 110f); eqBtn.SetEnabled(isEq);
             eqBtn.style.paddingLeft = 8; eqBtn.style.paddingRight = 8;
             var upBtn = FigmaUi.CreateButton("Upgrade", "button-slab", 110f); upBtn.SetEnabled(isEq);
@@ -366,7 +361,7 @@ namespace Obscure
             r1.Add(eqBtn); r1.Add(upBtn); r1.Add(sellBtn);
             host.Add(r1);
 
-            var r2 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween } };
+            var r2 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, flexShrink = 0 } };
             var disBtn = FigmaUi.CreateButton("Discard", "button-danger", 160f); disBtn.SetEnabled(canDiscard);
             var useBtn = FigmaUi.CreateButton("Use on...", canUse ? "button-primary" : "button-slab", 174f); useBtn.SetEnabled(canUse);
             r2.Add(disBtn); r2.Add(useBtn);

@@ -82,7 +82,8 @@ namespace Obscure
             }
             if (footerHint != null) footerHint.style.display = DisplayStyle.None; // only needed as a layout anchor
 
-            rowsContainer = new VisualElement { name = "SettingsRows" };
+            rowsContainer = FigmaUi.CreateVerticalScrollView();
+            rowsContainer.name = "SettingsRows";
             rowsContainer.style.position = Position.Absolute;
             rowsContainer.style.left = 300;
             rowsContainer.style.top = 124;
@@ -163,6 +164,8 @@ namespace Obscure
                 menu.Add(el, CategoryNames[i], () => { category = c; focusIndex = menuIdx; Rebuild(); }, selected: sel, visual: focused =>
                 {
                     el.EnableInClassList("uitk-focus", focused);
+                    el.EnableInClassList("uitk-selected", sel);
+                    inner.EnableInClassList("uitk-focus", focused);
                     inner.EnableInClassList("uitk-selected", sel);
                     if (inner.ClassListContains("button-flat"))
                     {
@@ -296,6 +299,7 @@ namespace Obscure
             right.style.alignItems = UnityEngine.UIElements.Align.Center;
 
             var track = new VisualElement();
+            track.AddToClassList("uitk-slider-track");
             track.style.width = 280;
             track.style.height = 12;
             track.style.backgroundColor = Palette.Ink0;

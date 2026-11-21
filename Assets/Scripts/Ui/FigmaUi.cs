@@ -248,8 +248,24 @@ namespace Obscure
             var tokens = catalog != null ? catalog.GetTokens() : LoadEditorStyle($"{FigmaScreenCatalog.FigmaFolder}/tokens.uss");
             var runtime = catalog != null ? catalog.GetRuntimeStylesheet() : LoadEditorStyle("Assets/UI/felna-runtime.uss");
             if (tokens != null && !root.styleSheets.Contains(tokens)) root.styleSheets.Add(tokens);
-            if (runtime != null && !root.styleSheets.Contains(runtime)) root.styleSheets.Add(runtime);
             if (entry?.uss != null && !root.styleSheets.Contains(entry.uss)) root.styleSheets.Add(entry.uss);
+            if (runtime != null)
+            {
+                // Append runtime stylesheet AFTER screen USS and onto every nested TemplateContainer / styled subtree
+                // so runtime hover, focus, unfocused, disabled, and spacing rules override template-scoped Figma USS.
+                AppendRuntimeStyle(root, runtime);
+                root.Query<VisualElement>().ForEach(el =>
+                {
+                    if (el != root && (el is TemplateContainer || el.styleSheets.count > 0))
+                        AppendRuntimeStyle(el, runtime);
+                });
+            }
+        }
+
+        static void AppendRuntimeStyle(VisualElement el, StyleSheet runtime)
+        {
+            if (el.styleSheets.Contains(runtime)) el.styleSheets.Remove(runtime);
+            el.styleSheets.Add(runtime);
         }
 
         static FigmaScreenCatalog.Entry LoadEditorEntry(string key)
@@ -332,21 +348,19 @@ namespace Obscure
             el.EnableInClassList("uitk-disabled", !interactable);
 
             var inner = el.childCount == 1 && el is TemplateContainer ? el[0] : el;
+            if (inner != el)
+            {
+                inner.EnableInClassList("uitk-focus", focused);
+                inner.EnableInClassList("uitk-selected", selected);
+                inner.EnableInClassList("uitk-disabled", !interactable);
+            }
+
             if (inner.ClassListContains("button-flat"))
                 inner.EnableInClassList("uitk-unfocused", !focused);
             else if (inner.ClassListContains("button-primary-2"))
                 inner.EnableInClassList("uitk-unfocused", !focused);
             else if (inner.ClassListContains("button-slab-2"))
                 inner.EnableInClassList("uitk-unfocused", !focused);
-            else if (inner.ClassListContains("button-primary") && !(inner is Button))
-            {
-                var bg = focused ? Palette.Gold1 : Palette.Gold2;
-                inner.style.backgroundColor = bg;
-                inner.style.borderTopColor = bg;
-                inner.style.borderBottomColor = bg;
-                inner.style.borderLeftColor = bg;
-                inner.style.borderRightColor = bg;
-            }
 
             var cursor = el.Q<VisualElement>("uitkCursor");
             if (cursor != null)
@@ -389,24 +403,54 @@ namespace Obscure
             if (width.HasValue) btn.style.width = width.Value;
             var lbl = new UiLabel(text) { name = "uitkLabel" };
             lbl.style.unityTextAlign = TextAnchor.MiddleCenter;
-            if (styleClass == "button-primary")
-            {
-                btn.style.backgroundColor = Palette.Gold2;
-                btn.style.borderTopWidth = 2;
-                btn.style.borderBottomWidth = 2;
-                btn.style.borderLeftWidth = 2;
-                btn.style.borderRightWidth = 2;
-                btn.style.borderTopColor = Palette.Gold2;
-                btn.style.borderBottomColor = Palette.Gold2;
-                btn.style.borderLeftColor = Palette.Gold2;
-                btn.style.borderRightColor = Palette.Gold2;
-                btn.style.paddingTop = 6;
-                btn.style.paddingBottom = 6;
-                lbl.style.color = Palette.Ink0;
-                lbl.style.fontSize = 20;
-            }
             btn.Add(lbl);
             return btn;
+        }
+
+        public static VisualElement CreateTabButton(string text, bool active, float? width = null, float height = 34f, float fontSize = 16f)
+        {
+            var btn = new VisualElement();
+            btn.AddToClassList("uitk-tab-btn");
+            if (active)
+            {
+                btn.AddToClassList("uitk-tab-active");
+                btn.AddToClassList("uitk-selected");
+            }
+            btn.style.height = height;
+            btn.style.paddingLeft = 10;
+            btn.style.paddingRight = 10;
+            if (width.HasValue) btn.style.width = width.Value;
+            var lbl = new UiLabel(text) { name = "uitkLabel" };
+            lbl.style.fontSize = fontSize;
+            lbl.style.unityTextAlign = TextAnchor.MiddleCenter;
+            btn.Add(lbl);
+            return btn;
+        }
+
+        public static void ApplyTabVisual(VisualElement btn, bool active, bool focused, bool interactable = true)
+        {
+            if (btn == null) return;
+            btn.EnableInClassList("uitk-tab-active", active);
+            btn.EnableInClassList("uitk-selected", active);
+            btn.EnableInClassList("uitk-focus", focused);
+            btn.EnableInClassList("uitk-disabled", !interactable);
+        }
+
+        public static void StyleKeyButton(VisualElement keyEl, Action onClick, float marginRight = 6f)
+        {
+            if (keyEl == null) return;
+            keyEl.AddToClassList("uitk-key-btn");
+            keyEl.style.marginRight = marginRight;
+            keyEl.pickingMode = PickingMode.Position;
+            if (onClick != null)
+            {
+                keyEl.RegisterCallback<ClickEvent>(_ =>
+                {
+                    if (Controls.Locked) return;
+                    Sfx.Play(Sound.Move);
+                    onClick();
+                });
+            }
         }
 
         public static UiLabel CreateHeader(string text, float width)
@@ -540,8 +584,12 @@ namespace Obscure
         {
             var sv = new ScrollView(ScrollViewMode.Vertical);
             sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            sv.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+            sv.verticalScrollerVisibility = ScrollerVisibility.Auto;
+            sv.mouseWheelScrollSize = 40f;
+            sv.style.overflow = Overflow.Hidden;
+            sv.style.minHeight = 0;
             sv.contentContainer.style.flexShrink = 0;
+            sv.contentContainer.style.paddingRight = 6;
             sv.AddToClassList("uitk-scroll-view");
             return sv;
         }

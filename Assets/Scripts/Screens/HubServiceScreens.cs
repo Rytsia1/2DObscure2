@@ -104,6 +104,7 @@ namespace Obscure
             row.style.paddingRight = 12;
             row.style.flexDirection = FlexDirection.Row;
             row.style.alignItems = UnityEngine.UIElements.Align.Center;
+            row.style.overflow = Overflow.Hidden;
             row.style.borderTopWidth = 2;
             row.style.borderBottomWidth = 2;
             row.style.borderLeftWidth = 2;
@@ -135,7 +136,7 @@ namespace Obscure
 
             if (!string.IsNullOrEmpty(right) || !string.IsNullOrEmpty(subRight))
             {
-                var rCol = new VisualElement { style = { flexDirection = FlexDirection.Column, alignItems = UnityEngine.UIElements.Align.FlexEnd, minWidth = 86 } };
+                var rCol = new VisualElement { style = { flexDirection = FlexDirection.Column, alignItems = UnityEngine.UIElements.Align.FlexEnd, minWidth = 86, flexShrink = 0 } };
                 if (!string.IsNullOrEmpty(right))
                     rCol.Add(new UiLabel(right) { style = { fontSize = 16, color = rightCol ?? Palette.Gold1 } });
                 if (!string.IsNullOrEmpty(subRight))
@@ -199,34 +200,21 @@ namespace Obscure
             var row = new VisualElement { style = { position = Position.Absolute, left = left, top = top, height = 38, flexDirection = FlexDirection.Row } };
             foreach (var (lbl, active, enabled, onClick) in tabs)
             {
-                var btn = FigmaUi.CreateButton(lbl, "button-slab", null);
-                btn.style.height = 38;
+                var btn = FigmaUi.CreateTabButton(lbl, active, null, 38f, 18f);
                 btn.style.paddingLeft = 16;
                 btn.style.paddingRight = 16;
-                btn.style.marginRight = 4;
-                btn.style.fontSize = 18;
-                btn.style.borderTopWidth = active ? 3 : 2;
-                btn.style.borderBottomWidth = active ? 0 : 2;
+                btn.style.marginRight = 6;
                 row.Add(btn);
                 if (enabled)
                 {
                     var item = m.Add(btn, lbl, onClick, selected: active);
-                    item.visual = on =>
-                    {
-                        btn.style.backgroundColor = on || active ? Palette.Ink3 : Palette.Ink2;
-                        btn.style.borderTopColor = on ? Palette.Gold1 : active ? Palette.Gold2 : Palette.Ink4;
-                        var side = on ? Palette.Gold1 : active ? Palette.Gold3 : Palette.Ink4;
-                        btn.style.borderLeftColor = side;
-                        btn.style.borderRightColor = side;
-                        btn.style.borderBottomColor = active ? Palette.Ink3 : side;
-                        btn.style.color = on || active ? Palette.Gold1 : Palette.Mist2;
-                    };
+                    item.visual = on => FigmaUi.ApplyTabVisual(btn, active, on, true);
                     item.visual(false);
                 }
                 else
                 {
                     btn.SetEnabled(false);
-                    btn.style.opacity = 0.55f;
+                    FigmaUi.ApplyTabVisual(btn, active, false, false);
                 }
             }
             return row;
@@ -353,7 +341,7 @@ namespace Obscure
 
         void BuildDetail(VisualElement screen, List<(string id, string name, string sub, ItemDef def, int price, int owned)> rows)
         {
-            var host = new VisualElement { name = "DynamicHost", style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { name = "DynamicHost", style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
 
             if (rows.Count == 0)
@@ -366,33 +354,39 @@ namespace Obscure
             var r = rows[selected];
             host.Add(FigmaUi.CreateSectionHeader(r.name, 346f));
 
-            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 10, marginBottom = 10 } };
+            var bodyScroll = FigmaUi.CreateVerticalScrollView();
+            bodyScroll.style.flexGrow = 1;
+            bodyScroll.style.flexBasis = 0;
+            bodyScroll.style.minHeight = 0;
+            bodyScroll.style.marginTop = 8;
+            bodyScroll.style.marginBottom = 10;
+            host.Add(bodyScroll);
+
+            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 10 } };
             if (r.def != null) tagRow.Add(RarityTag(r.def.rarity));
             var t2 = FigmaUi.InstantiateTemplate("Tag-Cls");
             if (t2 != null) { FigmaUi.SetInstanceText(t2, "text-0", sellTab ? "OWNED" : "CONSUMABLE"); tagRow.Add(t2); }
-            host.Add(tagRow);
+            bodyScroll.Add(tagRow);
 
             var desc = new UiLabel((r.def?.description ?? r.sub).ToUpperInvariant()) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 14 } };
-            host.Add(desc);
-            host.Add(StatLine("YOU OWN", r.def != null && r.def.maxStack < 99 ? $"{r.owned} / {r.def.maxStack}" : r.owned.ToString()));
-            host.Add(StatLine(sellTab ? "SELLS FOR" : "PRICE EACH", $"{Money(r.price)} GOLD", Palette.Gold2));
+            bodyScroll.Add(desc);
+            bodyScroll.Add(StatLine("YOU OWN", r.def != null && r.def.maxStack < 99 ? $"{r.owned} / {r.def.maxStack}" : r.owned.ToString()));
+            bodyScroll.Add(StatLine(sellTab ? "SELLS FOR" : "PRICE EACH", $"{Money(r.price)} GOLD", Palette.Gold2));
             if (!sellTab && HubEconomy.HubStockLeft(Run, r.id) != int.MaxValue)
-                host.Add(StatLine("IN STOCK", $"{HubEconomy.HubStockLeft(Run, r.id)} · RESTOCKS AFTER EACH DUNGEON"));
-            if (r.def?.target != null) host.Add(StatLine("TARGET", r.def.target.ToUpperInvariant()));
+                bodyScroll.Add(StatLine("IN STOCK", $"{HubEconomy.HubStockLeft(Run, r.id)} · RESTOCKS AFTER EACH DUNGEON"));
+            if (r.def?.target != null) bodyScroll.Add(StatLine("TARGET", r.def.target.ToUpperInvariant()));
 
             if (!sellTab && Limit(r.id) <= 0)
-                host.Add(CreateToast($"{r.name}: {LimitReason(r.id)}.", true));
+                bodyScroll.Add(CreateToast($"{r.name}: {LimitReason(r.id)}.", true));
             else if (!sellTab && Gold < r.price)
-                host.Add(CreateToast($"{r.name}: NOT ENOUGH GOLD — NEED {Money(r.price - Gold)} MORE.", true));
+                bodyScroll.Add(CreateToast($"{r.name}: NOT ENOUGH GOLD — NEED {Money(r.price - Gold)} MORE.", true));
 
             var fbToast = CreateFeedbackToast();
-            if (fbToast != null) host.Add(fbToast);
-
-            var spacer = new VisualElement { style = { flexGrow = 1 } };
-            host.Add(spacer);
+            if (fbToast != null) bodyScroll.Add(fbToast);
 
             bool canAct = sellTab || (Gold >= r.price && Limit(r.id) > 0);
             var actBtn = FigmaUi.CreateButton(sellTab ? $"Sell for {Money(r.price)}" : "Buy...", canAct ? "button-primary" : "button-slab", 346f);
+            actBtn.style.flexShrink = 0;
             actBtn.SetEnabled(canAct);
             host.Add(actBtn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(actBtn, sellTab ? "Sell" : "Buy", sellTab ? (Action)(() => Sell(r.id, r.price)) : () => { qty = 1; dialogFocusIndex = -1; dialogOpen = true; Rebuild(); }, interactable: canAct));
@@ -529,11 +523,15 @@ namespace Obscure
             string[] frameClasses = { "frame-vars", "frame-vars-2", "frame-vars-3", "frame-vars-4" };
             var portraitItems = new Dictionary<UitkMenu.Item, int>();
             int portraitBaseIdx = menu.items.Count;
+            VisualElement switcherRow = null;
             for (int i = 0; i < frameClasses.Length; i++)
             {
                 var fr = UiRoot.Q<VisualElement>(className: frameClasses[i]);
                 if (fr == null) continue;
+                switcherRow ??= fr.parent;
                 if (i >= party.Count) { fr.style.display = DisplayStyle.None; continue; }
+                fr.AddToClassList("uitk-portrait-btn");
+                fr.style.marginRight = 6;
                 int idx = i;
                 var u = party[i];
                 if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
@@ -548,10 +546,19 @@ namespace Obscure
                 portraitItems[it] = idx;
                 it.visual = focus =>
                 {
+                    fr.EnableInClassList("uitk-focus", focus);
+                    fr.EnableInClassList("uitk-selected", onHero);
                     var col = focus ? Palette.Gold1 : onHero ? Palette.Gold2 : Palette.Ink5;
                     fr.style.borderTopColor = col; fr.style.borderBottomColor = col; fr.style.borderLeftColor = col; fr.style.borderRightColor = col;
                 };
                 it.visual(false);
+            }
+            if (switcherRow != null && party.Count > 1)
+            {
+                var qCap = FigmaUi.FindLabel(switcherRow, "Q")?.parent;
+                var eCap = FigmaUi.FindLabel(switcherRow, "E")?.parent;
+                if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => { heroIndex = (heroIndex - 1 + party.Count) % party.Count; Rebuild(); }, 6f);
+                if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => { heroIndex = (heroIndex + 1) % party.Count; Rebuild(); }, 0f);
             }
             menu.onFocus = item =>
             {
@@ -576,8 +583,11 @@ namespace Obscure
                     if (i != rIdx) screen[i].style.display = DisplayStyle.None;
             }
 
-            // Filter chip strip
-            var chipRow = new VisualElement { style = { position = Position.Absolute, left = 44, top = 120, flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 800 } };
+            // Unified left flex column so wrapping filter chips never overlap the scrollable stock list
+            var leftCol = new VisualElement { style = { position = Position.Absolute, left = 44, top = 118, width = 802, height = 566, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
+            screen.Add(leftCol);
+
+            var chipRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, flexShrink = 0, marginBottom = 8 } };
             for (int i = 0; i < FilterNames.Length; i++)
             {
                 int f = i;
@@ -585,23 +595,30 @@ namespace Obscure
                 var tag = FigmaUi.InstantiateTemplate(active ? "Tag-Gold" : "Tag-Cls");
                 if (tag == null) continue;
                 FigmaUi.SetInstanceText(tag, "text-0", FilterNames[i].ToUpperInvariant());
+                tag.AddToClassList("uitk-filter-chip");
+                tag.EnableInClassList("uitk-filter-active", active);
                 tag.style.marginRight = 6;
+                tag.style.marginBottom = 4;
                 chipRow.Add(tag);
                 var it = menu.Add(tag, FilterNames[i], () => { filter = f; selected = 0; Rebuild(); }, selected: active);
-                it.visual = on => tag.style.opacity = on || active ? 1f : 0.72f;
+                it.visual = on =>
+                {
+                    tag.EnableInClassList("uitk-focus", on);
+                    tag.EnableInClassList("uitk-selected", active);
+                    tag.EnableInClassList("uitk-filter-active", active);
+                };
+                it.visual(false);
             }
-            screen.Add(chipRow);
+            leftCol.Add(chipRow);
 
             var items = stock.items.Where(s => s.item?.Definition != null && InFilter(s.item.Definition, filter)).ToList();
             selected = Mathf.Clamp(selected, 0, Mathf.Max(0, items.Count - 1));
 
             var listHost = FigmaUi.CreateVerticalScrollView();
-            listHost.style.position = Position.Absolute;
-            listHost.style.left = 44;
-            listHost.style.top = 162;
-            listHost.style.width = 802;
-            listHost.style.height = 520;
-            screen.Add(listHost);
+            listHost.style.flexGrow = 1;
+            listHost.style.flexBasis = 0;
+            listHost.style.minHeight = 0;
+            leftCol.Add(listHost);
             for (int i = 0; i < items.Count; i++)
             {
                 int idx = i;
@@ -624,7 +641,7 @@ namespace Obscure
 
         void BuildDetail(VisualElement screen, ShopItem s, Unit hero)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             if (s == null) { var fb = CreateFeedbackToast(); if (fb != null) host.Add(fb); return; }
 
@@ -632,25 +649,33 @@ namespace Obscure
             var def = item.Definition;
             host.Add(FigmaUi.CreateSectionHeader(def.name, 346f));
 
-            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 10, marginBottom = 10 } };
+            var bodyScroll = FigmaUi.CreateVerticalScrollView();
+            bodyScroll.style.flexGrow = 1;
+            bodyScroll.style.flexBasis = 0;
+            bodyScroll.style.minHeight = 0;
+            bodyScroll.style.marginTop = 8;
+            bodyScroll.style.marginBottom = 8;
+            host.Add(bodyScroll);
+
+            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 10 } };
             tagRow.Add(RarityTag(item.rarity));
             var slotTag = FigmaUi.InstantiateTemplate("Tag-Cls");
             if (slotTag != null) { FigmaUi.SetInstanceText(slotTag, "text-0", EquipmentSlots.DisplayName(def.slot).ToUpperInvariant()); tagRow.Add(slotTag); }
-            host.Add(tagRow);
+            bodyScroll.Add(tagRow);
 
-            host.Add(new UiLabel("BASE STATS · FIXED") { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 4 } });
-            if (item.EffectiveWeaponPower > 0) host.Add(StatLine("WEAPON POWER", $"+{item.EffectiveWeaponPower}"));
-            if (item.EffectivePhysicalDefense > 0) host.Add(StatLine("DEFENSE", $"+{item.EffectivePhysicalDefense}"));
-            if (item.EffectiveMagicDefense > 0) host.Add(StatLine("MAGIC DEFENSE", $"+{item.EffectiveMagicDefense}"));
-            if (item.EffectiveBreakPowerModifier > 0) host.Add(StatLine("BREAK POWER", $"+{item.EffectiveBreakPowerModifier}"));
+            bodyScroll.Add(new UiLabel("BASE STATS · FIXED") { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 4 } });
+            if (item.EffectiveWeaponPower > 0) bodyScroll.Add(StatLine("WEAPON POWER", $"+{item.EffectiveWeaponPower}"));
+            if (item.EffectivePhysicalDefense > 0) bodyScroll.Add(StatLine("DEFENSE", $"+{item.EffectivePhysicalDefense}"));
+            if (item.EffectiveMagicDefense > 0) bodyScroll.Add(StatLine("MAGIC DEFENSE", $"+{item.EffectiveMagicDefense}"));
+            if (item.EffectiveBreakPowerModifier > 0) bodyScroll.Add(StatLine("BREAK POWER", $"+{item.EffectiveBreakPowerModifier}"));
 
             int affixCount = item.affixes?.Count ?? 0;
-            host.Add(new UiLabel($"RANDOM AFFIXES ({affixCount} / 3)") { style = { fontSize = 12, color = Palette.Gold2, marginTop = 10, marginBottom = 4 } });
+            bodyScroll.Add(new UiLabel($"RANDOM AFFIXES ({affixCount} / 3)") { style = { fontSize = 12, color = Palette.Gold2, marginTop = 10, marginBottom = 4 } });
             foreach (var a in (item.affixes ?? new List<GeneratedAffix>()).Take(3))
-                host.Add(StatLine(a.GetDescription().ToUpperInvariant(), ""));
+                bodyScroll.Add(StatLine(a.GetDescription().ToUpperInvariant(), ""));
 
             string why = EquipmentValidator.Validate(def, def.slot, hero.classDef, hero.race, hero.level, hero.FinalScores, hero.id);
-            host.Add(new UiLabel(why == null ? $"✓ {hero.name} CAN USE THIS".ToUpperInvariant() : why.ToUpperInvariant())
+            bodyScroll.Add(new UiLabel(why == null ? $"✓ {hero.name} CAN USE THIS".ToUpperInvariant() : why.ToUpperInvariant())
             {
                 style = { fontSize = 13, color = why == null ? Ok : No, whiteSpace = WhiteSpace.Normal, marginTop = 10 }
             });
@@ -662,19 +687,19 @@ namespace Obscure
                     : DerivedStatId.PhysicalDefense;
                 int delta = EquipmentManager.CalculateStatDelta(hero, def.slot, item, stat);
                 hero.equipped.TryGetValue(def.slot, out var cur);
-                host.Add(new UiLabel($"VS {(cur != null ? cur.name : "EMPTY")}: {Database.DerivedStatDefs[stat].shortName} {(delta > 0 ? "+" : "")}{delta}".ToUpperInvariant())
+                bodyScroll.Add(new UiLabel($"VS {(cur != null ? cur.name : "EMPTY")}: {Database.DerivedStatDefs[stat].shortName} {(delta > 0 ? "+" : "")}{delta}".ToUpperInvariant())
                 {
                     style = { fontSize = 13, color = delta > 0 ? Up : delta < 0 ? No : Palette.Mist3, marginTop = 4 }
                 });
             }
 
             var fbToast = CreateFeedbackToast();
-            if (fbToast != null) host.Add(fbToast);
+            if (fbToast != null) bodyScroll.Add(fbToast);
 
-            host.Add(new VisualElement { style = { flexGrow = 1 } });
-            host.Add(new UiLabel($"GOLD {Money(Gold)} › {Money(Gold - s.cost)}") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 8 } });
+            host.Add(new UiLabel($"GOLD {Money(Gold)} › {Money(Gold - s.cost)}") { style = { fontSize = 12, color = Palette.Mist2, marginBottom = 8, flexShrink = 0 } });
             bool canBuy = !s.isSold && Gold >= s.cost;
             var buyBtn = FigmaUi.CreateButton(s.isSold ? "Sold out" : $"Buy · {Money(s.cost)}", canBuy ? "button-primary" : "button-slab", 346f);
+            buyBtn.style.flexShrink = 0;
             buyBtn.SetEnabled(canBuy);
             host.Add(buyBtn);
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(buyBtn, "Buy", () => Buy(s), interactable: canBuy));
@@ -736,11 +761,11 @@ namespace Obscure
             selected = Mathf.Clamp(selected, 0, Math.Max(0, gear.Count - 1));
 
             // Left panel
-            var leftHost = new VisualElement { style = { position = Position.Absolute, left = 36, top = 84, width = 306, height = 600, flexDirection = FlexDirection.Column } };
+            var leftHost = new VisualElement { style = { position = Position.Absolute, left = 36, top = 84, width = 306, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(leftHost);
             leftHost.Add(FigmaUi.CreateSectionHeader("Choose equipment", 298f));
 
-            var fltRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 10, marginBottom = 10 } };
+            var fltRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, flexShrink = 0, marginTop = 10, marginBottom = 8 } };
             for (int i = 0; i < Filters.Length; i++)
             {
                 int f = i;
@@ -749,16 +774,27 @@ namespace Obscure
                 if (tag != null)
                 {
                     FigmaUi.SetInstanceText(tag, "text-0", Filters[i].ToUpperInvariant());
+                    tag.AddToClassList("uitk-filter-chip");
+                    tag.EnableInClassList("uitk-filter-active", active);
                     tag.style.marginRight = 6;
+                    tag.style.marginBottom = 4;
                     fltRow.Add(tag);
                     var it = menu.Add(tag, Filters[i], () => { filter = f; selected = 0; Rebuild(); }, selected: active);
-                    it.visual = on => tag.style.opacity = on || active ? 1f : 0.72f;
+                    it.visual = on =>
+                    {
+                        tag.EnableInClassList("uitk-focus", on);
+                        tag.EnableInClassList("uitk-selected", active);
+                        tag.EnableInClassList("uitk-filter-active", active);
+                    };
+                    it.visual(false);
                 }
             }
             leftHost.Add(fltRow);
 
             var listScroll = FigmaUi.CreateVerticalScrollView();
-            listScroll.style.height = 490;
+            listScroll.style.flexGrow = 1;
+            listScroll.style.flexBasis = 0;
+            listScroll.style.minHeight = 0;
             leftHost.Add(listScroll);
 
             for (int i = 0; i < gear.Count; i++)
@@ -779,13 +815,13 @@ namespace Obscure
 
         void BuildAnvil(VisualElement screen, EquipmentInstance e)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 396, top = 96, width = 468, height = 580, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 396, top = 96, width = 468, height = 580, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             if (e == null) return;
 
             var def = e.Definition;
             bool canUp = e.CanUpgrade(out string maxReason);
-            var top = new VisualElement { style = { alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 18 } };
+            var top = new VisualElement { style = { alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 16, flexShrink = 0 } };
             var slot = FigmaUi.InstantiateTemplate("Item-Slot-Selected");
             if (slot != null)
             {
@@ -799,19 +835,25 @@ namespace Obscure
             var lvlRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
             var curT = FigmaUi.InstantiateTemplate("Tag-Cls"); if (curT != null) { FigmaUi.SetInstanceText(curT, "text-0", $"+{e.upgradeLevel}"); lvlRow.Add(curT); }
             lvlRow.Add(new UiLabel("  ›  ") { style = { fontSize = 20, color = Palette.Gold2 } });
-            var nxtT = FigmaUi.InstantiateTemplate("Tag-Gold"); if (nxtT != null) { FigmaUi.SetInstanceText(nxtT, "text-0", canUp ? $"+{e.upgradeLevel + 1}" : "MAX"); lvlRow.Add(nxtT); }
+            var nxtT = FigmaUi.InstantiateTemplate("Tag-Gold"); if (nxtT != null) { FigmaUi.SetInstanceText(nxtT, "text-0", canUp ? $"+{e.upgradeLevel + 1}" : "MAX"); nxtT.style.marginRight = 8; lvlRow.Add(nxtT); }
             lvlRow.Add(RarityTag(e.rarity));
             top.Add(lvlRow);
             host.Add(top);
 
-            host.Add(new UiLabel("BASE STATS · UPGRADED") { style = { fontSize = 13, color = Palette.Gold2, marginBottom = 6 } });
+            var statsScroll = FigmaUi.CreateVerticalScrollView();
+            statsScroll.style.flexGrow = 1;
+            statsScroll.style.flexBasis = 0;
+            statsScroll.style.minHeight = 0;
+            host.Add(statsScroll);
+
+            statsScroll.Add(new UiLabel("BASE STATS · UPGRADED") { style = { fontSize = 13, color = Palette.Gold2, marginBottom = 6 } });
             float now = e.UpgradeMultiplier, next = 1f + (e.upgradeLevel + 1) * 0.05f;
             void AddStat(string n, int baseVal)
             {
                 if (baseVal <= 0) return;
                 int a = Mathf.RoundToInt(baseVal * now), b = canUp ? Mathf.RoundToInt(baseVal * next) : a;
                 string val = b > a ? $"{a} › {b} (+{b - a})" : a.ToString();
-                host.Add(StatLine(n, val, b > a ? Up : Palette.Mist1));
+                statsScroll.Add(StatLine(n, val, b > a ? Up : Palette.Mist1));
             }
             AddStat("WEAPON POWER", def.weaponPower);
             AddStat("DEFENSE", def.physicalDefense);
@@ -821,32 +863,37 @@ namespace Obscure
             var notes = (e.affixes ?? new List<GeneratedAffix>()).Select(a => "AFFIX · " + a.GetDescription()).ToList();
             if (e.SpecialEffect != null) notes.Add($"{e.rarity} · {e.SpecialEffect.name} — {e.SpecialEffect.description}");
             if (notes.Count == 0) notes.Add("NO AFFIXES OR SPECIAL EFFECTS.");
-            var box = new VisualElement { style = { marginTop = 18, paddingLeft = 10, paddingRight = 10, paddingTop = 8, paddingBottom = 8, borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1, borderTopColor = Palette.Ink5, borderBottomColor = Palette.Ink5, borderLeftColor = Palette.Ink5, borderRightColor = Palette.Ink5 } };
+            var box = new VisualElement { style = { marginTop = 14, paddingLeft = 10, paddingRight = 10, paddingTop = 8, paddingBottom = 8, borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1, borderTopColor = Palette.Ink5, borderBottomColor = Palette.Ink5, borderLeftColor = Palette.Ink5, borderRightColor = Palette.Ink5 } };
             box.Add(new UiLabel("NOT CHANGED BY UPGRADES") { style = { fontSize = 12, color = Palette.Mist3, marginBottom = 4 } });
             box.Add(new UiLabel(string.Join("\n", notes).ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
-            host.Add(box);
-            if (!canUp) host.Add(new UiLabel(maxReason.ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Mist3, marginTop = 8 } });
+            statsScroll.Add(box);
+            if (!canUp) statsScroll.Add(new UiLabel(maxReason.ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Mist3, marginTop = 8 } });
         }
 
         void BuildCost(VisualElement screen, EquipmentInstance e)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 922, top = 84, width = 318, height = 600, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 922, top = 84, width = 318, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             host.Add(FigmaUi.CreateSectionHeader("Upgrade cost", 318f));
             if (e == null) { var fb = CreateFeedbackToast(); if (fb != null) host.Add(fb); return; }
 
+            var bodyScroll = FigmaUi.CreateVerticalScrollView();
+            bodyScroll.style.flexGrow = 1;
+            bodyScroll.style.flexBasis = 0;
+            bodyScroll.style.minHeight = 0;
+            bodyScroll.style.marginTop = 10;
+            bodyScroll.style.marginBottom = 10;
+            host.Add(bodyScroll);
+
             int cost = e.GetUpgradeCostGold();
             bool canUp = e.CanUpgrade(out _), afford = Gold >= cost;
-            var list = new VisualElement { style = { marginTop = 14 } };
-            list.Add(StatLine("GOLD", canUp ? $"{Money(cost)} {(afford ? "✓" : "X")}" : "-", afford ? Palette.Gold1 : Palette.Err));
-            host.Add(list);
-            host.Add(CreateToast(canUp ? $"SPENDS {Money(cost)} GOLD. GOLD AFTER: {Money(Gold - cost)}" : "AT MAXIMUM UPGRADE LEVEL.", canUp && !afford, "!"));
+            bodyScroll.Add(StatLine("GOLD", canUp ? $"{Money(cost)} {(afford ? "✓" : "X")}" : "-", afford ? Palette.Gold1 : Palette.Err));
+            bodyScroll.Add(CreateToast(canUp ? $"SPENDS {Money(cost)} GOLD. GOLD AFTER: {Money(Gold - cost)}" : "AT MAXIMUM UPGRADE LEVEL.", canUp && !afford, "!"));
 
             var fbToast = CreateFeedbackToast();
-            if (fbToast != null) host.Add(fbToast);
+            if (fbToast != null) bodyScroll.Add(fbToast);
 
-            host.Add(new VisualElement { style = { flexGrow = 1 } });
-            var btnRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween } };
+            var btnRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, flexShrink = 0 } };
             var cancelBtn = FigmaUi.CreateButton("Cancel", "button-slab", 148f);
             var upBtn = FigmaUi.CreateButton("Upgrade", canUp && afford ? "button-primary" : "button-slab", 156f);
             upBtn.SetEnabled(canUp && afford);
@@ -881,9 +928,9 @@ namespace Obscure
             var party = Party;
             var screen = UiRoot.Q<VisualElement>(className: "_09-temple-revive-recovery") ?? UiRoot;
 
-            // Hide baked hero rows inside panel-default__i-17 and bill children inside panel-gold
+            // Hide baked hero rows inside panel-default__i-17 and bill children inside panel-gold__i-6 (preserve the right gold panel!)
             var pLeft = UiRoot.Q<VisualElement>(className: "panel-default__i-17");
-            var pRight = UiRoot.Q<VisualElement>(className: "panel-gold");
+            var pRight = UiRoot.Q<VisualElement>(className: "panel-gold__i-6") ?? UiRoot.Q<VisualElement>(className: "panel-gold");
             int lIdx = pLeft != null ? screen.IndexOf(pLeft) : -1;
             int rIdx = pRight != null ? screen.IndexOf(pRight) : -1;
             if (lIdx >= 0)
@@ -892,11 +939,15 @@ namespace Obscure
                     if (i != rIdx) screen[i].style.display = DisplayStyle.None;
             }
 
-            var leftHost = new VisualElement { style = { position = Position.Absolute, left = 40, top = 84, width = 588, height = 600, flexDirection = FlexDirection.Column } };
+            var leftHost = new VisualElement { style = { position = Position.Absolute, left = 40, top = 84, width = 588, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(leftHost);
             leftHost.Add(FigmaUi.CreateSectionHeader("Party condition", 588f));
 
-            var heroList = new VisualElement { style = { marginTop = 12, flexDirection = FlexDirection.Column } };
+            var heroList = FigmaUi.CreateVerticalScrollView();
+            heroList.style.flexGrow = 1;
+            heroList.style.flexBasis = 0;
+            heroList.style.minHeight = 0;
+            heroList.style.marginTop = 10;
             foreach (var u in party)
             {
                 var unit = u;
@@ -909,6 +960,7 @@ namespace Obscure
                     {
                         height = 104, marginBottom = 10, paddingLeft = 10, paddingRight = 10,
                         flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                        overflow = Overflow.Hidden,
                         backgroundColor = queued ? Palette.Hex(0x2B2210) : Palette.Ink2,
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                         borderTopColor = queued ? Palette.Gold3 : Palette.Ink5, borderBottomColor = queued ? Palette.Gold3 : Palette.Ink5,
@@ -916,14 +968,14 @@ namespace Obscure
                     }
                 };
 
-                var fig = new VisualElement { style = { width = 64, height = 80, marginRight = 12, opacity = u.Alive ? 1f : 0.35f } };
+                var fig = new VisualElement { style = { width = 58, height = 76, marginRight = 10, flexShrink = 0, opacity = u.Alive ? 1f : 0.35f } };
                 if (u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "tpl_" + (u.classDef?.id ?? u.name)));
                 card.Add(fig);
 
-                var midCol = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
+                var midCol = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden, marginRight = 8 } };
                 var titleLine = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 6 } };
-                titleLine.Add(new UiLabel(u.name) { style = { fontSize = 20, color = Palette.Mist1, marginRight = 8 } });
+                titleLine.Add(new UiLabel(u.name) { style = { fontSize = 19, color = Palette.Mist1, marginRight = 8 } });
                 titleLine.Add(new UiLabel(u.Alive ? (full ? "FULL" : "HURT") : "DEAD") { style = { fontSize = 12, color = !u.Alive ? Palette.Err : full ? Ok : Palette.Gold1 } });
                 midCol.Add(titleLine);
 
@@ -932,7 +984,7 @@ namespace Obscure
 
                 VisualElement MiniBar(float ratio, Color col)
                 {
-                    var track = new VisualElement { style = { width = 220, height = 5, backgroundColor = Palette.Ink0, borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1, borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4, marginBottom = 3 } };
+                    var track = new VisualElement { style = { width = 200, height = 5, backgroundColor = Palette.Ink0, borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1, borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4, marginBottom = 3 } };
                     track.Add(new VisualElement { style = { width = Length.Percent(Mathf.Clamp01(ratio) * 100f), height = Length.Percent(100), backgroundColor = col } });
                     return track;
                 }
@@ -940,9 +992,10 @@ namespace Obscure
                 midCol.Add(MiniBar(mp, Palette.Mp));
                 card.Add(midCol);
 
-                var btnCol = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+                var btnCol = new VisualElement { style = { flexDirection = FlexDirection.Row, flexShrink = 0 } };
                 bool canRev = !u.Alive;
-                var revBtn = FigmaUi.CreateButton(u.Alive ? "Revive —" : $"Revive {Money(HubEconomy.TempleReviveCost)}", revive.Contains(u) ? "button-primary" : "button-slab", 118f);
+                var revBtn = FigmaUi.CreateButton(u.Alive ? "Revive —" : $"Revive {Money(HubEconomy.TempleReviveCost)}", revive.Contains(u) ? "button-primary" : "button-slab", 126f);
+                var revLbl = revBtn.Q<UiLabel>("uitkLabel"); if (revLbl != null) revLbl.style.fontSize = 16;
                 revBtn.SetEnabled(canRev);
                 revBtn.style.marginRight = 6;
                 btnCol.Add(revBtn);
@@ -953,7 +1006,8 @@ namespace Obscure
                 }, interactable: canRev));
 
                 bool canRec = (u.Alive && !full) || revive.Contains(u);
-                var recBtn = FigmaUi.CreateButton($"Heal {Money(HubEconomy.TempleRecoveryCost)}", recover.Contains(u) ? "button-primary" : "button-slab", 112f);
+                var recBtn = FigmaUi.CreateButton($"Heal {Money(HubEconomy.TempleRecoveryCost)}", recover.Contains(u) ? "button-primary" : "button-slab", 116f);
+                var recLbl = recBtn.Q<UiLabel>("uitkLabel"); if (recLbl != null) recLbl.style.fontSize = 16;
                 recBtn.SetEnabled(canRec);
                 btnCol.Add(recBtn);
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(recBtn, $"Recovery {u.name}", () =>
@@ -968,24 +1022,28 @@ namespace Obscure
             leftHost.Add(heroList);
 
             // Right bill panel
-            var rightHost = new VisualElement { style = { position = Position.Absolute, left = 682, top = 84, width = 556, height = 600, flexDirection = FlexDirection.Column } };
+            var rightHost = new VisualElement { style = { position = Position.Absolute, left = 682, top = 84, width = 556, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(rightHost);
             rightHost.Add(FigmaUi.CreateSectionHeader("This visit", 556f));
 
-            var billLines = new VisualElement { style = { marginTop = 14, flexDirection = FlexDirection.Column } };
+            var billLines = FigmaUi.CreateVerticalScrollView();
+            billLines.style.flexGrow = 1;
+            billLines.style.flexBasis = 0;
+            billLines.style.minHeight = 0;
+            billLines.style.marginTop = 12;
+            billLines.style.marginBottom = 10;
             foreach (var u in party.Where(revive.Contains)) billLines.Add(StatLine($"REVIVE · {u.name}".ToUpperInvariant(), Money(HubEconomy.TempleReviveCost), Palette.Gold2));
             foreach (var u in party.Where(recover.Contains)) billLines.Add(StatLine($"RECOVERY · {u.name}".ToUpperInvariant(), Money(HubEconomy.TempleRecoveryCost), Palette.Gold2));
             if (revive.Count + recover.Count == 0)
                 billLines.Add(new UiLabel("NOTHING SELECTED YET.") { style = { fontSize = 14, color = Palette.Mist3, marginBottom = 8 } });
             billLines.Add(StatLine("Total", Money(Total), Palette.Gold1));
             billLines.Add(new UiLabel($"GOLD {Money(Gold)} › {Money(Gold - Total)}") { style = { fontSize = 13, color = Total > Gold ? Palette.Err : Palette.Mist2, marginTop = 10 } });
-            rightHost.Add(billLines);
 
             var fbToast = CreateFeedbackToast();
-            if (fbToast != null) rightHost.Add(fbToast);
+            if (fbToast != null) billLines.Add(fbToast);
+            rightHost.Add(billLines);
 
-            rightHost.Add(new VisualElement { style = { flexGrow = 1 } });
-            var footRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween } };
+            var footRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, flexShrink = 0 } };
             var clearBtn = FigmaUi.CreateButton("Clear", "button-slab", 160f);
             clearBtn.SetEnabled(Total > 0);
             var payBtn = FigmaUi.CreateButton($"Pay {Money(Total)}", Total > 0 && Total <= Gold ? "button-primary" : "button-slab", 380f);
@@ -1052,8 +1110,13 @@ namespace Obscure
                 ("Rare & Epic items", false, false, null),
             }, menu));
 
-            // Stock list
-            var listHost = new VisualElement { style = { position = Position.Absolute, left = 40, top = 124, width = 806, height = 350, flexDirection = FlexDirection.Column } };
+            // Stock list (scrollable strictly inside panel-default__i-18)
+            var listHost = FigmaUi.CreateVerticalScrollView();
+            listHost.style.position = Position.Absolute;
+            listHost.style.left = 40;
+            listHost.style.top = 120;
+            listHost.style.width = 806;
+            listHost.style.height = 356;
             screen.Add(listHost);
             for (int i = 0; i < stock.Count; i++)
             {
@@ -1075,16 +1138,21 @@ namespace Obscure
 
         void BuildSelected(VisualElement screen, RelicDef r)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 44, top = 522, width = 798, height = 166, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 44, top = 522, width = 798, height = 166, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, overflow = Overflow.Hidden } };
             screen.Add(host);
 
-            var left = new VisualElement { style = { width = 500, flexDirection = FlexDirection.Column } };
-            left.Add(new UiLabel(r.name) { style = { fontSize = 24, color = Ui.RelicColor(r), marginBottom = 8 } });
-            left.Add(new UiLabel($"{r.proposedRarity} · {r.category}".ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 8 } });
-            left.Add(new UiLabel((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, flexGrow = 1 } });
+            var left = new VisualElement { style = { width = 508, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden, marginRight = 16 } };
+            left.Add(new UiLabel(r.name) { style = { fontSize = 24, color = Ui.RelicColor(r), marginBottom = 6, flexShrink = 0 } });
+            left.Add(new UiLabel($"{r.proposedRarity} · {r.category}".ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 6, flexShrink = 0 } });
+            var descScroll = FigmaUi.CreateVerticalScrollView();
+            descScroll.style.flexGrow = 1;
+            descScroll.style.flexBasis = 0;
+            descScroll.style.minHeight = 0;
+            descScroll.Add(new UiLabel((r.gameplayEffect ?? r.description ?? "").ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal } });
+            left.Add(descScroll);
             host.Add(left);
 
-            var right = new VisualElement { style = { width = 260, flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween } };
+            var right = new VisualElement { style = { width = 260, flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween, flexShrink = 0 } };
             int count = Owned.Count;
             bool owned = Owned.Contains(r.id), full = count >= RelicManager.MaxRelicCapacity;
             var stats = new VisualElement();
@@ -1102,23 +1170,29 @@ namespace Obscure
 
         void BuildOwned(VisualElement screen)
         {
-            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column } };
+            var host = new VisualElement { style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 600, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
             screen.Add(host);
             host.Add(FigmaUi.CreateSectionHeader($"Your relics  {Owned.Count} / 5", 346f));
 
-            var slotsCol = new VisualElement { style = { marginTop = 12, flexDirection = FlexDirection.Column } };
+            var slotsCol = FigmaUi.CreateVerticalScrollView();
+            slotsCol.style.flexGrow = 1;
+            slotsCol.style.flexBasis = 0;
+            slotsCol.style.minHeight = 0;
+            slotsCol.style.marginTop = 12;
             for (int i = 0; i < RelicManager.MaxRelicCapacity; i++)
             {
-                var box = new VisualElement { style = { height = 56, marginBottom = 8, paddingLeft = 12, paddingRight = 10, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2, borderTopColor = Palette.Ink5, borderBottomColor = Palette.Ink5, borderLeftColor = Palette.Ink5, borderRightColor = Palette.Ink5, backgroundColor = Palette.Ink1 } };
+                var box = new VisualElement { style = { height = 56, marginBottom = 8, paddingLeft = 12, paddingRight = 10, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, overflow = Overflow.Hidden, borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2, borderTopColor = Palette.Ink5, borderBottomColor = Palette.Ink5, borderLeftColor = Palette.Ink5, borderRightColor = Palette.Ink5, backgroundColor = Palette.Ink1 } };
                 if (i < Owned.Count && Database.Relics.TryGetValue(Owned[i], out var r))
                 {
-                    var txt = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column } };
+                    var txt = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden, marginRight = 8 } };
                     txt.Add(new UiLabel(r.name) { style = { fontSize = 16, color = Ui.RelicColor(r) } });
                     txt.Add(new UiLabel($"{r.proposedRarity} · {r.category}".ToUpperInvariant()) { style = { fontSize = 11, color = Palette.Mist3 } });
                     box.Add(txt);
                     bool canSell = r.sellPrice > 0 && r.bonus.IsZero && r.abilityBonus.IsZero;
                     var relic = r;
-                    var sBtn = FigmaUi.CreateButton(canSell ? $"Sell {Money(r.sellPrice)}" : "Sell", "button-slab", 92f);
+                    var sBtn = FigmaUi.CreateButton(canSell ? $"Sell {Money(r.sellPrice)}" : "Sell", "button-slab", 94f);
+                    sBtn.style.flexShrink = 0;
+                    var sLbl = sBtn.Q<UiLabel>("uitkLabel"); if (sLbl != null) sLbl.style.fontSize = 15;
                     sBtn.SetEnabled(canSell);
                     box.Add(sBtn);
                     FigmaUi.ApplyDefaultFocusVisual(menu.Add(sBtn, $"Sell {r.name}", () => Sell(relic), interactable: canSell));
@@ -1132,9 +1206,9 @@ namespace Obscure
                 }
                 slotsCol.Add(box);
             }
-            host.Add(slotsCol);
             var fbToast = CreateFeedbackToast();
-            if (fbToast != null) host.Add(fbToast);
+            if (fbToast != null) slotsCol.Add(fbToast);
+            host.Add(slotsCol);
         }
 
         void Buy(RelicDef r)

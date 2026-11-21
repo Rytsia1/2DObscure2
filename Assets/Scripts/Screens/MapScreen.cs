@@ -152,10 +152,24 @@ namespace Obscure
             // Footer buttons
             var partyBtn = FigmaUi.FindButton(UiRoot, "Party");
             if (partyBtn != null)
+            {
+                partyBtn.style.marginRight = 10;
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(partyBtn, "Party", () => Game.Go(GameState.Party), tooltip: "PARTY, STATUS AND EQUIPMENT"), partyBtn);
+            }
+
+            // Add clean horizontal spacing to the baked bottom map legend row
+            var combatLegend = FigmaUi.FindLabel(UiRoot, "COMBAT");
+            if (combatLegend?.parent != null)
+            {
+                var legendRow = combatLegend.parent;
+                for (int i = 0; i < legendRow.childCount; i++)
+                {
+                    var ch = legendRow[i];
+                    ch.style.marginRight = ch is UiLabel ? 14 : 6;
+                }
+            }
 
             travelInst = UiRoot.Q<VisualElement>(className: "button-primary-2");
-            var primaryBtns = UiRoot.Query<Button>(className: "button-primary-2").ToList();
             // In 12---Dungeon-Map.uxml the primary button instance holds an inner clickable visual
             var travelHost = UiRoot.Q<VisualElement>(className: "button-primary-focus") ?? FindPrimaryInstance();
             if (travelHost != null)
@@ -165,11 +179,7 @@ namespace Obscure
                 travelItem.visual = on =>
                 {
                     FigmaUi.SetInstanceText(travelHost, "text-0", on ? "▸" : "");
-                    var innerBtn = travelHost.Q<VisualElement>(className: "button-primary-2") ?? travelHost;
-                    innerBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
-                    innerBtn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
-                    innerBtn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
-                    innerBtn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
+                    FigmaUi.ApplyDefaultFocusVisual(travelHost, on, false, travelItem.interactable);
                 };
                 travelItem.visual(false);
             }
@@ -450,7 +460,10 @@ namespace Obscure
                 FigmaUi.SetInstanceText(travelInst, "text-1", label);
             }
             if (travelItem != null)
+            {
                 travelItem.interactable = selected != null;
+                travelItem.visual?.Invoke(menu != null && menu.Current == travelItem);
+            }
             if (sneakItem != null && sneakBtn != null)
             {
                 bool canSneak = Run != null && Run.CanSneakNode(selected);
@@ -517,8 +530,11 @@ namespace Obscure
                 var tabHint = FigmaUi.InstantiateTemplate("Key-Hint");
                 if (tabHint != null)
                 {
+                    tabHint.AddToClassList("uitk-clickable-bar");
                     tabHint.style.flexShrink = 0;
                     tabHint.style.marginLeft = 10;
+                    tabHint.style.paddingLeft = 4;
+                    tabHint.style.paddingRight = 6;
                     FigmaUi.SetInstanceText(tabHint, "text-0", "TAB");
                     FigmaUi.SetInstanceText(tabHint, "text-1", "DETAILS");
                     tabHint.pickingMode = PickingMode.Position;
@@ -550,6 +566,7 @@ namespace Obscure
                     overflow = Overflow.Hidden
                 }
             };
+            bar.AddToClassList("uitk-clickable-bar");
             bar.RegisterCallback<ClickEvent>(_ => ToggleRunEffectsModal());
 
             bar.Add(new UiLabel("RUN EFFECTS")

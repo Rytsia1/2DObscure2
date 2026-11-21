@@ -152,10 +152,7 @@ namespace Obscure
                 item.visual = on =>
                 {
                     FigmaUi.SetInstanceText(menuInst, "text-0", on ? "▸" : "");
-                    btn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderBottomColor = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderLeftColor = on ? Palette.Mist1 : Palette.Gold2;
-                    btn.style.borderRightColor = on ? Palette.Mist1 : Palette.Gold2;
+                    FigmaUi.ApplyDefaultFocusVisual(btn, on, false, true);
                 };
                 item.visual(false);
             }

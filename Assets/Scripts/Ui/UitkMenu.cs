@@ -24,6 +24,7 @@ namespace Obscure
             public Action<bool> visual;
             public UitkMenu menu;
             internal EventCallback<PointerEnterEvent> pointerEnterCb;
+            internal EventCallback<PointerLeaveEvent> pointerLeaveCb;
             internal EventCallback<ClickEvent> clickCb;
         }
 
@@ -104,7 +105,14 @@ namespace Obscure
                 // A resting or nudged cursor must not steal the keyboard's selection (Controls.MouseActive).
                 if (Controls.Locked || !Controls.MouseActive || (ActiveMenu != null && ActiveMenu != this)) return;
                 if (item.interactable)
+                {
+                    SetHoverClass(el, true);
                     Focus(item, false);
+                }
+            };
+            EventCallback<PointerLeaveEvent> onLeave = _ =>
+            {
+                SetHoverClass(el, false);
             };
             EventCallback<ClickEvent> onClickCb = _ =>
             {
@@ -122,8 +130,10 @@ namespace Obscure
                 }
             };
             item.pointerEnterCb = onEnter;
+            item.pointerLeaveCb = onLeave;
             item.clickCb = onClickCb;
             el.RegisterCallback(onEnter);
+            el.RegisterCallback(onLeave);
             el.RegisterCallback(onClickCb);
 
             items.Add(item);
@@ -132,13 +142,23 @@ namespace Obscure
             return item;
         }
 
+        static void SetHoverClass(VisualElement el, bool on)
+        {
+            if (el == null) return;
+            el.EnableInClassList("uitk-hover", on);
+            if (el.childCount == 1 && el is TemplateContainer)
+                el[0].EnableInClassList("uitk-hover", on);
+        }
+
         public void Clear()
         {
             for (int i = 0; i < items.Count; i++)
             {
                 var it = items[i];
                 if (it?.element == null) continue;
+                SetHoverClass(it.element, false);
                 if (it.pointerEnterCb != null) it.element.UnregisterCallback(it.pointerEnterCb);
+                if (it.pointerLeaveCb != null) it.element.UnregisterCallback(it.pointerLeaveCb);
                 if (it.clickCb != null) it.element.UnregisterCallback(it.clickCb);
             }
             items.Clear();
