@@ -1,5 +1,4 @@
 @import url("../Figma/FELNA---UI-UX-Design/tokens.uss");
-@import url("../UI/felna-runtime.uss");
 
 .unity-ui-document__root {
     width: 100%;

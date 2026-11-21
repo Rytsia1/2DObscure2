@@ -145,9 +145,14 @@ namespace Obscure
         static void SetHoverClass(VisualElement el, bool on)
         {
             if (el == null) return;
-            el.EnableInClassList("uitk-hover", on);
+            if (el.ClassListContains("uitk-hover") != on)
+                el.EnableInClassList("uitk-hover", on);
             if (el.childCount == 1 && el is TemplateContainer)
-                el[0].EnableInClassList("uitk-hover", on);
+            {
+                var inner = el[0];
+                if (inner.ClassListContains("uitk-hover") != on)
+                    inner.EnableInClassList("uitk-hover", on);
+            }
         }
 
         public void Clear()
@@ -169,6 +174,7 @@ namespace Obscure
         {
             if (i < 0 || i >= items.Count) return;
             if (i == index && !force) return;
+            if (Current?.element != null && i != index) SetHoverClass(Current.element, false);
             Current?.visual?.Invoke(false);
             index = i;
             Current?.visual?.Invoke(true);
@@ -199,9 +205,15 @@ namespace Obscure
 
         void Update()
         {
-            // felna-runtime.uss scopes :hover under .mouse-active, so a resting cursor can't light a second item
-            // while the keyboard owns the selection.
-            registeredRoot?.panel?.visualTree.EnableInClassList("mouse-active", Controls.MouseActive);
+            // felna-runtime.uss scopes :hover and .uitk-hover under .mouse-active, so a resting cursor can't light a
+            // second item while the keyboard owns the selection. Clear any lingering hover class when keyboard takes over.
+            bool mouseActive = Controls.MouseActive;
+            registeredRoot?.panel?.visualTree.EnableInClassList("mouse-active", mouseActive);
+            if (!mouseActive)
+            {
+                for (int i = 0; i < items.Count; i++)
+                    SetHoverClass(items[i]?.element, false);
+            }
             if (Controls.Locked || Time.frameCount == bornFrame) return;
             if (ActiveMenu != null && ActiveMenu != this) return;
             if (items.Count == 0)
