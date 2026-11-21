@@ -462,7 +462,7 @@ namespace Obscure.Tests
             AssertActiveMenuAudit("Status-StatusEffects");
             yield return ClickMenuItem("Back");
             Assert.AreEqual(GameState.Party, State);
-            yield return ClickMenuItem("Confirm Party");
+            yield return ClickMenuItem("Done");
             Assert.AreEqual(GameState.Map, State);
 
             // Map Pause modal -> QTE Assists -> Settings QTE tab -> Back
@@ -563,6 +563,32 @@ namespace Obscure.Tests
             yield return Tap(Key.Escape);
             yield return Settle();
             Assert.AreEqual(GameState.Hub, State);
+        }
+
+        [UnityTest]
+        public IEnumerator Hub_EscOpensSettings_AndEnterOnUnsavedModalApplies()
+        {
+            yield return Begin();
+            Game.I.StartRun();
+            yield return Settle();
+            Game.I.Go(GameState.Hub);
+            yield return Settle();
+
+            yield return Tap(Key.Escape);
+            yield return Settle();
+            Assert.AreEqual(GameState.Settings, State, "Esc in the Hub opens Settings");
+
+            bool muted = Game.I.Settings.musicMuted;
+            yield return ClickMenuItem("Mute music");
+            yield return Tap(Key.Escape);   // unsaved changes -> confirmation modal
+            yield return null;
+            yield return Tap(Key.Enter);    // APPLY has the initial focus, so Enter keeps the change
+            yield return Settle();
+            Assert.AreEqual(GameState.Hub, State, "Settings returns to the Hub");
+            Assert.AreEqual(!muted, GameSettings.Load().musicMuted, "Enter on the unsaved-changes modal applies, never discards");
+
+            Game.I.Settings.musicMuted = muted; // leave saved preferences as they were
+            Game.I.Settings.Save();
         }
 
         [UnityTest]

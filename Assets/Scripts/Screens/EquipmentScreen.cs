@@ -22,6 +22,7 @@ namespace Obscure
         bool rebuilding;
         string feedback;
         UitkMenu menu;
+        readonly Dictionary<UitkMenu.Item, int> portraitItems = new Dictionary<UitkMenu.Item, int>();
 
         public static readonly EquipmentSlot[] CoreSlots = EquipmentSlots.All;
 
@@ -38,7 +39,7 @@ namespace Obscure
             _ => slot.ToString().ToUpperInvariant()
         };
 
-        static readonly DerivedStatId[] ComparedStats =
+        internal static readonly DerivedStatId[] ComparedStats = // also used by RewardScreen's equipment preview
         {
             DerivedStatId.MaxHP, DerivedStatId.PhysicalPower, DerivedStatId.MagicPower, DerivedStatId.PhysicalDefense,
             DerivedStatId.MagicDefense, DerivedStatId.CriticalChance, DerivedStatId.Initiative, DerivedStatId.StatusResistance
@@ -73,11 +74,21 @@ namespace Obscure
         void SwitchHero(int delta)
         {
             if (party.Count == 0) return;
+            bool wasPortraitFocused = menu != null && menu.Current != null && portraitItems.ContainsKey(menu.Current);
             heroIndex = (heroIndex + delta + party.Count) % party.Count;
+            if (wasPortraitFocused)
+                focusIndex = FindPortraitFocusIndex(heroIndex, focusIndex);
             selectedSlotIndex = 0;
             candidateIndex = -1;
             feedback = null;
             Refresh();
+        }
+
+        int FindPortraitFocusIndex(int targetHero, int fallback)
+        {
+            foreach (var kv in portraitItems)
+                if (kv.Value == targetHero) return menu.items.IndexOf(kv.Key);
+            return fallback;
         }
 
         void SelectSlot(int index) { selectedSlotIndex = index; candidateIndex = -1; feedback = null; Refresh(); }
@@ -144,10 +155,23 @@ namespace Obscure
             {
                 UiRoot = FigmaUi.Mount(Root.gameObject, "15---Equipment");
                 FigmaUi.DestroyMenu(ref menu);
+                portraitItems.Clear();
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
                 menu.onBack = () => Game?.Back(returnState);
-                menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
+                menu.onFocus = item =>
+                {
+                    if (rebuilding || item == null) return;
+                    focusIndex = menu.items.IndexOf(item);
+                    if (portraitItems.TryGetValue(item, out int idx) && idx != heroIndex)
+                    {
+                        heroIndex = idx;
+                        selectedSlotIndex = 0;
+                        candidateIndex = -1;
+                        feedback = null;
+                        Refresh();
+                    }
+                };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
 
@@ -170,6 +194,7 @@ namespace Obscure
                     if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
                         FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "eq_hdr_" + (u.classDef?.id ?? u.name)));
                     var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; candidateIndex = -1; feedback = null; Refresh(); } }, selected: on, onAdjust: SwitchHero);
+                    portraitItems[it] = idx;
                     it.visual = f => { var col = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = col; fr.style.borderBottomColor = col; fr.style.borderLeftColor = col; fr.style.borderRightColor = col; };
                     it.visual(false);
                 }

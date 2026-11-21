@@ -46,7 +46,18 @@ namespace Obscure
 
             if (continueInst != null)
             {
-                ContinueButton = menu.Add(continueInst, "CONTINUE", () => Game?.ContinueGame(), interactable: canContinue);
+                ContinueButton = menu.Add(continueInst, "CONTINUE", () => Game?.ContinueGame(), interactable: canContinue, visual: focused =>
+                {
+                    var inner = continueInst.childCount == 1 && continueInst is TemplateContainer ? continueInst[0] : continueInst;
+                    inner.EnableInClassList("uitk-unfocused", !focused);
+                    inner.EnableInClassList("uitk-disabled", !canContinue);
+                    var arrow = continueInst.Q<UiLabel>("text-0");
+                    if (arrow != null) arrow.style.opacity = focused ? 1f : 0f;
+                    var textLbl = continueInst.Q<UiLabel>("text-1");
+                    if (textLbl != null)
+                        textLbl.style.color = !canContinue ? Palette.Mist3 : focused ? Palette.Gold1 : Palette.Mist1;
+                    FigmaUi.ApplyDefaultFocusVisual(continueInst, focused, false, canContinue);
+                });
             }
 
             NewGameButton = AddFlatButton(menu, UiRoot, "NEW GAME", () => Game?.StartNewGame(), true);

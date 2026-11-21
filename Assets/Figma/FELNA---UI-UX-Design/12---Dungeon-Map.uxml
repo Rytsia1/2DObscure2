@@ -132,17 +132,23 @@
         <ui:Instance template="Section-Header" class="section-header__i-12" style="position: absolute; left: 956px; top: 90px; width: 284px;">
             <AttributeOverrides element-name="text-0" text="Combat node" />
         </ui:Instance>
-        <ui:Label text="GRAVEBOUND ARCHER, HOLLOW SQUIRE" class="unity-label gravebound-archer-hollow-squire-vars" style="width: 284px; font-size: 14px; letter-spacing: 0.56px; white-space: normal; position: absolute; left: 956px; top: 132px;" />
-        <ui:Label text="CURRENCY" class="unity-label currency-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 956px; top: 178px;" />
-        <ui:Label text="—" class="unity-label node-vars-7" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1226px; top: 178px;" />
-        <ui:VisualElement class="rectangle-vars-92" style="width: 284px; height: 2px; position: absolute; left: 956px; top: 200px;" />
-        <ui:Label text="RISK" class="unity-label risk-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 956px; top: 210px;" />
-        <ui:Label text="COMBAT" class="unity-label combat-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1174px; top: 210px;" />
-        <ui:VisualElement class="rectangle-vars-93" style="width: 284px; height: 2px; position: absolute; left: 956px; top: 232px;" />
-        <ui:Instance template="Toast-Info" class="toast-info__i-2" style="position: absolute; left: 956px; top: 248px; width: 284px;">
-            <AttributeOverrides element-name="text-0" text="!" />
-            <AttributeOverrides element-name="text-1" text="ONE-WAY: OTHER PATHS CLOSE ONCE YOU MOVE." />
-        </ui:Instance>
+        <ui:VisualElement class="map-node-detail-col" style="position: absolute; left: 956px; top: 132px; width: 284px; height: 202px; flex-direction: column; justify-content: flex-start; overflow: hidden;">
+            <ui:Label text="GRAVEBOUND ARCHER, HOLLOW SQUIRE" class="unity-label gravebound-archer-hollow-squire-vars" style="width: 284px; font-size: 13px; letter-spacing: 0.5px; white-space: normal; margin-bottom: 10px;" />
+            <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; width: 284px; margin-bottom: 4px;">
+                <ui:Label text="CURRENCY" class="unity-label currency-vars" style="font-size: 13px; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0;" />
+                <ui:Label text="—" class="unity-label node-vars-7" style="font-size: 13px; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; unity-text-align: middle-right;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="rectangle-vars-92" style="width: 284px; height: 2px; margin-bottom: 6px; flex-shrink: 0;" />
+            <ui:VisualElement style="flex-direction: row; justify-content: space-between; align-items: center; width: 284px; margin-bottom: 4px;">
+                <ui:Label text="RISK" class="unity-label risk-vars" style="font-size: 13px; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; margin-right: 8px;" />
+                <ui:Label text="COMBAT" class="unity-label combat-vars-2" style="font-size: 13px; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 1; overflow: hidden; unity-text-align: middle-right;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="rectangle-vars-93" style="width: 284px; height: 2px; margin-bottom: 10px; flex-shrink: 0;" />
+            <ui:Instance template="Toast-Info" class="toast-info__i-2" style="width: 284px; flex-shrink: 0;">
+                <AttributeOverrides element-name="text-0" text="!" />
+                <AttributeOverrides element-name="text-1" text="ONE-WAY: OTHER PATHS CLOSE ONCE YOU MOVE." />
+            </ui:Instance>
+        </ui:VisualElement>
         <ui:Instance template="Panel-Default" class="panel-default__i-22" style="position: absolute; left: 940px; top: 356px; width: 316px; height: 228px;" />
         <ui:Instance template="Section-Header" class="section-header__i-13" style="position: absolute; left: 956px; top: 370px; width: 284px;">
             <AttributeOverrides element-name="text-0" text="Party" />

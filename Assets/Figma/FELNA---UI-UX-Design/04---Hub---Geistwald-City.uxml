@@ -113,8 +113,8 @@
             <AttributeOverrides element-name="text-0" text="▸" />
             <AttributeOverrides element-name="text-1" text="Dungeon Entrance" />
         </ui:Instance>
-        <ui:Instance template="Tag-Cls" style="position: absolute; left: 314px; top: 476px;">
-            <AttributeOverrides element-name="text-0" text="Z" />
+        <ui:Instance template="Tag-Cls" style="position: absolute; left: 294px; top: 476px;">
+            <AttributeOverrides element-name="text-0" text="ENTER" />
         </ui:Instance>
         <ui:Instance template="Panel-Gold" class="panel-gold__i-2" style="position: absolute; left: 902px; top: 210px; width: 250px; height: 104px;" />
         <ui:Label text="Dungeon Entrance" class="unity-label dungeon-entrance-vars" style="font-size: 20px; white-space: nowrap; position: absolute; left: 914px; top: 220px;" />

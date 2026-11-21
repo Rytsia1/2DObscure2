@@ -235,7 +235,8 @@ namespace Obscure
             var confirmBtn = FigmaUi.FindButton(UiRoot, "Confirm Party");
             if (confirmBtn != null)
             {
-                var item = menu.Add(confirmBtn, "Confirm Party", () => Game?.Back(BackTo));
+                confirmBtn.text = "Done"; // nothing to confirm: party order is fixed and placement is automatic
+                var item = menu.Add(confirmBtn, "Done", () => Game?.Back(BackTo));
                 item.visual = on =>
                 {
                     confirmBtn.style.borderTopColor = on ? Palette.Mist1 : Palette.Gold2;
@@ -350,14 +351,34 @@ namespace Obscure
                     foreach (var el in elements)
                     {
                         string code = Palette.ElementCode(el);
+                        string elName = Palette.ElementName(el).ToUpperInvariant();
+                        var entry = new VisualElement
+                        {
+                            style =
+                            {
+                                flexDirection = FlexDirection.Row,
+                                alignItems = UnityEngine.UIElements.Align.Center,
+                                marginRight = 10,
+                                marginBottom = 4
+                            }
+                        };
                         var chip = FigmaUi.InstantiateTemplate($"Element-Chip-{code}");
                         if (chip != null)
                         {
                             FigmaUi.SetInstanceText(chip, "text-0", code);
-                            chip.style.marginRight = 6;
-                            chip.style.marginBottom = 4;
-                            row.Add(chip);
+                            chip.style.marginRight = 4;
+                            entry.Add(chip);
                         }
+                        entry.Add(new UiLabel(elName)
+                        {
+                            style =
+                            {
+                                fontSize = 11,
+                                color = Palette.Mist2,
+                                whiteSpace = WhiteSpace.NoWrap
+                            }
+                        });
+                        row.Add(entry);
                     }
                 }
             }
@@ -375,14 +396,14 @@ namespace Obscure
                 noteLbl.style.whiteSpace = WhiteSpace.Normal;
                 noteLbl.style.maxWidth = 350;
                 noteLbl.style.color = ko.Count > 0 ? Palette.Err : low.Count > 0 ? Palette.Ember1 : Palette.Ok;
-            }
-        }
 
-        // Legacy compatibility helper kept for callers like CharacterStatusScreen if still referenced.
-        public static void ElementChip(Transform t, Element el, int x, int y, int order = Ui.Widget)
-        {
-            Ui.Image(t, PixelArt.Badge(13, 13, Palette.ForElement(el), Palette.Ink0), x, y, order);
-            Ui.Label(t, Palette.ElementCode(el), x + 7, y + 3, Palette.Ink1, Align.Center, order: order + 1, font: FontKind.Interface);
+                // Placement is automatic and cosmetic (CombatView.StagePositions); say so, so I-IV doesn't read as rows.
+                var rowsLbl = new UiLabel("IN BATTLE: MELEE STAND IN FRONT, RANGED IN BACK, ROGUE FILLS IN. ROWS DON'T CHANGE WHO GETS HIT.")
+                {
+                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, maxWidth = 350, marginTop = 6 }
+                };
+                noteLbl.parent?.Insert(noteLbl.parent.IndexOf(noteLbl) + 1, rowsLbl);
+            }
         }
     }
 }

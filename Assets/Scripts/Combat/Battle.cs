@@ -16,6 +16,7 @@ namespace Obscure
         public event Action<string> Logged;
         public event Action<Combatant> BossPhaseTransitioning;
         public event Action<Combatant, StatusId, bool> StatusApplied;
+        public event Action<Combatant, StatusId, bool> StatusResisted; // bool: immune (true) or resisted by roll (false)
 
         public int Round { get; private set; }
         public readonly int Dungeon; // drives enemy stat scaling (Bab 10 §7)
@@ -620,6 +621,7 @@ namespace Obscure
             if (t.StatusController.ResistanceProfile.IsImmune(ap.id, isBoss))
             {
                 Say($"{t.name} is immune to {StatusInfo.Name(ap.id)}!");
+                StatusResisted?.Invoke(t, ap.id, true);
                 return;
             }
 
@@ -659,6 +661,7 @@ namespace Obscure
                 if (t.StatusController.ResistanceProfile.GetEffectiveResistance() > 0f)
                 {
                     Say($"{t.name} resists {StatusInfo.Name(ap.id)}!");
+                    StatusResisted?.Invoke(t, ap.id, false);
                     // Hermit Rank V: When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn.
                     if (t.unit?.background != null && !t.hermitResistedThisTurn)
                     {
@@ -687,7 +690,7 @@ namespace Obscure
             }
 
             // GDD Bab 11 & 12: Stun, Sleep, Mind Control cause auto-Poor reaction
-            if (t.stunTurns > 0 || t.StatusController.HasStatus(StatusId.Stun) || t.StatusController.HasStatus(StatusId.Sleep) || t.StatusController.HasStatus(StatusId.MindControl))
+            if (t.CannotReact)
             {
                 reaction = QteResult.Poor;
             }
@@ -701,8 +704,8 @@ namespace Obscure
             // Heavy attack check (Bab 12)
             bool isHeavy = heavy || skill != null && (skill.HasTag("Heavy") || (attacker?.enemy?.attacks != null && attacker.enemy.attacks.Any(a => a.name == skill.name && a.isHeavy)));
 
-            // Full parry needs a choice: Guarding this round or a shield equipped. A plain Perfect only deflects (below).
-            if (reaction == QteResult.Perfect && !isHeavy && (t.guarding || (t.unit?.HasEquippedShield() ?? false)))
+            // Full parry needs a choice: Guarding this round. A plain Perfect only deflects by Block Power (below).
+            if (reaction == QteResult.Perfect && !isHeavy && t.guarding)
             {
                 Say($"{t.name} perfectly parries!");
                 return new Hit { target = t, amount = 0, blocked = true };
@@ -817,21 +820,13 @@ namespace Obscure
                 }
             }
 
-            // Defensive QTE mitigation applied after damage modifiers (Bab 12 §5.1)
-            if (reaction == QteResult.Perfect && isHeavy)
+            // Defensive QTE mitigation applied after damage modifiers (Bab 12 §5.1), scaled by the target's Block Power (§3.5).
+            if (reaction == QteResult.Perfect || reaction == QteResult.Good)
             {
-                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.HeavyPerfectDefense));
-                Say($"{t.name} parries the Heavy attack for 50% damage reduction!");
-            }
-            else if (reaction == QteResult.Perfect)
-            {
-                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.PerfectDefense));
-                note += " (deflected)";
-            }
-            else if (reaction == QteResult.Good)
-            {
-                amount = Math.Max(1, (int)Math.Round(amount * QteConfig.GoodDefense));
-                note += " (blocked)";
+                float taken = QteConfig.Defense(reaction.Value, isHeavy, t);
+                amount = Math.Max(1, (int)Math.Round(amount * taken));
+                if (reaction == QteResult.Perfect && isHeavy) Say($"{t.name} braces against the Heavy attack ({(1f - taken) * 100f:0}% damage reduction)!");
+                else note += reaction == QteResult.Perfect ? " (deflected)" : " (blocked)";
             }
 
             var hit = Damage(t, amount, note);

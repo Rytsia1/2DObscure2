@@ -27,6 +27,7 @@ namespace Obscure
         int focusIndex;
         int dialogFocusIndex = -1;
         bool rebuilding;
+        readonly Dictionary<UitkMenu.Item, int> portraitItems = new Dictionary<UitkMenu.Item, int>();
 
         public TalentScreen() : this(null, 0, null) { }
 
@@ -60,10 +61,20 @@ namespace Obscure
         void SwitchHero(int delta)
         {
             if (party == null || party.Count == 0 || respecOpen) return;
+            bool wasPortraitFocused = menu != null && menu.Current != null && portraitItems.ContainsKey(menu.Current);
             heroIndex = (heroIndex + delta + party.Count) % party.Count;
+            if (wasPortraitFocused)
+                focusIndex = FindPortraitFocusIndex(heroIndex, focusIndex);
             selectedId = null;
             feedback = null;
             Rebuild();
+        }
+
+        int FindPortraitFocusIndex(int targetHero, int fallback)
+        {
+            foreach (var kv in portraitItems)
+                if (kv.Value == targetHero) return menu.items.IndexOf(kv.Key);
+            return fallback;
         }
 
         string ClassName(Unit hero) => hero.classDef?.name ?? "Class";
@@ -77,10 +88,22 @@ namespace Obscure
                 UiRoot = FigmaUi.Mount(Root.gameObject, "17---Talent-Selection");
                 FigmaUi.DestroyMenu(ref dialogMenu);
                 FigmaUi.DestroyMenu(ref menu);
+                portraitItems.Clear();
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
                 menu.onBack = () => { if (respecOpen) { respecOpen = false; Rebuild(); } else Game?.Back(returnState); };
-                menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
+                menu.onFocus = s =>
+                {
+                    if (rebuilding || s == null) return;
+                    focusIndex = menu.items.IndexOf(s);
+                    if (portraitItems.TryGetValue(s, out int idx) && idx != heroIndex && !respecOpen)
+                    {
+                        heroIndex = idx;
+                        selectedId = null;
+                        feedback = null;
+                        Rebuild();
+                    }
+                };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
 
@@ -139,10 +162,8 @@ namespace Obscure
                 int idx = i; var u = party[i]; bool on = i == heroIndex;
                 if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "tal_hdr_" + (u.classDef?.id ?? u.name)));
-                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d =>
-                {
-                    heroIndex = (heroIndex + d + party.Count) % party.Count; selectedId = null; feedback = null; Rebuild();
-                });
+                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d => SwitchHero(d));
+                portraitItems[it] = idx;
                 it.visual = f => { var b = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = b; fr.style.borderBottomColor = b; fr.style.borderLeftColor = b; fr.style.borderRightColor = b; };
                 it.visual(false);
             }

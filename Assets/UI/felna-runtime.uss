@@ -122,7 +122,7 @@ Button,
     background-color: rgba(0, 0, 0, 0);
 }
 
-.uitk-flat-item:hover {
+.mouse-active .uitk-flat-item:hover {
     background-color: rgba(122, 87, 23, 0.35);
 }
 
@@ -168,7 +168,7 @@ Button,
 }
 
 /* Figma template button focus/unfocus overrides */
-.button-flat-2:hover {
+.mouse-active .button-flat-2:hover {
     background-color: rgba(122, 87, 23, 0.35);
     color: var(--text-highlight);
 }
@@ -178,7 +178,7 @@ Button,
     color: var(--text-highlight);
 }
 
-.button-slab:hover {
+.mouse-active .button-slab:hover {
     background-color: var(--bg-raised);
     border-color: var(--border-focus);
     color: var(--text-highlight);
@@ -190,7 +190,7 @@ Button,
     color: var(--text-highlight);
 }
 
-.button-primary:hover {
+.mouse-active .button-primary:hover {
     background-color: var(--text-highlight);
     border-color: var(--text-highlight);
 }
@@ -208,7 +208,7 @@ Button,
     color: var(--text-primary);
 }
 
-.button-slab:hover > Label,
+.mouse-active .button-slab:hover > Label,
 .button-slab.uitk-focus > Label {
     color: var(--text-highlight);
 }
@@ -228,7 +228,7 @@ Button,
     align-items: center;
 }
 
-.button-danger:hover,
+.mouse-active .button-danger:hover,
 .button-danger.uitk-focus {
     background-color: rgba(180, 44, 34, 1);
     color: var(--text-primary);
@@ -239,11 +239,11 @@ Button,
     background-color: rgba(0, 0, 0, 0);
 }
 
-.button-flat.uitk-unfocused > .button-flat__e {
+.button-flat.uitk-unfocused > .button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e.button-flat__e {
     visibility: hidden;
 }
 
-.button-flat.uitk-unfocused > .button-flat__e-2 {
+.button-flat.uitk-unfocused > .button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2.button-flat__e-2 {
     color: var(--text-primary);
 }
 
@@ -252,7 +252,7 @@ Button,
     border-color: var(--border-focus);
 }
 
-.button-primary-2.uitk-unfocused > .button-primary-2__e {
+.button-primary-2.uitk-unfocused > .button-primary-2__e.button-primary-2__e.button-primary-2__e.button-primary-2__e.button-primary-2__e.button-primary-2__e.button-primary-2__e {
     visibility: hidden;
 }
 
@@ -261,12 +261,30 @@ Button,
     border-color: var(--border-default);
 }
 
-.button-slab-2.uitk-unfocused > .button-slab-2__e {
+.button-slab-2.uitk-unfocused > .button-slab-2__e.button-slab-2__e.button-slab-2__e.button-slab-2__e.button-slab-2__e.button-slab-2__e.button-slab-2__e {
     visibility: hidden;
 }
 
-.button-slab-2.uitk-unfocused > .button-slab-2__e-2 {
+.button-slab-2.uitk-unfocused > .button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2.button-slab-2__e-2 {
     color: var(--text-primary);
+}
+
+/* Figma template flex rows lack CSS gap (unsupported in USS); restore visual spacing cleanly. */
+.key-hint {
+    margin-right: 16px;
+}
+
+.key-hint__e.key-hint__e.key-hint__e.key-hint__e.key-hint__e.key-hint__e.key-hint__e {
+    margin-right: 6px;
+}
+
+.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e.currency-tag-hub__e,
+.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e.currency-tag-run__e {
+    margin-right: 8px;
+}
+
+.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e.effect-chip-overflow__e {
+    margin-right: 6px;
 }
 
 /* Slot Cards (Load / Save) */
@@ -276,7 +294,7 @@ Button,
     background-color: var(--bg-panel);
 }
 
-.uitk-slot-interactive:hover {
+.mouse-active .uitk-slot-interactive:hover {
     border-color: var(--border-focus);
     background-color: var(--bg-raised);
 }
@@ -299,7 +317,7 @@ Button,
     margin-bottom: 6px;
 }
 
-.uitk-card:hover {
+.mouse-active .uitk-card:hover {
     border-color: var(--border-focus);
     background-color: var(--bg-raised);
 }

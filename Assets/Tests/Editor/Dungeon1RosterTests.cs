@@ -333,16 +333,23 @@ namespace Obscure.Tests
         [Test]
         public void MultiHitAttacksGetOneMarkerPerHitWithTheirIntervals()
         {
+            // First seeded roll without a feint: feints shift impacts and are tested in QteTests; here the intervals are.
             DefenseQte Q(string enemy, string move)
             {
                 var b = NewBattle(1, enemy);
-                return (DefenseQte)QteFactory.Defense(BattleAction.Strike(b.Enemies[0], Move(enemy, move), b.Party[2]), QteAssist.Standard);
+                for (int seed = 0; ; seed++)
+                {
+                    var q = (DefenseQte)QteFactory.Defense(BattleAction.Strike(b.Enemies[0], Move(enemy, move), b.Party[2]), QteAssist.Standard, null, new Random(seed));
+                    if (!Enumerable.Range(0, q.Hits).Any(q.IsFeint)) return q;
+                }
             }
             float[] Gaps(DefenseQte q) => Enumerable.Range(1, q.Hits - 1).Select(i => (float)Math.Round(q.impacts[i] - q.impacts[i - 1], 3)).ToArray();
 
             var militia = Q("forgotten_militia", "Two-Step Slash");
             Assert.AreEqual(2, militia.Hits);
-            CollectionAssert.AreEqual(new[] { 0.35f }, Gaps(militia), "Steady 350 ms");
+            // Steady (no authored intervals) is jittered +/- IntervalJitter around 350 ms (Bab 12 §6.6); a feint can push it later.
+            if (!militia.IsFeint(1))
+                Assert.That(Gaps(militia)[0], Is.InRange(0.35f - QteConfig.IntervalJitter - 0.001f, 0.35f + QteConfig.IntervalJitter + 0.001f), "Steady 350 ms +/- jitter");
 
             var rend = Q("soul_reaper", "Accelerating Rend");
             Assert.AreEqual(4, rend.Hits);
@@ -390,7 +397,8 @@ namespace Obscure.Tests
             }
             Assert.IsFalse(perfect[3].blocked, "Heavy is never fully parried");
             Assert.Greater(perfect[3].amount, 0);
-            Assert.AreEqual(poor[3].amount * 0.5f, perfect[3].amount, 1.01f, "Heavy Perfect = 50% reduction");
+            float heavyTaken = QteConfig.DefenseTaken(QteResult.Perfect, true, QteConfig.BlockOf(perfect[3].target));
+            Assert.AreEqual(poor[3].amount * heavyTaken, perfect[3].amount, 1.01f, "Heavy Perfect = Good-level reduction by Block Power");
         }
 
         // ---- skills ----
@@ -896,7 +904,8 @@ namespace Obscure.Tests
             var poor = Release(QteResult.Poor);
             Assert.IsFalse(perfect.blocked, "Heavy cannot be fully parried");
             Assert.Greater(perfect.amount, 0);
-            Assert.AreEqual(poor.amount * 0.5f, perfect.amount, 1.01f, "Perfect vs Heavy = 50% reduction");
+            float heavyTaken = QteConfig.DefenseTaken(QteResult.Perfect, true, QteConfig.BlockOf(perfect.target));
+            Assert.AreEqual(poor.amount * heavyTaken, perfect.amount, 1.01f, "Perfect vs Heavy = Good-level reduction by Block Power");
 
             var b2 = NewBattle(9, "royal_ossuary_knight");
             var k2 = AdvanceTo(b2, c => c.IsEnemy);

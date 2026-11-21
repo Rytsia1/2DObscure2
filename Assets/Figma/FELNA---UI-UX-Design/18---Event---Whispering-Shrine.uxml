@@ -6,18 +6,18 @@
     <Template name="Tag-Cond" src="Tag-Cond.uxml" />
     <Template name="Key-Hint" src="Key-Hint.uxml" />
     <ui:VisualElement class="_18-event-whispering-shrine _18-event-whispering-shrine-vars" style="overflow: hidden;">
-        <ui:VisualElement class="frame-vars-31" style="width: 470px; height: 36px; border-width: 2px; overflow: hidden; position: absolute; left: 20px; top: 18px;">
+        <ui:VisualElement class="frame-vars-31" style="width: 560px; height: 36px; border-width: 2px; overflow: hidden; position: absolute; left: 20px; top: 18px;">
             <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 10px; top: 2px;">
-                <ui:Label text="D1" class="unity-label d1-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Label text="D1" class="unity-label d1-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap; margin-right: 8px;" />
                 <ui:Label text="The Sunken Crypt" class="unity-label the-sunken-crypt-vars-2" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
-                <ui:Label text="· NODE 4 · EVENT" class="unity-label node-4-event-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                <ui:Label text="· NODE 4 · EVENT" class="unity-label node-4-event-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; margin-left: 8px;" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:Instance template="Currency-Tag-Run" style="position: absolute; left: 1098px; top: 18px;">
             <AttributeOverrides element-name="text-0" text="45 RUN GOLD" />
         </ui:Instance>
         <ui:Instance template="Panel-Gold" class="panel-gold__i-14" style="position: absolute; left: 90px; top: 74px; width: 1100px; height: 590px;" />
-        <ui:VisualElement style="width: 424px; height: 582px; position: absolute; left: 94px; top: 78px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-b0206cf45ea75aafd11ace8b7f8bb416-2642.svg?fileID=7388822144124034973&amp;guid=f1690c0422203aa488ccfe374283aadd&amp;type=3#img-b0206cf45ea75aafd11ace8b7f8bb416-2642&quot;); -unity-background-scale-mode: scale-to-fit;" />
+        <ui:VisualElement name="EventArtwork" style="width: 424px; height: 582px; position: absolute; left: 94px; top: 78px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-b0206cf45ea75aafd11ace8b7f8bb416-2642.svg?fileID=7388822144124034973&amp;guid=f1690c0422203aa488ccfe374283aadd&amp;type=3#img-b0206cf45ea75aafd11ace8b7f8bb416-2642&quot;); -unity-background-scale-mode: scale-to-fit;" />
         <ui:VisualElement class="rectangle-vars-163" style="width: 2px; height: 582px; position: absolute; left: 518px; top: 78px;" />
         <ui:Label text="EVENT" class="unity-label event-vars-2" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 544px; top: 100px;" />
         <ui:Label text="Whispering Shrine" class="unity-label whispering-shrine-vars" style="font-size: 32px; white-space: nowrap; position: absolute; left: 544px; top: 122px;" />
@@ -46,7 +46,7 @@
                 <AttributeOverrides element-name="text-1" text="CHOOSE" />
             </ui:Instance>
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="Z" />
+                <AttributeOverrides element-name="text-0" text="ENTER" />
                 <AttributeOverrides element-name="text-1" text="CONFIRM" />
             </ui:Instance>
         </ui:VisualElement>

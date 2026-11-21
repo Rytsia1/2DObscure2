@@ -20,13 +20,26 @@ namespace Obscure
             MountFigma("18---Event---Whispering-Shrine");
 
             var d1 = UiRoot.Q<UiLabel>(className: "d1-vars");
-            if (d1 != null) d1.text = $"D{Run?.Act ?? 1} ";
+            if (d1 != null)
+            {
+                d1.text = $"D{Run?.Act ?? 1}";
+                d1.style.marginRight = 8;
+            }
 
             var dung = UiRoot.Q<UiLabel>(className: "the-sunken-crypt-vars-2");
             if (dung != null) dung.text = Run?.Map?.name ?? "Dungeon";
 
             var node = UiRoot.Q<UiLabel>(className: "node-4-event-vars");
-            if (node != null) node.text = $" · NODE {Run?.Floor ?? 1} · EVENT";
+            if (node != null)
+            {
+                node.text = $"· NODE {Run?.Floor ?? 1} · EVENT";
+                node.style.marginLeft = 8;
+            }
+
+            var artEl = UiRoot.Q<VisualElement>("EventArtwork");
+            var sceneTex = IconArt.EventScene(currentEvent.id, currentEvent.category);
+            if (artEl != null && sceneTex != null)
+                FigmaUi.SetBackgroundContain(artEl, sceneTex);
 
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");

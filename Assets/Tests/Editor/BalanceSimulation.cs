@@ -85,9 +85,9 @@ namespace Obscure.Tests
             new Execution { name = "All Poor", perfect = 0, good = 0 },
         };
 
-        // Hero level per encounter, estimated from RunConfig EXP for where each fight sits in Dungeon 1 (not measured).
-        // The boss also runs at level 8 to tell "boss too tanky" apart from "level estimate too low".
-        public static readonly (string id, int level)[] Encounters = { ("d1_e5", 2), ("d1_e7", 4), ("d1_boss", 6), ("d1_boss", 8) };
+        // Hero level per encounter, measured 2026-11-21: median level on first entering each encounter, 200 Random paths (ExpPacingReport, Logs/ExpPacing.md).
+        // The boss also runs at 8 as an under-levelled check.
+        public static readonly (string id, int level)[] Encounters = { ("d1_e5", 4), ("d1_e7", 9), ("d1_boss", 8), ("d1_boss", 12) };
 
         static readonly (string race, string cls, string bg)[] PartyPlan =
         {
@@ -156,10 +156,14 @@ namespace Obscure.Tests
         // Player policy, the same for every build and execution so only those two vary:
         // heal an ally below 40% HP, Guard against a telegraphed Heavy or charge aimed at this hero,
         // else the strongest affordable damaging skill, else a basic attack on the weakest enemy.
-        static BattleAction Choose(Battle b, Combatant c)
+        // AttackOnly is Dheo's 19 Nov playtest line: "just attack and parry without using skill". Never Guard, heal or skill.
+        public enum Policy { Tactical, AttackOnly }
+
+        static BattleAction Choose(Battle b, Combatant c, Policy policy = Policy.Tactical)
         {
             var foes = b.Enemies.Where(e => e.Alive).ToList();
             var target = foes.OrderBy(e => e.unit.hp).First();
+            if (policy == Policy.AttackOnly) return BattleAction.Attack(c, target);
             var skills = c.unit.GetCombatActiveSkillIds().Where(Database.Skills.ContainsKey).Select(id => Database.Skills[id]).ToList();
 
             var hurt = b.Party.Where(p => p.Alive).OrderBy(p => (float)p.unit.hp / p.Stats.maxHp).First();
@@ -186,7 +190,8 @@ namespace Obscure.Tests
             var intent = enemy.Charge ?? enemy.Intent;
             if (intent?.move == null) return false;
             bool aimed = intent.target == hero || intent.move.allTargets;
-            return aimed && (intent.move.HasHeavy || enemy.IsCharging);
+            // A charged all-target move (Soulstorm) only gets a Guard if it is Heavy: else all four heroes Guard and the round deals 0.
+            return aimed && (intent.move.HasHeavy || enemy.IsCharging && !intent.move.allTargets);
         }
 
         public sealed class Result
@@ -196,7 +201,8 @@ namespace Obscure.Tests
             public float hpLeft;
         }
 
-        public static Result Fight(string encounterId, int level, Build build, Execution ex, int seed, Gear gear = Gear.Starter)
+        public static Result Fight(string encounterId, int level, Build build, Execution ex, int seed, Gear gear = Gear.Starter,
+            Policy policy = Policy.Tactical)
         {
             var party = PartyPlan.Select(p => MakeHero(p, build, level, gear)).ToList();
             var enc = Database.Encounters[encounterId];
@@ -216,11 +222,12 @@ namespace Obscure.Tests
                     List<QteResult> defense = null;
                     if (qte is WardQte ward) defense = Enumerable.Repeat(ex.Roll(qteRng), ward.Results.Count).ToList(); // one typed ward covers every hit
                     else if (qte is DefenseQte d) defense = Enumerable.Range(0, d.Hits).Select(_ => ex.Roll(qteRng)).ToList();
+                    else if (qte is StruggleQte st) defense = Enumerable.Repeat(ex.Roll(qteRng), st.hits).ToList(); // one gauge covers every hit
                     b.Perform(act, 1f, defense);
                 }
                 else
                 {
-                    var act = Choose(b, c);
+                    var act = Choose(b, c, policy);
                     res.playerTurns++;
                     if (act.kind == ActionKind.Skill) res.skillTurns++;
                     if (act.kind == ActionKind.Guard) res.guardTurns++;
@@ -245,7 +252,8 @@ namespace Obscure.Tests
 
         // EXP and gold along one path. Gold uses the middle of each RunConfig range and counts fights and treasure
         // only (no events, modifiers, relic fallbacks or shop spending).
-        static (int exp, int gold) PathTotals(int act, int seed, PathStyle style)
+        // expBefore: if given, records the EXP held on first entering each encounter (feeds the sim's encounter levels).
+        static (int exp, int gold) PathTotals(int act, int seed, PathStyle style, Dictionary<string, int> expBefore = null)
         {
             var rng = new Random(unchecked(seed * 977 + act));
             int exp = 0, gold = 0;
@@ -259,6 +267,7 @@ namespace Obscure.Tests
                     if (node.IsCombat)
                     {
                         var tier = Database.Encounters[node.encounter].tier;
+                        if (expBefore != null && !expBefore.ContainsKey(node.encounter)) expBefore[node.encounter] = exp;
                         exp += RunConfig.ExpFor(tier);
                         gold += tier == Tier.Boss ? RunConfig.BossGold : Mid(tier == Tier.Elite ? RunConfig.EliteGold : RunConfig.BattleGold);
                     }
@@ -318,6 +327,19 @@ namespace Obscure.Tests
                 sb.AppendLine($"| {style} | {d1.Average():0} | {l1.First()} / {l1[seeds / 2]} / {l1.Last()} | {d2.Average():0} | {l2.First()} / {l2[seeds / 2]} / {l2.Last()} |");
             }
 
+            // Source of BalanceSimulation.Encounters levels: the level a hero has on first entering each encounter.
+            sb.AppendLine();
+            sb.AppendLine("## Level on entering each sim encounter (Random path; paths that never meet it are left out)");
+            sb.AppendLine();
+            sb.AppendLine("| Encounter | Paths | Level (min / median / max) |");
+            sb.AppendLine("|---|---:|---:|");
+            var seen = Enumerable.Range(1, seeds).Select(s => { var d = new Dictionary<string, int>(); PathTotals(1, s, PathStyle.Random, d); return d; }).ToList();
+            foreach (var id in Encounters.Select(e => e.id).Distinct())
+            {
+                var lv = seen.Where(d => d.ContainsKey(id)).Select(d => LevelFor(d[id])).OrderBy(l => l).ToList();
+                sb.AppendLine(lv.Count == 0 ? $"| {id} | 0 | - |" : $"| {id} | {lv.Count} | {lv.First()} / {lv[lv.Count / 2]} / {lv.Last()} |");
+            }
+
             sb.AppendLine();
             sb.AppendLine($"## Gold (fights and treasure only). Battle {RunConfig.BattleGold.min}-{RunConfig.BattleGold.max}, " +
                           $"Elite {RunConfig.EliteGold.min}-{RunConfig.EliteGold.max}, Treasure {RunConfig.TreasureGold.min}-{RunConfig.TreasureGold.max}, Boss {RunConfig.BossGold}");
@@ -356,8 +378,27 @@ namespace Obscure.Tests
             sb.AppendLine($"Generated {DateTime.Now:yyyy-MM-dd HH:mm}. {runs} fights per row. Party: Human Fighter, Dwarf Cleric, Elf Wizard, Halfling Rogue.");
             sb.AppendLine("Every fight starts at full HP/MP with no items, relics or modifiers. Hero levels per encounter are estimates.");
             sb.AppendLine($"Current values: offense {QteConfig.PoorPower}/{QteConfig.GoodPower}/{QteConfig.PerfectPower}, " +
-                          $"defense taken {QteConfig.PoorDefense}/{QteConfig.GoodDefense}/{QteConfig.PerfectDefense} (full parry with Guard or shield), " +
+                          $"defense taken at Block 50: Poor {QteConfig.PoorDefense} / Good {QteConfig.DefenseTaken(QteResult.Good, false, 0.5f)} / " +
+                          $"Perfect {QteConfig.DefenseTaken(QteResult.Perfect, false, 0.5f)} (scales with Block Power; full parry only with Guard), " +
                           $"Perfect MP refund {QteConfig.PerfectMpRefund}.");
+
+            // Policy check (GDD Bab 12 §3.5): pass if AttackOnly does worse than Tactical with the same execution.
+            sb.AppendLine();
+            sb.AppendLine("## Policy: Tactical (skills, heals, Guard) vs AttackOnly (basic attack + parry), Recommended build, Starter gear");
+            sb.AppendLine();
+            sb.AppendLine("| Encounter | Level | Execution | Policy | Win % | Party HP left (wins) | Avg rounds | Guard turns |");
+            sb.AppendLine("|---|---:|---|---|---:|---:|---:|---:|");
+            foreach (var (id, level) in Encounters)
+            foreach (var ex in Executions.Where(e => e.name == "All Perfect" || e.name.StartsWith("Typical")))
+            foreach (Policy policy in Enum.GetValues(typeof(Policy)))
+            {
+                var rs = Enumerable.Range(1, runs).Select(seed => Fight(id, level, Build.Recommended, ex, seed, Gear.Starter, policy)).ToList();
+                var wins = rs.Where(r => r.won).ToList();
+                int turns = Math.Max(1, rs.Sum(r => r.playerTurns));
+                sb.AppendLine($"| {id} | {level} | {ex.name} | {policy} | {100f * wins.Count / runs:0} | " +
+                              $"{(wins.Count > 0 ? wins.Average(r => r.hpLeft) * 100f : 0f):0}% | {rs.Average(r => r.rounds):0.0} | " +
+                              $"{100f * rs.Sum(r => r.guardTurns) / turns:0}% |");
+            }
             foreach (var (id, level) in Encounters)
             {
                 sb.AppendLine();
@@ -394,6 +435,5 @@ namespace Obscure.Tests
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, sb.ToString());
             TestContext.WriteLine(sb.ToString());
-        }
-    }
+        }    }
 }

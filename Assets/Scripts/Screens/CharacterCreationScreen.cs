@@ -38,6 +38,7 @@ namespace Obscure
         public enum Page { Race, Class, Abilities, Background, Passive, Gear, Review }
         static readonly string[] PageNames = { "RACE", "CLASS", "ABILITIES", "BACKGROUND", "PASSIVE", "GEAR", "REVIEW" };
         public Page CurrentPage { get; private set; } = Page.Race;
+        int selectedTraitIndex;
 
         static readonly string[] RaceIds = Database.PlayableRaceIds;
         static readonly string[] ClassIds = Database.PlayableClassIds;
@@ -58,6 +59,7 @@ namespace Obscure
         VisualElement middlePanelEl, goldPanelEl;
         VisualElement middleBody, rightBody, abilitiesHost, costTableHost, nextPreviewHost;
         VisualElement backBtn, nextBtn, keyHintUp, keyHintDn;
+        UiLabel hintText;
         UiLabel previewMemberTag, previewNameLbl, previewNoteLbl, scoresHeaderLbl;
         VisualElement previewSpriteEl, previewRaceTag;
         readonly VisualElement[] stepChips = new VisualElement[7];
@@ -239,6 +241,19 @@ namespace Obscure
             }
             keyHintUp = KeyHint("UP");
             keyHintDn = KeyHint("DN");
+
+            // Visible home for menu tooltips: footer, between the key hints (x 152) and the Next button (right 28).
+            hintText = new UnityEngine.UIElements.Label("")
+            {
+                style =
+                {
+                    position = Position.Absolute, left = 480, top = 656, width = 500, height = 40,
+                    fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal,
+                    unityTextAlign = TextAnchor.MiddleCenter, overflow = Overflow.Hidden,
+                },
+                pickingMode = PickingMode.Ignore,
+            };
+            screenContainer.Add(hintText);
         }
 
         public void Refresh()
@@ -368,7 +383,7 @@ namespace Obscure
             // so those pages name both keys instead of crediting UP/DN with the change.
             var (k0, t0, k1, t1) = CurrentPage switch
             {
-                Page.Race => ("UP", "", "DN", "BROWSE RACES"),
+                Page.Race => ("UP", "", "DN", PresetMode ? "BROWSE PRESETS" : "BROWSE RACES"),
                 Page.Class => ("UP", "", "DN", "BROWSE CLASSES"),
                 Page.Abilities => ("UP DN", "STAT", "L R", "ADJUST SCORE"),
                 Page.Gear => ("UP DN", "SLOT", "L R", "CHANGE ITEM"),
@@ -387,6 +402,16 @@ namespace Obscure
                     nb.SetEnabled(canDo);
                     menu.Add(nb, nb.text, InReview ? () => TryConfirmPartyAndBegin(out _) : (Action)ConfirmAndAddToParty, interactable: canDo);
                 }
+                return;
+            }
+
+            // Presets: Next becomes "Add Hero" so a preset goes straight into the party, one hero at a time.
+            if (CurrentPage == Page.Race && PresetMode && nextBtn is Button addBtn)
+            {
+                bool canAdd = IsActivePreset(Session.ActiveTemplateId) && Session.CanConfirm;
+                addBtn.text = "Add Hero";
+                addBtn.SetEnabled(canAdd);
+                menu.Add(addBtn, "Add Hero", ConfirmAndAddToParty, interactable: canAdd, tooltip: "ADD THIS PRESET HERO TO THE PARTY");
                 return;
             }
 
@@ -424,9 +449,13 @@ namespace Obscure
             if (titleLbl != null)
             {
                 titleLbl.style.marginLeft = 6;
+                titleLbl.style.marginRight = 6;
                 titleLbl.style.flexGrow = 1;
                 titleLbl.style.flexShrink = 1;
+                titleLbl.style.whiteSpace = WhiteSpace.NoWrap;
                 titleLbl.style.overflow = Overflow.Hidden;
+                if (!string.IsNullOrEmpty(rightNote) && colWidth < 400f)
+                    titleLbl.style.fontSize = 18;
             }
 
             if (!string.IsNullOrEmpty(rightNote))
@@ -533,8 +562,86 @@ namespace Obscure
 
         // ------------------------------------------------------------------ pages
 
+        // Race page = start of each hero: Custom (step-by-step) or Presets (pick a ready-made hero, add it in one press).
+        public bool PresetMode { get; private set; }
+        const int RaceTabCount = 2; // Custom / Presets tab buttons come before the list in menu order
+
+        bool IsActivePreset(string id) => id != null && Session.Method == CreationMethod.Template && Session.ActiveTemplateId == id;
+
+        public void SetPresetMode(bool on)
+        {
+            if (PresetMode == on) return;
+            PresetMode = on;
+            focusIndex = on ? 1 : 0;
+            SetHint(on ? "PICK A PRESET HERO, THEN ADD HERO" : "BUILD THIS HERO STEP BY STEP");
+            Refresh();
+        }
+
+        public void ApplyPreset(string templateId)
+        {
+            if (IsActivePreset(templateId)) return;
+            if (!Session.TryApplyTemplate(templateId, out _)) Sfx.Play(Sound.Deny);
+            SetHint(Session.LastFeedbackMessage);
+            Refresh();
+        }
+
+        void AddModeTabs()
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.marginBottom = 6;
+            row.style.flexShrink = 0;
+            var customBtn = FigmaUi.CreateButton("Custom", "button-slab", 132f);
+            var presetBtn = FigmaUi.CreateButton("Presets", "button-slab", 132f);
+            customBtn.style.marginRight = 8;
+            row.Add(customBtn);
+            row.Add(presetBtn);
+            middleBody.Add(row);
+            menu.Add(customBtn, "Custom", () => SetPresetMode(false), selected: !PresetMode, tooltip: "BUILD THIS HERO STEP BY STEP");
+            menu.Add(presetBtn, "Presets", () => SetPresetMode(true), selected: PresetMode, tooltip: "PICK A READY-MADE HERO");
+        }
+
+        void BuildPresetList()
+        {
+            AddColumnHeader(middleBody, "Choose a Preset", $"{TemplateIds.Length} HEROES");
+            foreach (var id in TemplateIds)
+            {
+                var t = Database.Templates[id];
+                string sub = $"{Database.Races[t.raceId].name} · {Database.Classes[t.classId].name}".ToUpperInvariant();
+                AddCard(middleBody, t.name, null, sub, IsActivePreset(id), () => ApplyPreset(id));
+            }
+
+            if (!IsActivePreset(Session.ActiveTemplateId) || !Database.Templates.TryGetValue(Session.ActiveTemplateId, out var tpl))
+            {
+                AddColumnHeader(rightBody, "Presets");
+                AddParagraph(rightBody, "Pick a ready-made hero from the list. Add it as-is, or press Customize to tweak it in the full editor.");
+                return;
+            }
+
+            AddColumnHeader(rightBody, tpl.name, $"{Session.Race.name} · {Session.Class.name}".ToUpperInvariant());
+            AddParagraph(rightBody, tpl.description);
+            foreach (var (k, v) in new[]
+            {
+                ("BACKGROUND", Session.Background.name),
+                ("FEAT", Session.Race.racialFeat?.name ?? "-"),
+                ("PASSIVE", Session.StarterPassive?.name ?? "-"),
+                ("MAIN HAND", Session.GetEquipped(EquipmentSlot.MainHand)?.name ?? "-"),
+                ("OFF HAND", Session.GetEquipped(EquipmentSlot.SecondHand)?.name ?? "-"),
+            })
+                AddStatRow(rightBody, k, v.ToUpperInvariant());
+
+            var customizeBtn = FigmaUi.CreateButton("Customize", "button-slab", 140f);
+            customizeBtn.style.marginTop = 10;
+            rightBody.Add(customizeBtn);
+            menu.Add(customizeBtn, "Customize", () => { PresetMode = false; GoToPage(Page.Race); },
+                tooltip: "EDIT THIS PRESET IN THE FULL EDITOR");
+        }
+
         void BuildRacePage()
         {
+            AddModeTabs();
+            if (PresetMode) { BuildPresetList(); return; }
+
             AddColumnHeader(middleBody, "Choose a Race", $"{RaceIds.Length} RACES");
             for (int i = 0; i < RaceIds.Length; i++)
             {
@@ -578,7 +685,7 @@ namespace Obscure
             AddParagraph(rightBody, feat?.description ?? "");
 
             var util = race.racialUtility;
-            var utilHeader = new UiLabel($"RACIAL UTILITY · {util?.name ?? "None"}" + (string.IsNullOrEmpty(util?.utilityTag) ? "" : $" [{util.utilityTag}]"));
+            var utilHeader = new UiLabel($"RACIAL UTILITY · {util?.name ?? "None"}");
             utilHeader.style.fontSize = 18;
             utilHeader.style.color = Palette.Gold1;
             utilHeader.style.marginTop = 8;
@@ -668,7 +775,7 @@ namespace Obscure
             foreach (var st in new[] { DerivedStatId.MaxHP, DerivedStatId.MaxMP, DerivedStatId.PhysicalPower, DerivedStatId.MagicPower, DerivedStatId.PhysicalDefense })
                 AddStatRow(rightBody, Database.DerivedStatDefs[st].shortName, preview.FormatValue(st));
 
-            var skillHead = new UiLabel("STARTER LOADOUT · PASSIVE IN STEP 6");
+            var skillHead = new UiLabel("STARTER LOADOUT · PASSIVE IN STEP 5");
             skillHead.style.fontSize = 14;
             skillHead.style.color = Palette.Gold2;
             skillHead.style.marginTop = 10;
@@ -1237,7 +1344,7 @@ namespace Obscure
 
             string toastMsg = null;
             if (!atMax && !canAfford)
-                toastMsg = $"{focusedAbility} {cur} › {cur + 1} NEEDS {nextCost} POINTS. YOU HAVE {rem}. FREE ONE BY LOWERING ANOTHER SCORE.";
+                toastMsg = $"{focusedAbility} {cur} › {cur + 1} NEEDS {nextCost} {(nextCost == 1 ? "POINT" : "POINTS")}. YOU HAVE {rem}. FREE ONE BY LOWERING ANOTHER SCORE.";
             else if (atMax)
                 toastMsg = $"{focusedAbility} IS AT THE BASE CAP OF {max} BEFORE RACIAL BONUS.";
             else if (rem == 0)
@@ -1259,34 +1366,35 @@ namespace Obscure
 
         void BuildBackgroundPage()
         {
-            AddColumnHeader(middleBody, "Choose a Background", $"{BackgroundIds.Length} TOTAL");
+            AddColumnHeader(middleBody, "Background", $"{BackgroundIds.Length} TOTAL");
+            var bgList = FigmaUi.CreateVerticalScrollView();
+            bgList.style.flexGrow = 1;
+            bgList.style.height = 516;
+            middleBody.Add(bgList);
+
             for (int i = 0; i < BackgroundIds.Length; i++)
             {
                 var b = Database.Backgrounds[BackgroundIds[i]];
-                var item = AddCard(middleBody, b.name, null, (b.narrativeIdentity ?? "").ToUpperInvariant(), b.id == Session.Background.id, () => SelectBackgroundById(b.id));
+                var item = AddCard(bgList, b.name, null, (b.narrativeIdentity ?? "").ToUpperInvariant(), b.id == Session.Background.id, () => SelectBackgroundById(b.id));
                 if (item?.element != null)
                 {
-                    item.element.style.height = 42;
-                    item.element.style.paddingTop = 2;
-                    item.element.style.paddingBottom = 2;
-                    item.element.style.marginBottom = 3;
-                    item.element.style.justifyContent = Justify.Center;
-                    item.element.style.overflow = Overflow.Hidden;
+                    item.element.style.paddingTop = 4;
+                    item.element.style.paddingBottom = 4;
+                    item.element.style.marginBottom = 4;
                     var tLbl = item.element.Q<UiLabel>(className: "uitk-card-title");
-                    if (tLbl != null) tLbl.style.fontSize = 13;
+                    if (tLbl != null) tLbl.style.fontSize = 14;
                     var sLbl = item.element.Q<UiLabel>(className: "uitk-card-sub");
                     if (sLbl != null)
                     {
-                        sLbl.style.fontSize = 10;
-                        sLbl.style.marginTop = 0;
-                        sLbl.style.whiteSpace = WhiteSpace.NoWrap;
-                        sLbl.style.overflow = Overflow.Hidden;
+                        sLbl.style.fontSize = 11;
+                        sLbl.style.marginTop = 2;
+                        sLbl.style.whiteSpace = WhiteSpace.Normal;
                     }
                 }
             }
 
             var bg = Session.Background;
-            AddColumnHeader(rightBody, $"{bg.name} · {bg.perkName}", "DRAFT VALUES");
+            AddColumnHeader(rightBody, $"{bg.name} · {bg.perkName}", "5 RANKS · LV 1–13");
             AddParagraph(rightBody, bg.description);
 
             var perkHead = new UiLabel("PERK RANKS · UNLOCK BY LEVEL");
@@ -1315,11 +1423,17 @@ namespace Obscure
             }
         }
 
+        void SelectTrait(int index)
+        {
+            if (selectedTraitIndex != index) { selectedTraitIndex = index; Refresh(); }
+        }
+
         void BuildPassivePage()
         {
-            AddColumnHeader(middleBody, "Starter Passive", "FROM CLASS");
+            selectedTraitIndex = Math.Clamp(selectedTraitIndex, 0, 2);
+            AddColumnHeader(middleBody, "Level 1 Traits", "AUTO-GRANTED");
             var sp = Session.StarterPassive;
-            AddCard(middleBody, sp?.name ?? "None", null, (sp?.description ?? "").ToUpperInvariant(), true, null);
+            AddCard(middleBody, sp?.name ?? "None", "CLASS", (sp?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 0, () => SelectTrait(0));
 
             var also = new UiLabel("ALSO ACTIVE AT LEVEL 1");
             also.style.fontSize = 13;
@@ -1329,13 +1443,31 @@ namespace Obscure
             middleBody.Add(also);
 
             var feat = Session.Race?.racialFeat;
-            AddCard(middleBody, "Racial Feat · " + (feat?.name ?? "None"), null, (feat?.description ?? "").ToUpperInvariant(), false, null);
+            AddCard(middleBody, feat?.name ?? "None", "RACE", (feat?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 1, () => SelectTrait(1));
 
             var bgRank = Session.Background?.GetRank(1);
-            AddCard(middleBody, "Perk · " + (bgRank?.perkName ?? Session.Background?.perkName ?? ""), null, (bgRank?.perkDescription ?? "").ToUpperInvariant(), false, null);
+            string perkName = bgRank?.perkName ?? Session.Background?.perkName ?? "None";
+            string perkDesc = bgRank?.perkDescription ?? "";
+            AddCard(middleBody, perkName, "RANK I", perkDesc.ToUpperInvariant(), selectedTraitIndex == 2, () => SelectTrait(2));
 
-            AddColumnHeader(rightBody, sp?.name ?? "Passive");
-            AddParagraph(rightBody, sp?.description ?? "No starter passive.");
+            if (selectedTraitIndex == 1)
+            {
+                AddColumnHeader(rightBody, feat?.name ?? "Racial Feat", $"{Session.Race?.name?.ToUpperInvariant() ?? "RACE"} FEAT");
+                AddParagraph(rightBody, feat?.description ?? "No racial feat.");
+                AddParagraph(rightBody, "AUTOMATICALLY ACTIVE AT LEVEL 1 FOR THIS RACE.", Palette.Mist3);
+            }
+            else if (selectedTraitIndex == 2)
+            {
+                AddColumnHeader(rightBody, perkName, "BACKGROUND · RANK I");
+                AddParagraph(rightBody, string.IsNullOrEmpty(perkDesc) ? "No background perk." : perkDesc);
+                AddParagraph(rightBody, $"STARTING PERK FROM {Session.Background?.name?.ToUpperInvariant() ?? "BACKGROUND"}. HIGHER RANKS UNLOCK AT LEVELS 4, 7, 10, AND 13.", Palette.Mist3);
+            }
+            else
+            {
+                AddColumnHeader(rightBody, sp?.name ?? "Starter Passive", $"{Session.Class?.name?.ToUpperInvariant() ?? "CLASS"} PASSIVE");
+                AddParagraph(rightBody, sp?.description ?? "No starter passive.");
+                AddParagraph(rightBody, "FIXED AT LEVEL 1 BY YOUR CLASS. ADDITIONAL PASSIVE NODES UNLOCK VIA THE SKILL TREE.", Palette.Mist3);
+            }
         }
 
         void BuildGearPage()
@@ -1376,6 +1508,31 @@ namespace Obscure
             AddParagraph(rightBody, $"{count} COMPATIBLE ITEMS · L R ON A SLOT OR PREV / NEXT TO CHANGE. TWO-HANDED WEAPONS USE MAIN HAND ONLY.", Palette.Mist3);
         }
 
+        static void AddReadOnlyPartyCard(VisualElement parent, string title, string subText, bool selected)
+        {
+            var card = new VisualElement();
+            card.AddToClassList("uitk-card");
+            if (selected) card.AddToClassList("uitk-selected");
+            card.style.paddingTop = 4;
+            card.style.paddingBottom = 4;
+            card.style.marginBottom = 4;
+            card.style.flexShrink = 0;
+
+            var titleLbl = new UiLabel(title);
+            titleLbl.AddToClassList("uitk-card-title");
+            titleLbl.style.fontSize = 16;
+            card.Add(titleLbl);
+
+            if (!string.IsNullOrEmpty(subText))
+            {
+                var sub = new UiLabel(subText);
+                sub.AddToClassList("uitk-card-sub");
+                sub.style.fontSize = 11;
+                card.Add(sub);
+            }
+            parent.Add(card);
+        }
+
         void BuildReviewPage()
         {
             bool inReview = InReview;
@@ -1389,12 +1546,21 @@ namespace Obscure
                     var c = Builder.PendingParty[i];
                     string r = Database.Races.TryGetValue(c.raceId ?? "", out var rd) ? rd.name : c.raceId;
                     string cl = Database.Classes.TryGetValue(c.classId ?? "", out var cd) ? cd.name : c.classId;
-                    AddCard(middleBody, c.name, null, $"{r} · {cl}".ToUpperInvariant(), inReview && i == Builder.SelectedReviewIndex,
-                        inReview ? () => { if (Builder.SelectedReviewIndex != idx) { Builder.SelectReviewMember(idx); Session.LoadFromCharacterDef(Builder.PendingParty[idx]); Refresh(); } } : (Action)null);
+                    if (inReview)
+                    {
+                        AddCard(middleBody, c.name, null, $"{r} · {cl}".ToUpperInvariant(), i == Builder.SelectedReviewIndex,
+                            () => { if (Builder.SelectedReviewIndex != idx) { Builder.SelectReviewMember(idx); Session.LoadFromCharacterDef(Builder.PendingParty[idx]); Refresh(); } });
+                    }
+                    else
+                    {
+                        AddReadOnlyPartyCard(middleBody, c.name, $"{r} · {cl}".ToUpperInvariant(), false);
+                    }
                 }
                 else
                 {
-                    AddCard(middleBody, i == Builder.PendingParty.Count && !inReview ? "THIS HERO" : "EMPTY SLOT", null, "CONFIGURE AND ADD HERO", false, null);
+                    bool isCurrentHero = i == Builder.PendingParty.Count && !inReview;
+                    AddReadOnlyPartyCard(middleBody, isCurrentHero ? $"THIS HERO · {HeroName}" : "EMPTY SLOT",
+                        isCurrentHero ? $"{Session.Race.name} · {Session.Class.name}".ToUpperInvariant() : "CONFIGURE AND ADD HERO", isCurrentHero);
                 }
             }
 
@@ -1485,11 +1651,17 @@ namespace Obscure
             if (p < Page.Race) p = Page.Race;
             if (p > Page.Review) p = Page.Review;
             CurrentPage = p;
+            if (p != Page.Race) PresetMode = false; // leaving Race = customizing; never re-apply a preset over edits
+            if (p == Page.Passive) selectedTraitIndex = 0;
             focusIndex = p switch
             {
-                Page.Race => Math.Max(0, Array.IndexOf(RaceIds, Session.Race.id)),
+                // No active preset -> focus the Presets tab, so focus never auto-applies a preset over the hero.
+                Page.Race => PresetMode
+                    ? (IsActivePreset(Session.ActiveTemplateId) ? RaceTabCount + Array.IndexOf(TemplateIds, Session.ActiveTemplateId) : 1)
+                    : RaceTabCount + Math.Max(0, Array.IndexOf(RaceIds, Session.Race.id)),
                 Page.Class => Math.Max(0, Array.IndexOf(ClassIds, Session.Class.id)),
                 Page.Background => Math.Max(0, Array.IndexOf(BackgroundIds, Session.Background.id)),
+                Page.Review => InReview ? Math.Clamp(Builder.SelectedReviewIndex, 0, Math.Max(0, Builder.PendingParty.Count - 1)) : 0,
                 _ => 0,
             };
             var step = p switch
@@ -1519,7 +1691,11 @@ namespace Obscure
 
         static string Truncate(string s, int maxChars) => string.IsNullOrEmpty(s) ? "" : s.Length <= maxChars ? s : s.Substring(0, maxChars);
 
-        void SetHint(string text) => HintLabel?.Set(PixelFont.Fit((text ?? "").ToUpperInvariant(), 308));
+        void SetHint(string text)
+        {
+            HintLabel?.Set(PixelFont.Fit((text ?? "").ToUpperInvariant(), 308)); // hidden sprite binding, read by tests
+            if (hintText != null) hintText.text = (text ?? "").ToUpperInvariant();
+        }
 
         public void CycleCreationMethodOrTemplate(int dir)
         {
@@ -1768,7 +1944,7 @@ namespace Obscure
             Sfx.Play(Sound.Success);
             SetHint(Builder.LastFeedback);
             CurrentPage = InReview ? Page.Review : Page.Race;
-            focusIndex = 0;
+            focusIndex = PresetMode && !InReview ? 1 : 0; // stay on the Presets tab for the next pick
             Refresh();
         }
 

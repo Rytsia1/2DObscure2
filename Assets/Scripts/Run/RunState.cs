@@ -1172,6 +1172,7 @@ namespace Obscure
         // ---- rest ----
 
         public static int RecoverAmount(Unit u) => u.Alive ? (int)Math.Round((u.stats.maxHp - u.hp) * RunConfig.RestRecover) : 0;
+        public static int RecoverMpAmount(Unit u) => u.Alive ? (int)Math.Round((u.stats.maxMp - u.mp) * RunConfig.RestRecover) : 0;
 
         public void RestRecover()
         {
@@ -1180,7 +1181,7 @@ namespace Obscure
             {
                 if (!u.Alive) continue;
                 u.hp += RecoverAmount(u);
-                u.mp += (int)Math.Round((u.stats.maxMp - u.mp) * RunConfig.RestRecover);
+                u.mp += RecoverMpAmount(u);
             }
             Complete();
         }

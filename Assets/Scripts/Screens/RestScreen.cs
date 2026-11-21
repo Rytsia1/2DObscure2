@@ -98,15 +98,15 @@ namespace Obscure
             actionHost.style.left = 676;
             actionHost.style.top = 286;
             actionHost.style.width = 528;
-            actionHost.style.height = 330;
+            actionHost.style.height = 288;
             actionHost.style.flexDirection = FlexDirection.Column;
             screen.Add(actionHost);
 
             feedbackLbl = new UiLabel { name = "CampFeedback" };
             feedbackLbl.style.position = Position.Absolute;
-            feedbackLbl.style.left = 660;
-            feedbackLbl.style.top = 656;
-            feedbackLbl.style.width = 560;
+            feedbackLbl.style.left = 676;
+            feedbackLbl.style.top = 584;
+            feedbackLbl.style.width = 528;
             feedbackLbl.style.fontSize = 14;
             feedbackLbl.style.color = Palette.Gold1;
             feedbackLbl.style.whiteSpace = WhiteSpace.Normal;
@@ -174,12 +174,15 @@ namespace Obscure
         void ShowMain()
         {
             NewMenu();
-            feedbackLbl.text = "";
-            int total = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
-            Option($"RECOVER +{total} HP", $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES", Recover);
+            feedbackLbl.text = "PICK ONE: RECOVER, IMPROVE OR BOON. THE CAMP IS SPENT AFTER.";
+            menu.onBack = () => feedbackLbl.text = "CHOOSE A CAMP ACTION TO CONTINUE.";
+            int hp = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
+            int mp = Run != null ? Run.Party.Sum(RunState.RecoverMpAmount) : 0;
+            Option($"RECOVER +{hp} HP · +{mp} MP", $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES", Recover);
             Option("IMPROVE A HERO", "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE", ShowImprove);
             Option("CAMP BOON (MODIFIER)", "PREPARE A TEMPORARY DUNGEON MODIFIER FOR THE LAYER", ShowCampModifiers);
-            Option("DEVELOP SKILLS", "VIEW HERO SKILL TREES AND ALLOCATE SKILL POINTS", () => Game?.Go(GameState.Skills));
+            // Skills is a service screen: Back returns here with the rest still unused.
+            Option("DEVELOP SKILLS (FREE)", "DOES NOT USE THE CAMP. ALLOCATE SKILL POINTS, THEN COME BACK", () => Game?.Go(GameState.Skills));
         }
 
         void ShowCampModifiers()

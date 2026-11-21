@@ -58,11 +58,34 @@ namespace Obscure
         public const float PerfectPower = 1.2f, GoodPower = 1.0f, PartialPower = 0.875f, PoorPower = 0.75f, MissPower = 0.75f;
         public const int PerfectMpRefund = 1; // MP back on an offensive Perfect (basic attack or damaging skill)
 
-        // Defense damage taken: Perfect 0.25x, Good 0.5x, Poor 1.0x; Heavy Perfect 0.5x.
-        // A full parry (0 damage, Perfect on a non-Heavy hit) needs a choice: Guarding or a shield equipped (GDD Bab 12 §3.5).
-        // PerfectDefense is a starting value, untested: the GDD section has the test and the tuning direction.
-        public const float PerfectDefense = 0.25f, GoodDefense = 0.5f, HeavyPerfectDefense = 0.5f, PartialDefense = 0.75f, PoorDefense = 1f, MissDefense = 1f;
+        // Defense damage taken scales with the defender's Block Power (Derived.BlockFraction, base 50% + STR), so the
+        // reaction grade multiplies a stat instead of replacing it (GDD Bab 12 §3.5, revisi 21 Nov 2026):
+        //   Perfect (non-Heavy): 1 - min(PerfectBlockCap, block)   -> Block 50: 0.5x, Block 75+: 0.25x floor
+        //   Good / Heavy Perfect: 1 - block * GoodBlockScale        -> Block 50: 0.75x, Block 80: 0.6x
+        //   Partial: halfway between Good and 1.0; Poor: 1.0x.
+        // A full parry (0 damage) needs Guard: a non-Heavy Perfect while Guarding. Shields only add Block Power.
+        // Starting values, untested: GDD Bab 12 §3.5 has the test and the tuning direction.
+        public const float PerfectBlockCap = 0.75f, GoodBlockScale = 0.5f, PoorDefense = 1f;
+        public const float DefaultBlockFraction = 0.5f; // defenders whose derived stats are not computed (base Block Power 50)
         public const float PartialWindowMultiplier = 1.35f;
+
+        public static float DefenseTaken(QteOutcomeCategory c, bool heavy, float blockFraction)
+        {
+            float block = Math.Clamp(blockFraction, 0f, 0.9f);
+            float good = 1f - block * GoodBlockScale;
+            return c switch
+            {
+                QteOutcomeCategory.Perfect => heavy ? good : 1f - Math.Min(PerfectBlockCap, block),
+                QteOutcomeCategory.Success => good,
+                QteOutcomeCategory.PartialSuccess => (good + 1f) / 2f,
+                _ => PoorDefense,
+            };
+        }
+
+        public static float DefenseTaken(QteResult r, bool heavy, float blockFraction) => DefenseTaken(ToCategory(r), heavy, blockFraction);
+
+        public static float BlockOf(Combatant c) =>
+            c?.unit != null && c.unit.Derived.blockPower > 0 ? c.unit.Derived.BlockFraction : DefaultBlockFraction;
 
         // Typing: Perfect = no mistakes and finished within this fraction of the time limit.
         public const float TypingPerfectFraction = 0.6f;
@@ -89,8 +112,19 @@ namespace Obscure
 
         // Defensive QTE variety (enemy -> player). Same damage-taken multipliers as the tap reaction.
         public const int WardBaseLetters = 3;             // magic: rune ward length = this + tier runeLetters (3/4/5)
-        public const float FeintChance = 0.35f;           // Elite/Boss single physical hits
+        // Every enemy can be unreliable (Dheo playtest 19 Nov). Starting values, untested: GDD Bab 12 §6.6 has the test.
+        public static float FeintChance(Tier t) => t == Tier.Boss ? 0.40f : t == Tier.Elite ? 0.30f : 0.15f; // one hit per attack
+        public static float StutterChance(Tier t) => t == Tier.Boss ? 0.50f : t == Tier.Elite ? 0.35f : 0.20f; // per physical hit
         public const float FeintStop = 0.7f, FeintRecoil = 0.25f; // fake cue stops at 70% of its run, then slides back
+        public const float IntervalJitter = 0.08f, MinHitInterval = 0.2f; // untimed multi-hits: gap = hitInterval +/- jitter
+        // Stutter cue: the cue covers StutterDistance of the track in StutterTime of its run, then the rest.
+        // Slow-then-fast = (0.6 time, 0.3 distance); fast-then-slow = (0.4 time, 0.7 distance).
+        public const float StutterSlowTime = 0.6f, StutterSlowDistance = 0.3f, StutterFastTime = 0.4f, StutterFastDistance = 0.7f;
+
+        // Struggle (drain attacks): mash to fill a draining gauge before impact. Starting values, untested.
+        // Normal (1.5 s of mashing): Perfect ~6 presses/s, Good ~4.3/s; Boss (1.2 s): Perfect ~7/s.
+        public const float MashFill = 0.15f, MashDecay = 0.25f, StruggleWindup = 1.5f; // window = telegraph + windup * this
+        public const float StrugglePerfect = 1.0f, StruggleGood = 0.6f;
 
         public static QteProfile For(Tier tier, QteAssist assist) =>
             assist == QteAssist.Relaxed ? Profiles[tier].Scaled(RelaxedWindow, RelaxedTime) : Profiles[tier];
@@ -156,20 +190,11 @@ namespace Obscure
             };
         }
 
-        public static float Defense(QteResult r, bool isHeavy = false) =>
-            r == QteResult.Perfect ? (isHeavy ? HeavyPerfectDefense : PerfectDefense) :
-            r == QteResult.Good ? GoodDefense : PoorDefense;
+        public static float Defense(QteResult r, bool isHeavy = false, Combatant defender = null) =>
+            DefenseTaken(r, isHeavy, BlockOf(defender));
 
-        public static float DefenseCategory(QteOutcomeCategory c, Combatant defender = null, Element attackElement = Element.Physical, bool isHeavy = false)
-        {
-            if (c == QteOutcomeCategory.Perfect) return isHeavy ? HeavyPerfectDefense : PerfectDefense;
-            return c switch
-            {
-                QteOutcomeCategory.Success => GoodDefense,
-                QteOutcomeCategory.PartialSuccess => PartialDefense,
-                _ => PoorDefense
-            };
-        }
+        public static float DefenseCategory(QteOutcomeCategory c, Combatant defender = null, Element attackElement = Element.Physical, bool isHeavy = false) =>
+            DefenseTaken(c, isHeavy, BlockOf(defender));
 
         // Counter damage (Bab 12 §6.5): a physical strike at Good-equivalent power, times the counter multiplier,
         // raised by Counter Power read as a percentage (Counter Power 18 = +18%). It goes through Physical Power, so

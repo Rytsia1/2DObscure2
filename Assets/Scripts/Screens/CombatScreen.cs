@@ -52,6 +52,22 @@ namespace Obscure
             new Vector2(180, 272)
         };
 
+        // Slots 0-1 above are the front pair, 2-3 the back pair. Melee classes take the front, ranged the back,
+        // anyone else (Rogue) fills the gap; overflow spills into the other row. Visual only: list order still drives
+        // turn-order ties, targeting ties and redirects. Returns the stage slot for each party index.
+        // ponytail: class ids hard-coded here; move to a ClassDef field if classes keep growing.
+        static readonly HashSet<string> FrontClasses = new HashSet<string> { "fighter", "barbarian", "martial_artist", "knight" };
+        static readonly HashSet<string> BackClasses = new HashSet<string> { "wizard", "ranger", "cleric", "warlock", "druid", "mage", "healer" };
+
+        public static int[] StagePositions(IReadOnlyList<string> classIds)
+        {
+            int Rank(string id) => id != null && FrontClasses.Contains(id) ? 0 : id != null && BackClasses.Contains(id) ? 2 : 1;
+            var stage = new int[classIds.Count];
+            int k = 0;
+            foreach (int i in Enumerable.Range(0, classIds.Count).OrderBy(i => Rank(classIds[i]))) stage[i] = k++; // stable
+            return stage;
+        }
+
         public Battle Battle { get; private set; }
         public VisualElement UiRoot { get; private set; }
 
@@ -78,6 +94,7 @@ namespace Obscure
         {
             public UiLabel lbl;
             public float age, startY;
+            public Combatant numberOn; // set on damage/heal numbers so a multi-hit stacks instead of overlapping
         }
 
         readonly Dictionary<Combatant, Hud> huds = new Dictionary<Combatant, Hud>();
@@ -197,7 +214,8 @@ namespace Obscure
 
             // Bind party sprites + bottom 4 vitals cards
             var slots = isBossHud ? PartySlotsBoss : PartySlots;
-            for (int i = 0; i < battle.Party.Count; i++) AddPartyCombatant(battle.Party[i], i, slots[i]);
+            var standAt = StagePositions(battle.Party.Select(p => p.unit.classDef?.id).ToList());
+            for (int i = 0; i < battle.Party.Count; i++) AddPartyCombatant(battle.Party[i], i, slots[standAt[i]]);
             for (int i = battle.Party.Count; i < 4; i++) HideUnusedVitalsCard(i);
 
             if (isBossHud)
@@ -221,7 +239,7 @@ namespace Obscure
             }
 
             if (!isBossHud)
-                ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
+                modifierStrip = ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
 
             // Command menu column inside right console panel
             menuHost = new VisualElement { name = "CombatCommandMenu" };
@@ -308,6 +326,13 @@ namespace Obscure
                 Sfx.Play(isBuff ? Sound.Buff : Sound.Debuff);
                 var fx = StatusFx(id, isBuff);
                 if (fx != null) PlayFxOn(target, fx, head: fx is "st_stun" or "st_sleep" or "st_charm" or "st_confuse", flip: fx == "guard" && target.IsEnemy);
+            };
+            // A blocked status was log-only; show it on the unit, above the WEAK (-24) and BREAK (-36) rows.
+            battle.StatusResisted += (target, id, immune) =>
+            {
+                if (!huds.TryGetValue(target, out var h)) return;
+                SpawnPopup($"{StatusInfo.Name(id).ToUpperInvariant()} {(immune ? "IMMUNE" : "RESISTED")}",
+                    h.pos.x + h.size.x / 2f, h.pos.y - 50f, Palette.Mist3, 14);
             };
             AddLog(isBossHud ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
@@ -895,8 +920,11 @@ namespace Obscure
             foreach (var c in Battle.NextRoundOrder.Take(4)) Chip(c, "Turn-Chip-Next-Round");
         }
 
+        VisualElement modifierStrip; // dungeon modifiers / relics / blessings; TAB lists them without a mouse
+
         void Update()
         {
+            if (Controls.Details) ModifierHudHelper.ToggleDetails(modifierStrip);
             var a = Battle?.Active;
             if (a != null && activeMarker != null && activeMarker.style.display == DisplayStyle.Flex && huds.TryGetValue(a, out var ah))
             {
@@ -1165,6 +1193,7 @@ namespace Obscure
                     {
                         DefenseQte d => d.Results,
                         WardQte w => w.Results,
+                        StruggleQte s => s.Results,
                         _ => ((AutoQte)qte).Results,
                     });
                 }
@@ -1190,8 +1219,14 @@ namespace Obscure
                 }
             }
             Refresh();
+            // Hold on the field so the finishing event (often a DoT tick or counter that had no Resolve beat) is seen.
+            Hint(FinalEvent.ToUpperInvariant());
+            yield return new WaitForSeconds(AfterAction * 2f);
             ShowOutcome();
         }
+
+        // The last combat-log line: what ended the fight, shown before and on the outcome card.
+        string FinalEvent => Battle.Log.Count > 0 ? Battle.Log[Battle.Log.Count - 1] : "";
 
         IEnumerator TryRetryQte(Combatant owner, Qte qte, Func<Qte> makeRetry, string heading, BattleAction enemyAction, Action<Qte> onRetried)
         {
@@ -1246,14 +1281,17 @@ namespace Obscure
             if (!action.charging) castFx?.RemoveFromHierarchy();
             int idx = 0;
             Combatant critTarget = null;
+            bool perfectDefense = false;
             foreach (var h in Battle.Perform(action, power, defense))
             {
                 var defGrade = defense != null && idx < defense.Count ? defense[idx] : (QteResult?)null;
                 Feedback(h, action, defGrade);
                 if (critTarget == null && h.critical && !h.blocked && h.amount > 0) critTarget = h.target;
+                if (defGrade == QteResult.Perfect && !h.target.IsBroken) perfectDefense = true;
                 idx++;
             }
             if (critTarget != null) yield return CritImpact(critTarget);
+            else if (perfectDefense) yield return HitStop(); // a Perfect defense gets the same beat of weight as a crit
             Refresh();
             if (pendingPhaseTransitionBoss != null)
             {
@@ -1328,7 +1366,9 @@ namespace Obscure
             string element = move != null && move.element != Element.Physical ? " " + move.element.ToString().ToUpperInvariant() : "";
             Hint(move == null ? $"{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
                 : $"{move.name.ToUpperInvariant()}{(move.hits > 1 ? $" X{move.hits}" : "")} > {who}  {EnemyAI.Severity(move)}{element}");
-            return $"GUARD {who}!";
+            // Say up front when the grade is capped, instead of quietly downgrading it in Battle.Deal.
+            if (a.target != null && a.target.CannotReact) return $"{who} CAN'T REACT!";
+            return a.target != null && a.target.IsBroken ? $"GUARD {who}! (BROKEN: MAX BLOCK)" : $"GUARD {who}!";
         }
 
         IEnumerator RunQte(Qte qte, string heading, BattleAction enemyAction)
@@ -1351,6 +1391,9 @@ namespace Obscure
             qteHost.style.display = DisplayStyle.Flex;
             if (!(qte is AutoQte)) Sfx.Play(enemyAction != null ? Sound.QteTelegraph : Sound.QteStart);
             var panel = phaseGo.AddComponent<QtePanel>();
+            var defender = enemyAction?.target;
+            if (defender != null)
+                panel.perfectDefense = defender.IsBroken ? "BLOCK (BROKEN)" : defender.guarding ? "PARRY!" : "PERFECT BLOCK";
             panel.Init(qte, heading, qteHost);
             activeQte = qte;
             if (qte is AutoQte) yield return new WaitForSeconds(enemyAction != null ? EnemyThink : 0.15f);
@@ -1382,8 +1425,22 @@ namespace Obscure
             // 640x360 frame at 4x centred on the hit always covers the 1280x720 screen; added last, so it sits over the HUD.
             var p = stageHost.ChangeCoordinatesTo(screenRoot, new Vector2(h.pos.x + h.size.x / 2f, h.pos.y + h.size.y / 2f));
             Fx.Spawn(screenRoot, "impact", p.x, p.y, 4f, unscaled: true);
+            yield return HitStop();
+        }
+
+        // Freezes the battle for a beat while the stage shakes. Off with Settings > Screen shake (reduceMotion).
+        // 4 px amplitude: GDD Bab 12 §9 QTE feedback spec. The shake lasts the freeze; a decaying alternating offset.
+        IEnumerator HitStop()
+        {
+            if (Game.I?.Settings?.reduceMotion == true) yield break;
             Time.timeScale = 0f;
-            yield return new WaitForSecondsRealtime(CritHitStop);
+            for (float t = 0f; t < CritHitStop; t += Time.unscaledDeltaTime)
+            {
+                float a = 4f * (1f - t / CritHitStop) * (Time.frameCount % 2 == 0 ? 1f : -1f);
+                stageHost.style.translate = new Translate(a, -a * 0.5f);
+                yield return null;
+            }
+            stageHost.style.translate = new Translate(0, 0);
             Time.timeScale = 1f;
         }
 
@@ -1394,8 +1451,14 @@ namespace Obscure
             bool immune = hit.effect == Effectiveness.Immune;
             PlayHitFx(hit, action, defGrade);
 
-            SpawnPopup(hit.blocked ? "PARRY" : immune ? "IMMUNE" : hit.amount.ToString(), cx, h.pos.y - 10f,
-                hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : Palette.CrimsonBright, 20);
+            // Hits of one action spawn in the same frame: each further number on this target sits one row lower (they rise together).
+            // 18 px row = number font 20 minus a little overlap; starting value, raise it if 3 hits still touch at 1280x720.
+            int stack = activePopups.Count(p => p.numberOn == hit.target && p.age < 0.3f) % 4;
+            bool crit = hit.critical && !hit.blocked && !immune && !hit.heal && hit.amount > 0;
+            SpawnPopup(hit.blocked ? "PARRY" : immune ? "IMMUNE" : crit ? hit.amount + "!" : hit.amount.ToString(), cx, h.pos.y - 10f + stack * 18f,
+                hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : crit ? Palette.Gold1 : Palette.CrimsonBright,
+                crit ? 26 : 20); // crit: bigger, gold, "!" (size step is a starting value)
+            activePopups[activePopups.Count - 1].numberOn = hit.target;
             if (hit.brokeTarget)
                 SpawnPopup("@ BREAK! @", cx, h.pos.y - 36f, Palette.Gold1, 18);
             if (hit.effect == Effectiveness.Weak || hit.effect == Effectiveness.Resist)
@@ -1574,7 +1637,7 @@ namespace Obscure
             el.pickingMode = PickingMode.Position;
             el.RegisterCallback<PointerEnterEvent>(_ =>
             {
-                if (Controls.Locked || currentMenu == null || UitkMenu.ActiveMenu != currentMenu) return;
+                if (Controls.Locked || !Controls.MouseActive || currentMenu == null || UitkMenu.ActiveMenu != currentMenu) return;
                 if (activeTargets.TryGetValue(c, out var entry) && entry.item != null && entry.item.interactable)
                     currentMenu.Focus(entry.item, false);
             });
@@ -1696,7 +1759,7 @@ namespace Obscure
                 string element = sk.kind == SkillKind.Magic || sk.kind == SkillKind.Heal ? sk.element.ToString().ToUpperInvariant() + " " : "";
                 string costText = cd > 0 ? $"CD {cd}" : $"{effCost} MP";
                 string typeText = $"{element}{sk.kind.ToString().ToUpperInvariant()}";
-                string targetText = $"TARGET: {sk.target.ToString().ToUpperInvariant()}";
+                string targetText = $"TARGET: {Palette.FormatTarget(sk.target)}";
                 var skChips = sk.apply != null && sk.apply.Length > 0
                     ? sk.apply.Select(ap => (ap.id, StatusInfo.ChipText(ap)))
                     : null;
@@ -1852,6 +1915,11 @@ namespace Obscure
             };
             title.AddToClassList("uitk-font-display");
             card.Add(title);
+            if (!string.IsNullOrEmpty(FinalEvent))
+                card.Add(new UiLabel(FinalEvent)
+                {
+                    style = { fontSize = 16, color = Palette.Mist2, marginTop = -8, marginBottom = 18, whiteSpace = WhiteSpace.Normal, unityTextAlign = TextAnchor.MiddleCenter }
+                });
 
             var contBtn = FigmaUi.CreateButton("CONTINUE", "button-primary", 220f);
             contBtn.style.height = 44;

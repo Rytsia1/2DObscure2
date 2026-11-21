@@ -600,7 +600,7 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void UiComponents_EnemyCard_DoubleBorderCard_AndButtons_BuildSuccessfully()
+        public void UiComponents_EnemyCard_AndDoubleBorderCard_BuildSuccessfully()
         {
             var ec = Ui.EnemyCard(testRoot.transform, 10, 10, 60, 40);
             Assert.IsNotNull(ec);
@@ -609,12 +609,6 @@ namespace Obscure.Tests
             var dbc = Ui.DoubleBorderCard(testRoot.transform, 10, 60, 80, 50);
             Assert.IsNotNull(dbc);
             Assert.IsNotNull(dbc.sprite);
-
-            bool dangerClicked = false;
-            var dangerBtn = Ui.Button(testRoot.transform, "DISCARD", 10, 120, 100, () => dangerClicked = true, style: ButtonStyle.Danger, font: FontKind.DotGothic);
-            Assert.IsNotNull(dangerBtn);
-            dangerBtn.onClick?.Invoke();
-            Assert.IsTrue(dangerClicked);
         }
 
         [Test]
@@ -740,45 +734,6 @@ namespace Obscure.Tests
             {
                 Game.SetInstance(null);
                 UnityEngine.Object.DestroyImmediate(gameGo);
-            }
-        }
-
-        [Test]
-        public void Ui_Selectable_UniversalRegistrationAndPointerHitTesting_Works()
-        {
-            var host = new GameObject("TestSelectableHost");
-            try
-            {
-                bool clicked = false;
-                var btn = Ui.Button(host.transform, "TEST BUTTON", 100, 50, 80, () => clicked = true, 20);
-
-                Assert.IsNotNull(btn);
-                Assert.IsTrue(Selectable.All.Contains(btn), "Selectable must be registered in Selectable.All when enabled.");
-
-                // Button is placed at (100, -50) locally under host (which is at (0, 0))
-                var pos = btn.transform.position;
-                Assert.AreEqual(100f, pos.x, 0.01f);
-                Assert.AreEqual(-50f, pos.y, 0.01f);
-
-                // Inside points
-                Assert.IsTrue(btn.Contains(new Vector2(100, -50)), "Top-left corner of button should be contained.");
-                Assert.IsTrue(btn.Contains(new Vector2(140, -60)), "Center of button should be contained.");
-                Assert.IsTrue(btn.Contains(new Vector2(180, -70)), "Bottom-right corner of button should be contained.");
-
-                // Outside points
-                Assert.IsFalse(btn.Contains(new Vector2(99, -50)), "Point to left of button should not be contained.");
-                Assert.IsFalse(btn.Contains(new Vector2(181, -50)), "Point to right of button should not be contained.");
-                Assert.IsFalse(btn.Contains(new Vector2(140, -49)), "Point above button should not be contained.");
-                Assert.IsFalse(btn.Contains(new Vector2(140, -71)), "Point below button should not be contained.");
-                Assert.IsFalse(btn.Contains(new Vector2(float.NaN, float.NaN)), "NaN coordinates must return false.");
-
-                // Direct activation
-                btn.onClick.Invoke();
-                Assert.IsTrue(clicked, "Direct invocation of onClick must work.");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(host);
             }
         }
 

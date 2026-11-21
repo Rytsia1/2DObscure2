@@ -79,9 +79,7 @@ namespace Obscure.Tests
             get
             {
                 var u = UitkMenu.ActiveMenu?.Current;
-                if (u != null) return u.text;
-                var c = Object.FindFirstObjectByType<Menu>()?.Current;
-                return c != null ? (c.label != null ? c.label.Text : c.name) : "";
+                return u != null ? u.text : "";
             }
         }
 

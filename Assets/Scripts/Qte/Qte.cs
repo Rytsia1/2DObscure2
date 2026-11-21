@@ -327,20 +327,24 @@ namespace Obscure
 
     // Enemy telegraph, then one cue per hit sliding toward the impact line. Press as each lands.
     // A cue may carry a dodge arrow (press that arrow, not the QTE key) or open with a feint (a fake cue that recoils).
+    // A stutter cue changes speed on its way in (impact time unchanged); a Heavy hit must be held (braced) through impact.
     public class DefenseQte : Qte
     {
         public readonly QteProfile profile;
         public readonly float[] impacts, delays;  // impact time and extra hold per hit
-        public readonly bool[] heavy;             // Heavy marker per hit (Perfect only halves that hit)
+        public readonly bool[] heavy;             // Heavy marker per hit: brace (press and hold through impact)
         public readonly DodgeDir[] cues;          // None = press the QTE key; otherwise press this arrow
+        readonly (float time, float dist)[] stutter; // per hit speed break; time 0 = steady cue
         readonly float[] feintStarts;             // when the fake cue appears; < 0 = no feint
         readonly QteResult?[] results;
         readonly QteOutcomeCategory?[] categories;
         readonly bool[] wrong;                    // hit spent by the wrong input (key vs arrow, or wrong arrow)
+        readonly bool[] bracing, letGo;           // Heavy hit pressed and still held / released before impact
 
         // intervals: seconds between consecutive markers (Accelerando etc.); null = profile.hitInterval (Steady).
         public DefenseQte(QteProfile profile, int hits, float firstHitDelay = 0f, float timingBonusFraction = 0f,
-            float[] intervals = null, bool[] heavy = null, DodgeDir[] cues = null, bool[] feints = null)
+            float[] intervals = null, bool[] heavy = null, DodgeDir[] cues = null, bool[] feints = null,
+            (float time, float dist)[] stutter = null)
         {
             this.profile = profile;
             TimingBonusFraction = timingBonusFraction;
@@ -348,10 +352,13 @@ namespace Obscure
             delays = new float[hits];
             this.heavy = heavy ?? new bool[hits];
             this.cues = cues ?? new DodgeDir[hits];
+            this.stutter = stutter ?? new (float, float)[hits];
             feintStarts = Enumerable.Repeat(-1f, hits).ToArray();
             results = new QteResult?[hits];
             categories = new QteOutcomeCategory?[hits];
             wrong = new bool[hits];
+            bracing = new bool[hits];
+            letGo = new bool[hits];
             delays[0] = firstHitDelay;
             float t = profile.telegraph + profile.windup + firstHitDelay;
             for (int i = 0; i < hits; i++)
@@ -374,6 +381,17 @@ namespace Obscure
         public QteResult? HitResult(int i) => results[i];
         public QteOutcomeCategory? HitCategory(int i) => categories[i];
         public bool WrongInput(int i) => wrong[i];
+        public bool LetGo(int i) => letGo[i];
+        public bool Stutters(int i) => stutter[i].time > 0f;
+
+        // Visual progress of hit i's cue for a linear run fraction x (0 = spawn, 1 = impact). Steady cues return x;
+        // a stutter cue covers `dist` of the track in `time` of its run, then the rest. Past 1 it keeps the last speed.
+        public float CueProgress(int i, float x)
+        {
+            var (bt, bd) = stutter[i];
+            if (bt <= 0f || bt >= 1f) return x;
+            return x <= bt ? x / bt * bd : bd + (x - bt) / (1f - bt) * (1f - bd);
+        }
         public IReadOnlyList<QteResult> Results => results.Select(r => r ?? QteResult.Miss).ToList();
         public IReadOnlyList<QteOutcomeCategory> Categories => categories.Select(c => c ?? QteOutcomeCategory.Failure).ToList();
 
@@ -401,6 +419,22 @@ namespace Obscure
         // Arrow input. The wrong input for the cue (arrow on a key cue, key or wrong arrow on an arrow cue) is a miss.
         public override void PressDirection(DodgeDir d) => Commit(d);
 
+        // Brace: letting go of a Heavy hit before it lands drops that hit to Poor.
+        public override void Release()
+        {
+            if (Done) return;
+            for (int i = 0; i < bracing.Length; i++)
+            {
+                if (!bracing[i]) continue;
+                bracing[i] = false;
+                if (T >= impacts[i]) continue;
+                letGo[i] = true;
+                results[i] = QteResult.Miss;
+                categories[i] = QteOutcomeCategory.Failure;
+            }
+            CheckDone();
+        }
+
         void Commit(DodgeDir input)
         {
             if (Done || InTelegraph) return;
@@ -417,12 +451,16 @@ namespace Obscure
                 float err = T - impacts[i];
                 results[i] = QteConfig.Judge(err, profile, TimingBonusFraction);
                 categories[i] = QteConfig.JudgeCategory(err, profile, TimingBonusFraction);
+                if (heavy[i] && input == DodgeDir.None && err < 0f && results[i] != QteResult.Miss) bracing[i] = true;
             }
             CheckDone();
         }
 
         void CheckDone()
         {
+            // A braced Heavy hit stays open until it lands, so an early release can still break the brace.
+            for (int i = 0; i < bracing.Length; i++)
+                if (bracing[i] && T < impacts[i]) return;
             if (results.All(r => r != null))
                 Finish(Results.Max(), Categories.Max()); // overall = worst hit (Miss > Good > Perfect)
         }
@@ -482,6 +520,7 @@ namespace Obscure
             // Stances, charge turns and status-only actions have no direct damage, so no Defensive QTE (Bab 11 §2.3).
             if (a.charging || (move != null && (move.self || move.StatusOnly))) return null;
             int hits = move?.hits ?? 1;
+            if (a.target != null && a.target.CannotReact) return new AutoQte(hits, QteResult.Poor); // Battle.Deal forces Poor anyway
             if (assist == QteAssist.Auto) return new AutoQte(hits);
             var profile = QteConfig.For(a.actor.enemy?.tier ?? Tier.Normal, assist);
             var evasion = a.target?.Get(StatusId.Evasion);
@@ -493,18 +532,79 @@ namespace Obscure
                 ? r.ModifierManager.GetDefensiveQteWindowDelta()
                 : 0f;
             float totalTimingBonus = Math.Clamp(statTimingBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
-            // Magic is warded by typing runes; single physical non-Heavy hits are dodged by arrow, and Elite/Boss may feint them.
+            var tier = a.actor.enemy?.tier ?? Tier.Normal;
+            // Drain attacks are fought off by mashing (Struggle); other magic is warded by typing runes.
+            if (move != null && move.drain > 0f) return new StruggleQte(profile, hits, move.delay);
             if (move != null && move.UsesMagic) return WardQte.For(profile, hits, rng);
-            var heavy = move == null ? null : Enumerable.Range(0, hits).Select(move.HeavyAt).ToArray();
+
+            // Physical hits: Heavy hits are braced (press and hold); single hits and Elite/Boss multi-hit chains are
+            // dodged by arrow; any tier may feint one hit, stutter a cue, and untimed multi-hits land on uneven beats.
+            var heavy = move == null ? new bool[hits] : Enumerable.Range(0, hits).Select(move.HeavyAt).ToArray();
             DodgeDir[] cues = null;
-            bool[] feints = null;
-            if (hits == 1 && !(heavy?[0] ?? false))
+            if (hits == 1 || tier >= Tier.Elite)
             {
-                cues = new[] { (DodgeDir)(1 + rng.Next(4)) };
-                var tier = a.actor.enemy?.tier ?? Tier.Normal;
-                if (tier >= Tier.Elite && rng.NextDouble() < QteConfig.FeintChance) feints = new[] { true };
+                cues = new DodgeDir[hits];
+                for (int i = 0; i < hits; i++)
+                    if (!heavy[i]) cues[i] = (DodgeDir)(1 + rng.Next(4));
             }
-            return new DefenseQte(profile, hits, move?.delay ?? 0f, totalTimingBonus, move?.intervals, heavy, cues, feints);
+            bool[] feints = null;
+            if (rng.NextDouble() < QteConfig.FeintChance(tier))
+            {
+                feints = new bool[hits];
+                feints[rng.Next(hits)] = true;
+            }
+            var stutter = new (float, float)[hits];
+            for (int i = 0; i < hits; i++)
+                if (rng.NextDouble() < QteConfig.StutterChance(tier))
+                    stutter[i] = rng.Next(2) == 0
+                        ? (QteConfig.StutterSlowTime, QteConfig.StutterSlowDistance)
+                        : (QteConfig.StutterFastTime, QteConfig.StutterFastDistance);
+            float[] intervals = move?.intervals;
+            if (intervals == null && hits > 1)
+            {
+                intervals = new float[hits - 1];
+                for (int i = 0; i < intervals.Length; i++)
+                    intervals[i] = Math.Max(QteConfig.MinHitInterval,
+                        profile.hitInterval + ((float)rng.NextDouble() * 2f - 1f) * QteConfig.IntervalJitter);
+            }
+            return new DefenseQte(profile, hits, move?.delay ?? 0f, totalTimingBonus, intervals, heavy, cues, feints, stutter);
+        }
+    }
+
+    // Drain attacks: mash the QTE key to fill a gauge that keeps draining, before the siphon lands.
+    // Filling it completely ends early as a Perfect; at the deadline >= StruggleGood is a Good, else Poor.
+    // One grade covers every hit of the attack.
+    public class StruggleQte : Qte
+    {
+        public readonly QteProfile profile;
+        public readonly int hits;
+        public readonly float deadline;
+        public float Gauge { get; private set; }
+
+        public StruggleQte(QteProfile profile, int hits, float delay = 0f)
+        {
+            this.profile = profile;
+            this.hits = Math.Max(1, hits);
+            deadline = profile.telegraph + profile.windup * QteConfig.StruggleWindup + delay;
+        }
+
+        public bool InTelegraph => T < profile.telegraph;
+        public float TimeLeft => Math.Max(0f, deadline - T);
+        public IReadOnlyList<QteResult> Results => Enumerable.Repeat(Result, hits).ToList();
+
+        public override void Tick(float dt)
+        {
+            base.Tick(dt);
+            if (Done) return;
+            if (!InTelegraph) Gauge = Math.Max(0f, Gauge - QteConfig.MashDecay * dt);
+            if (T >= deadline) Finish(Gauge >= QteConfig.StruggleGood ? QteResult.Good : QteResult.Miss);
+        }
+
+        public override void Press()
+        {
+            if (Done || InTelegraph) return;
+            Gauge = Math.Min(1f, Gauge + QteConfig.MashFill);
+            if (Gauge >= QteConfig.StrugglePerfect) Finish(QteResult.Perfect);
         }
     }
 
@@ -512,7 +612,8 @@ namespace Obscure
     public class AutoQte : Qte
     {
         public readonly int hits;
-        public AutoQte(int hits = 1) { this.hits = hits; Finish(QteResult.Good, QteOutcomeCategory.Success); }
-        public IReadOnlyList<QteResult> Results => Enumerable.Repeat(QteResult.Good, hits).ToList();
+        // grade Poor = the defender cannot react (Stun/Sleep/Mind Control): no bar is shown at all.
+        public AutoQte(int hits = 1, QteResult grade = QteResult.Good) { this.hits = hits; Finish(grade); }
+        public IReadOnlyList<QteResult> Results => Enumerable.Repeat(Result, hits).ToList();
     }
 }

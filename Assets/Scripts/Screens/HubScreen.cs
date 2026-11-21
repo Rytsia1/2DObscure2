@@ -33,6 +33,7 @@ namespace Obscure
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onFocus = ShowTip;
+            menu.onBack = () => Game?.Go(GameState.Settings); // Esc opens Settings; its Back returns here (SettingsScreen.GoBack)
 
             BindTopBar();
             BindFacilityMenu();
@@ -189,6 +190,7 @@ namespace Obscure
                     labels[0].text = u.name;
                     labels[0].style.color = u.Alive ? Palette.Mist1 : Palette.Mist3;
                     labels[0].style.maxWidth = 96;
+                    labels[0].style.marginRight = 8;
                     labels[0].style.overflow = Overflow.Hidden;
                 }
                 if (labels.Count > 1)

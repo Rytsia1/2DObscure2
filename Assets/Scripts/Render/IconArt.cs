@@ -22,6 +22,33 @@ namespace Obscure
         public static Texture2D Passive(string id) => Load("Passives", id);
         public static Texture2D SkillOrPassive(string id, bool passive) => passive ? Passive(id) : Skill(id);
         public static Texture2D Status(StatusId id) => Load("Status", id.ToString());
+        public static Texture2D Reward(string id) => Load("Rewards", id);
+
+        public static Texture2D EventScene(string eventId, EventCategory category)
+        {
+            string sceneName = EventSceneKey(eventId, category);
+            string key = "Events/" + sceneName;
+            if (cache.TryGetValue(key, out var t) && (t == null || t)) return t;
+            t = Resources.Load<Texture2D>(key);
+            if (t != null) t.filterMode = FilterMode.Point;
+            return cache[key] = t;
+        }
+
+        public static string EventSceneKey(string eventId, EventCategory category)
+        {
+            if (eventId == "D1_EVT_017") return "cistern";
+            return category switch
+            {
+                EventCategory.NpcEncounter => "npc",
+                EventCategory.Treasure => "treasure",
+                EventCategory.TrapAndHazard => "trap",
+                EventCategory.Supernatural => "supernatural",
+                EventCategory.PuzzleAndExploration => "puzzle",
+                EventCategory.Survival => "survival",
+                EventCategory.CursedAndRisk => "cursed",
+                _ => "shrine",
+            };
+        }
 
         static Texture2D Load(string folder, string id)
         {

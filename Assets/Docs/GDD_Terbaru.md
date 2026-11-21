@@ -3625,8 +3625,8 @@ Nilai Scaling belum ditetapkan secara universal dan akan diatur per skill.
 
 |**QTE Grade**|**Damage Reduction**|
 |---|---|
-|Perfect|75%; 100% saat Guard atau memakai shield (serangan Heavy: 50%) (Bab 12 §3.5)|
-|Good|50%|
+|Perfect|Block Power, maksimal 75% (Block 50 → 50%); 100% hanya saat Guard (serangan Heavy: setara Good) (Bab 12 §3.5)|
+|Good|Block Power × 0,5 (Block 50 → 25%)|
 |Poor|0%|
 
 - Defensive QTE dipicu oleh setiap aksi musuh yang memiliki minimal satu component direct damage. Aksi musuh yang hanya menerapkan status tidak memicu QTE.
@@ -3989,7 +3989,7 @@ Keputusan berikut berasal dari Master Checklist QTE yang sudah disetujui dan men
 | Grade | Perfect / Good / Poor ("Miss" diganti Poor agar tidak bentrok dengan miss dari Hit Chance) |
 | Offensive QTE | Direct damage (Physical, Elemental, Almighty): Perfect 1.2×, Good 1.0×, Poor 0.75×. Break Power: Perfect 1.5×, Good 1.0×, Poor 0.5×. Perfect juga mengembalikan 1 MP (§2.5). Terpisah dari Hit Chance dan Critical; tidak memengaruhi DoT |
 | Cakupan ofensif | Hanya Basic Attack dan skill dengan direct damage; heal, buff, debuff, dan control tanpa damage tidak memakai QTE |
-| Defensive QTE | Dipicu setiap aksi musuh dengan direct damage; Perfect 75% reduksi, atau 100% (full parry) saat Guard atau memakai shield (§3.5); Heavy 50%; Good 50%; Poor 0%; Perfect tidak menghalangi status |
+| Defensive QTE | Dipicu setiap aksi musuh dengan direct damage; reduksi mengikuti Block Power (§3.5): Perfect = Block (maks 75%), Good dan Heavy Perfect = Block × 0,5, Poor 0%; full parry (100%) hanya Perfect saat Guard; Perfect tidak menghalangi status. Variasi: arrow, arrow chain, feint, stutter, brace, struggle, ward (§6.6) |
 | Multi-hit | Defensif: satu QTE per hit. Ofensif: satu QTE sekuens per rangkaian |
 | AoE | Satu Shared QTE per hit, hasil seragam untuk semua target yang bisa bereaksi |
 | Urutan kalkulasi | Defensive QTE diterapkan setelah semua modifier dan sebelum rounding; Shield menyerap sisanya |
@@ -4396,30 +4396,31 @@ Semua angka bertanda *tuning* adalah nilai awal playtest. Angkanya konkret dan b
 - Unit test urutan perhitungan: 12 kombinasi tier, Freeze, dan modifier. Target: semua sesuai clamp 66–125 ms.
 - Uji perbandingan build: tester yang sama memainkan boss dengan modifier 0% dan +25%. Target: rasio Perfect naik 10–20 poin persentase; kenaikan lebih dari 30 poin berarti cap terlalu tinggi.
 
-#### 3.5 Full parry: Guard atau shield (revisi November 2026)
+#### 3.5 Full parry hanya lewat Guard; reduksi QTE mengikuti Block Power (revisi 21 November 2026)
 
-**Keputusan: Defensive Perfect saja hanya menangkis (75% reduksi). Full parry (0 damage) membutuhkan pilihan: Guard pada giliran sebelumnya atau shield yang terpasang.** Good dan Poor tidak berubah.
+**Keputusan: reduksi Defensive QTE dihitung dari stat Block Power target, bukan angka tetap. Full parry (0 damage) hanya dari Guard.** Revisi ini menggantikan aturan 20 November (Perfect 0.25× tetap; full parry lewat Guard atau shield).
 
-**1. Tujuan desain.** Dengan aturan lama, setiap Perfect bernilai 0 damage, sehingga stat pertahanan, armor, dan aksi Guard hampir tidak berarti bagi pemain yang terampil. Full parry yang terikat pada Guard atau shield membuat keputusan taktis (siapa yang Guard sebelum serangan yang ditelegraph) dan build (shield) kembali penting, tanpa mengubah hasil pemain yang biasanya mendapat Good.
+**1. Tujuan desain.** Playtest 19 November (Dheo): pemain yang terampil bisa "attack dan parry saja" tanpa skill, sehingga Guard dan healer terasa tidak berguna; reduksi QTE berada di luar damage calc dan menenggelamkan stat party. Dengan reduksi yang mengalikan Block Power (STR, shield, passive), stat pertahanan kembali menentukan hasil, dan nol damage menjadi keputusan taktis (Guard) yang memakan giliran. Shield tidak lagi memberi full parry karena tidak semua class bisa memakai shield; shield cukup menambah Block Power.
 
-**2. Aturan/mekanik.**
+**2. Aturan/mekanik.** `block` = Block Power / 100 (base 50 + 3 × STR modifier, ditambah shield dan passive, cap 90).
 
-- Damage yang diterima per grade: Perfect 0.25×, Good 0.5×, Poor 1.0×.
-- Perfect pada hit non-Heavy menjadi full parry (0 damage, tanpa Poise damage) jika target sedang Guard atau memakai shield/buckler di Second Hand.
-- Heavy tidak pernah bisa full parry: Perfect pada Heavy tetap 50% reduksi, termasuk saat Guard atau memakai shield.
-- Guard tetap menggandakan pertahanan: damage dasar dikali 0.5× sebelum QTE, lalu Perfect saat Guard menjadi 0.
-- Poise: Perfect yang hanya menangkis mengurangi Poise damage sama seperti Good (0.5×); full parry tidak memberi Poise damage.
-- Counter (6.5) tetap terpicu oleh setiap Defensive Perfect, baik full parry maupun tangkisan biasa.
-- Broken tetap membatasi Defensive QTE ke Good (3.1), sehingga full parry juga tidak mungkin saat Broken.
+- Perfect (non-Heavy): damage × (1 − min(0,75; block)). Block 50 → 0,5×; Block 75 ke atas → 0,25× (batas bawah).
+- Good, atau Perfect pada Heavy: damage × (1 − block × 0,5). Block 50 → 0,75×; Block 80 → 0,6×.
+- Partial: di tengah antara Good dan 1,0×. Poor: 1,0×.
+- Full parry (0 damage, tanpa Poise damage): Perfect pada hit non-Heavy saat target sedang Guard. Heavy tidak pernah bisa full parry.
+- Guard tetap mengalikan damage dasar 0,5× sebelum QTE.
+- Poise: Perfect yang hanya menangkis mengurangi Poise damage sama seperti Good (0,5×).
+- Counter (6.5) tetap terpicu oleh setiap Defensive Perfect. Broken tetap membatasi Defensive QTE ke Good (3.1).
 
-**3. Interaksi dengan sistem lain.** Class: Fighter dan class lain yang bisa memakai shield mendapat identitas tank yang jelas. Equipment: affix shield yang menambah reduksi Perfect (contoh EQ019) perlu ditinjau ulang karena shield kini sudah memberi full parry. Difficulty: pemain yang biasanya meraih Perfect akan menerima lebih banyak damage dibanding sebelumnya kecuali memakai Guard atau shield; tuning encounter Dungeon 1 perlu dicek ulang.
+**3. Interaksi dengan sistem lain.** Healer: damage yang masuk kini nyata pada setiap grade, sehingga heal kembali diperlukan. Equipment: shield dan passive yang menambah Block Power (Iron Shield +8, Shield Mastery +15, Divine Aegis +8, Oathsworn +4, affix EQ019) kini bernilai langsung; affix EQ019 tetap relevan karena hanya menambah Block Power. Class: semua class bisa mencapai nol damage lewat Guard.
 
-**4. Status nilai.** 0.25× adalah nilai *tuning*: nilai awal, belum diukur.
+**4. Status nilai.** PerfectBlockCap 0,75 dan GoodBlockScale 0,5 adalah nilai *tuning*: nilai awal, belum diukur.
 
 **5. Cara pengujian.**
 
+- Simulasi (`BalanceSimulation.Report`, tabel kebijakan): kebijakan AttackOnly dengan Perfect semua harus menang lebih jarang atau dengan sisa HP lebih sedikit dibanding kebijakan taktis (skill, heal, Guard). Jika AttackOnly ≥ taktis, turunkan Perfect power Basic Attack (mis. 1,1×).
 - Playtest: catat porsi giliran yang memakai Guard sebelum serangan Heavy atau signature yang ditelegraph. Lulus jika Guard dipakai secara sengaja (bukan 0% dan bukan setiap giliran).
-- Simulasi: bandingkan damage yang diterima per stage oleh pemain dengan Perfect semua, dengan dan tanpa shield. Jika pemain tanpa shield masih hampir tidak menerima damage, naikkan 0.25×; jika party tanpa shield runtuh di encounter normal, turunkan.
+- Jika party runtuh di encounter normal, naikkan GoodBlockScale atau PerfectBlockCap; jika pemain Perfect semua hampir tidak menerima damage, turunkan.
 
 ### 4. Multi-hit dan AoE
 
@@ -4657,7 +4658,7 @@ Nilai dasar (dungeon 1–3, *tuning*):
 | Accelerando | Setiap interval berkurang 15% dari sebelumnya, minimal interval minimum tier | Elite, boss |
 | Syncopated | Selang-seling panjang dan pendek: 450 ms dan interval minimum tier | Boss |
 
-- Pola ditentukan per serangan di data musuh, bukan di-roll saat battle.
+- Pola ditentukan per serangan di data musuh, bukan di-roll saat battle. Revisi 21 November 2026: serangan multi-hit tanpa pola di data (Steady) kini memakai jitter ±80 ms per interval (§6.6); pola yang ditulis di data tidak berubah.
 - Semua marker terlihat sejak bar muncul (4.2), jadi pola terbaca sebelum hit pertama.
 - Musuh normal hanya memakai Steady. Elite memakai maksimal 2 pola. Boss boleh memakai semuanya.
 - Serangan single-hit tidak punya pola; variasinya hanya pada T\_lead tier (6.1).
@@ -4790,6 +4791,35 @@ Nilai dasar (dungeon 1–3, *tuning*):
 
 - Telemetri interrupt: persentase serangan charge yang berhasil dibatalkan. Target: 25–45% secara keseluruhan; di atas 60% berarti Break Power pemain terlalu tinggi.
 - Telemetri counter: kontribusi damage counter terhadap total damage party. Target: maksimal 15% untuk party yang memakai skill counter.
+
+#### 6.6 Variasi Defensive QTE (revisi 21 November 2026)
+
+**Keputusan: setiap musuh, termasuk Normal, bisa membuat Defensive QTE tidak bisa diandalkan, dan setiap jenis serangan punya input yang berbeda.** Varian dipilih dari data serangan yang sudah ada, tanpa authoring baru.
+
+**1. Tujuan desain.** Playtest 19 November (Dheo): QTE terlalu mudah ditebak, sehingga pemain yang fokus bisa parry setiap serangan. QTE harus menjadi taruhan yang berisiko, bukan hanya pada skill Elf, tetapi pada setiap musuh.
+
+**2. Aturan/mekanik.** Urutan pemilihan di `QteFactory.Defense`:
+
+| Varian | Dipicu oleh | Input | Gagal jika |
+| --- | --- | --- | --- |
+| Struggle | Serangan dengan `drain > 0` (mis. Vital Siphon) | Tekan tombol QTE berulang untuk mengisi gauge yang terus berkurang (+0,15 per tekan, −0,25/detik) dalam telegraph + windup × 1,5 | Gauge < 0,6 saat waktu habis (Poor); ≥ 0,6 Good; penuh = Perfect (berhenti lebih awal) |
+| Ward | Serangan magic lainnya | Ketik rune (sudah ada) | Terlambat atau 3 kesalahan |
+| Brace | Hit Heavy | Tekan dan tahan tombol QTE melewati impact | Lepas sebelum impact (Poor) |
+| Arrow | Single hit non-Heavy (semua tier) | Tekan arah panah (sudah ada) | Salah arah atau tombol |
+| Arrow chain | Multi-hit Elite/Boss | Setiap hit non-Heavy punya panah acak sendiri | Salah arah pada hit itu |
+| Feint | Peluang per serangan: Normal 15%, Elite 30%, Boss 40%; satu hit acak | Cue palsu berhenti di 70% lalu mundur; tunggu cue asli | Menekan pada cue palsu |
+| Stutter | Peluang per hit fisik: Normal 20%, Elite 35%, Boss 50% | Cue berubah kecepatan (lambat→cepat: 60% waktu untuk 30% jarak; cepat→lambat: 40% waktu untuk 70% jarak); waktu impact tidak berubah | Menebak dari ritme, bukan dari posisi |
+| Jitter | Multi-hit tanpa pola di data | Interval 350 ms ± 80 ms, minimal 200 ms | — |
+
+**3. Interaksi dengan sistem lain.** §3.5: semua varian memakai grade yang sama, sehingga reduksi tetap mengikuti Block Power. Assist Relaxed memperlebar window dan waktu (termasuk Struggle); Assist Auto melewati semua varian dengan Good. Second Chance (Halfling) mengulang QTE dengan varian yang di-roll ulang.
+
+**4. Status nilai.** Semua peluang, jitter, dan angka mash adalah nilai *tuning*: nilai awal, belum diukur.
+
+**5. Cara pengujian.**
+
+- Playtest: rasio Perfect pemain berpengalaman pada musuh Normal. Target 50–75%; di atas 85% berarti varian masih terlalu mudah ditebak (naikkan peluang feint/stutter), di bawah 40% berarti terlalu acak (turunkan).
+- Struggle: Perfect harus bisa dicapai sekitar 6 tekanan/detik di Normal dan 7/detik di Boss. Jika tester mengeluh lelah atau Perfect < 20%, naikkan MashFill.
+- Unit test: `QteTests` (stutter monotonik dan tiba tepat saat impact, brace, struggle, jitter, routing varian).
 
 ### 7. Class dan Skill
 
@@ -5018,7 +5048,7 @@ Class lain (kandidat, mengikuti dua jalur yang diizinkan):
 **5. Risiko.**
 
 - Retry di tengah sekuens bisa memecah ritme pemain. Diterima; jeda 400 ms memberi waktu untuk menyesuaikan diri.
-- Aturan Shared QTE (kuota karakter pertama) bisa menghabiskan kuota karakter yang tidak diinginkan pemain. Diterima karena urutan party bisa diatur pemain di luar battle.
+- Aturan Shared QTE (kuota karakter pertama) bisa menghabiskan kuota karakter yang tidak diinginkan pemain. Diterima: urutan party mengikuti urutan pembuatan karakter dan saat ini tidak bisa diatur pemain, sehingga dampaknya terbatas pada kasus beberapa target Lucky sekaligus.
 
 **6. Cara pengujian.**
 
@@ -7422,6 +7452,8 @@ Resolusi referensi adalah 640 × 360 (16:9). Resolusi ini menjadi baseline kompo
 
 - Pertarungan menggunakan tampilan side-view. Posisi, jarak, dan arah sprite dibuat konsisten agar target dan urutan aksi mudah dibaca.
 
+- Penempatan party di arena (2 baris depan, 2 baris belakang) otomatis berdasarkan class: Fighter, Barbarian, dan Martial Artist di depan; Wizard, Ranger, Cleric, Warlock, dan Druid di belakang; Rogue mengisi baris yang tersisa. Jika satu kelompok lebih dari dua anggota, sisanya pindah ke baris lain. Penempatan ini hanya visual: tidak ada sistem posisi di combat, dan baris tidak mengubah siapa yang diserang.
+
 - UI combat ditempatkan pada area bawah layar; ruang arena utama dipertahankan agar animasi serangan dan efek skill tidak tertutup UI.
 
 - Kamera tidak perlu mengikuti setiap karakter dalam combat turn-based; framing arena harus stabil.
@@ -8818,7 +8850,7 @@ These items should be finalized before implementation:
 1. Does the game support Continue, manual Load Game, and multiple save slots?
 2. Is character creation for one character or the full party?
 3. Can the player pause during combat and exploration?
-4. Is party formation mechanically relevant?
+4. ~~Is party formation mechanically relevant?~~ Resolved: no. Party order (creation order, not player-editable) only breaks Speed ties, breaks LowestHp/LowestDef targeting ties, and picks the redirect target for a telegraphed attack. Combat placement is automatic by class and visual only (see Visual Style Guide, combat staging).
 5. Are Temple/revival and Rest nodes confirmed?
 6. What are the final combat actions and item-use rules?
 7. Are skill respecs supported?
@@ -8908,7 +8940,7 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Pilihan reward lemah: fight normal Draught atau Ether plus 3 modifier tiap fight; boss hanya 1 opsi (relic boss atau 30 gold); Dungeon 1 tanpa node Elite | Fight normal: pilih 1 dari consumable (Draught/Ether), equipment (Common–Uncommon; sampai Rare mulai Dungeon 3), atau gold tambahan (30–55). Modifier hanya ditawarkan dari Elite, stage boss, treasure, dan event, bukan setiap fight; modifier yang sudah mencapai cap tidak ditawarkan. Boss: pilih 1 dari relic boss (atau relic lain jika sudah dimiliki), relic kedua, dan equipment Rare/Epic; jika slot relic penuh, opsi relic diganti equipment. Dungeon 1: node Elite opsional di stage 2 dan 3; karena Dungeon 1 belum punya elite khusus, stage boss sebelumnya muncul kembali sebagai elite (stage 2: Reaper's Passage; stage 3: keduanya), dan boss stage yang sama atau berikutnya tidak pernah muncul lebih awal. Pacing tetap: median level 13–14 setelah Dungeon 1 |
 | Consumable tanpa batas di Hub Shop dan inventory | Batas bawaan per item (`maxStack`): Draught dan Ether maksimal 10, juga item lain sesuai `maxStack` katalognya. Stok Hub Shop: Draught 10, Ether 10, dan Elixir 5 (Elixir memulihkan sekitar dua kali lipat Draught), diisi ulang setiap kali dungeon clear. Hadiah item saat bawaan penuh tidak ditambahkan (layar reward menampilkan batasnya); pembelian yang melewati batas ditolak tanpa memotong gold |
 | EXP per encounter dan kurva TBD (placeholder 35 / 80 / 175) | EXP: Normal 150, Elite 350, Boss 750; kurva tetap 100 + 25 × (level − 1), cap 15. Target (November 2026): level 13 saat Dungeon 1 selesai, level 15 di Dungeon 2. Diukur pada 200 map (`BalanceSimulation.ExpPacingReport`): median level setelah Dungeon 1 adalah 13 (jalur menghindari fight) sampai 14 (jalur mencari fight); median level 15 setelah Dungeon 2. Konsekuensi: Dungeon 3–8 tidak memberi level; progresi di sana datang dari equipment, skill rank, dan relic |
-| Defensive Perfect = 100% reduksi | Perfect 75% reduksi; full parry (100%) hanya saat Guard atau memakai shield; Heavy tetap 50% (Bab 12 §3.5) |
+| Defensive Perfect = 100% reduksi | Reduksi mengikuti Block Power: Perfect = Block (maks 75%), Good = Block × 0,5; full parry (100%) hanya saat Guard; shield hanya menambah Block Power (Bab 12 §3.5, revisi 21 November 2026) |
 | Damage counter TBD (Bab 8) | Damage fisik setara Good dengan power M × (1 + Counter Power / 100); durasi counter dan combo gain per skill (Bab 12 §6.5) |
 | Arah rounding belum dikonfirmasi | Floor, sekali per hit (Bab 11 §7) |
 | Nilai combo Martial Artist TBD | Ditetapkan di Bab 8 §5.1 dan Bab 12 §7 |

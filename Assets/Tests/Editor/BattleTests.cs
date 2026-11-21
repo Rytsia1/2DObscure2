@@ -333,8 +333,9 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void FullParryNeedsGuardOrShield_PlainPerfectOnlyDeflects()
+        public void FullParryNeedsGuard_PlainPerfectDeflectsByBlockPower()
         {
+            float block = 0f;
             Hit Struck(QteResult r, Action<Combatant> setup)
             {
                 var b = NewBattle("warden");
@@ -344,18 +345,33 @@ namespace Obscure.Tests
                 target.unit.hp = 9999;
                 target.guarding = false; // AdvanceTo makes everyone Guard while waiting
                 setup?.Invoke(target);
+                block = QteConfig.BlockOf(target);
                 return b.Perform(BattleAction.Attack(warden, target), 1f, new[] { r })[0];
             }
             var poor = Struck(QteResult.Poor, null);
             var plain = Struck(QteResult.Perfect, null);
-            Assert.IsFalse(plain.blocked, "a Perfect alone is no longer a full parry");
+            Assert.IsFalse(plain.blocked, "a Perfect alone is not a full parry");
             Assert.Greater(plain.amount, 0);
-            Assert.AreEqual(poor.amount * QteConfig.PerfectDefense, plain.amount, 1.01f);
+            Assert.AreEqual(poor.amount * QteConfig.DefenseTaken(QteResult.Perfect, false, block), plain.amount, 1.01f);
 
             Assert.IsTrue(Struck(QteResult.Perfect, t => t.guarding = true).blocked, "Guard + Perfect fully parries");
             var shielded = Struck(QteResult.Perfect, t => t.unit.Equip(Database.Equipment["EQ019"]));
-            Assert.IsTrue(shielded.blocked, "a shield + Perfect fully parries");
-            Assert.AreEqual(0, shielded.amount);
+            Assert.IsFalse(shielded.blocked, "a shield alone never fully parries (Guard is the only route to 0)");
+            Assert.Greater(shielded.amount, 0);
+            Assert.LessOrEqual(shielded.amount, plain.amount, "a shield's Block Power never makes a Perfect worse");
+        }
+
+        [Test]
+        public void DefenseTakenScalesWithBlockPower()
+        {
+            Assert.AreEqual(0.5f, QteConfig.DefenseTaken(QteResult.Perfect, false, 0.5f), 1e-4f, "Block 50 Perfect");
+            Assert.AreEqual(0.75f, QteConfig.DefenseTaken(QteResult.Good, false, 0.5f), 1e-4f, "Block 50 Good");
+            Assert.AreEqual(0.75f, QteConfig.DefenseTaken(QteResult.Perfect, true, 0.5f), 1e-4f, "Heavy Perfect = Good");
+            Assert.AreEqual(0.25f, QteConfig.DefenseTaken(QteResult.Perfect, false, 0.9f), 1e-4f, "Perfect floor at the 75% cap");
+            Assert.AreEqual(0.6f, QteConfig.DefenseTaken(QteResult.Good, false, 0.8f), 1e-4f, "Block 80 Good");
+            Assert.AreEqual(1f, QteConfig.DefenseTaken(QteResult.Poor, false, 0.9f), 1e-4f, "Poor ignores Block");
+            Assert.Less(QteConfig.DefenseTaken(QteResult.Good, false, 0.7f), QteConfig.DefenseTaken(QteResult.Good, false, 0.4f),
+                "more Block Power means less damage");
         }
 
         [Test]

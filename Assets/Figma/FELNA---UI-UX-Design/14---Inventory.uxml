@@ -159,7 +159,7 @@
         <ui:Label text="CONSUMABLES AND MATERIALS STACK — ONE SLOT PER ITEM TYPE." class="unity-label consumables-and-materials-stack-one-slot-per-item-type-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 44px; top: 628px;" />
         <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 44px; top: 656px;">
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="Z" />
+                <AttributeOverrides element-name="text-0" text="ENTER" />
                 <AttributeOverrides element-name="text-1" text="USE" />
             </ui:Instance>
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">

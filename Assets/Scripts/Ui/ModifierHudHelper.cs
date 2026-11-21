@@ -40,7 +40,7 @@ namespace Obscure
                 badges.Add((Badge("✦", name, buff ? Palette.Ok : Palette.Err, buff ? Palette.Ink2 : Palette.Hex(0x2B1115),
                         buff ? Palette.Mist1 : Palette.Err, buff ? 0f : 10f),
                     $"{name.ToUpperInvariant()} [EVENT {(buff ? "BLESSING" : "AFFLICTION")}]\n" +
-                    $"EACH BATTLE: PARTY {name.ToUpperInvariant()} ({b.turns} TURNS)\n{DungeonModifierManager.UntilDungeonExit}"));
+                    $"EACH BATTLE: PARTY {name.ToUpperInvariant()} ({b.turns} {(b.turns == 1 ? "TURN" : "TURNS")})\n{DungeonModifierManager.UntilDungeonExit}"));
             }
 
             if (badges.Count == 0) return null;
@@ -77,8 +77,30 @@ namespace Obscure
                 strip.Add(badge);
             }
 
+            // Keyboard route to the same text: TAB lists every effect (see ToggleDetails).
+            var hint = new UiLabel("TAB: DETAILS") { pickingMode = PickingMode.Ignore };
+            hint.style.fontSize = 10;
+            hint.style.color = Palette.Mist2;
+            hint.style.marginLeft = 4;
+            strip.Add(hint);
+            strip.userData = (tooltip, string.Join("\n\n", badges.ConvertAll(b => b.tip)), left, top);
+
             host.Add(strip);
             return strip;
+        }
+
+        // Shows (or hides) every badge's tooltip at once, for players without a mouse.
+        public static void ToggleDetails(VisualElement strip)
+        {
+            if (!(strip?.userData is ValueTuple<VisualElement, string, float, float> data)) return;
+            var (tooltip, all, left, top) = data;
+            bool show = tooltip.style.display != DisplayStyle.Flex;
+            var lbl = tooltip.Q<UiLabel>("ModTipLabel");
+            if (lbl != null) lbl.text = all;
+            tooltip.style.left = Mathf.Clamp(left, 12f, 880f);
+            tooltip.style.top = top + 34f;
+            tooltip.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (show) tooltip.BringToFront();
         }
 
         // Distinct shape + color per polarity (Bab 15 §6.2)

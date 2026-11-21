@@ -516,6 +516,7 @@ namespace Obscure
             BindBackButton();
             BindHubGold();
             var party = Party;
+            menu.onBack = () => Game?.Go(GameState.Hub);
             menu.onPrevPage = () => { if (party.Count > 0) { heroIndex = (heroIndex - 1 + party.Count) % party.Count; Rebuild(); } };
             menu.onNextPage = () => { if (party.Count > 0) { heroIndex = (heroIndex + 1) % party.Count; Rebuild(); } };
             var hero = party[Mathf.Clamp(heroIndex, 0, party.Count - 1)];
@@ -526,6 +527,8 @@ namespace Obscure
 
             // Hero portrait switcher
             string[] frameClasses = { "frame-vars", "frame-vars-2", "frame-vars-3", "frame-vars-4" };
+            var portraitItems = new Dictionary<UitkMenu.Item, int>();
+            int portraitBaseIdx = menu.items.Count;
             for (int i = 0; i < frameClasses.Length; i++)
             {
                 var fr = UiRoot.Q<VisualElement>(className: frameClasses[i]);
@@ -536,7 +539,13 @@ namespace Obscure
                 if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "armory_" + (u.classDef?.id ?? u.name)));
                 bool onHero = i == heroIndex;
-                var it = menu.Add(fr, u.name, () => { heroIndex = idx; Rebuild(); }, selected: onHero, onAdjust: d => { heroIndex = (heroIndex + d + party.Count) % party.Count; Rebuild(); });
+                var it = menu.Add(fr, u.name, () => { heroIndex = idx; Rebuild(); }, selected: onHero, onAdjust: d =>
+                {
+                    heroIndex = (heroIndex + d + party.Count) % party.Count;
+                    focusIndex = portraitBaseIdx + heroIndex;
+                    Rebuild();
+                });
+                portraitItems[it] = idx;
                 it.visual = focus =>
                 {
                     var col = focus ? Palette.Gold1 : onHero ? Palette.Gold2 : Palette.Ink5;
@@ -544,6 +553,16 @@ namespace Obscure
                 };
                 it.visual(false);
             }
+            menu.onFocus = item =>
+            {
+                if (rebuilding || item == null) return;
+                focusIndex = menu.items.IndexOf(item);
+                if (portraitItems.TryGetValue(item, out int idx) && idx != heroIndex)
+                {
+                    heroIndex = idx;
+                    Rebuild();
+                }
+            };
 
             // Hide baked static stock list and right panel detail nodes
             HideElementsByClass(UiRoot, "list-row-2__i-3", "list-row-2__i-4", "list-row__i-2", "list-row-2__i-5", "list-row-2__i-6", "list-row-2__i-7", "tag-cond");

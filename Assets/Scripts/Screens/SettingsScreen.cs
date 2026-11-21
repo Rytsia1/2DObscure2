@@ -61,8 +61,8 @@ namespace Obscure
             Rebuild();
         }
 
-        int[] Snapshot() => new[] { s.volume, s.musicVolume, s.musicMuted ? 1 : 0, s.fullscreen ? 1 : 0, s.qteAssist, s.qteKey };
-        void Restore(int[] v) { s.volume = v[0]; s.musicVolume = v[1]; s.musicMuted = v[2] == 1; s.fullscreen = v[3] == 1; s.qteAssist = v[4]; s.qteKey = v[5]; }
+        int[] Snapshot() => new[] { s.volume, s.musicVolume, s.musicMuted ? 1 : 0, s.fullscreen ? 1 : 0, s.qteAssist, s.qteKey, s.reduceMotion ? 1 : 0 };
+        void Restore(int[] v) { s.volume = v[0]; s.musicVolume = v[1]; s.musicMuted = v[2] == 1; s.fullscreen = v[3] == 1; s.qteAssist = v[4]; s.qteKey = v[5]; s.reduceMotion = v[6] == 1; }
         int Dirty(int i) => Snapshot()[i] != saved[i] ? 1 : 0;
         int DirtyCount => Enumerable.Range(0, saved.Length).Sum(Dirty);
 
@@ -198,6 +198,7 @@ namespace Obscure
                     break;
                 case Category.Graphics:
                     SegRow(3, "Display mode", "WINDOWED OR FULLSCREEN", new[] { "Windowed", "Fullscreen" }, s.fullscreen ? 1 : 0, v => s.fullscreen = v == 1);
+                    SegRow(6, "Screen shake", "SHAKE AND FREEZE ON CRITS AND PERFECT DEFENSES", new[] { "On", "Off" }, s.reduceMotion ? 1 : 0, v => s.reduceMotion = v == 1);
                     break;
                 case Category.Controls:
                     SegRow(5, "QTE key", "KEY USED FOR REACTION PROMPTS", GameSettings.QteKeys.Select(k => k.ToString()).ToArray(), s.qteKey, v => s.qteKey = v);
@@ -477,7 +478,7 @@ namespace Obscure
         {
             var d = new GameSettings();
             s.volume = d.volume; s.musicVolume = d.musicVolume; s.musicMuted = d.musicMuted;
-            s.fullscreen = d.fullscreen; s.qteAssist = d.qteAssist; s.qteKey = d.qteKey;
+            s.fullscreen = d.fullscreen; s.qteAssist = d.qteAssist; s.qteKey = d.qteKey; s.reduceMotion = d.reduceMotion;
             Rebuild();
         }
 
@@ -487,7 +488,7 @@ namespace Obscure
             FigmaUi.ShowConfirmationModal(UiRoot, "UNSAVED CHANGES", "Apply your changes before leaving?\nDiscard drops them. Esc keeps editing.", "APPLY",
                 () => { s.Save(); GoBack(); },
                 () => { Restore(saved); GoBack(); },
-                cancelText: "DISCARD", onDismiss: () => { });
+                cancelText: "DISCARD", onDismiss: () => { }, destructive: false);
         }
 
         static void GoBack()

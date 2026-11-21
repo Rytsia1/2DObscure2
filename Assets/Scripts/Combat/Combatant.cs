@@ -215,6 +215,9 @@ namespace Obscure
 
         public bool HasBreakGauge => MaxBreakGauge > 0;
         public bool IsBroken => Has(StatusId.Broken);
+        // Stun, Sleep and Mind Control: any Defensive QTE auto-resolves as Poor (GDD Bab 11 & 12).
+        public bool CannotReact => stunTurns > 0 || StatusController.HasStatus(StatusId.Stun)
+            || StatusController.HasStatus(StatusId.Sleep) || StatusController.HasStatus(StatusId.MindControl);
 
         // Barbarian Starter Passive — Savage Instinct: grants Physical Power bonus when HP is below 50%.
         public int LowHpPhysicalPowerBonus

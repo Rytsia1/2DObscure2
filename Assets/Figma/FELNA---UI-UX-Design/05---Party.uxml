@@ -174,8 +174,7 @@
         </ui:VisualElement>
         <ui:Label text="NEEDS ATTENTION" class="unity-label needs-attention-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 876px; top: 484px;" />
         <ui:Label text="ALL MEMBERS READY." class="unity-label all-members-ready-vars" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 876px; top: 508px;" />
-        <ui:Button text="Back" class="button-slab unity-button" style="position: absolute; left: 28px; top: 656px;" />
-        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 152px; top: 666px;">
+        <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 28px; top: 666px;">
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
                 <AttributeOverrides element-name="text-0" text="Q / E" />
                 <AttributeOverrides element-name="text-1" text="SELECT MEMBER" />

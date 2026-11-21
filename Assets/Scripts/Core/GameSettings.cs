@@ -15,6 +15,7 @@ namespace Obscure
         public bool fullscreen = true;
         public int qteAssist;  // QteAssist: Standard, Relaxed, Auto (QTEs off)
         public int qteKey;     // index into QteKeys
+        public bool reduceMotion; // skips combat screen shake and hit-stop freezes
 
         public static readonly UnityEngine.InputSystem.Key[] QteKeys =
         {

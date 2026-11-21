@@ -74,10 +74,10 @@ namespace Obscure
         void Update()
         {
             SaveManager.RecordPlaytime(Time.unscaledDeltaTime);
+            Controls.Tick();
         }
 
         GameScreen screen;
-        SpriteRenderer fader;
         bool transitioning;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -93,13 +93,10 @@ namespace Obscure
             transform.position = new Vector3(-Ui.Width / 2, Ui.Height / 2, 0);
             SetupCamera();
             EnsureEventSystem();
-            UiPointerDispatcher.Ensure(gameObject);
             Settings = GameSettings.Load();
             Sfx.Init(gameObject);
             MusicManager.Create(gameObject);
             Settings.Apply();
-            fader = Ui.Image(transform, PixelArt.Pixel, 0, 0, Ui.Overlay, Color.clear);
-            fader.transform.localScale = new Vector3(Ui.Width, Ui.Height, 1);
             Go(GameState.MainMenu);
         }
 
@@ -294,11 +291,9 @@ namespace Obscure
             {
                 // Stepped alpha keeps the fade feeling retro rather than smooth.
                 float alpha = Mathf.Round(Mathf.Lerp(from, to, t / duration) * 4) / 4;
-                fader.color = new Color(Palette.Void.r, Palette.Void.g, Palette.Void.b, alpha);
                 FigmaUi.SetFadeAlpha(alpha);
                 yield return null;
             }
-            fader.color = new Color(Palette.Void.r, Palette.Void.g, Palette.Void.b, to);
             FigmaUi.SetFadeAlpha(to);
         }
 

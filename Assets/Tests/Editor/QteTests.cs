@@ -207,8 +207,11 @@ namespace Obscure.Tests
         {
             int full = DefendedDamage(QteResult.Miss);
             Assert.AreEqual(full, DefendedDamage(null), "no reaction = full damage");
-            Assert.AreEqual(0, DefendedDamage(QteResult.Perfect), "perfect guard negates");
-            Assert.AreEqual(Math.Max(1, (int)Math.Round(full * 0.5f)), DefendedDamage(QteResult.Good));
+            // Without Guard, Perfect and Good scale with the defender's Block Power (Bab 12 §3.5); only Guard negates.
+            float block = QteConfig.BlockOf(NewBattle(7, "skeleton").Party[0]);
+            Assert.AreEqual(Math.Max(1, (int)Math.Round(full * QteConfig.DefenseTaken(QteResult.Perfect, false, block))), DefendedDamage(QteResult.Perfect), 1);
+            Assert.AreEqual(Math.Max(1, (int)Math.Round(full * QteConfig.DefenseTaken(QteResult.Good, false, block))), DefendedDamage(QteResult.Good), 1);
+            Assert.Less(DefendedDamage(QteResult.Perfect), DefendedDamage(QteResult.Good));
         }
 
         int OffenseDamage(float power)
@@ -598,13 +601,135 @@ namespace Obscure.Tests
 
             var cleave = (DefenseQte)D("hollow_squire", "Rusty Cleave");
             Assert.AreNotEqual(DodgeDir.None, cleave.cues[0], "a single physical hit carries an arrow");
-            Assert.IsTrue(((DefenseQte)D("soul_reaper", "Accelerating Rend")).cues.All(c => c == DodgeDir.None), "multi-hit stays on the QTE key");
-            Assert.IsTrue(((DefenseQte)D("zoroa_p1", "Final Reaping")).cues.All(c => c == DodgeDir.None));
+            // Arrow chain: Elite/Boss multi-hit attacks put an arrow on every non-Heavy hit; Heavy hits are braced on the key.
+            foreach (var (enemy, move) in new[] { ("soul_reaper", "Accelerating Rend"), ("zoroa_p1", "Final Reaping") })
+            {
+                var chain = (DefenseQte)D(enemy, move);
+                for (int i = 0; i < chain.Hits; i++)
+                    Assert.AreEqual(chain.heavy[i], chain.cues[i] == DodgeDir.None, $"{move} hit {i + 1}: arrow unless Heavy");
+            }
             Assert.AreEqual(DodgeDir.None, ((DefenseQte)D("royal_ossuary_knight", "Graveward Charge")).cues[0], "Heavy stays on the QTE key");
 
-            int Feints(string enemy, string move) => Enumerable.Range(0, 60).Count(s => ((DefenseQte)D(enemy, move, s)).IsFeint(0));
-            Assert.AreEqual(0, Feints("hollow_squire", "Rusty Cleave"), "Normal enemies never feint");
-            Assert.That(Feints("soul_reaper", "Harvesting Arc"), Is.InRange(5, 40), "Elite enemies feint sometimes");
+            int Feints(string enemy, string move) => Enumerable.Range(0, 100).Count(s =>
+            {
+                var d = (DefenseQte)D(enemy, move, s);
+                return Enumerable.Range(0, d.Hits).Any(d.IsFeint);
+            });
+            Assert.That(Feints("hollow_squire", "Rusty Cleave"), Is.InRange(4, 30), "Normal enemies feint now and then (15%)");
+            Assert.That(Feints("soul_reaper", "Harvesting Arc"), Is.InRange(15, 50), "Elite enemies feint more (30%)");
+            Assert.IsInstanceOf<StruggleQte>(D("crypt_leech", "Vital Siphon"), "drain attacks are struggled against");
+        }
+
+        [Test]
+        public void UntimedMultiHitsLandOnUnevenBeats()
+        {
+            var b = NewBattle(1, "hollow_squire");
+            var move = new EnemyAttack { name = "Test Flurry", hits = 4, power = 1f };
+            var gaps = new List<float>();
+            for (int seed = 0; seed < 30; seed++)
+            {
+                var d = (DefenseQte)QteFactory.Defense(BattleAction.Strike(b.Enemies[0], move, b.Party[0]), QteAssist.Standard, null, new Random(seed));
+                for (int i = 1; i < d.Hits; i++)
+                    if (!d.IsFeint(i)) gaps.Add(d.impacts[i] - d.impacts[i - 1]);
+            }
+            Assert.IsTrue(gaps.All(g => g >= QteConfig.MinHitInterval - 1e-4f && g <= N.hitInterval + QteConfig.IntervalJitter + 1e-4f), "gaps stay in range");
+            Assert.Greater(gaps.Max() - gaps.Min(), 0.05f, "gaps are not all the same");
+        }
+
+        [Test]
+        public void StunnedDefenderSkipsTheBarAndTakesPoor()
+        {
+            var b = NewBattle(1, "hollow_squire");
+            var move = new EnemyAttack { name = "Test Blow", hits = 2, power = 1f };
+            b.Party[0].stunTurns = 1;
+            var qte = QteFactory.Defense(BattleAction.Strike(b.Enemies[0], move, b.Party[0]), QteAssist.Standard, null, new Random(1));
+            Assert.IsInstanceOf<AutoQte>(qte, "no bar is shown to a defender who cannot react");
+            Assert.AreEqual(QteResult.Poor, qte.Result);
+            CollectionAssert.AreEqual(new[] { QteResult.Poor, QteResult.Poor }, ((AutoQte)qte).Results);
+
+            b.Party[0].stunTurns = 0;
+            Assert.IsInstanceOf<DefenseQte>(QteFactory.Defense(BattleAction.Strike(b.Enemies[0], move, b.Party[0]), QteAssist.Standard, null, new Random(1)));
+            Assert.AreEqual(QteResult.Good, new AutoQte(3).Result, "QTE assist Auto still grades Good");
+        }
+
+        [Test]
+        public void StutterCueChangesSpeedButLandsOnTime()
+        {
+            var steady = new DefenseQte(N, 1);
+            Assert.AreEqual(0.4f, steady.CueProgress(0, 0.4f), 1e-5f);
+            Assert.IsFalse(steady.Stutters(0));
+            var slowFast = new DefenseQte(N, 1, stutter: new[] { (QteConfig.StutterSlowTime, QteConfig.StutterSlowDistance) });
+            var fastSlow = new DefenseQte(N, 1, stutter: new[] { (QteConfig.StutterFastTime, QteConfig.StutterFastDistance) });
+            foreach (var q in new[] { slowFast, fastSlow })
+            {
+                Assert.IsTrue(q.Stutters(0));
+                Assert.AreEqual(0f, q.CueProgress(0, 0f), 1e-5f);
+                Assert.AreEqual(1f, q.CueProgress(0, 1f), 1e-5f, "reaches the impact line at impact");
+                float prev = -1f;
+                for (float x = 0f; x <= 1.2f; x += 0.05f)
+                {
+                    Assert.Greater(q.CueProgress(0, x), prev, "never moves backwards");
+                    prev = q.CueProgress(0, x);
+                }
+                Assert.AreEqual(steady.impacts[0], q.impacts[0], 1e-5f, "judging is unchanged");
+            }
+            Assert.Less(slowFast.CueProgress(0, 0.5f), 0.5f, "slow start");
+            Assert.Greater(fastSlow.CueProgress(0, 0.3f), 0.3f, "fast start");
+        }
+
+        [Test]
+        public void BraceHeavyHitMustBeHeldThroughImpact()
+        {
+            DefenseQte Heavy() => new DefenseQte(N, 1, heavy: new[] { true });
+            float impact = N.telegraph + N.windup;
+
+            var held = Heavy();
+            Wait(held, impact - 0.02f); held.Press();
+            Assert.IsFalse(held.Done, "a braced hit stays open until it lands");
+            Wait(held, 0.05f);
+            Assert.IsTrue(held.Done);
+            held.Release();
+            Assert.AreEqual(QteResult.Perfect, held.Result, "held through impact");
+
+            var dropped = Heavy();
+            Wait(dropped, impact - 0.02f); dropped.Press();
+            Wait(dropped, 0.01f); dropped.Release();
+            Assert.AreEqual(QteResult.Miss, dropped.Result, "let go before impact");
+            Assert.IsTrue(dropped.LetGo(0));
+
+            var late = Heavy();
+            Wait(late, impact + 0.02f); late.Press(); late.Release();
+            Assert.AreEqual(QteResult.Perfect, late.Result, "a press after impact has nothing left to hold");
+        }
+
+        [Test]
+        public void StruggleGradesByHowFullTheGaugeGets()
+        {
+            void Mash(StruggleQte s, int presses, float gap)
+            {
+                for (int i = 0; i < presses && !s.Done; i++) { s.Press(); Wait(s, gap); }
+            }
+
+            var idle = new StruggleQte(N, 1);
+            Wait(idle, idle.deadline + 0.01f);
+            Assert.IsTrue(idle.Done);
+            Assert.AreEqual(QteResult.Miss, idle.Result, "no mashing");
+
+            var early = new StruggleQte(N, 1);
+            early.Press();
+            Assert.AreEqual(0f, early.Gauge, "presses during the telegraph do nothing");
+
+            var fast = new StruggleQte(N, 2);
+            Wait(fast, N.telegraph);
+            Mash(fast, 20, 0.1f);
+            Assert.AreEqual(QteResult.Perfect, fast.Result, "a full gauge ends early as a Perfect");
+            CollectionAssert.AreEqual(new[] { QteResult.Perfect, QteResult.Perfect }, fast.Results, "one grade covers every hit");
+
+            var steady = new StruggleQte(N, 1);
+            Wait(steady, N.telegraph + 0.01f); // clear the telegraph (float steps can land just short of it)
+            Mash(steady, 7, 0.2f);
+            Wait(steady, steady.deadline - steady.T + 0.01f);
+            Assert.AreEqual(QteResult.Good, steady.Result, "past the Good line at the deadline");
         }
     }
 }

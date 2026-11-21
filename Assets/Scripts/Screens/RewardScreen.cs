@@ -373,9 +373,16 @@ namespace Obscure
                     well.style.justifyContent = Justify.Center;
                     well.style.alignItems = UiAlign.Center;
 
-                    var tex = o.kind == RewardKind.Item ? IconArt.Item(o.id)
-                            : o.kind == RewardKind.Equipment ? IconArt.Gear(o.id)
-                            : null;
+                    var tex = o.kind switch
+                    {
+                        RewardKind.Item => IconArt.Item(o.id) ?? IconArt.Reward("item"),
+                        RewardKind.Equipment => IconArt.Gear(o.id) ?? IconArt.Reward("equipment"),
+                        RewardKind.Relic => IconArt.Reward("relic"),
+                        RewardKind.Upgrade => IconArt.Reward("upgrade"),
+                        RewardKind.Modifier => IconArt.Reward("modifier"),
+                        RewardKind.Gold => IconArt.Reward("gold"),
+                        _ => IconArt.Reward("gold"),
+                    };
                     if (tex != null)
                     {
                         var img = new VisualElement { style = { width = 64, height = 64 } };
@@ -518,7 +525,7 @@ namespace Obscure
 
                         var txtCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
                         txtCol.Add(new UiLabel(u.name) { style = { fontSize = 15, color = Palette.Mist1 } });
-                        string subTxt = !canEquip ? "CAN'T USE" : (isBest ? "✓ BEST · EQUIP" : "CAN EQUIP");
+                        string subTxt = !canEquip ? "CAN'T USE" : (isBest ? "✓ " : "") + GainText(u, eqDef);
                         txtCol.Add(new UiLabel(subTxt)
                         {
                             style = { fontSize = 11, color = !canEquip ? Palette.Mist3 : (isBest ? Palette.Ok : Palette.Gold2) }
@@ -814,7 +821,7 @@ namespace Obscure
                         int best = FindBestHeroForEquipment(eq);
                         string slotName = EquipmentSlots.DisplayName(eq.slot).ToUpperInvariant();
                         return best >= 0 && best < currentParty.Count
-                            ? $"BEST FOR {currentParty[best].name.ToUpperInvariant()} · {slotName}"
+                            ? $"BEST FOR {currentParty[best].name.ToUpperInvariant()} · {GainText(currentParty[best], eq)}"
                             : $"STORED IN BAG · {slotName}";
                     }
                     return "STORED IN INVENTORY";
@@ -862,18 +869,41 @@ namespace Obscure
             return false;
         }
 
+        // The hero who gains the most from it (largest single stat change, as on the Equipment screen);
+        // with no gain anywhere, the first hero with that slot empty, else the first who can use it.
         int FindBestHeroForEquipment(EquipmentDef def)
         {
             if (def == null || currentParty == null) return -1;
-            int firstValid = -1;
+            int firstValid = -1, firstEmpty = -1, best = -1, bestGain = 0;
             for (int i = 0; i < currentParty.Count; i++)
             {
                 var u = currentParty[i];
                 if (!CanHeroEquip(u, def, out var slot)) continue;
                 if (firstValid < 0) firstValid = i;
-                if (!u.equipped.ContainsKey(slot)) return i;
+                if (firstEmpty < 0 && !u.equipped.ContainsKey(slot)) firstEmpty = i;
+                int gain = BestChange(u, def, slot).delta;
+                if (gain > bestGain) { bestGain = gain; best = i; }
             }
-            return firstValid;
+            return best >= 0 ? best : firstEmpty >= 0 ? firstEmpty : firstValid;
+        }
+
+        static (DerivedStatId stat, int delta) BestChange(Unit u, EquipmentDef def, EquipmentSlot slot)
+        {
+            var cand = new EquipmentInstance(def);
+            return EquipmentScreen.ComparedStats
+                .Select(s => (s, EquipmentManager.CalculateStatDelta(u, slot, cand, s)))
+                .OrderByDescending(t => t.Item2).First();
+        }
+
+        // "+3 PATK", "NEW SLOT" (fills an empty slot), "NO GAIN" or the smallest loss, for one hero.
+        string GainText(Unit u, EquipmentDef def)
+        {
+            if (!CanHeroEquip(u, def, out var slot)) return "CAN'T USE";
+            if (!u.equipped.ContainsKey(slot)) return "NEW SLOT";
+            var (st, d) = BestChange(u, def, slot);
+            if (d == 0) return "NO GAIN";
+            string name = Database.DerivedStatDefs[st].shortName.ToUpperInvariant();
+            return $"{(d > 0 ? "+" : "")}{d}{(DerivedStats.IsPercentage(st) ? "%" : "")} {name}";
         }
 
         static string PrizeSymbol(RewardOption o) => o.kind switch

@@ -30,7 +30,6 @@ namespace Obscure
         public static bool PrevPage => Pressed(Key.Q) || Pad(p => p.leftShoulder);
         public static bool NextPage => Pressed(Key.E) || Pad(p => p.rightShoulder);
         public static bool Details => Pressed(Key.Tab) || Pad(p => p.selectButton);
-        public static bool ResetKey => Pressed(Key.R);
 
         // Timing/defense QTE button: one remappable key (Settings) plus gamepad south.
         public static Key QteKey = Key.Space;
@@ -40,69 +39,48 @@ namespace Obscure
             (!Locked && !SuppressKeyboardNavigation && Keyboard.current != null && Keyboard.current[QteKey].wasReleasedThisFrame)
             || (!Locked && Gamepad.current != null && Gamepad.current.buttonSouth.wasReleasedThisFrame);
 
-        public static bool Click => !Locked && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+        // Last device the player touched wins. A keyboard or gamepad press hides the cursor and stops hover from moving
+        // the menu selection; the mouse takes over again only once it really moves, clicks or scrolls.
+        // MouseWakeDistance is a starting value, untested: raise it if testers still see the selection jump while
+        // using the keyboard, lower it if the cursor feels slow to come back (GDD Bab 15, keyboard-first input).
+        public const float MouseWakeDistance = 4f; // screen pixels
+        static bool mouseActive = true;
+        static Vector2 mouseAnchor;
 
-        public static Vector2 MouseWorld
+        // Checked when read, not only in Tick: UI Toolkit sends the hover event in the same frame the mouse moves,
+        // before Game.Update runs Tick, so the first real move after keyboard use must count straight away.
+        public static bool MouseActive
         {
             get
             {
                 var mouse = Mouse.current;
-                if (mouse == null) return new Vector2(float.NaN, float.NaN);
-                Vector2 screenPos = mouse.position.ReadValue();
-                var cam = Camera.main;
-                if (cam == null) return new Vector2(float.NaN, float.NaN);
-
-                var ppc = cam.GetComponent<UnityEngine.Rendering.Universal.PixelPerfectCamera>();
-                if (ppc != null && ppc.enabled && ppc.pixelRatio > 0)
-                {
-                    int ratio = ppc.pixelRatio;
-                    int viewW = ppc.refResolutionX * ratio;
-                    int viewH = ppc.refResolutionY * ratio;
-                    float viewX = (Screen.width - viewW) * 0.5f;
-                    float viewY = (Screen.height - viewH) * 0.5f;
-
-                    float normX = (screenPos.x - viewX) / viewW;
-                    float normY = (screenPos.y - viewY) / viewH;
-                    if (normX < 0f || normX > 1f || normY < 0f || normY > 1f)
-                        return new Vector2(float.NaN, float.NaN);
-
-                    float pixelX = normX * Ui.Width;
-                    float pixelY = (1f - normY) * Ui.Height;
-                    return new Vector2(-Ui.Width * 0.5f + pixelX, Ui.Height * 0.5f - pixelY);
-                }
-
-                if (cam.orthographic)
-                {
-                    float targetAspect = (float)Ui.Width / Ui.Height;
-                    float screenAspect = (float)Screen.width / Mathf.Max(1, Screen.height);
-                    float viewW, viewH, viewX, viewY;
-                    if (screenAspect > targetAspect)
-                    {
-                        viewH = Screen.height;
-                        viewW = viewH * targetAspect;
-                        viewX = (Screen.width - viewW) * 0.5f;
-                        viewY = 0f;
-                    }
-                    else
-                    {
-                        viewW = Screen.width;
-                        viewH = viewW / targetAspect;
-                        viewX = 0f;
-                        viewY = (Screen.height - viewH) * 0.5f;
-                    }
-
-                    float normX = (screenPos.x - viewX) / viewW;
-                    float normY = (screenPos.y - viewY) / viewH;
-                    if (normX < 0f || normX > 1f || normY < 0f || normY > 1f)
-                        return new Vector2(float.NaN, float.NaN);
-
-                    float pixelX = normX * Ui.Width;
-                    float pixelY = (1f - normY) * Ui.Height;
-                    return new Vector2(-Ui.Width * 0.5f + pixelX, Ui.Height * 0.5f - pixelY);
-                }
-
-                return cam.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, -cam.transform.position.z));
+                if (mouse == null) return false;
+                if (!mouseActive && ((mouse.position.ReadValue() - mouseAnchor).sqrMagnitude > MouseWakeDistance * MouseWakeDistance
+                    || mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame
+                    || mouse.scroll.ReadValue() != Vector2.zero))
+                    mouseActive = true;
+                return mouseActive;
             }
+        }
+
+        public static void Tick()
+        {
+            var mouse = Mouse.current;
+            var kb = Keyboard.current;
+            if ((kb != null && kb.anyKey.wasPressedThisFrame) || PadPressed(Gamepad.current))
+            {
+                mouseActive = false;
+                if (mouse != null) mouseAnchor = mouse.position.ReadValue();
+            }
+            Cursor.visible = MouseActive;
+        }
+
+        static bool PadPressed(Gamepad pad)
+        {
+            if (pad == null) return false;
+            foreach (var c in pad.allControls)
+                if (c is ButtonControl b && b.wasPressedThisFrame) return true;
+            return false;
         }
     }
 }

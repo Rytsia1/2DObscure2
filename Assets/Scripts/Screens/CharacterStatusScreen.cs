@@ -46,6 +46,8 @@ namespace Obscure
         UiLabel tooltipText;
         UiLabel detailLabel;
         int focusIndex;
+        bool rebuilding;
+        readonly Dictionary<UitkMenu.Item, int> portraitItems = new Dictionary<UitkMenu.Item, int>();
 
         public CharacterStatusScreen() : this(null, null) { }
 
@@ -144,8 +146,18 @@ namespace Obscure
         public void SwitchHero(int delta)
         {
             if (units.Count == 0) return;
+            bool wasPortraitFocused = menu != null && menu.Current != null && portraitItems.ContainsKey(menu.Current);
             currentIndex = (currentIndex + delta + units.Count) % units.Count;
+            if (wasPortraitFocused)
+                focusIndex = FindPortraitFocusIndex(currentIndex, focusIndex);
             Refresh();
+        }
+
+        int FindPortraitFocusIndex(int targetHero, int fallback)
+        {
+            foreach (var kv in portraitItems)
+                if (kv.Value == targetHero) return menu.items.IndexOf(kv.Key);
+            return fallback;
         }
 
         public void ShowTab(Tab t)
@@ -168,48 +180,54 @@ namespace Obscure
 
         public void Refresh()
         {
-            if (Root == null) return;
-            var u = CurrentUnit;
-            u.RecalculateStats();
-
-            if (hiddenBindings != null)
+            if (Root == null || rebuilding) return;
+            rebuilding = true;
+            try
             {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(hiddenBindings.gameObject);
-                else UnityEngine.Object.DestroyImmediate(hiddenBindings.gameObject);
+                var u = CurrentUnit;
+                u.RecalculateStats();
+
+                if (hiddenBindings != null)
+                {
+                    if (Application.isPlaying) UnityEngine.Object.Destroy(hiddenBindings.gameObject);
+                    else UnityEngine.Object.DestroyImmediate(hiddenBindings.gameObject);
+                }
+
+                menu.Clear();
+                portraitItems.Clear();
+                PrimaryStatLabels.Clear();
+                DerivedStatLabels.Clear();
+                detailLabel = null;
+                tabHost.Clear();
+                mainHost.Clear();
+                if (tooltipStrip != null) tooltipStrip.style.display = DisplayStyle.None;
+
+                // Hidden off-screen Obscure.Label bindings kept intact for CharacterStatsTests contract.
+                hiddenBindings = new GameObject("Bindings").transform;
+                hiddenBindings.SetParent(Root, false);
+                hiddenBindings.gameObject.SetActive(false);
+                HeaderLabel = Ui.Label(hiddenBindings, PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 84), 0, 0, Palette.Mist1);
+                IdentityLabel = Ui.Label(hiddenBindings, PixelFont.Fit($"{u.race?.name ?? "Human"} {u.classDef?.name ?? u.role}".ToUpperInvariant(), 125), 0, 0, Palette.Mist1);
+                TooltipLabel = Ui.Label(hiddenBindings, "", 0, 0, Palette.Mist1);
+                foreach (var a in AbilityScores.AllAbilities) PrimaryStatLabels[a] = Ui.Label(hiddenBindings, StatLine(u, a), 0, 0, Palette.Mist1);
+                foreach (var st in DisplayedDerivedStats) DerivedStatLabels[st] = Ui.Label(hiddenBindings, $"{Database.DerivedStatDefs[st].shortName,-4} : {u.Derived.FormatValue(st)}", 0, 0, Palette.Mist1);
+
+                BindHeader();
+                BindIdentity(u);
+                BindTabs();
+
+                switch (CurrentTab)
+                {
+                    case Tab.Attributes: BuildAttributeList(u); break;
+                    case Tab.Combat: BuildCombatList(u); break;
+                    case Tab.StatusEffects: BuildStatusList(); break;
+                    default: BuildOverview(u); break;
+                }
+
+                if (menu.items.Count > 0)
+                    menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
             }
-
-            menu.Clear();
-            PrimaryStatLabels.Clear();
-            DerivedStatLabels.Clear();
-            detailLabel = null;
-            tabHost.Clear();
-            mainHost.Clear();
-            if (tooltipStrip != null) tooltipStrip.style.display = DisplayStyle.None;
-
-            // Hidden off-screen Obscure.Label bindings kept intact for CharacterStatsTests contract.
-            hiddenBindings = new GameObject("Bindings").transform;
-            hiddenBindings.SetParent(Root, false);
-            hiddenBindings.gameObject.SetActive(false);
-            HeaderLabel = Ui.Label(hiddenBindings, PixelFont.Fit($"{u.name ?? "HERO"} LV{u.level}".ToUpperInvariant(), 84), 0, 0, Palette.Mist1);
-            IdentityLabel = Ui.Label(hiddenBindings, PixelFont.Fit($"{u.race?.name ?? "Human"} {u.classDef?.name ?? u.role}".ToUpperInvariant(), 125), 0, 0, Palette.Mist1);
-            TooltipLabel = Ui.Label(hiddenBindings, "", 0, 0, Palette.Mist1);
-            foreach (var a in AbilityScores.AllAbilities) PrimaryStatLabels[a] = Ui.Label(hiddenBindings, StatLine(u, a), 0, 0, Palette.Mist1);
-            foreach (var st in DisplayedDerivedStats) DerivedStatLabels[st] = Ui.Label(hiddenBindings, $"{Database.DerivedStatDefs[st].shortName,-4} : {u.Derived.FormatValue(st)}", 0, 0, Palette.Mist1);
-
-            BindHeader();
-            BindIdentity(u);
-            BindTabs();
-
-            switch (CurrentTab)
-            {
-                case Tab.Attributes: BuildAttributeList(u); break;
-                case Tab.Combat: BuildCombatList(u); break;
-                case Tab.StatusEffects: BuildStatusList(); break;
-                default: BuildOverview(u); break;
-            }
-
-            if (menu.items.Count > 0)
-                menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
+            finally { rebuilding = false; }
         }
 
         void BindHeader()
@@ -239,6 +257,7 @@ namespace Obscure
                 {
                     if (currentIndex != idx) { currentIndex = idx; Refresh(); }
                 }, selected: selected, onAdjust: SwitchHero, tooltip: "LEFT/RIGHT OR CLICK: INSPECT ANOTHER PARTY MEMBER");
+                portraitItems[pItem] = idx;
                 pItem.visual = on =>
                 {
                     var border = on ? Palette.Gold1 : selected ? Palette.Gold2 : Palette.Ink5;
@@ -429,12 +448,13 @@ namespace Obscure
                 if (chip != null)
                 {
                     FigmaUi.SetInstanceText(chip, "text-0", code);
-                    chip.style.marginRight = 8;
+                    chip.style.marginRight = 5;
                     cell.Add(chip);
                 }
                 string pct = v == 0 ? "0%" : $"{(v > 0 ? "+" : "-")}{Mathf.RoundToInt(Mathf.Abs(v) * 100)}%";
-                var pctLbl = new UiLabel(note != "" ? $"{pct} {note}" : pct);
-                pctLbl.style.fontSize = 13;
+                string elName = Palette.ElementName(el).ToUpperInvariant();
+                var pctLbl = new UiLabel(note != "" ? $"{elName} {pct} {note}" : $"{elName} {pct}");
+                pctLbl.style.fontSize = 11;
                 pctLbl.style.color = v > 0 ? Palette.Ok : v < 0 ? Palette.Err : Palette.Mist1;
                 cell.Add(pctLbl);
                 resGrid.Add(cell);
@@ -585,7 +605,7 @@ namespace Obscure
             if (Run != null && Run.BattleBuffs.Count > 0)
             {
                 foreach (var b in Run.BattleBuffs)
-                    list.Add(($"EACH BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} TURNS · {DungeonModifierManager.UntilDungeonExit}", StatusInfo.IsBuff(b.id) ? Palette.Ok : Palette.Err, IconArt.Status(b.id)));
+                    list.Add(($"EACH BATTLE: {StatusInfo.Name(b.id)}", $"{b.turns} {(b.turns == 1 ? "TURN" : "TURNS")} · {DungeonModifierManager.UntilDungeonExit}", StatusInfo.IsBuff(b.id) ? Palette.Ok : Palette.Err, IconArt.Status(b.id)));
             }
             if (u.background != null)
             {
@@ -757,8 +777,14 @@ namespace Obscure
 
         void OnFocus(UitkMenu.Item item)
         {
-            if (item == null) return;
+            if (rebuilding || item == null) return;
             focusIndex = menu.items.IndexOf(item);
+            if (portraitItems.TryGetValue(item, out int idx) && idx != currentIndex)
+            {
+                currentIndex = idx;
+                Refresh();
+                return;
+            }
             ShowTip(item.tooltip);
         }
 

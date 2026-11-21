@@ -164,6 +164,29 @@ namespace Obscure
             _ => "PH",
         };
 
+        public static string ElementName(Element el) => el switch
+        {
+            Element.Fire => "Fire",
+            Element.Ice => "Ice",
+            Element.Lightning => "Lightning",
+            Element.Earth => "Earth",
+            Element.Wind => "Wind",
+            Element.Water => "Water",
+            Element.Holy => "Holy",
+            Element.Shadow => "Shadow",
+            Element.Arcane => "Arcane",
+            _ => "Physical",
+        };
+
+        public static string FormatTarget(TargetType target) => target switch
+        {
+            TargetType.AllEnemies => "ALL ENEMIES",
+            TargetType.AllAllies => "ALL ALLIES",
+            TargetType.Ally => "ALLY",
+            TargetType.Self => "SELF",
+            _ => "ENEMY",
+        };
+
         public static Color ForRarity(EquipmentRarity r) => r switch
         {
             EquipmentRarity.Common => RarityCommon,

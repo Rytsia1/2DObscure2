@@ -101,7 +101,8 @@ namespace Obscure
 
             EventCallback<PointerEnterEvent> onEnter = _ =>
             {
-                if (Controls.Locked || (ActiveMenu != null && ActiveMenu != this)) return;
+                // A resting or nudged cursor must not steal the keyboard's selection (Controls.MouseActive).
+                if (Controls.Locked || !Controls.MouseActive || (ActiveMenu != null && ActiveMenu != this)) return;
                 if (item.interactable)
                     Focus(item, false);
             };
@@ -178,6 +179,9 @@ namespace Obscure
 
         void Update()
         {
+            // felna-runtime.uss scopes :hover under .mouse-active, so a resting cursor can't light a second item
+            // while the keyboard owns the selection.
+            registeredRoot?.panel?.visualTree.EnableInClassList("mouse-active", Controls.MouseActive);
             if (Controls.Locked || Time.frameCount == bornFrame) return;
             if (ActiveMenu != null && ActiveMenu != this) return;
             if (items.Count == 0)
@@ -218,13 +222,14 @@ namespace Obscure
                 else
                     Focus((index + 1) % items.Count);
             }
-            else if (Controls.Up || Controls.Left)
+            else if (Controls.Up || Controls.Right || Controls.Down || Controls.Left)
             {
-                Focus((index - 1 + items.Count) % items.Count);
-            }
-            else if (Controls.Down || Controls.Right)
-            {
-                Focus((index + 1) % items.Count);
+                // Arrows follow the screen layout: the nearest item in that direction. With nothing there
+                // (the end of a list), fall back to list order with wrap, as before.
+                int dir = Controls.Up ? 0 : Controls.Right ? 1 : Controls.Down ? 2 : 3;
+                int target = NearestInDirection(dir);
+                if (target >= 0) Focus(target);
+                else Focus(dir == 0 || dir == 3 ? (index - 1 + items.Count) % items.Count : (index + 1) % items.Count);
             }
 
             if (Controls.Confirm) Activate();
@@ -233,6 +238,33 @@ namespace Obscure
                 Sfx.Play(Sound.Back);
                 onBack();
             }
+        }
+
+        // dir: 0=Up, 1=Right, 2=Down, 3=Left. Picks the laid-out item whose centre lies ahead of the current one,
+        // preferring straight lines over diagonals (sideways offset counts double). -1 = nothing in that direction.
+        public int NearestInDirection(int dir)
+        {
+            var from = Current?.element;
+            if (from == null || from.panel == null) return -1;
+            Rect a = from.worldBound;
+            if (a.width <= 0f && a.height <= 0f) return -1;
+            Vector2 d = dir == 0 ? Vector2.down : dir == 1 ? Vector2.right : dir == 2 ? Vector2.up : Vector2.left; // UITK y grows down
+            int best = -1;
+            float bestScore = float.MaxValue;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var el = items[i]?.element;
+                if (i == index || el == null || el.panel == null) continue;
+                Rect r = el.worldBound;
+                if (r.width <= 0f && r.height <= 0f) continue; // hidden (display: none somewhere above)
+                Vector2 v = r.center - a.center;
+                float ahead = Vector2.Dot(v, d);
+                if (ahead <= 1f) continue;
+                float side = Mathf.Abs(v.x * d.y - v.y * d.x);
+                float score = ahead + side * 2f;
+                if (score < bestScore) { bestScore = score; best = i; }
+            }
+            return best;
         }
 
         public void Activate()

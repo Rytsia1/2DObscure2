@@ -25,6 +25,7 @@ namespace Obscure
         bool feedbackBad;
         int focusIndex;
         bool rebuilding;
+        readonly Dictionary<UitkMenu.Item, int> portraitItems = new Dictionary<UitkMenu.Item, int>();
 
         class Node { public string id; public bool passive; public int tier; public int row; public float x, y; }
 
@@ -81,10 +82,20 @@ namespace Obscure
         void SwitchHero(int delta)
         {
             if (party == null || party.Count == 0) return;
+            bool wasPortraitFocused = menu != null && menu.Current != null && portraitItems.ContainsKey(menu.Current);
             heroIndex = (heroIndex + delta + party.Count) % party.Count;
+            if (wasPortraitFocused)
+                focusIndex = FindPortraitFocusIndex(heroIndex, focusIndex);
             selectedSkillId = null;
             feedback = null;
             Rebuild();
+        }
+
+        int FindPortraitFocusIndex(int targetHero, int fallback)
+        {
+            foreach (var kv in portraitItems)
+                if (kv.Value == targetHero) return menu.items.IndexOf(kv.Key);
+            return fallback;
         }
 
         static string NameOf(string id, bool passive) =>
@@ -105,10 +116,22 @@ namespace Obscure
             {
                 UiRoot = FigmaUi.Mount(Root.gameObject, "16---Training-Ground---Skill-Tree");
                 FigmaUi.DestroyMenu(ref menu);
+                portraitItems.Clear();
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
                 menu.onBack = () => Game?.Back(returnState);
-                menu.onFocus = s => { if (!rebuilding && s != null) focusIndex = menu.items.IndexOf(s); };
+                menu.onFocus = s =>
+                {
+                    if (rebuilding || s == null) return;
+                    focusIndex = menu.items.IndexOf(s);
+                    if (portraitItems.TryGetValue(s, out int idx) && idx != heroIndex)
+                    {
+                        heroIndex = idx;
+                        selectedSkillId = null;
+                        feedback = null;
+                        Rebuild();
+                    }
+                };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
 
@@ -153,10 +176,8 @@ namespace Obscure
                 int idx = i; var u = party[i]; bool on = i == heroIndex;
                 if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "sk_hdr_" + (u.classDef?.id ?? u.name)));
-                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d =>
-                {
-                    heroIndex = (heroIndex + d + party.Count) % party.Count; selectedSkillId = null; feedback = null; Rebuild();
-                });
+                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d => SwitchHero(d));
+                portraitItems[it] = idx;
                 it.visual = f => { var b = f ? Palette.Gold1 : on ? Palette.Gold2 : Palette.Ink5; fr.style.borderTopColor = b; fr.style.borderBottomColor = b; fr.style.borderLeftColor = b; fr.style.borderRightColor = b; };
                 it.visual(false);
             }
@@ -377,9 +398,9 @@ namespace Obscure
             if (a != null)
             {
                 host.Add(Line("MP COST", a.GetMpCost(shown).ToString()));
-                host.Add(Line("TARGET", a.target.ToString().ToUpperInvariant()));
+                host.Add(Line("TARGET", Palette.FormatTarget(a.target)));
                 host.Add(Line("POWER", $"{a.GetPower(shown):0.##}X"));
-                if (a.cooldown > 0) host.Add(Line("COOLDOWN", $"{a.cooldown} TURNS"));
+                if (a.cooldown > 0) host.Add(Line("COOLDOWN", $"{a.cooldown} {(a.cooldown == 1 ? "TURN" : "TURNS")}"));
             }
             host.Add(Line("RANK", learned ? $"{rank} / {maxRank}" : $"LOCKED · MAX {maxRank}"));
 

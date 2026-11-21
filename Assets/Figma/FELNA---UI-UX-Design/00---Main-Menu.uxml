@@ -67,7 +67,7 @@
         <ui:Label text="FELNA" class="unity-label felna-vars" style="font-size: 72px; -unity-font-style: bold; white-space: nowrap; position: absolute; left: 92px; top: 96px;" />
         <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 96px; top: 190px;">
             <ui:Label text="◆◆◆◆◆◆◆◆" class="unity-label node-vars" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
-            <ui:Label text="THE WORLD'S BETWEEN · EIGHT LAYERS DOWN" class="unity-label the-world-s-between-eight-layers-down-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+            <ui:Label text="THE WORLDS BETWEEN · EIGHT LAYERS DOWN" class="unity-label the-world-s-between-eight-layers-down-vars" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
         </ui:VisualElement>
         <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; position: absolute; left: 104px; top: 324px;">
             <ui:Instance template="Button-Flat-Focus" class="button-flat__i" style="flex-shrink: 0; width: 380px;">

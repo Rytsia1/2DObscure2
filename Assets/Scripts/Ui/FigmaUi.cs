@@ -473,7 +473,7 @@ namespace Obscure
 
         // Back/Esc runs onDismiss when given (e.g. "stay here"), otherwise the same as the cancel button.
         public static void ShowConfirmationModal(VisualElement screenRoot, string title, string message, string confirmText, Action onConfirm, Action onCancel = null,
-            string cancelText = "CANCEL", Action onDismiss = null)
+            string cancelText = "CANCEL", Action onDismiss = null, bool destructive = true)
         {
             if (screenRoot == null) return;
             Sfx.Play(Sound.ModalOpen);
@@ -503,12 +503,18 @@ namespace Obscure
             var modalMenu = menuGo.AddComponent<UitkMenu>();
             modalMenu.AttachRoot(backdrop);
 
+            bool closed = false;
             void CloseModal()
             {
+                if (closed) return;
+                closed = true;
                 backdrop.RemoveFromHierarchy();
+                if (menuGo == null) return;
                 if (Application.isPlaying) UnityEngine.Object.Destroy(menuGo);
                 else UnityEngine.Object.DestroyImmediate(menuGo);
             }
+            // The screen can be torn down with the modal still open: never leave its menu behind as the ActiveMenu.
+            backdrop.RegisterCallback<DetachFromPanelEvent>(_ => CloseModal());
 
             modalMenu.onBack = () => { CloseModal(); (onDismiss ?? onCancel)?.Invoke(); };
 
@@ -516,12 +522,14 @@ namespace Obscure
             cancelEl.AddToClassList("uitk-modal-btn");
             row.Add(cancelEl);
 
-            var confirmEl = CreateButton(confirmText.ToUpperInvariant(), "button-danger", 200f);
+            // Non-destructive confirms (e.g. APPLY) are drawn as primary and get the initial focus, so Enter is safe.
+            var confirmEl = CreateButton(confirmText.ToUpperInvariant(), destructive ? "button-danger" : "button-primary", 200f);
             confirmEl.AddToClassList("uitk-modal-btn");
             row.Add(confirmEl);
 
             modalMenu.Add(cancelEl, cancelText, () => { CloseModal(); onCancel?.Invoke(); });
             modalMenu.Add(confirmEl, confirmText.ToUpperInvariant(), () => { CloseModal(); onConfirm?.Invoke(); });
+            if (!destructive) modalMenu.Focus(1, sound: false);
 
             panel.Add(row);
             backdrop.Add(panel);

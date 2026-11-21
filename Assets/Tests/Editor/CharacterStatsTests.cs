@@ -379,10 +379,12 @@ namespace Obscure.Tests
             Assert.AreEqual(QteResult.Miss, QteConfig.Judge(0.35f, profile, 0.25f));
             Assert.AreEqual(QteOutcomeCategory.Failure, QteConfig.JudgeCategory(0.35f, profile, 0.25f));
 
-            // Defense multipliers match GDD Terbaru values (GoodDefense = 0.5f, PartialDefense = 0.75f, Perfect = 0.25f, Poor = 1.0f)
+            // Defense multipliers scale with the defender's Block Power (GDD Bab 12 §3.5): Partial sits between Good and Poor.
             var knight = new Combatant(new Unit(Database.Characters["knight"]), Side.Party, 0, "Knight", "KNI");
             float partialMult = QteConfig.DefenseCategory(QteOutcomeCategory.PartialSuccess, knight, Element.Physical);
-            Assert.AreEqual(QteConfig.PartialDefense, partialMult);
+            float goodMult = QteConfig.DefenseCategory(QteOutcomeCategory.Success, knight, Element.Physical);
+            Assert.AreEqual((goodMult + 1f) / 2f, partialMult, 1e-4f);
+            Assert.Less(goodMult, 1f);
 
             // STR + DEX Counter Power calculates positive counterattack damage
             var sk = new Combatant(new Unit(Database.Enemies["skeleton"]), Side.Enemy, 0, "Skeleton", "SK", Database.Enemies["skeleton"]);
@@ -1164,6 +1166,60 @@ namespace Obscure.Tests
             Assert.AreEqual(2, builder.CurrentMemberIndex);
 
             GameSave.ClearSave();
+        }
+
+        [Test]
+        public void PresetsTabAddsChosenPresetHeroesOneByOneAndCustomizeLeavesPresetMode()
+        {
+            var root = new GameObject("TestUiRoot").transform;
+            var root2 = new GameObject("TestUiRoot2").transform;
+            try
+            {
+                NewGamePartyBuilder FreshBuilder() { var b = new NewGamePartyBuilder(); b.StartNewGame(); return b; }
+                var creation = new CharacterCreationScreen(builder: FreshBuilder());
+                creation.Open(root);
+                UitkMenu.Item Item(string text) => root.GetComponentInChildren<UitkMenu>().items.First(i => i.text == text);
+
+                Item("Presets").onClick();
+                Assert.IsTrue(creation.PresetMode);
+                Assert.IsFalse(Item("Add Hero").interactable, "Add Hero needs a preset picked first");
+
+                // Player's own picks, in their order; picking the same preset twice is allowed.
+                string[] picks = { "pact_warlock", "agile_rogue", "pact_warlock", "nature_druid" };
+                foreach (var id in picks)
+                {
+                    Item(Database.Templates[id].name).onClick();
+                    Assert.IsTrue(Item("Add Hero").interactable, $"{id} should be addable");
+                    Item("Add Hero").onClick();
+                }
+
+                var party = creation.Builder.PendingParty;
+                Assert.AreEqual(NewGameFlowState.PendingPartyReview, creation.Builder.FlowState);
+                Assert.IsNull(creation.Builder.ValidatePendingParty());
+                Assert.IsFalse(creation.Builder.IsPartyConfirmed, "Presets must NOT auto-confirm the party");
+                CollectionAssert.AreEqual(picks.Select(id => Database.Templates[id].classId).ToArray(), party.Select(c => c.classId).ToArray());
+                Assert.IsTrue(party.All(c => c.creationMethod == CreationMethod.Template));
+                Assert.AreEqual(4, party.Select(c => c.id).Distinct().Count());
+                creation.Close();
+
+                // Customize: a preset prefills the full editor and leaves Presets mode.
+                var custom = new CharacterCreationScreen(builder: FreshBuilder());
+                custom.Open(root2);
+                UitkMenu.Item Item2(string text) => root2.GetComponentInChildren<UitkMenu>().items.First(i => i.text == text);
+                var cleric = Database.Templates["support_cleric"];
+                Item2("Presets").onClick();
+                Item2(cleric.name).onClick();
+                Item2("Customize").onClick();
+                Assert.IsFalse(custom.PresetMode);
+                Assert.AreEqual(cleric.classId, custom.Session.Class.id, "Customize keeps the preset's values to edit");
+                Assert.AreEqual(0, custom.Builder.PendingParty.Count, "Customize must not add the hero yet");
+                custom.Close();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root.gameObject);
+                UnityEngine.Object.DestroyImmediate(root2.gameObject);
+            }
         }
 
         [Test]

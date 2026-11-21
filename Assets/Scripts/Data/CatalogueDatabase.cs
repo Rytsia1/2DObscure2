@@ -3473,9 +3473,9 @@ namespace Obscure
             {
                 id = "KEY001",
                 name = "Geistwald Expedition Permit",
-                description = "Required to enter The World's Between. Issued by Emerose expedition authority.",
+                description = "Required to enter The Worlds Between. Issued by Emerose expedition authority.",
                 category = "Progression Key",
-                progressionFunction = "Required to enter The World's Between.",
+                progressionFunction = "Required to enter The Worlds Between.",
                 loreDescription = "Issued by Emerose expedition authority.",
                 suggestedSource = "Hub / Prologue",
                 restriction = "Not sellable; not normally discardable"
@@ -3572,10 +3572,10 @@ namespace Obscure
             {
                 id = "KEY010",
                 name = "World-Severing Keystone",
-                description = "Core component required to permanently sever Felna-Endworld connection. Its function is tied to the deepest point of The World's Between.",
+                description = "Core component required to permanently sever Felna-Endworld connection. Its function is tied to the deepest point of The Worlds Between.",
                 category = "Final Objective",
                 progressionFunction = "Core component required to permanently sever Felna-Endworld connection.",
-                loreDescription = "Its function is tied to the deepest point of The World's Between.",
+                loreDescription = "Its function is tied to the deepest point of The Worlds Between.",
                 suggestedSource = "Layer 8 - Helelios",
                 restriction = "Not sellable; not normally discardable"
             },

@@ -178,8 +178,8 @@ namespace Obscure
             {
                 sneakBtn = FigmaUi.CreateButton("Sneak (Halfling)", "button-slab", 180);
                 sneakBtn.style.position = Position.Absolute;
-                sneakBtn.style.left = 740;
-                sneakBtn.style.top = 602;
+                sneakBtn.style.left = 736;
+                sneakBtn.style.top = 656;
                 (UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot).Add(sneakBtn);
                 sneakItem = menu.Add(sneakBtn, "Sneak", () =>
                 {
@@ -321,7 +321,7 @@ namespace Obscure
 
         void SpawnEntrance(Vector2 c, bool isStart)
         {
-            var dia = new UiLabel("◆");
+            var dia = new UiLabel("▶");
             dia.style.position = Position.Absolute;
             dia.style.left = c.x - 12;
             dia.style.top = c.y - 14;
@@ -353,7 +353,10 @@ namespace Obscure
             var txtLbl = el.Q<UiLabel>("text-0");
             if (txtLbl != null)
             {
-                txtLbl.style.color = current ? Palette.Gold1 : available ? Palette.Mist1 : cleared ? Palette.Mist3 : Palette.Ink5;
+                // Elites read as danger on the map itself, not only after selecting the node.
+                bool elite = n.type == NodeType.Elite;
+                txtLbl.style.color = current ? Palette.Gold1 : available ? (elite ? Palette.CrimsonBright : Palette.Mist1)
+                    : cleared ? Palette.Mist3 : elite ? Palette.SpecCrimson : Palette.Ink5;
                 if (boss) txtLbl.style.fontSize = 20;
             }
 
@@ -425,7 +428,9 @@ namespace Obscure
             {
                 curLbl.text = n != null && n.type == NodeType.Shop ? "SPOILS" : "—";
                 curLbl.style.color = n != null && n.type == NodeType.Shop ? Palette.Ember1 : Palette.Mist3;
-                curLbl.style.left = n != null && n.type == NodeType.Shop ? 1152 : 1226;
+                curLbl.style.position = Position.Relative;
+                curLbl.style.left = StyleKeyword.Auto;
+                curLbl.style.top = StyleKeyword.Auto;
             }
 
             var riskLbl = UiRoot.Q<UiLabel>(className: "combat-vars-2");
@@ -433,6 +438,9 @@ namespace Obscure
             {
                 riskLbl.text = n == null ? "—" : Risk(n.type);
                 riskLbl.style.color = n != null && (n.type == NodeType.Boss || n.type == NodeType.Elite) ? Palette.Err : Palette.Mist1;
+                riskLbl.style.position = Position.Relative;
+                riskLbl.style.left = StyleKeyword.Auto;
+                riskLbl.style.top = StyleKeyword.Auto;
             }
 
             // Travel/Sneak follow the picked node, not the previewed one.
@@ -561,27 +569,41 @@ namespace Obscure
             }
             else
             {
-                int shown = Math.Min(3, chips.Count);
+                var chipsRow = new VisualElement
+                {
+                    pickingMode = PickingMode.Ignore,
+                    style =
+                    {
+                        flexDirection = FlexDirection.Row,
+                        alignItems = UnityEngine.UIElements.Align.Center,
+                        flexGrow = 1,
+                        flexShrink = 1,
+                        overflow = Overflow.Hidden,
+                        marginRight = 10
+                    }
+                };
+                int shown = Math.Min(2, chips.Count);
                 for (int i = 0; i < shown; i++)
                 {
                     var chip = InstantiateEffectChip(chips[i].template, chips[i].glyph, chips[i].name, chips[i].meta);
                     if (chip != null)
                     {
                         chip.style.marginRight = 8;
-                        bar.Add(chip);
+                        chipsRow.Add(chip);
                     }
                 }
-                if (chips.Count > 3)
+                if (chips.Count > shown)
                 {
                     var ov = FigmaUi.InstantiateTemplate("Effect-Chip-Overflow");
                     if (ov != null)
                     {
                         ov.style.flexShrink = 0;
                         FigmaUi.SetInstanceText(ov, "text-0", "+");
-                        FigmaUi.SetInstanceText(ov, "text-1", $"+{chips.Count - 3}");
-                        bar.Add(ov);
+                        FigmaUi.SetInstanceText(ov, "text-1", $"+{chips.Count - shown}");
+                        chipsRow.Add(ov);
                     }
                 }
+                bar.Add(chipsRow);
             }
 
             bar.Add(new UiLabel("TAB › DETAILS")
@@ -805,7 +827,7 @@ namespace Obscure
                 {
                     totalCount++;
                     AddEffectCard(InstantiateEffectChip(EventChipTemplate(b.id), "✦", StatusInfo.Name(b.id), "DUNGEON"),
-                        DungeonModifierManager.UntilDungeonExit, $"EACH BATTLE: PARTY {StatusInfo.Name(b.id)} ({b.turns} TURNS).", b.id);
+                        DungeonModifierManager.UntilDungeonExit, $"EACH BATTLE: PARTY {StatusInfo.Name(b.id)} ({b.turns} {(b.turns == 1 ? "TURN" : "TURNS")}).", b.id);
                 }
             }
 
@@ -1006,8 +1028,8 @@ namespace Obscure
 
         static string Glyph(NodeType t) => t switch
         {
-            NodeType.Battle => "VS", NodeType.Elite => "VS", NodeType.Event => "?", NodeType.Shop => "SH",
-            NodeType.Rest => "ZZ", NodeType.Treasure => "TR", _ => "!",
+            NodeType.Battle => "VS", NodeType.Elite => "EL", NodeType.Event => "?", NodeType.Shop => "SH",
+            NodeType.Rest => "ZZ", NodeType.Treasure => "TR", _ => "◆",
         };
 
         static void Enter(NodeDef n)

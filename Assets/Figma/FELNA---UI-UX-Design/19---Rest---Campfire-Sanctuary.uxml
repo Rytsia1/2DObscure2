@@ -117,7 +117,7 @@
                 <AttributeOverrides element-name="text-1" text="CHOOSE" />
             </ui:Instance>
             <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
-                <AttributeOverrides element-name="text-0" text="Z" />
+                <AttributeOverrides element-name="text-0" text="ENTER" />
                 <AttributeOverrides element-name="text-1" text="CONFIRM" />
             </ui:Instance>
         </ui:VisualElement>

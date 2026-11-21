@@ -23,6 +23,8 @@ namespace Obscure
         readonly List<UiLabel> letters = new List<UiLabel>();
 
         public Qte Qte => qte;
+        // Label for a non-Heavy defensive Perfect. Only a Guarding, un-Broken defender truly parries (Battle.Deal).
+        public string perfectDefense = "PARRY!";
 
         public void Init(Qte q, string heading, VisualElement qteHost = null)
         {
@@ -80,15 +82,31 @@ namespace Obscure
                         float perfScaled = QteConfig.ScalePerfect(d.profile, d.TimingBonusFraction);
                         BuildTrack(new[] { Impact }, goodScaled * speed, perfScaled * speed, d.Hits);
                         // Name the dodge direction from the first frame (the cue is known before the telegraph ends).
+                        int arrowCount = System.Array.FindAll(d.cues, c => c != DodgeDir.None).Length;
                         var dodge = System.Array.Find(d.cues, c => c != DodgeDir.None);
-                        if (dodge != DodgeDir.None) headingLbl.text = $"DODGE {DirName(dodge)}!";
+                        if (arrowCount > 1) headingLbl.text = "DODGE EACH ARROW!";
+                        else if (dodge != DodgeDir.None) headingLbl.text = $"DODGE {DirName(dodge)}!";
                         for (int i = 0; i < d.Hits && i < markers.Count; i++)
+                        {
+                            // rides just below the track, clear of the instruction text above it
                             if (d.cues[i] != DodgeDir.None)
                                 markers[i].Add(new UiLabel(Arrow(d.cues[i]))
                                 {
-                                    // rides just below the track, clear of the instruction text above it
                                     style = { position = Position.Absolute, left = -11, top = TrackH + 14, width = 28, fontSize = 22, color = Palette.Gold1, unityTextAlign = TextAnchor.MiddleCenter }
                                 });
+                            else if (d.heavy[i])
+                                markers[i].Add(new UiLabel("HOLD")
+                                {
+                                    style = { position = Position.Absolute, left = -22, top = TrackH + 16, width = 50, fontSize = 14, color = Palette.CrimsonBright, unityTextAlign = TextAnchor.MiddleCenter }
+                                });
+                        }
+                        break;
+                    case StruggleQte st:
+                        headingLbl.text = "BREAK FREE!";
+                        var stTrack = BuildTrack(new float[0], 0f, 0f, 0);
+                        chargeFill = new VisualElement { style = { position = Position.Absolute, left = 0, top = 0, bottom = 0, width = 0, backgroundColor = Palette.Gold2 } };
+                        stTrack.Add(chargeFill);
+                        stTrack.Add(new VisualElement { style = { position = Position.Absolute, left = QteConfig.StruggleGood * TrackW - 2f, top = -6, width = 4, height = TrackH + 12, backgroundColor = Palette.Hex(0xB8D6FF) } });
                         break;
                     case WardQte w:
                         BuildTyping(w);
@@ -97,7 +115,7 @@ namespace Obscure
                         BuildTyping(ty);
                         break;
                     default:
-                        infoLbl.text = "QTE ASSIST: AUTO";
+                        infoLbl.text = q.Result == QteResult.Poor ? "CAN'T REACT - TAKES THE FULL HIT" : "QTE ASSIST: AUTO";
                         host.Add(new VisualElement { style = { height = 40 } });
                         break;
                 }
@@ -247,6 +265,7 @@ namespace Obscure
                 case MovingTargetQte mv: RenderMoving(mv); break;
                 case ComboQte co: RenderCombo(co); break;
                 case DefenseQte d: RenderDefense(d); break;
+                case StruggleQte st: RenderStruggle(st); break;
                 case TypingQte ty: RenderTyping(ty); break;
             }
         }
@@ -304,13 +323,28 @@ namespace Obscure
                 }
         }
 
+        void RenderStruggle(StruggleQte s)
+        {
+            if (chargeFill != null) chargeFill.style.width = s.Gauge * TrackW;
+            if (s.InTelegraph) infoLbl.text = $"GET READY: MASH [{Key}] TO RESIST THE SIPHON";
+            else if (!defenseActiveStarted)
+            {
+                defenseActiveStarted = true;
+                Sfx.Play(Sound.QteStart);
+            }
+            if (!s.InTelegraph && !s.Done) infoLbl.text = $"MASH [{Key}]! FILL THE BAR ({s.TimeLeft:0.0}s)";
+            if (s.Done && !s.Cancelled) ShowResult(s.Result, "BROKE FREE!", "RESISTED", "DRAINED", true);
+        }
+
         void RenderDefense(DefenseQte d)
         {
             string key = Controls.QteKey.ToString().ToUpperInvariant();
             var dodge = System.Array.Find(d.cues, c => c != DodgeDir.None);
+            bool anyHeavy = System.Array.IndexOf(d.heavy, true) >= 0;
             if (d.InTelegraph)
                 infoLbl.text = dodge != DodgeDir.None
                     ? $"GET READY: PRESS {DirName(dodge)} (ARROW KEY OR W/A/S/D)"
+                    : anyHeavy ? $"GET READY: HOLD [{key}] THROUGH THE RED HIT"
                     : $"GET READY: PRESS [{key}] WHEN IT LANDS";
             else if (!defenseActiveStarted)
             {
@@ -352,21 +386,28 @@ namespace Obscure
                     Sfx.Play(Sound.QteTelegraph);
                 }
                 bool holding = hold > 0 && e >= w / 2 && e < w / 2 + hold;
-                float p = holding ? Impact / 2 : (e >= w / 2 + hold ? e - hold : e) / w * Impact;
+                float run = holding ? 0.5f : (e >= w / 2 + hold ? e - hold : e) / w;
+                float p = d.CueProgress(i, run) * Impact; // stutter cues change speed; impact time is unchanged
                 var c = holding ? (Mathf.Repeat(d.T, 0.2f) < 0.1f ? Palette.SpecCrimson : Palette.WarmIvory)
                     : d.heavy[i] ? Palette.CrimsonBright
                     : i == next ? Palette.WarmIvory : Palette.MutedGray;
                 SetMarker(i, p, c);
             }
             if (!d.InTelegraph)
-                infoLbl.text = dodge != DodgeDir.None
-                    ? $"PRESS {DirName(dodge)} AS IT LANDS"
-                    : (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (System.Array.IndexOf(d.heavy, true) >= 0 ? " - RED = HEAVY" : "");
+            {
+                // Name the input for the cue that comes next: arrow, brace, or the plain key.
+                int cur = next >= 0 ? next : 0;
+                infoLbl.text = d.cues[cur] != DodgeDir.None ? $"PRESS {DirName(d.cues[cur])} AS IT LANDS"
+                    : d.heavy[cur] ? $"HOLD [{key}] UNTIL THE RED HIT LANDS"
+                    : (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (anyHeavy ? " - RED = HOLD" : "");
+            }
 
             for (int i = d.Hits - 1; i >= 0; i--)
                 if (d.HitResult(i) is QteResult r)
                 {
-                    if (i != lastResolved) { lastResolved = i; resultSfxPlayed = false; ShowResult(r, "PARRY!", "BLOCK", d.WrongInput(i) ? $"WRONG KEY: {DirName(d.cues[i])}" : "HIT", true); }
+                    string miss = d.WrongInput(i) ? $"WRONG KEY: {DirName(d.cues[i])}" : d.LetGo(i) ? "LET GO TOO SOON" : "HIT";
+                    if (i != lastResolved) { lastResolved = i; resultSfxPlayed = false; ShowResult(r, d.heavy[i] ? "BRACED!" : perfectDefense, "BLOCK", miss, true); }
+                    else if (d.LetGo(i) && resultLbl != null && resultLbl.text != miss) { resultSfxPlayed = false; ShowResult(r, "BRACED!", "BLOCK", miss, true); }
                     break;
                 }
         }
