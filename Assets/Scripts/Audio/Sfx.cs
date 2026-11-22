@@ -109,8 +109,12 @@ namespace Obscure
                 Sound.Back or Sound.Deny or Sound.ModalOpen => 0.35f,
                 Sound.Confirm => 0.40f,
                 Sound.Success or Sound.QteGood or Sound.QteMiss or Sound.MapStep or Sound.Equip or Sound.Coin => 0.45f,
-                Sound.Crit or Sound.Break or Sound.Death or Sound.VictoryStinger or Sound.DefeatStinger => 0.56f,
-                _ => 0.50f,
+                Sound.VictoryStinger or Sound.DefeatStinger => 0.62f,
+                Sound.Hit or Sound.Block
+                    or Sound.Fire or Sound.Ice or Sound.Lightning or Sound.Arcane
+                    or Sound.Holy or Sound.Dark or Sound.Earth or Sound.Wind or Sound.Water => 0.80f,
+                Sound.Crit or Sound.Break or Sound.Parry or Sound.Death => 0.90f,
+                _ => 0.55f,
             };
             source.PlayOneShot(clip, vol);
         }
