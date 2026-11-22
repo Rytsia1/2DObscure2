@@ -358,6 +358,7 @@ namespace Obscure
                         actor.unit.mp = Math.Max(0, actor.unit.mp - move.mpCost); // only Skills cost MP; it never regenerates on its own
                         if (move.cooldown > 0) actor.cooldowns[Combatant.MoveKey(move)] = move.cooldown;
                         if (move.telegraph) actor.Charge = null;
+                        actor.JustReleasedCharge = move.telegraph; // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
                     }
                     if (move != null && move.self)
                     {

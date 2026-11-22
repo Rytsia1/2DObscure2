@@ -30,6 +30,12 @@ namespace Obscure
         // Enemy intent (Bab 10 §8.9, Bab 12 §6.4): planned at round start; a charged move is released on the next turn.
         public EnemyIntent Intent;
         public EnemyIntent Charge;
+        // Charge gap: own turns after a charged release before another charge can start (posture-B starting value, untested).
+        // Pass test: in a Zoroa fight, 50-66% of Zoroa's turns are charge or release, and Soul Lance shows up at least once per 4 turns.
+        // If it fails: still feels charge-heavy -> 2; Zoroa feels flat and has no signature moments -> 0 for Boss tier only.
+        public const int ChargeGapTurns = 1; // posture-B starting value (untested)
+        // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
+        public bool JustReleasedCharge;
         public bool IsCharging => Charge != null || (Intent != null && Intent.charging);
         public static string MoveKey(EnemyAttack m) => "move:" + m.name;
 
@@ -211,6 +217,7 @@ namespace Obscure
             unit = new Unit(next, dungeonNumber);
             phase++;
             Intent = Charge = null;
+            JustReleasedCharge = false;
             MaxBreakGauge = Math.Max(0, next.maxBreakGauge);
             BreakResistance = Math.Max(0, next.breakResistance + Math.Max(0, unit.Mod(Ability.VIT)));
             if (wasBroken && next.bossBreakRecoverOnPhase2) RecoverBreakGauge();

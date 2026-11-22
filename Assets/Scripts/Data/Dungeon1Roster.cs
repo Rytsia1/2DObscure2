@@ -212,7 +212,8 @@ namespace Obscure
                 "Zoroa gathers the souls of Felna and tears them from the living. Health bar 1/2.",
                 new EnemyAttack { name = "Final Reaping", element = Element.Physical, hitDamage = new[] { 30, 30, 30, 45 }, intervals = ZoroaAccelerando,
                     heavyHit = 3, telegraph = true, breakPower = FinalReapingP1BreakPower, mpCost = 35, aiPriority = 4, cooldown = 3, initialCooldown = 2 },
-                new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, telegraph = true, mpCost = 24, aiPriority = 3, cooldown = 3,
+                // ponytail: Soulbind is no longer telegraphed (instant status move), which diverges from Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx.
+                new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, mpCost = 24, aiPriority = 3, cooldown = 3,
                     apply = new[] { Chance(StatusId.Silence, 0.20f) } },
                 new EnemyAttack { name = "Soul Lance", element = Element.Shadow, hitDamage = new[] { 42 }, mpCost = 18, aiPriority = 2, cooldown = 1 },
                 Move("Soul Rend", Element.Physical, 38),
@@ -225,7 +226,8 @@ namespace Obscure
                     heavyHit = 3, telegraph = true, breakPower = FinalReapingP2BreakPower, mpCost = 40, aiPriority = 4, cooldown = 3, initialCooldown = 1 },
                 new EnemyAttack { name = "Soulstorm", element = Element.Shadow, hitDamage = new[] { 24 }, allTargets = true, telegraph = true,
                     breakPower = SoulstormBreakPower, mpCost = 45, aiPriority = 3, cooldown = 3, minTargets = 2 }, // the one new Phase 2 attack; shared QTE
-                new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, telegraph = true, mpCost = 28, aiPriority = 2, cooldown = 3,
+                // ponytail: Soulbind is no longer telegraphed (instant status move), which diverges from Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx.
+                new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, mpCost = 28, aiPriority = 2, cooldown = 3,
                     apply = new[] { Chance(StatusId.Silence, 0.25f) } },
                 new EnemyAttack { name = "Soul Lance", element = Element.Shadow, hitDamage = new[] { 50 }, mpCost = 22, aiPriority = 1, cooldown = 1 },
                 new EnemyAttack { name = "Soul Rend", element = Element.Physical, hitDamage = new[] { 43 }, aiPriority = 0 },

@@ -123,11 +123,11 @@ namespace Obscure.Tests
             yield return S("royal_ossuary_knight", "Graveward Charge", Element.Physical, false, new[] { 38 }, 18, 0, true);
             yield return S("zoroa_p1", "Soul Rend", Element.Physical, false, new[] { 38 }, 0, -1, false);
             yield return S("zoroa_p1", "Soul Lance", Element.Shadow, false, new[] { 42 }, 18, -1, false);
-            yield return S("zoroa_p1", "Soulbind", Element.Shadow, false, new int[0], 24, -1, true, StatusId.Silence, 0.20f);
+            yield return S("zoroa_p1", "Soulbind", Element.Shadow, false, new int[0], 24, -1, false, StatusId.Silence, 0.20f);
             yield return S("zoroa_p1", "Final Reaping", Element.Physical, false, new[] { 30, 30, 30, 45 }, 35, 3, true);
             yield return S("zoroa_p2", "Soul Rend", Element.Physical, false, new[] { 43 }, 0, -1, false);
             yield return S("zoroa_p2", "Soul Lance", Element.Shadow, false, new[] { 50 }, 22, -1, false);
-            yield return S("zoroa_p2", "Soulbind", Element.Shadow, false, new int[0], 28, -1, true, StatusId.Silence, 0.25f);
+            yield return S("zoroa_p2", "Soulbind", Element.Shadow, false, new int[0], 28, -1, false, StatusId.Silence, 0.25f);
             yield return S("zoroa_p2", "Final Reaping", Element.Physical, false, new[] { 34, 34, 34, 50 }, 40, 3, true);
             yield return S("zoroa_p2", "Soulstorm", Element.Shadow, true, new[] { 24 }, 45, -1, true);
             yield return S("reliquary_confessor", "Reliquary Staff", Element.Physical, false, new[] { 15 }, 0, -1, false);
@@ -847,10 +847,83 @@ namespace Obscure.Tests
                     b.Perform(BattleAction.Guard(c));
                 }
             }
-            CollectionAssert.AreEqual(new[] { "charge:Soulbind", "Soulbind", "charge:Final Reaping", "Final Reaping" }, seen.Take(4),
-                "Final Reaping waits out its opening cooldown; each telegraphed move charges one turn first");
+            CollectionAssert.AreEqual(new[] { "Soulbind", "Soul Lance", "charge:Final Reaping", "Final Reaping" }, seen.Take(4),
+                "Final Reaping waits out its opening cooldown; Soulbind is instant; telegraphed moves charge one turn first");
             Assert.IsTrue(seen.All(s => !s.Contains("Soulstorm")), "Soulstorm is Phase 2 only");
             Assert.GreaterOrEqual(z.unit.mp, 0);
+        }
+
+        [Test]
+        public void ZoroaChargeGapPreventsBackToBackChargesAndCapsChargeShareAtTwoThirds()
+        {
+            foreach (var zoroaId in new[] { "zoroa_p1", "zoroa_p2" })
+            {
+                var b = NewBattle(1, zoroaId);
+                var z = b.Enemies[0];
+                var turns = new List<(bool charging, bool released, string move)>();
+                while (turns.Count < 12 && b.Outcome == Outcome.None)
+                {
+                    var c = b.NextTurn();
+                    if (c == null) continue;
+                    if (c == z)
+                    {
+                        bool wasCharged = z.Charge != null;
+                        // HUD intent at round prep must match the action actually chosen.
+                        if (z.Intent != null)
+                            Assert.AreEqual(z.Intent.charging, !wasCharged && z.Intent.move.telegraph, $"{zoroaId}: HUD intent matches charge state");
+                        var act = EnemyAI.Choose(b, z);
+                        Assert.IsNull(b.Validate(act));
+                        bool released = wasCharged && !act.charging && act.attack.telegraph;
+                        turns.Add((act.charging, released, act.attack.name));
+                        b.Perform(act, 1f, Enumerable.Repeat(QteResult.Poor, Math.Max(1, act.attack.hits)).ToList());
+                    }
+                    else
+                    {
+                        c.unit.hp = c.Stats.maxHp;
+                        c.statuses.RemoveAll(s => s.id == StatusId.Silence);
+                        c.StatusController.RemoveStatus(StatusId.Silence);
+                        b.Perform(BattleAction.Guard(c));
+                    }
+                }
+
+                Assert.AreEqual(12, turns.Count, zoroaId);
+                for (int i = 1; i < turns.Count; i++)
+                {
+                    if (turns[i - 1].released)
+                        Assert.IsFalse(turns[i].charging, $"{zoroaId} turn {i + 1}: cannot start a charge on the turn right after a release");
+                }
+                int chargeOrRelease = turns.Count(t => t.charging || t.released);
+                Assert.LessOrEqual(chargeOrRelease, 8, $"{zoroaId}: share of charge or release turns over 12 turns is at most 66% (8/12)");
+            }
+        }
+
+        [Test]
+        public void OssuaryKnightCyclesChargeReleaseAndOssuarySlam()
+        {
+            var b = NewBattle(1, "royal_ossuary_knight");
+            var knight = b.Enemies[0];
+            knight.cooldowns.Clear(); // start at the charge-ready state to test the repeating 3-turn cycle
+            var seen = new List<string>();
+            while (seen.Count < 6 && b.Outcome == Outcome.None)
+            {
+                var c = b.NextTurn();
+                if (c == null) continue;
+                if (c == knight)
+                {
+                    var act = EnemyAI.Choose(b, knight);
+                    Assert.IsNull(b.Validate(act));
+                    seen.Add((act.charging ? "charge:" : "") + act.attack.name);
+                    b.Perform(act, 1f, Enumerable.Repeat(QteResult.Poor, Math.Max(1, act.attack.hits)).ToList());
+                }
+                else
+                {
+                    c.unit.hp = c.Stats.maxHp;
+                    b.Perform(BattleAction.Guard(c));
+                }
+            }
+            CollectionAssert.AreEqual(
+                new[] { "charge:Graveward Charge", "Graveward Charge", "Ossuary Slam", "charge:Graveward Charge", "Graveward Charge", "Ossuary Slam" },
+                seen);
         }
 
         [Test]
