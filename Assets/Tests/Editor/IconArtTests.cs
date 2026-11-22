@@ -68,6 +68,14 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void EveryRacialFeatHasAnIconWithSigilFallback()
+        {
+            AssertIcons(Database.Races.Values.Where(r => r.racialFeat != null).Select(r => r.racialFeat.id), IconArt.Racial, "racial feat");
+            Assert.AreSame(IconArt.Racial("_sigil"), IconArt.Racial("no_such_feat"));
+            Assert.IsNotNull(IconArt.Racial(null));
+        }
+
+        [Test]
         public void IconsAreCrispAndDistinct()
         {
             var a = IconArt.Skill("firebolt");

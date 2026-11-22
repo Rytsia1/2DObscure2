@@ -1948,7 +1948,7 @@ namespace Obscure
                         else
                             Choose(BattleAction.RacialFeat(c));
                     },
-                    canUse, tip, "COST: TURN · NO MP", targetLabel, "RACIAL FEAT");
+                    canUse, tip, "COST: TURN · NO MP", targetLabel, "RACIAL FEAT", IconArt.Racial(c.unit?.race?.racialFeat?.id));
             }
             foreach (var s in skills)
             {

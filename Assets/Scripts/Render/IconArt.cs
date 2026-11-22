@@ -7,6 +7,7 @@ using UnityEngine.UIElements;
 //   Resources/Icons/Gear/<id>.png     every EquipmentDef in Database.Equipment and CatalogueEquipment
 //   Resources/Icons/Skills/<id>.png   active skills;  Resources/Icons/Passives/<id>.png  passive skills
 //   Resources/Icons/Status/<StatusId>.png  status effects (combat HUD)
+//   Resources/Icons/Racial/<featId>.png    racial feats (_sigil.png = fallback)
 // Drawn at whole-number scales (3x = 48px in a 56px slot) so the pixels stay crisp.
 namespace Obscure
 {
@@ -23,6 +24,8 @@ namespace Obscure
         public static Texture2D SkillOrPassive(string id, bool passive) => passive ? Passive(id) : Skill(id);
         public static Texture2D Status(StatusId id) => Load("Status", id.ToString());
         public static Texture2D Reward(string id) => Load("Rewards", id);
+        // Racial feats; unknown ids fall back to the ancestral tree sigil.
+        public static Texture2D Racial(string id) => Load("Racial", id) ?? Load("Racial", "_sigil");
 
         public static Texture2D EventScene(string eventId, EventCategory category)
         {

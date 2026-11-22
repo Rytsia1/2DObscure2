@@ -498,4 +498,22 @@ const STATUS = {
   Madness: all(g("eye", { iris: "K", white: "c" }, { y: 7 }), (c) => { c.line(1.5, 7, 3.5, 6, "r"); c.line(12.5, 7, 10.5, 8, "r"); c.line(2.5, 8.5, 4, 8, "r"); }),
 };
 
-module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, gearIcon };
+// ---------------- racial feats (one per RacialFeatDef id; _sigil = ancestral tree, fallback for the rest) ----------------
+const RACIAL = {
+  determination: all(I("shield", { rim: "s", face: "S" }), g("heart", { k: "K" }, { y: 6.4, s: 0.62 }), spark("H", 11.6, 2.4, 0.6)),
+  fey_step: all((c) => c.at({ x: 9, y: 5.5, r: 35, s: 0.95 }, () => { c.poly([[0, -6], [2.4, -3.5], [3, 0], [2, 3], [0, 5], [-2, 3], [-3, 0], [-2.4, -3.5]], "N"); c.line(0, -4.5, 0, 4, "n"); }),
+    spark("T", 3.5, 10.5, 0.65), spark("T", 7.5, 12.5, 0.5)),
+  iron_resolve: all(I("shield", { rim: "G", face: "S", boss: "o" }), (c) => { for (const [x, y] of [[3.2, 3.2], [10.8, 3.2], [3.2, 6.4], [10.8, 6.4]]) c.px(x, y, "G"); }),
+  second_chance: all(g("coin", { r: 2.9 }, { y: 7.5 }), (c) => { c.arc(7, 7.5, 4.7, 5.9, -40, 250, "T"); c.poly([[4.3, 0.4], [9, 1.6], [6, 4.8]], "T"); }),
+  draconic_overdrive: g("claw", { k: "F" }, { s: 1.05 }),
+  lightbound: all(g("sun", {}, { x: 6.6, y: 7.4, s: 0.95 }), spark("T", 11.8, 2.2, 0.6)),
+  oceans_embrace: all(g("drop", { k: "B" }, { y: 5.8, s: 1.05 }), (c) => c.arc(7, 6.5, 5, 6.4, 15, 165, "I")),
+  _sigil: (c) => { // ancestral tree: rounded gold crown, bronze trunk spreading into roots
+    c.rect(6.2, 6, 7.8, 11, "z");
+    for (const [x, y] of [[3, 13], [11, 13], [7, 13.4]]) c.cap([[7, 10.4], [x, y]], 0.7, 0.4, "z");
+    c.ell(7, 4.4, 4, 3.6, "G"); c.ell(3.6, 6.4, 2.6, 2.2, "G"); c.ell(10.4, 6.4, 2.6, 2.2, "G");
+    c.line(7, 8, 7, 3, "z"); c.line(7, 6, 4.5, 4, "z"); c.line(7, 6, 9.5, 4, "z");
+  },
+};
+
+module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, RACIAL, gearIcon };
