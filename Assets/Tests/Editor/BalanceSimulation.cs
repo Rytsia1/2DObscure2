@@ -197,7 +197,7 @@ namespace Obscure.Tests
         public sealed class Result
         {
             public bool won, timedOut;
-            public int rounds, playerTurns, skillTurns, guardTurns, damageDealt;
+            public int rounds, playerTurns, skillTurns, guardTurns, damageDealt, damageTaken, partyDeaths, summonsSpawned;
             public float hpLeft;
         }
 
@@ -223,7 +223,10 @@ namespace Obscure.Tests
                     if (qte is WardQte ward) defense = Enumerable.Repeat(ex.Roll(qteRng), ward.Results.Count).ToList(); // one typed ward covers every hit
                     else if (qte is DefenseQte d) defense = Enumerable.Range(0, d.Hits).Select(_ => ex.Roll(qteRng)).ToList();
                     else if (qte is StruggleQte st) defense = Enumerable.Repeat(ex.Roll(qteRng), st.hits).ToList(); // one gauge covers every hit
-                    b.Perform(act, 1f, defense);
+                    int enemiesBefore = b.Enemies.Count;
+                    var hits = b.Perform(act, 1f, defense);
+                    res.summonsSpawned += Math.Max(0, b.Enemies.Count - enemiesBefore);
+                    res.damageTaken += hits.Where(h => !h.heal && h.target != null && h.target.IsPlayer).Sum(h => Math.Max(0, h.amount));
                 }
                 else
                 {
@@ -239,8 +242,25 @@ namespace Obscure.Tests
             res.won = b.Outcome == Outcome.Victory;
             res.timedOut = b.Outcome == Outcome.None;
             res.rounds = b.Round;
+            res.partyDeaths = b.Party.Count(p => !p.Alive);
             res.hpLeft = (float)b.Party.Sum(p => Math.Max(0, p.unit.hp)) / b.Party.Sum(p => p.Stats.maxHp);
             return res;
+        }
+
+        [Test]
+        public void ZoroaDoubleTurnAndSummonSimulation()
+        {
+            const int seeds = 50;
+            const int level = 11;
+            var good = Enumerable.Range(1, seeds).Select(s => Fight("d1_boss", level, Build.Recommended, Executions[1], s, Gear.D1WeaponArmor)).ToList();
+            var miss = Enumerable.Range(1, seeds).Select(s => Fight("d1_boss", level, Build.Recommended, Executions[3], s, Gear.D1WeaponArmor)).ToList();
+
+            TestContext.WriteLine($"Zoroa L{level} (D1WeaponArmor, {seeds} seeds):");
+            TestContext.WriteLine($"  All Good: win={100f * good.Count(r => r.won) / seeds:0}%, avgRounds={good.Average(r => r.rounds):0.1}, avgDeaths={good.Average(r => r.partyDeaths):0.2}, dmgTaken/round={good.Average(r => (double)r.damageTaken / Math.Max(1, r.rounds)):0.1}, avgSummons={good.Average(r => r.summonsSpawned):0.2}");
+            TestContext.WriteLine($"  All Miss: win={100f * miss.Count(r => r.won) / seeds:0}%, avgRounds={miss.Average(r => r.rounds):0.1}, avgDeaths={miss.Average(r => r.partyDeaths):0.2}, dmgTaken/round={miss.Average(r => (double)r.damageTaken / Math.Max(1, r.rounds)):0.1}, avgSummons={miss.Average(r => r.summonsSpawned):0.2}");
+
+            Assert.Greater(miss.Average(r => r.partyDeaths), good.Average(r => r.partyDeaths));
+            Assert.Greater(good.Average(r => r.summonsSpawned), 0);
         }
 
         // ---- EXP pacing (RunConfig) ----

@@ -70,7 +70,7 @@ namespace Obscure
         // Builds the action; single-target hits respect Interpose.
         public static BattleAction Use(Battle b, Combatant self, EnemyAttack move, Combatant target = null)
         {
-            if (move.self || move.allTargets) return BattleAction.Strike(self, move, null);
+            if (move.self || move.allTargets || move.Summons) return BattleAction.Strike(self, move, null);
             if (move.Heals) return BattleAction.Strike(self, move, target ?? self); // ally support: no Interpose
             return BattleAction.Strike(self, move, b.Intercept(target ?? RandomTarget(b, self)));
         }
@@ -83,12 +83,13 @@ namespace Obscure
             return a.HasHeavy ? size + " HEAVY" : size;
         }
 
-        // HUD intent line for actions that must be telegraphed (Heavy, charge, signature, status-only); null otherwise.
+        // HUD intent line for actions that must be telegraphed (Heavy, charge, signature, status-only, summon); null otherwise.
         public static string IntentText(Combatant c)
         {
             var i = c.Intent ?? c.Charge;
             if (i == null || !i.move.NeedsTelegraph) return null;
             var m = i.move;
+            if (m.Summons) return $"{m.name}: SUMMONS".ToUpperInvariant();
             string stage = c.Intent == null ? "CHARGED" : c.Charge != null ? "RELEASE" : i.charging ? "CHARGING" : m.StatusOnly ? "STATUS" : "HEAVY";
             string hits = m.hits > 1 ? $" x{m.hits}" : "";
             string heavy = m.HasHeavy ? " HEAVY" : "";

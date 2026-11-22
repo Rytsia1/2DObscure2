@@ -91,7 +91,7 @@ namespace Obscure
         // Living combatants still to act this round, in order (excludes Active).
         public IEnumerable<Combatant> Upcoming => queue.Where(c => c.Alive);
         public List<Combatant> NextRoundOrder => TurnOrder.Build(All);
-        public bool HasActed(Combatant c) => acted.Contains(c);
+        public bool HasActed(Combatant c) => c.turnsTakenThisRound > 0 || acted.Contains(c);
 
         // QTE result -> offense multiplier. Skills may override Perfect (critical hits).
         public static float QtePower(BattleAction a, QteResult r) =>
@@ -103,26 +103,34 @@ namespace Obscure
         public Combatant NextTurn()
         {
             Active = null;
-            int budget = (Party.Count + Enemies.Count) * 2 + 2;
+            int budget = (Party.Count + Enemies.Count) * 4 + 4;
             while (Outcome == Outcome.None && budget-- > 0)
             {
                 if (queue.Count == 0) StartRound();
                 var c = queue[0];
                 queue.RemoveAt(0);
-                if (!c.Alive || !acted.Add(c)) continue;
+                if (!c.Alive || c.turnsTakenThisRound >= c.TurnsPerRound) continue;
+                bool isFirstTurn = c.turnsTakenThisRound == 0;
+                c.turnsTakenThisRound++;
+                acted.Add(c);
                 c.guarding = false;
-                StartTurn(c);
+                if (isFirstTurn) StartTurn(c);
                 if (!c.Alive) continue; // DoT finished it
                 if (c.stunTurns > 0 || c.StatusController.HasStatus(StatusId.Stun))
                 {
-                    if (c.stunTurns > 0) c.stunTurns--;
-                    c.StatusController.DecrementControlImmunities();
+                    if (isFirstTurn)
+                    {
+                        if (c.stunTurns > 0) c.stunTurns--;
+                        c.StatusController.DecrementControlImmunities();
+                    }
+                    c.turnsTakenThisRound = c.TurnsPerRound; // Stun, Sleep and Broken cost the whole round
                     Say($"{c.name} is stunned and cannot act.");
                     continue;
                 }
                 if (c.StatusController.HasStatus(StatusId.Sleep))
                 {
-                    c.StatusController.DecrementControlImmunities();
+                    if (isFirstTurn) c.StatusController.DecrementControlImmunities();
+                    c.turnsTakenThisRound = c.TurnsPerRound; // Stun, Sleep and Broken cost the whole round
                     Say($"{c.name} is asleep and cannot act.");
                     continue;
                 }
@@ -140,6 +148,11 @@ namespace Obscure
         {
             Round++;
             acted.Clear();
+            foreach (var c in All)
+            {
+                c.turnsTakenThisRound = 0;
+                c.UsedHeavyThisRound = false;
+            }
             queue.AddRange(TurnOrder.Build(All));
             foreach (var e in Enemies) EnemyAI.Plan(this, e); // intents are telegraphed from the start of the round
         }
@@ -256,7 +269,7 @@ namespace Obscure
             {
                 case ActionKind.Attack:
                     if (a.attack != null && a.actor.unit.mp < a.attack.mpCost) return "Not enough MP.";
-                    if (a.attack != null && a.attack.self) return null;
+                    if (a.attack != null && (a.attack.self || a.attack.Summons)) return null;
                     if (a.attack != null && a.attack.Heals) return IsAlly(a.actor, a.target) ? null : "Invalid target.";
                     if (a.attack != null && a.attack.allTargets) return Opponents(a.actor).Any(c => c.Alive) ? null : "Invalid target.";
                     return IsFoe(a.actor, a.target) ? null : "Invalid target.";
@@ -349,16 +362,26 @@ namespace Obscure
                     }
                     if (a.charging)
                     {
+                        if (move != null && move.HasHeavy) actor.UsedHeavyThisRound = true;
                         actor.Charge = new EnemyIntent { move = move, target = a.target };
                         Say($"{actor.name} begins charging {move.name}{(move.allTargets ? "" : $" at {a.target.name}")}!");
                         break;
                     }
                     if (move != null)
                     {
+                        if (move.HasHeavy) actor.UsedHeavyThisRound = true;
                         actor.unit.mp = Math.Max(0, actor.unit.mp - move.mpCost); // only Skills cost MP; it never regenerates on its own
                         if (move.cooldown > 0) actor.cooldowns[Combatant.MoveKey(move)] = move.cooldown;
                         if (move.telegraph) actor.Charge = null;
                         actor.JustReleasedCharge = move.telegraph; // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
+                    }
+                    if (move != null && move.Summons)
+                    {
+                        Say($"{actor.name} uses {move.name}!");
+                        int livingSummons = Enemies.Count(e => e.Alive && e.IsSummon);
+                        for (int sIdx = livingSummons; sIdx < move.summonCount; sIdx++)
+                            Summon(actor, Dungeon1Roster.RollHarvestCallSummon(Rng));
+                        break;
                     }
                     if (move != null && move.self)
                     {
@@ -584,9 +607,62 @@ namespace Obscure
                     }
                     break;
             }
-            a.actor.StatusController.DecrementControlImmunities();
+            if (a.actor.turnsTakenThisRound == 1)
+                a.actor.StatusController.DecrementControlImmunities();
+            if (a.actor.IsEnemy && a.actor.Alive && a.actor.turnsTakenThisRound < a.actor.TurnsPerRound)
+                EnemyAI.Plan(this, a.actor); // Plan turn B's intent at the end of turn A and show it right away
             Active = null;
             return hits;
+        }
+
+        // Spawns a summoned enemy (Harvest Call) at 70% normal HP. Summons join at the next round (never act in the round they appear).
+        public void Summon(Combatant summoner, EnemyDef def)
+        {
+            if (def == null) return;
+            var u = new Unit(def, Dungeon);
+            int scaledHp = Math.Max(1, (int)Math.Round(u.stats.maxHp * Dungeon1Roster.SummonHpMult));
+            u.stats = new Stats(scaledHp, u.stats.maxMp, u.stats.atk, u.stats.def, u.stats.spd, u.stats.mag);
+            u.hp = scaledHp;
+            u.RecalculateStats();
+
+            int priorSame = Enemies.Count(e => e.enemy == def);
+            bool dup = priorSame > 0;
+            if (priorSame == 1)
+            {
+                var first = Enemies.First(e => e.enemy == def);
+                if (first.name == def.shortName)
+                {
+                    int idx = Enemies.IndexOf(first);
+                    var renamed = new Combatant(first.unit, Side.Enemy, first.slot, $"{def.shortName} A", def.tag + "A", def)
+                    {
+                        IsSummon = first.IsSummon,
+                        turnsTakenThisRound = first.turnsTakenThisRound,
+                        CurrentBreakGauge = first.CurrentBreakGauge,
+                        Intent = first.Intent,
+                        Charge = first.Charge,
+                        JustReleasedCharge = first.JustReleasedCharge,
+                        UsedHeavyThisRound = first.UsedHeavyThisRound,
+                        guarding = first.guarding,
+                        stunTurns = first.stunTurns,
+                    };
+                    foreach (var st in first.statuses) renamed.statuses.Add(st);
+                    foreach (var cd in first.cooldowns) renamed.cooldowns[cd.Key] = cd.Value;
+                    Enemies[idx] = renamed;
+                    for (int q = 0; q < queue.Count; q++) if (queue[q] == first) queue[q] = renamed;
+                }
+            }
+            char letter = (char)('A' + priorSame);
+            string name = dup ? $"{def.shortName} {letter}" : def.shortName;
+            string tag = dup ? def.tag + letter : def.tag;
+            int nextSlot = Enemies.Count > 0 ? Enemies.Max(e => e.slot) + 1 : 0;
+            var summoned = new Combatant(u, Side.Enemy, nextSlot, name, tag, def)
+            {
+                IsSummon = true,
+                turnsTakenThisRound = Math.Max(1, def.turnsPerRound), // never acts in the round it is summoned
+            };
+            acted.Add(summoned);
+            Enemies.Add(summoned);
+            Say($"{(summoner != null ? summoner.name + " summons " : "")}{summoned.name}!");
         }
 
         // CHA (Command Presence): a Support skill's stat buffs grow with the caster's CHA modifier
@@ -996,11 +1072,23 @@ namespace Obscure
             if (!t.Alive)
             {
                 acted.Add(t); // a unit defeated this round never acts again in it, even if revived (Bab 10 §8.6)
+                t.turnsTakenThisRound = t.TurnsPerRound;
                 Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
-                // Relic System: Enemy Defeated (R013 Dirge-Eater's Fang, R022 Zoroa's Dull Crown)
-                if (t.IsEnemy)
+                // Relic System: Enemy Defeated (R013 Dirge-Eater's Fang, R022 Zoroa's Dull Crown) — skipped for summons
+                if (t.IsEnemy && !t.IsSummon)
                 {
                     run?.RelicManager?.OnEnemyDefeated(Active, t, this);
+                }
+                // Zoroa's final bar breaking ends the battle: kill every living summon (no rewards/relic triggers) so Outcome.Victory triggers.
+                if (t.IsEnemy && t.enemy != null && t.enemy.tier == Tier.Boss && t.enemy.nextPhase == null)
+                {
+                    foreach (var s in Enemies.Where(e => e.Alive && e.IsSummon).ToList())
+                    {
+                        s.unit.hp = 0;
+                        s.turnsTakenThisRound = s.TurnsPerRound;
+                        acted.Add(s);
+                        Say($"{s.name} collapses with its master!");
+                    }
                 }
             }
             else CheckPhase(t);

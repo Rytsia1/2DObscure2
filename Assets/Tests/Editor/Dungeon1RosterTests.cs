@@ -66,7 +66,7 @@ namespace Obscure.Tests
         public void RosterBaseStatsMatchWorkbook(string id, Tier tier, int hp, int mp, int atk, int def, int matk, int mdef, int spd, int brk)
         {
             float hpMult = tier == Tier.Boss ? Dungeon1Roster.BossHpMult : tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
-            float atkMult = tier == Tier.Boss ? Dungeon1Roster.BossAtkMult : tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
+            float atkMult = id.StartsWith("zoroa_") ? Dungeon1Roster.ZoroaAtkMult : tier == Tier.Boss ? Dungeon1Roster.BossAtkMult : tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
             int scaledHp = Dungeon1Roster.ScaleD1Stat(hp, hpMult);
             int scaledAtk = Dungeon1Roster.ScaleD1Stat(atk, atkMult);
             int scaledMatk = Dungeon1Roster.ScaleD1Stat(matk, atkMult);
@@ -124,10 +124,12 @@ namespace Obscure.Tests
             yield return S("zoroa_p1", "Soul Rend", Element.Physical, false, new[] { 38 }, 0, -1, false);
             yield return S("zoroa_p1", "Soul Lance", Element.Shadow, false, new[] { 42 }, 18, -1, false);
             yield return S("zoroa_p1", "Soulbind", Element.Shadow, false, new int[0], 24, -1, false, StatusId.Silence, 0.20f);
+            yield return S("zoroa_p1", "Harvest Call", Element.Shadow, false, new int[0], 30, -1, false);
             yield return S("zoroa_p1", "Final Reaping", Element.Physical, false, new[] { 30, 30, 30, 45 }, 35, 3, true);
             yield return S("zoroa_p2", "Soul Rend", Element.Physical, false, new[] { 43 }, 0, -1, false);
             yield return S("zoroa_p2", "Soul Lance", Element.Shadow, false, new[] { 50 }, 22, -1, false);
             yield return S("zoroa_p2", "Soulbind", Element.Shadow, false, new int[0], 28, -1, false, StatusId.Silence, 0.25f);
+            yield return S("zoroa_p2", "Harvest Call", Element.Shadow, false, new int[0], 35, -1, false);
             yield return S("zoroa_p2", "Final Reaping", Element.Physical, false, new[] { 34, 34, 34, 50 }, 40, 3, true);
             yield return S("zoroa_p2", "Soulstorm", Element.Shadow, true, new[] { 24 }, 45, -1, true);
             yield return S("reliquary_confessor", "Reliquary Staff", Element.Physical, false, new[] { 15 }, 0, -1, false);
@@ -156,12 +158,12 @@ namespace Obscure.Tests
             Assert.IsFalse(m.isHeavy, "no all-hits Heavy in the roster");
             Assert.AreEqual(telegraph, m.telegraph);
             Assert.IsFalse(m.self);
-            if (damage.Length == 0) Assert.IsTrue(m.StatusOnly || m.Heals);
+            if (damage.Length == 0) Assert.IsTrue(m.StatusOnly || m.Heals || m.Summons);
             else CollectionAssert.AreEqual(damage, m.hitDamage);
 
             // The coefficient maps the authored D1 damage onto the D1 ATK / MATK (scaled automatically by the tier stat multiplier).
             float stat = m.UsesMagic ? d.stats.mag : d.stats.atk;
-            float atkMult = d.tier == Tier.Boss ? Dungeon1Roster.BossAtkMult : d.tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
+            float atkMult = d.id.StartsWith("zoroa_") ? Dungeon1Roster.ZoroaAtkMult : d.tier == Tier.Boss ? Dungeon1Roster.BossAtkMult : d.tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
             for (int i = 0; i < damage.Length; i++) Assert.AreEqual(damage[i] * atkMult, stat * m.PowerAt(i), 0.75, $"hit {i + 1}");
 
             if (status == null) Assert.IsTrue(m.apply == null || m.apply.Length == 0, "no status");
@@ -256,15 +258,15 @@ namespace Obscure.Tests
         public void ScalingNeverChainsAndMatchesWorkbookZoroaDungeon8()
         {
             int p1Hp = Expected(ZoroaHp, Tier.Boss, 0, 8);
-            int p1Atk = Expected(Dungeon1Roster.ScaleD1Stat(38, Dungeon1Roster.BossAtkMult), Tier.Boss, 2, 8);
-            int p1Matk = Expected(Dungeon1Roster.ScaleD1Stat(42, Dungeon1Roster.BossAtkMult), Tier.Boss, 3, 8);
+            int p1Atk = Expected(Dungeon1Roster.ScaleD1Stat(38, Dungeon1Roster.ZoroaAtkMult), Tier.Boss, 2, 8);
+            int p1Matk = Expected(Dungeon1Roster.ScaleD1Stat(42, Dungeon1Roster.ZoroaAtkMult), Tier.Boss, 3, 8);
             var p1 = new Unit(E("zoroa_p1"), 8);
             Assert.AreEqual(new Stats(p1Hp, 1020, p1Atk, 28, 17, p1Matk), p1.stats);
             Assert.AreEqual(31, p1.Derived.magicDefense);
 
             int p2Hp = Expected(ZoroaHp, Tier.Boss, 0, 8);
-            int p2Atk = Expected(Dungeon1Roster.ScaleD1Stat(43, Dungeon1Roster.BossAtkMult), Tier.Boss, 2, 8);
-            int p2Matk = Expected(Dungeon1Roster.ScaleD1Stat(50, Dungeon1Roster.BossAtkMult), Tier.Boss, 3, 8);
+            int p2Atk = Expected(Dungeon1Roster.ScaleD1Stat(43, Dungeon1Roster.ZoroaAtkMult), Tier.Boss, 2, 8);
+            int p2Matk = Expected(Dungeon1Roster.ScaleD1Stat(50, Dungeon1Roster.ZoroaAtkMult), Tier.Boss, 3, 8);
             var p2 = new Unit(E("zoroa_p2"), 8);
             Assert.AreEqual(new Stats(p2Hp, 1445, p2Atk, 25, 21, p2Matk), p2.stats);
             Assert.AreEqual(34, p2.Derived.magicDefense);
@@ -802,25 +804,25 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void ZoroaGetsOneTurnPerRoundAcrossThePhaseChange()
+        public void ZoroaGetsTwoTurnsPerRoundAcrossThePhaseChange()
         {
             var b = NewBattle(1, "zoroa_p1");
             foreach (var p in b.Party) p.unit.stats.spd = 1;
             var z = b.Enemies[0];
             var turns = new Dictionary<int, int>();
-            for (int i = 0; i < 40 && b.Round <= 4; i++)
+            for (int i = 0; i < 60 && b.Round <= 4; i++)
             {
                 var c = b.NextTurn();
                 if (c == null) continue;
                 if (c == z)
                 {
                     turns[b.Round] = turns.TryGetValue(b.Round, out var n) ? n + 1 : 1;
-                    if (b.Round == 2) b.Damage(z, ZoroaHp); // phase change after it already acted this round
+                    if (b.Round == 2 && turns[b.Round] == 1) b.Damage(z, ZoroaHp); // phase change after Turn A: Turn B still belongs to this round, no extra turns
                 }
                 b.Perform(BattleAction.Guard(c));
             }
             Assert.GreaterOrEqual(turns.Count, 4);
-            Assert.IsTrue(turns.Values.All(n => n == 1), string.Join(",", turns.Select(kv => $"R{kv.Key}:{kv.Value}")));
+            Assert.IsTrue(turns.Take(4).All(kv => kv.Value == Dungeon1Roster.ZoroaTurnsPerRound), string.Join(",", turns.Select(kv => $"R{kv.Key}:{kv.Value}")));
             Assert.AreEqual(2, z.phase);
         }
 
@@ -847,10 +849,230 @@ namespace Obscure.Tests
                     b.Perform(BattleAction.Guard(c));
                 }
             }
-            CollectionAssert.AreEqual(new[] { "Soulbind", "Soul Lance", "charge:Final Reaping", "Final Reaping" }, seen.Take(4),
+            CollectionAssert.AreEqual(new[] { "Soulbind", "Soul Lance", "Soul Rend", "charge:Final Reaping", "Final Reaping" }, seen.Take(5),
                 "Final Reaping waits out its opening cooldown; Soulbind is instant; telegraphed moves charge one turn first");
             Assert.IsTrue(seen.All(s => !s.Contains("Soulstorm")), "Soulstorm is Phase 2 only");
             Assert.GreaterOrEqual(z.unit.mp, 0);
+        }
+
+        [Test]
+        public void ZoroaAppearsTwiceInTurnOrderWithSecondTurnAtHalfSpeedAndOrdinaryEnemiesOnce()
+        {
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0]; // SPD 14 -> Turn A at 14, Turn B at 7
+            int[] spd = { 16, 12, 9, 5 }; // 2 heroes (12, 9) between 14 and 7
+            for (int i = 0; i < 4; i++) b.Party[i].unit.stats.spd = spd[i];
+
+            var order = b.NextRoundOrder;
+            Assert.AreEqual(2, order.Count(c => c == z), "Zoroa appears twice");
+            CollectionAssert.AreEqual(new[] { b.Party[0], z, b.Party[1], b.Party[2], z, b.Party[3] }, order);
+
+            var bNormal = NewBattle(1, "hollow_squire", "soul_reaper");
+            foreach (var e in bNormal.Enemies)
+                Assert.AreEqual(1, bNormal.NextRoundOrder.Count(c => c == e), $"{e.enemy.id} appears once");
+        }
+
+        [Test]
+        public void ZoroaFinalReapingIsUsedAtMostOnceEveryThreeRoundsOverTwelveRounds()
+        {
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0];
+            var releaseRounds = new List<int>();
+            while (b.Round <= 12 && b.Outcome == Outcome.None)
+            {
+                var c = b.NextTurn();
+                if (c == null) continue;
+                if (c.IsEnemy)
+                {
+                    var act = EnemyAI.Choose(b, c);
+                    if (c == z && !act.charging && act.attack.name == "Final Reaping")
+                        releaseRounds.Add(b.Round);
+                    b.Perform(act, 1f, Enumerable.Repeat(QteResult.Poor, Math.Max(1, act.attack.hits)).ToList());
+                }
+                else
+                {
+                    c.unit.hp = c.Stats.maxHp;
+                    b.Perform(BattleAction.Guard(c));
+                }
+            }
+            Assert.LessOrEqual(releaseRounds.Count, 4, $"Final Reaping released on rounds: {string.Join(",", releaseRounds)}");
+            for (int i = 1; i < releaseRounds.Count; i++)
+                Assert.GreaterOrEqual(releaseRounds[i] - releaseRounds[i - 1], 3, "cooldown 3 is counted in rounds, not individual turns");
+        }
+
+        [Test]
+        public void ZoroaStunRemovesBothTurnsThatRound()
+        {
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0];
+            z.stunTurns = 1;
+            int zoroaActions = 0;
+            while (b.Round <= 1)
+            {
+                var c = b.NextTurn();
+                if (c == null) break;
+                if (b.Round > 1) break;
+                if (c == z) zoroaActions++;
+                b.Perform(BattleAction.Guard(c));
+            }
+            Assert.AreEqual(0, zoroaActions, "1-turn stun costs both of Zoroa's turns in that round");
+            Assert.AreEqual(0, z.stunTurns, "stunTurns decremented once for the round");
+        }
+
+        [Test]
+        public void ZoroaChargesReleaseOnNextTurnWithinOrAcrossRoundsAndCanBeBrokenInBetween()
+        {
+            // 1. Charge on Turn A -> releases on Turn B of the same round, and Turn B's intent is planned right after Turn A.
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0];
+            z.cooldowns.Clear();
+            AdvanceTo(b, c => c == z);
+            int roundA = b.Round;
+            var actA = EnemyAI.Choose(b, z);
+            Assert.IsTrue(actA.charging && actA.attack.name == "Final Reaping");
+            b.Perform(actA);
+            Assert.IsNotNull(z.Intent, "Turn B intent is planned right after Turn A");
+            StringAssert.StartsWith("RELEASE: FINAL REAPING", EnemyAI.IntentText(z));
+
+            AdvanceTo(b, c => c == z);
+            Assert.AreEqual(roundA, b.Round, "Turn B is in the same round");
+            var actB = EnemyAI.Choose(b, z);
+            Assert.IsFalse(actB.charging);
+            Assert.AreEqual("Final Reaping", actB.attack.name);
+            foreach (var p in b.Party) p.unit.hp = 9999;
+            b.Perform(actB, 1f, Enumerable.Repeat(QteResult.Poor, 4).ToList());
+            Assert.IsTrue(z.JustReleasedCharge);
+
+            // 2. Charge on Turn B -> releases on next round's Turn A.
+            var b2 = NewBattle(1, "zoroa_p1");
+            var z2 = b2.Enemies[0];
+            AdvanceTo(b2, c => c == z2); // R1 Turn A: Soulbind
+            b2.Perform(EnemyAI.Choose(b2, z2));
+            z2.cooldowns.Remove(Combatant.MoveKey(Move("zoroa_p1", "Final Reaping"))); // ready on R1 Turn B
+            EnemyAI.Plan(b2, z2);
+            AdvanceTo(b2, c => c == z2); // R1 Turn B
+            Assert.AreEqual(1, b2.Round);
+            var chargeB = EnemyAI.Choose(b2, z2);
+            Assert.IsTrue(chargeB.charging && chargeB.attack.name == "Final Reaping");
+            b2.Perform(chargeB);
+
+            AdvanceTo(b2, c => c == z2); // R2 Turn A
+            Assert.AreEqual(2, b2.Round);
+            var releaseA = EnemyAI.Choose(b2, z2);
+            Assert.IsFalse(releaseA.charging);
+            Assert.AreEqual("Final Reaping", releaseA.attack.name);
+
+            // 3. Breaking Zoroa between Turn A and Turn B cancels the charge and skips Turn B.
+            var b3 = NewBattle(1, "zoroa_p1");
+            var z3 = b3.Enemies[0];
+            z3.cooldowns.Clear();
+            AdvanceTo(b3, c => c == z3); // Turn A charges Final Reaping
+            b3.Perform(EnemyAI.Choose(b3, z3));
+            Assert.IsTrue(z3.IsCharging);
+            var hero = AdvanceTo(b3, c => c.IsPlayer);
+            z3.CurrentBreakGauge = 1;
+            b3.Perform(BattleAction.Attack(hero, z3));
+            Assert.IsTrue(z3.IsBroken);
+            Assert.IsFalse(z3.IsCharging);
+        }
+
+        [Test]
+        public void ZoroaNeverUsesTwoHeavyMovesInOneRound()
+        {
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0];
+            z.cooldowns.Clear();
+            AdvanceTo(b, c => c == z);
+            var actA = EnemyAI.Choose(b, z);
+            Assert.IsTrue(actA.attack.HasHeavy);
+            b.Perform(actA);
+            // Force charge/cooldown off as if another Heavy move were available on Turn B: heavyTaken must block it.
+            z.Charge = null;
+            z.JustReleasedCharge = false;
+            z.cooldowns.Clear();
+            var intentB = PriorityBrain.Select(b, z);
+            Assert.IsFalse(intentB.move.HasHeavy, "second turn in the same round cannot pick another Heavy move");
+        }
+
+        [Test]
+        public void HarvestCallFillsUpToTwoSummonsWith8020NormalEliteSplitAndNeverSummonsStageBosses()
+        {
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0];
+            var hc = Move("zoroa_p1", "Harvest Call");
+            z.cooldowns.Clear();
+            AdvanceTo(b, c => c == z);
+
+            // 0 summons alive -> spawns 2
+            Assert.IsNull(QteFactory.Defense(BattleAction.Strike(z, hc, null), QteAssist.Standard), "no QTE on Harvest Call");
+            b.Perform(BattleAction.Strike(z, hc, null));
+            var summons = b.Enemies.Where(e => e.IsSummon && e.Alive).ToList();
+            Assert.AreEqual(2, summons.Count, "0 alive -> spawns 2");
+            foreach (var s in summons)
+            {
+                int baseHp = new Unit(s.enemy, 1).stats.maxHp;
+                Assert.AreEqual((int)Math.Round(baseHp * Dungeon1Roster.SummonHpMult), s.Stats.maxHp, "70% summon HP");
+                Assert.IsFalse(b.Upcoming.Contains(s), "summons never act in the round they appear");
+            }
+
+            // 2 summons alive -> AI skips Harvest Call even when off cooldown
+            z.cooldowns.Clear();
+            Assert.AreNotEqual("Harvest Call", PriorityBrain.Select(b, z).move.name);
+
+            // 1 summon alive -> spawns 1 to refill to 2
+            summons[0].unit.hp = 0;
+            Assert.AreEqual(1, b.Enemies.Count(e => e.IsSummon && e.Alive));
+            AdvanceTo(b, c => c == z);
+            b.Perform(BattleAction.Strike(z, hc, null));
+            Assert.AreEqual(2, b.Enemies.Count(e => e.IsSummon && e.Alive), "1 alive -> spawns 1");
+
+            // 1000 seeded rolls: 20% +/- 3% Elite, and stage bosses never appear
+            var rng = new Random(42);
+            int elites = 0;
+            for (int i = 0; i < 1000; i++)
+            {
+                var def = Dungeon1Roster.RollHarvestCallSummon(rng);
+                Assert.AreNotEqual("soul_reaper", def.id);
+                Assert.AreNotEqual("royal_ossuary_knight", def.id);
+                Assert.AreNotEqual(Tier.Boss, def.tier);
+                if (def.tier == Tier.Elite) elites++;
+            }
+            Assert.That(elites / 1000.0, Is.InRange(0.17, 0.23), $"Elite roll rate: {elites}/1000");
+        }
+
+        [Test]
+        public void SummonsPersistAcrossZoroaPhaseChangeCarryHarvestCallCooldownAndDieWithZoroaForZeroRewards()
+        {
+            var b = NewBattle(1, "zoroa_p1");
+            var z = b.Enemies[0];
+            var hc1 = Move("zoroa_p1", "Harvest Call");
+            z.cooldowns.Clear();
+            AdvanceTo(b, c => c == z);
+            b.Perform(BattleAction.Strike(z, hc1, null));
+            Assert.AreEqual(2, b.Enemies.Count(e => e.IsSummon && e.Alive));
+            Assert.AreEqual(Dungeon1Roster.HarvestCallCooldown, z.Cooldown(Combatant.MoveKey(hc1)));
+
+            // Phase transition: summons stay alive, Harvest Call cooldown carries over to Phase 2
+            b.Damage(z, ZoroaHp);
+            Assert.AreEqual(2, z.phase);
+            Assert.AreEqual(2, b.Enemies.Count(e => e.IsSummon && e.Alive), "summons persist into Phase 2");
+            Assert.AreEqual(Dungeon1Roster.HarvestCallCooldown, z.Cooldown(Combatant.MoveKey(Move("zoroa_p2", "Harvest Call"))), "cooldown carries over");
+
+            // Killing a summon does not trigger enemy-defeated relic hooks or grant extra EXP/gold
+            var run = new RunState(MapGenerator.Generate(1, 1, 3), Database.Party.Select(id => Database.Characters[id]), 1);
+            run.TryAddRelic("R013", out _); // Dirge-Eater's Fang: triggers on enemy defeated
+            b.run = run;
+            var firstSummon = b.Enemies.First(e => e.IsSummon && e.Alive);
+            b.Party[0].unit.hp = 10;
+            b.Damage(firstSummon, 9999);
+            Assert.IsFalse(firstSummon.Alive);
+            Assert.AreEqual(10, b.Party[0].unit.hp, "R013 did not heal on summon kill");
+
+            // Breaking Zoroa's P2 HP bar kills remaining living summons and ends the battle in Victory
+            b.Damage(z, ZoroaHp);
+            Assert.IsFalse(z.Alive);
+            Assert.IsTrue(b.Enemies.Where(e => e.IsSummon).All(e => !e.Alive), "remaining summons die with Zoroa");
+            Assert.AreEqual(Outcome.Victory, b.Outcome);
         }
 
         [Test]

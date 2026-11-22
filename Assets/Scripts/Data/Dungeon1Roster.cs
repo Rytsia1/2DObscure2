@@ -21,6 +21,26 @@ namespace Obscure
         // If it fails: adjust the HP multiplier first, then ATK.
         public const float BossHpMult = 1.30f;
         public const float BossAtkMult = 1.20f;
+        // Zoroa damage multiplier (per hit, both turns): posture-B starting value (untested), replacing the x1.20 BossAtkMult for Zoroa only
+        // (0.85 for the double turn, minus 0.05 to make room for summons from Part 2).
+        // Pass test: fight lasts 10-14 rounds; with Good QTEs, the party ends with 1+ hero above 30% HP; with sloppy QTEs, at least 2 heroes drop.
+        // If it fails: too lethal -> 0.70; still easy -> 0.90.
+        public const float ZoroaAtkMult = 0.80f;
+
+        // Zoroa double-turn and Harvest Call summon knobs: posture-B starting values (untested).
+        // If P1 feels unfair, set P1 = 1 and keep the double turn as the Phase 2 escalation.
+        public const int ZoroaTurnsPerRound = 2;             // posture-B starting value (untested)
+        public const int HarvestCallSummonCount = 2;         // posture-B starting value (untested)
+        public const int HarvestCallCooldown = 5;            // posture-B starting value (untested, user-set 5 rounds)
+        // Pass test: the party gets 2 rounds of pure Zoroa before the first summon. If it fails: too early -> 3.
+        public const int HarvestCallInitialCooldown = 2;     // posture-B starting value (untested)
+        // Pass test: Arcane Charge still at most about once per phase. If it fails: lower the cost, or raise Zoroa MP by 25%.
+        public const int HarvestCallP1MpCost = 30;           // posture-B starting value (untested)
+        public const int HarvestCallP2MpCost = 35;           // posture-B starting value (untested)
+        // Pass test: killing a common summon takes about 1-2 party turns, and an Elite summon about 3-4.
+        // If it fails: too tanky -> 0.60f; ignored freely -> 0.80f.
+        public const float SummonHpMult = 0.70f;             // posture-B starting value (untested)
+        public const float HarvestCallEliteChance = 0.20f;   // posture-B starting value (untested, user-set 20%)
 
         // Per-move breakPower (flat, added per target hit): posture-B starting values (untested).
         // Pass test: Final Reaping with all QTEs missed breaks a 60-Poise hero; with all Good QTEs it does not.
@@ -73,13 +93,14 @@ namespace Obscure
                 }
                 else if (tier == Tier.Boss)
                 {
+                    float atkMult = id.StartsWith("zoroa_") ? ZoroaAtkMult : BossAtkMult;
                     stats = new Stats(
                         ScaleD1Stat(stats.maxHp, BossHpMult),
                         stats.maxMp,
-                        ScaleD1Stat(stats.atk, BossAtkMult),
+                        ScaleD1Stat(stats.atk, atkMult),
                         stats.def,
                         stats.spd,
-                        ScaleD1Stat(stats.mag, BossAtkMult));
+                        ScaleD1Stat(stats.mag, atkMult));
                 }
             }
             var d = new EnemyDef
@@ -212,33 +233,57 @@ namespace Obscure
                 "Zoroa gathers the souls of Felna and tears them from the living. Health bar 1/2.",
                 new EnemyAttack { name = "Final Reaping", element = Element.Physical, hitDamage = new[] { 30, 30, 30, 45 }, intervals = ZoroaAccelerando,
                     heavyHit = 3, telegraph = true, breakPower = FinalReapingP1BreakPower, mpCost = 35, aiPriority = 4, cooldown = 3, initialCooldown = 2 },
+                // Harvest Call: instant summon move (no damage, no QTE). P1 priority 3, above Soulbind (2) and Soul Lance (1).
+                new EnemyAttack { name = "Harvest Call", hits = 0, power = 0f, element = Element.Shadow, summonCount = HarvestCallSummonCount,
+                    mpCost = HarvestCallP1MpCost, aiPriority = 3, cooldown = HarvestCallCooldown, initialCooldown = HarvestCallInitialCooldown },
                 // ponytail: Soulbind is no longer telegraphed (instant status move), which diverges from Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx.
-                new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, mpCost = 24, aiPriority = 3, cooldown = 3,
+                new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, mpCost = 24, aiPriority = 2, cooldown = 3,
                     apply = new[] { Chance(StatusId.Silence, 0.20f) } },
-                new EnemyAttack { name = "Soul Lance", element = Element.Shadow, hitDamage = new[] { 42 }, mpCost = 18, aiPriority = 2, cooldown = 1 },
-                Move("Soul Rend", Element.Physical, 38),
+                new EnemyAttack { name = "Soul Lance", element = Element.Shadow, hitDamage = new[] { 42 }, mpCost = 18, aiPriority = 1, cooldown = 1 },
+                new EnemyAttack { name = "Soul Rend", element = Element.Physical, hitDamage = new[] { 38 }, aiPriority = 0 },
                 ArcaneCharge(priority: 5)),
 
             D1Enemy("zoroa_p2", "Zoroa, Harvester of Souls", "Zoroa", "ZOR", Tier.Boss, "Soul Entity", "Controller",
                 new Stats(1840, 850, 43, 18, 17, 50), 24, Art.Warden,
                 "With the first bar shattered, Zoroa rises with a fresh one. Health bar 2/2.",
                 new EnemyAttack { name = "Final Reaping", element = Element.Physical, hitDamage = new[] { 34, 34, 34, 50 }, intervals = ZoroaAccelerando,
-                    heavyHit = 3, telegraph = true, breakPower = FinalReapingP2BreakPower, mpCost = 40, aiPriority = 4, cooldown = 3, initialCooldown = 1 },
+                    heavyHit = 3, telegraph = true, breakPower = FinalReapingP2BreakPower, mpCost = 40, aiPriority = 5, cooldown = 3, initialCooldown = 1 },
                 new EnemyAttack { name = "Soulstorm", element = Element.Shadow, hitDamage = new[] { 24 }, allTargets = true, telegraph = true,
-                    breakPower = SoulstormBreakPower, mpCost = 45, aiPriority = 3, cooldown = 3, minTargets = 2 }, // the one new Phase 2 attack; shared QTE
+                    breakPower = SoulstormBreakPower, mpCost = 45, aiPriority = 4, cooldown = 3, minTargets = 2 }, // the one new Phase 2 attack; shared QTE
+                // Harvest Call: placed between Soulstorm (4) and Soulbind (2), always below Final Reaping (5).
+                new EnemyAttack { name = "Harvest Call", hits = 0, power = 0f, element = Element.Shadow, summonCount = HarvestCallSummonCount,
+                    mpCost = HarvestCallP2MpCost, aiPriority = 3, cooldown = HarvestCallCooldown, initialCooldown = HarvestCallInitialCooldown },
                 // ponytail: Soulbind is no longer telegraphed (instant status move), which diverges from Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx.
                 new EnemyAttack { name = "Soulbind", hits = 0, power = 0f, element = Element.Shadow, mpCost = 28, aiPriority = 2, cooldown = 3,
                     apply = new[] { Chance(StatusId.Silence, 0.25f) } },
                 new EnemyAttack { name = "Soul Lance", element = Element.Shadow, hitDamage = new[] { 50 }, mpCost = 22, aiPriority = 1, cooldown = 1 },
                 new EnemyAttack { name = "Soul Rend", element = Element.Physical, hitDamage = new[] { 43 }, aiPriority = 0 },
-                ArcaneCharge(priority: 5)),
+                ArcaneCharge(priority: 6)),
         };
+
+        // Harvest Call summon pools: 80% D1 Normal enemies, 20% v1.9 random Elite pool (never stage bosses soul_reaper / royal_ossuary_knight).
+        public static readonly string[] SummonNormalPool =
+            Enemies.Where(e => e.tier == Tier.Normal).Select(e => e.id).ToArray();
+        public static readonly string[] SummonElitePool =
+        {
+            "reliquary_confessor", "graveglass_arcanist", "crownless_duelist", "tombstone_colossus", "mourning_bell_wraith",
+        };
+
+        public static EnemyDef RollHarvestCallSummon(System.Random rng)
+        {
+            var pool = rng.NextDouble() < HarvestCallEliteChance ? SummonElitePool : SummonNormalPool;
+            string id = pool[rng.Next(pool.Length)];
+            return Database.Enemies.TryGetValue(id, out var d) ? d : Enemies.First(e => e.id == id);
+        }
 
         static Dungeon1Roster()
         {
             var p1 = Enemies.First(e => e.id == "zoroa_p1");
+            var p2 = Enemies.First(e => e.id == "zoroa_p2");
             p1.nextPhase = "zoroa_p2";
             p1.phase2Text = "Zoroa's first soul-shell shatters - the Harvester rises anew! (Phase 2)";
+            p1.turnsPerRound = ZoroaTurnsPerRound;
+            p2.turnsPerRound = ZoroaTurnsPerRound;
             // Confirmed targeting: Elites -> lowest current HP, Archer -> lowest DEF, everyone else random.
             Enemies.First(e => e.id == "gravebound_archer").targetRule = TargetRule.LowestDef;
         }

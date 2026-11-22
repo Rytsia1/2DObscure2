@@ -763,12 +763,31 @@ namespace Obscure
         void Refresh()
         {
             if (roundLabel != null) roundLabel.text = $"ROUND {Battle.Round}";
+            var addSlots = new[] { new Vector2(660, 148), new Vector2(680, 248) };
+            foreach (var e in Battle.Enemies.Where(e => e.Alive && !huds.ContainsKey(e)).ToList())
+            {
+                if (isBossHud)
+                {
+                    int addIdx = huds.Keys.Count(k => k.IsEnemy && k != primaryBoss && k.Alive);
+                    AddEnemyCombatant(e, addSlots[Mathf.Min(addIdx, addSlots.Length - 1)]);
+                }
+                else
+                {
+                    var eSlots = EnemySlots(Battle.Enemies.Count(x => x.Alive));
+                    int idx = huds.Keys.Count(k => k.IsEnemy && k.Alive);
+                    AddEnemyCombatant(e, eSlots[Mathf.Min(idx, eSlots.Length - 1)]);
+                }
+                PlayFxOn(e, "phase");
+            }
+
             foreach (var kv in huds)
             {
                 var c = kv.Key;
                 var h = kv.Value;
                 if (c.IsEnemy)
                 {
+                    if (h.nameLbl != null && !h.isPrimaryBoss)
+                        h.nameLbl.text = (c.IsSummon ? $"[SUMMON] {c.name}" : c.name).ToUpperInvariant();
                     if (h.enemyCard != null) h.enemyCard.style.display = c.Alive ? DisplayStyle.Flex : DisplayStyle.None;
                     if (!c.Alive)
                     {
@@ -907,19 +926,35 @@ namespace Obscure
             if (turnBar == null) return;
             turnBar.Clear();
 
-            void Chip(Combatant c, string template, bool active = false)
+            string TurnTag(Combatant c, int occ) =>
+                c.TurnsPerRound <= 1 ? c.tag : $"{c.tag} {(occ <= 1 ? "①" : "②")}";
+
+            void Chip(Combatant c, string label, string template, bool active = false)
             {
                 var ch = FigmaUi.InstantiateTemplate(template);
                 if (ch == null) return;
-                FigmaUi.SetInstanceText(ch, "text-0", active ? $"▸{c.tag}" : c.tag);
+                FigmaUi.SetInstanceText(ch, "text-0", active ? $"▸{label}" : label);
                 ch.style.marginRight = 4;
                 turnBar.Add(ch);
             }
 
-            if (Battle.Active != null) Chip(Battle.Active, "Turn-Chip-Active", true);
-            foreach (var c in Battle.Upcoming.Take(6)) Chip(c, c.IsEnemy ? "Turn-Chip-Enemy" : "Turn-Chip-Hero");
+            if (Battle.Active != null) Chip(Battle.Active, TurnTag(Battle.Active, Math.Max(1, Battle.Active.turnsTakenThisRound)), "Turn-Chip-Active", true);
+            var curCounts = new Dictionary<Combatant, int>();
+            if (Battle.Active != null) curCounts[Battle.Active] = Math.Max(1, Battle.Active.turnsTakenThisRound);
+            foreach (var c in Battle.Upcoming.Take(6))
+            {
+                int occ = curCounts.TryGetValue(c, out var n) ? n + 1 : Math.Max(1, c.turnsTakenThisRound + 1);
+                curCounts[c] = occ;
+                Chip(c, TurnTag(c, occ), c.IsEnemy ? "Turn-Chip-Enemy" : "Turn-Chip-Hero");
+            }
             turnBar.Add(new UiLabel("‖") { style = { fontSize = 18, color = Palette.Mist3, marginLeft = 4, marginRight = 4 } });
-            foreach (var c in Battle.NextRoundOrder.Take(4)) Chip(c, "Turn-Chip-Next-Round");
+            var nextCounts = new Dictionary<Combatant, int>();
+            foreach (var c in Battle.NextRoundOrder.Take(4))
+            {
+                int occ = nextCounts.TryGetValue(c, out var n) ? n + 1 : 1;
+                nextCounts[c] = occ;
+                Chip(c, TurnTag(c, occ), "Turn-Chip-Next-Round");
+            }
         }
 
         VisualElement modifierStrip; // dungeon modifiers / relics / blessings; TAB lists them without a mouse
@@ -1351,6 +1386,11 @@ namespace Obscure
         string Telegraph(BattleAction a)
         {
             var move = a.attack;
+            if (move != null && move.Summons)
+            {
+                Hint($"{move.name.ToUpperInvariant()}: SUMMONS");
+                return null;
+            }
             if (move != null && move.self)
             {
                 var effects = (move.apply ?? Array.Empty<StatusApply>()).Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant()).ToList();

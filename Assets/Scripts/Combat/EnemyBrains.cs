@@ -57,7 +57,9 @@ namespace Obscure
         {
             var foes = b.Opponents(self).Where(c => c.Alive).ToList();
             if (foes.Count == 0) return null;
-            bool heavyTaken = b.Enemies.Any(e => e != self && e.Alive && ((e.Intent?.move.HasHeavy ?? false) || (e.Charge?.move.HasHeavy ?? false)));
+            bool heavyTaken = self.UsedHeavyThisRound
+                || b.Enemies.Any(e => e != self && e.Alive && (e.UsedHeavyThisRound || (e.Intent?.move.HasHeavy ?? false) || (e.Charge?.move.HasHeavy ?? false)));
+            int livingSummons = b.Enemies.Count(e => e.Alive && e.IsSummon);
             // Most-hurt ally (incl. self) by HP fraction: the heal target and the "ally in danger" check.
             var hurt = b.Allies(self).Where(c => c.Alive).OrderBy(c => (float)c.unit.hp / c.Stats.maxHp).ThenBy(c => c.slot).First();
             float hurtFrac = (float)hurt.unit.hp / hurt.Stats.maxHp;
@@ -65,6 +67,11 @@ namespace Obscure
             {
                 if (self.Cooldown(Combatant.MoveKey(m)) > 0 || self.unit.mp < m.mpCost) continue;
                 if (m.telegraph && self.JustReleasedCharge) continue; // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
+                if (m.Summons)
+                {
+                    if (livingSummons < m.summonCount) return new EnemyIntent { move = m };
+                    continue;
+                }
                 if (m.aiMpBelow > 0f && self.unit.mp >= self.Stats.maxMp * m.aiMpBelow) continue; // e.g. Arcane Charge only when low
                 if (m.aiUnlessAllyHpBelow > 0f && hurtFrac <= m.aiUnlessAllyHpBelow) continue;
                 if (m.Heals)

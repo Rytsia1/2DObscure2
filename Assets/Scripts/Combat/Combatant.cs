@@ -36,6 +36,15 @@ namespace Obscure
         public const int ChargeGapTurns = 1; // posture-B starting value (untested)
         // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
         public bool JustReleasedCharge;
+        public bool UsedHeavyThisRound;
+        public bool IsSummon;
+        // Double-turn support (Zoroa rework): SecondTurnSpeedFactor is a posture-B starting value (untested).
+        // Pass test: at least 2 of 4 heroes act between Zoroa's A and B turns in a typical party.
+        // If it fails: too few -> 0.4; turns feel disconnected -> 0.6.
+        public const float SecondTurnSpeedFactor = 0.5f; // posture-B starting value (untested)
+        public int TurnsPerRound => Math.Max(1, enemy?.turnsPerRound ?? 1);
+        public int turnsTakenThisRound;
+        public float TurnSpeed(int turnIndex) => turnIndex <= 0 ? Speed : Speed * SecondTurnSpeedFactor;
         public bool IsCharging => Charge != null || (Intent != null && Intent.charging);
         public static string MoveKey(EnemyAttack m) => "move:" + m.name;
 
@@ -222,7 +231,11 @@ namespace Obscure
             BreakResistance = Math.Max(0, next.breakResistance + Math.Max(0, unit.Mod(Ability.VIT)));
             if (wasBroken && next.bossBreakRecoverOnPhase2) RecoverBreakGauge();
             else CurrentBreakGauge = Math.Min(CurrentBreakGauge, MaxBreakGauge);
+            var carriedCooldowns = new Dictionary<string, int>(cooldowns);
             ResetMoveCooldowns();
+            foreach (var m in next.attacks ?? Array.Empty<EnemyAttack>())
+                if (m.Summons && carriedCooldowns.TryGetValue(MoveKey(m), out var cd) && cd > 0)
+                    cooldowns[MoveKey(m)] = cd; // Harvest Call cooldown carries over the phase change
         }
 
         public bool Alive => unit.Alive;
@@ -687,11 +700,15 @@ namespace Obscure
     public static class TurnOrder
     {
         // Highest Initiative/Speed first; ties go party before enemies, then by formation slot. No randomness.
+        // Multi-turn enemies (TurnsPerRound > 1) emit one entry per turn, sorted by TurnSpeed(turnIndex).
         public static List<Combatant> Build(IEnumerable<Combatant> combatants) =>
             combatants.Where(c => c.Alive)
-                .OrderByDescending(c => c.Speed)
-                .ThenBy(c => c.side)
-                .ThenBy(c => c.slot)
+                .SelectMany(c => Enumerable.Range(0, c.TurnsPerRound).Select(ti => (c, ti, spd: c.TurnSpeed(ti))))
+                .OrderByDescending(x => x.spd)
+                .ThenBy(x => x.c.side)
+                .ThenBy(x => x.c.slot)
+                .ThenBy(x => x.ti)
+                .Select(x => x.c)
                 .ToList();
     }
 }
