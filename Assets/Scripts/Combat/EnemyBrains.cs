@@ -57,11 +57,22 @@ namespace Obscure
             var foes = b.Opponents(self).Where(c => c.Alive).ToList();
             if (foes.Count == 0) return null;
             bool heavyTaken = b.Enemies.Any(e => e != self && e.Alive && ((e.Intent?.move.HasHeavy ?? false) || (e.Charge?.move.HasHeavy ?? false)));
+            // Most-hurt ally (incl. self) by HP fraction: the heal target and the "ally in danger" check.
+            var hurt = b.Allies(self).Where(c => c.Alive).OrderBy(c => (float)c.unit.hp / c.Stats.maxHp).ThenBy(c => c.slot).First();
+            float hurtFrac = (float)hurt.unit.hp / hurt.Stats.maxHp;
             foreach (var m in EnemyAI.Moves(self).OrderByDescending(m => m.aiPriority)) // stable: ties keep data order
             {
                 if (self.Cooldown(Combatant.MoveKey(m)) > 0 || self.unit.mp < m.mpCost) continue;
                 if (m.aiMpBelow > 0f && self.unit.mp >= self.Stats.maxMp * m.aiMpBelow) continue; // e.g. Arcane Charge only when low
+                if (m.aiUnlessAllyHpBelow > 0f && hurtFrac <= m.aiUnlessAllyHpBelow) continue;
+                if (m.Heals)
+                {
+                    if (hurtFrac <= m.aiAllyHpBelow) return new EnemyIntent { move = m, target = hurt };
+                    continue;
+                }
                 if (m.HasHeavy && heavyTaken) continue; // at most one Heavy-marked attack per round
+                if (m.aiBreakLeftBelow > 0f && self.HasBreakGauge && b.Round < m.aiBreakGateRound
+                    && self.CurrentBreakGauge > self.MaxBreakGauge * m.aiBreakLeftBelow) continue;
                 if (m.self) return new EnemyIntent { move = m };
                 if (m.allTargets)
                 {

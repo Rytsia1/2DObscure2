@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load, Party, HubShop, Armory, Blacksmith, Temple, MagicShop, DungeonClear }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load, Party, HubShop, Armory, Blacksmith, Temple, MagicShop, DungeonClear, PrologueClear }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -154,7 +154,7 @@ namespace Obscure
         }
 
         // Transitions from confirmed party creation directly to the Sanctuary Hub with 600 starter gold.
-        public void EnterHubFromCreation(int? seed = null)
+        public void EnterHubFromCreation(int? seed = null, bool prologue = false)
         {
             int s = seed ?? System.Environment.TickCount;
             if (Roster != null && NewGameBuilder != null && NewGameBuilder.PendingParty.Count == CharacterRoster.PartySize)
@@ -173,7 +173,33 @@ namespace Obscure
 
             var snapshot = PersistenceCommitHandler.CreateNewGameCommittedSnapshot(party, s, starterGold: PersistenceCommitHandler.StarterGold);
             PersistenceCommitHandler.SetActiveCommittedSnapshot(snapshot);
-            Go(GameState.Hub); // HubScreen auto-saves on arrival from Character Creation (Go is async, so saving here is rejected)
+            Go(prologue ? GameState.OpeningSequence : GameState.Hub); // HubScreen auto-saves on arrival (Go is async, so saving here is rejected)
+        }
+
+        // Character Creation -> Prologue intro (play or skip) -> Prologue -> Hub (Tutorial_Prologue_Design.md §2).
+        public void EnterPrologueFromCreation(int? seed = null) => EnterHubFromCreation(seed, prologue: true);
+
+        public void BeginPrologue()
+        {
+            Run.BeginPrologue();
+            Go(GameState.Map);
+        }
+
+        public void SkipPrologue()
+        {
+            Run.SkipPrologue();
+            Go(GameState.Hub);
+        }
+
+        // The Prologue clear card's button: remember the clear (enables Skip next New Game), then the Hub.
+        public void FinishPrologue()
+        {
+            if (!Settings.prologueCleared)
+            {
+                Settings.prologueCleared = true;
+                Settings.Save();
+            }
+            Go(GameState.Hub);
         }
 
         // Transitions from confirmed party creation to the Opening Sequence before the first expedition (Section 2 & 12).
@@ -324,6 +350,7 @@ namespace Obscure
             GameState.Temple => new TempleScreen(),
             GameState.MagicShop => new MagicShopScreen(),
             GameState.DungeonClear => new DungeonClearScreen(),
+            GameState.PrologueClear => new PrologueClearScreen(),
             // Create runs after State is already Load, so the screen we came from is PreviousState.
             GameState.Load => new LoadScreen(Game.I != null && Game.I.PreviousState == GameState.Hub ? GameState.Hub : GameState.MainMenu),
             _ => new EndScreen(true),

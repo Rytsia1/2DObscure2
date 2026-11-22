@@ -39,6 +39,7 @@ namespace Obscure.Tests
         {
             "hollow_squire", "gravebound_archer", "cinder_wisp", "soulbound_hound", "possessed_royal_guard", "crypt_leech",
             "forgotten_militia", "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2",
+            "reliquary_confessor", "graveglass_arcanist", "crownless_duelist", "tombstone_colossus", "mourning_bell_wraith",
         };
 
         // ---- enemy data ----
@@ -53,6 +54,11 @@ namespace Obscure.Tests
         [TestCase("forgotten_militia", Tier.Normal, 135, 35, 16, 6, 8, 6, 12, 100)]
         [TestCase("soul_reaper", Tier.Elite, 430, 130, 32, 13, 29, 14, 17, 100)]
         [TestCase("royal_ossuary_knight", Tier.Elite, 520, 90, 36, 22, 18, 18, 9, 100)]
+        [TestCase("reliquary_confessor", Tier.Elite, 380, 150, 15, 11, 30, 20, 12, 100)]
+        [TestCase("graveglass_arcanist", Tier.Elite, 360, 180, 12, 9, 38, 17, 16, 100)]
+        [TestCase("crownless_duelist", Tier.Elite, 410, 100, 36, 13, 12, 12, 18, 100)]
+        [TestCase("tombstone_colossus", Tier.Elite, 620, 70, 38, 24, 9, 16, 7, 100)]
+        [TestCase("mourning_bell_wraith", Tier.Elite, 400, 145, 15, 12, 33, 22, 14, 100)]
         [TestCase("zoroa_p1", Tier.Boss, 1840, 600, 38, 20, 42, 22, 14, 200)]
         [TestCase("zoroa_p2", Tier.Boss, 1840, 850, 43, 18, 50, 24, 17, 200)]
         public void RosterBaseStatsMatchWorkbook(string id, Tier tier, int hp, int mp, int atk, int def, int matk, int mdef, int spd, int brk)
@@ -116,6 +122,17 @@ namespace Obscure.Tests
             yield return S("zoroa_p2", "Soulbind", Element.Shadow, false, new int[0], 28, -1, true, StatusId.Silence, 0.25f);
             yield return S("zoroa_p2", "Final Reaping", Element.Physical, false, new[] { 34, 34, 34, 50 }, 40, 3, true);
             yield return S("zoroa_p2", "Soulstorm", Element.Shadow, true, new[] { 24 }, 45, -1, true);
+            yield return S("reliquary_confessor", "Reliquary Staff", Element.Physical, false, new[] { 15 }, 0, -1, false);
+            yield return S("reliquary_confessor", "Mending Litany", Element.Physical, false, new int[0], 24, -1, false);
+            yield return S("graveglass_arcanist", "Glass Shard", Element.Physical, false, new[] { 12 }, 0, -1, false);
+            yield return S("graveglass_arcanist", "Umbral Lance", Element.Shadow, false, new[] { 38 }, 22, -1, false);
+            yield return S("crownless_duelist", "Crownless Cut", Element.Physical, false, new[] { 36 }, 0, -1, false);
+            yield return S("crownless_duelist", "Triple Feint", Element.Physical, false, new[] { 12, 12, 12 }, 18, -1, false);
+            yield return S("tombstone_colossus", "Monument Fist", Element.Physical, false, new[] { 38 }, 0, -1, false);
+            yield return S("tombstone_colossus", "Gravefall", Element.Physical, false, new[] { 38 }, 18, -1, false);
+            yield return S("mourning_bell_wraith", "Echo Claw", Element.Physical, false, new[] { 15 }, 0, -1, false);
+            yield return S("mourning_bell_wraith", "Tolling Note", Element.Shadow, false, new[] { 34 }, 20, -1, false);
+            yield return S("mourning_bell_wraith", "Funeral Chorus", Element.Shadow, true, new[] { 20 }, 32, -1, true);
         }
 
         [TestCaseSource(nameof(Skills))]
@@ -131,7 +148,7 @@ namespace Obscure.Tests
             Assert.IsFalse(m.isHeavy, "no all-hits Heavy in the roster");
             Assert.AreEqual(telegraph, m.telegraph);
             Assert.IsFalse(m.self);
-            if (damage.Length == 0) Assert.IsTrue(m.StatusOnly);
+            if (damage.Length == 0) Assert.IsTrue(m.StatusOnly || m.Heals);
             else CollectionAssert.AreEqual(damage, m.hitDamage);
 
             // The coefficient maps the authored D1 damage onto the D1 ATK / MATK (no extra scaling layer).
@@ -481,7 +498,7 @@ namespace Obscure.Tests
         public void ArcaneChargeIsAssignedOnlyToDesignatedEnemies()
         {
             var holders = Dungeon1Roster.Enemies.Where(e => e.attacks.Any(a => a.name == "Arcane Charge")).Select(e => e.id).ToList();
-            CollectionAssert.AreEquivalent(new[] { "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2" }, holders);
+            CollectionAssert.AreEquivalent(new[] { "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2", "reliquary_confessor", "graveglass_arcanist" }, holders);
             var instances = Dungeon1Roster.Enemies.SelectMany(e => e.attacks).Where(a => a.name == "Arcane Charge").ToList();
             CollectionAssert.AllItemsAreUnique(instances, "configured per enemy, never shared");
             foreach (var a in instances)
@@ -833,6 +850,107 @@ namespace Obscure.Tests
             StringAssert.Contains("NEXT TURN", EnemyAI.IntentText(z));
         }
 
+        // ---- v1.9 random Elites ----
+
+        [Test]
+        public void ConfessorHealsTheMostHurtAllyOnlyAtOrBelow65Percent()
+        {
+            var b = NewBattle(1, "reliquary_confessor", "gravebound_archer");
+            var conf = b.Enemies[0];
+            var archer = b.Enemies[1];
+            AdvanceTo(b, c => c == conf);
+            archer.unit.hp = (int)(archer.Stats.maxHp * 0.70f);
+            Assert.AreEqual("Reliquary Staff", PriorityBrain.Select(b, conf).move.name, "70% HP is not low enough");
+
+            archer.unit.hp = (int)(archer.Stats.maxHp * 0.60f);
+            var plan = PriorityBrain.Select(b, conf);
+            Assert.AreEqual("Mending Litany", plan.move.name);
+            Assert.AreSame(archer, plan.target, "lowest HP percentage ally");
+
+            var act = EnemyAI.Use(b, conf, plan.move, plan.target);
+            Assert.IsNull(b.Validate(act));
+            Assert.IsNull(QteFactory.Defense(act, QteAssist.Standard), "healing has no Defensive QTE");
+            int before = archer.unit.hp, mp = conf.unit.mp;
+            b.Perform(act);
+            Assert.AreEqual(before + (int)Math.Floor(archer.Stats.maxHp * 0.15f), archer.unit.hp, "15% Max HP");
+            Assert.AreEqual(mp - 24, conf.unit.mp);
+            Assert.AreEqual(3, conf.Cooldown(Combatant.MoveKey(plan.move)));
+        }
+
+        [Test]
+        public void ConfessorHoldsArcaneChargeWhileAnAllyIsCritical()
+        {
+            var b = NewBattle(1, "reliquary_confessor", "gravebound_archer");
+            var conf = b.Enemies[0];
+            var archer = b.Enemies[1];
+            conf.unit.mp = 20; // <= 30% Max MP, and too little for Mending Litany
+            Assert.AreEqual("Arcane Charge", PriorityBrain.Select(b, conf).move.name);
+            archer.unit.hp = (int)(archer.Stats.maxHp * 0.35f);
+            Assert.AreEqual("Reliquary Staff", PriorityBrain.Select(b, conf).move.name, "ally <= 40% HP blocks Arcane Charge");
+        }
+
+        [Test]
+        public void ArcanistLancesWhileItCanAndChargesAtAQuarterMp()
+        {
+            var b = NewBattle(1, "graveglass_arcanist");
+            var arc = b.Enemies[0];
+            Assert.AreEqual("Umbral Lance", PriorityBrain.Select(b, arc).move.name);
+            arc.unit.mp = 44; // < 25% of 180
+            Assert.AreEqual("Arcane Charge", PriorityBrain.Select(b, arc).move.name);
+            arc.unit.mp = 50;
+            Assert.AreEqual("Umbral Lance", PriorityBrain.Select(b, arc).move.name);
+        }
+
+        [Test]
+        public void GravefallAddsThirtyBreakPowerOnTopOfTheHit()
+        {
+            int BreakTaken(string move)
+            {
+                var b = NewBattle(3, "tombstone_colossus");
+                var col = AdvanceTo(b, c => c.IsEnemy);
+                var t = b.Party[0];
+                t.unit.hp = 9999;
+                int before = t.CurrentBreakGauge;
+                b.Perform(BattleAction.Strike(col, Move("tombstone_colossus", move), t), 1f, new[] { QteResult.Poor });
+                Assert.IsFalse(t.IsBroken, "keep the comparison inside the gauge");
+                return before - t.CurrentBreakGauge;
+            }
+            // The extra 30 Break Power is raw: the player's Stagger Resistance (% reduction) mitigates it like any enemy break.
+            int stagger = NewBattle(3, "tombstone_colossus").Party[0].StaggerRes;
+            int extra = Math.Max(1, (int)Math.Round(30 * 100f / (100f + Math.Max(0, stagger))));
+            Assert.AreEqual(BreakTaken("Monument Fist") + extra, BreakTaken("Gravefall"));
+            Assert.IsFalse(Move("tombstone_colossus", "Gravefall").HasHeavy);
+        }
+
+        [Test]
+        public void BellWraithTelegraphsFuneralChorusOnlyWithThreeActiveMembers()
+        {
+            var b = NewBattle(1, "mourning_bell_wraith");
+            var w = b.Enemies[0];
+            var plan = PriorityBrain.Select(b, w);
+            Assert.AreEqual("Funeral Chorus", plan.move.name);
+            Assert.IsTrue(plan.charging, "telegraphed 1 turn prior");
+            Assert.LessOrEqual(Move("mourning_bell_wraith", "Funeral Chorus").hitDamage[0],
+                Move("mourning_bell_wraith", "Tolling Note").hitDamage[0] * 0.60f, "multi-target coefficient cap");
+            foreach (var p in b.Party.Skip(2)) p.unit.hp = 0;
+            Assert.AreEqual("Tolling Note", PriorityBrain.Select(b, w).move.name, "fewer than 3 active");
+        }
+
+        [Test]
+        public void RandomElitePoolIsTheFiveNewElitesAndMinibossesStayOnSpecialNodes()
+        {
+            var pool = new[] { "d1_e8", "d1_e9", "d1_e10", "d1_e11", "d1_e12" };
+            var seen = new HashSet<string>();
+            for (int seed = 1; seed <= 60; seed++)
+                for (int stage = 2; stage <= 3; stage++)
+                    foreach (var n in MapGenerator.Generate(seed, 1, stage).nodes.Where(n => n.type == NodeType.Elite))
+                    {
+                        CollectionAssert.Contains(pool, n.encounter, $"seed {seed} stage {stage}");
+                        seen.Add(n.encounter);
+                    }
+            CollectionAssert.AreEquivalent(pool, seen, "every new Elite encounter can appear");
+        }
+
         // ---- encounters ----
 
         [Test]
@@ -847,6 +965,11 @@ namespace Obscure.Tests
                 ["d1_e5"] = (Tier.Normal, new[] { "possessed_royal_guard", "hollow_squire", "hollow_squire" }),
                 ["d1_e6"] = (Tier.Elite, new[] { "soul_reaper", "forgotten_militia", "soulbound_hound", "crypt_leech" }),
                 ["d1_e7"] = (Tier.Elite, new[] { "royal_ossuary_knight", "possessed_royal_guard", "gravebound_archer", "hollow_squire" }),
+                ["d1_e8"] = (Tier.Elite, new[] { "reliquary_confessor", "gravebound_archer" }),
+                ["d1_e9"] = (Tier.Elite, new[] { "graveglass_arcanist", "cinder_wisp" }),
+                ["d1_e10"] = (Tier.Elite, new[] { "crownless_duelist", "forgotten_militia" }),
+                ["d1_e11"] = (Tier.Elite, new[] { "tombstone_colossus", "hollow_squire" }),
+                ["d1_e12"] = (Tier.Elite, new[] { "mourning_bell_wraith", "soulbound_hound" }),
                 ["d1_boss"] = (Tier.Boss, new[] { "zoroa_p1" }),
             };
             CollectionAssert.AreEquivalent(expected.Keys, Database.Encounters.Keys);

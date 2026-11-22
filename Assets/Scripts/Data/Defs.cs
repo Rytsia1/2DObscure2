@@ -162,6 +162,8 @@ namespace Obscure
         public bool telegraph;        // charged: one no-damage turn (shown as intent), released next turn; Broken cancels it
         public float drain;           // heals the user for this fraction of the final damage dealt
         public float restoreMp;       // self skill: restores this fraction of Max MP, capped at Max MP (Arcane Charge = 0.5)
+        public float healAlly;        // > 0: support skill healing one ally (incl. self) for this fraction of its Max HP; no damage, no QTE
+        public int breakPower;        // flat Break Power dealt to each target hit, on top of the normal hit break (Gravefall = 30)
 
         // Priority AI policy (configurable, deterministic). Highest ready priority wins.
         public int aiPriority;
@@ -169,8 +171,15 @@ namespace Obscure
         public int initialCooldown;   // rounds unavailable at battle / phase start
         public int minTargets = 1;    // living opponents required (area moves)
         public float aiMpBelow;       // > 0: only chosen while current MP is below this fraction of Max MP
+        public float aiAllyHpBelow;   // healAlly moves: only chosen while some ally is at or below this fraction of Max HP
+        public float aiUnlessAllyHpBelow; // > 0: skipped while any ally is at or below this fraction of Max HP
+        // > 0: only chosen while the user's Break gauge has at most this fraction left, or from round aiBreakGateRound on.
+        // Gives the party a real interrupt window (Tutorial_Prologue_Design §3 Node 3).
+        public float aiBreakLeftBelow;
+        public int aiBreakGateRound;
 
-        public bool StatusOnly => hits == 0 && !self;
+        public bool StatusOnly => hits == 0 && !self && !Heals;
+        public bool Heals => healAlly > 0f;
         // MP is consumed only by Skills: a Basic Attack is a free, untelegraphed damaging move, always affordable.
         public bool IsBasicAttack => mpCost == 0 && !self && hits > 0 && !telegraph;
         public bool UsesMagic => element != Element.Physical;
@@ -496,6 +505,7 @@ namespace Obscure
         public int totalStages = 1;
         public string stageName;
         public bool allowEliteNodes = true;
+        public bool isPrologue; // the 3-node Tutorial Prologue (Run/Prologue.cs)
         public NodeDef[] nodes;
         public NodeDef Get(string id) => nodes.First(n => n.id == id);
         public int Floors => nodes.Max(n => n.floor) + 1;

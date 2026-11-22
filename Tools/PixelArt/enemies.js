@@ -40,7 +40,15 @@ const E = {
   wraith: P.hueRamp(5, { hue: 262, sat: 0.22, shift: 25, light: [0.05, 0.3] }),
   abyss: P.hueRamp(5, { hue: 250, sat: 0.28, shift: 25, light: [0.04, 0.28] }),
   horn: P.hueRamp(4, { hue: 30, sat: 0.12, shift: 30, light: [0.1, 0.45] }),
+  // v1.9 Elites
+  vest: P.hueRamp(5, { hue: 45, sat: 0.12, shift: 35, light: [0.16, 0.66] }),   // stained ivory vestments
+  stole: P.hueRamp(4, { hue: 352, sat: 0.45, shift: 20, light: [0.13, 0.4] }),  // dark crimson cloth
+  stone: P.hueRamp(5, { hue: 190, sat: 0.07, shift: 30, light: [0.12, 0.6] }),  // weathered grave stone
+  bronze: P.hueRamp(5, { hue: 30, sat: 0.36, shift: 30, light: [0.1, 0.46] }), // old bell bronze
+  shroud: P.hueRamp(5, { hue: 210, sat: 0.12, shift: 25, light: [0.1, 0.46] }), // grey grave shroud
 };
+const GLASS = [P.hsl(178, 0.5, 0.5), P.hsl(322, 0.45, 0.48), P.hsl(40, 0.7, 0.55)]; // stained-glass panes
+const MOSS = P.hsl(95, 0.28, 0.3), VERDIGRIS = P.hsl(165, 0.28, 0.38);
 const SOUL = R.cyan;
 const BLOOD = P.hueRamp(4, { hue: 355, sat: 0.75, shift: 10, light: [0.16, 0.5] }); // dried -> fresh
 const TOOTH = E.bone[4], EYE = SOUL[3], GORE = BLOOD[1], WOOD = R.wood;
@@ -245,6 +253,98 @@ const ENEMIES = {
       return mm.map((r) => r.join(""));
     },
   },
+
+  // ---- roster v1.9 random Elites ----
+
+  // undead priest: tall mitre with a gold cross, skull under a veil, stained vestments with a blood-red stole,
+  // a staff crowned by a reliquary holding a trapped soul
+  reliquary_confessor: {
+    map: [
+      ".......M..............", "......MMM......oo.....", "......MgM.....oGGo....", ".....MMgMM....oGGo....",
+      ".....MgggM.....oo.....", ".....yyyyy............", "....USSSSSU...........", "....USkkSkeU..........",
+      "....USSSkSSU..........", "....USkSkSkU..........", "...VVVSSSSVVV.........", "..AVVrVVVVrVVA........",
+      "..AAVrVVVVrVAAh.......", "..AAVrVVVVrVV.h.......", "..hhVrVVVVrVV.........", "....VrVVVVrVV.........",
+      "....VrVVVVrVVV........", "...VVrVVVVrVVV........", "...VVrVVVVrVVV........", "...VVVVVVVVVVVV.......",
+      "..VVVVVVVVVVVVV.......", "..VVVVVVVVVVVVVV......", "..VVV.VVVVV.VVVV......", "...V...VVV...VV.......",
+    ],
+    parts: { M: [E.vest, 0.1, 2], U: [E.vest, -0.05, 1], S: [E.bone, 0.05, 2], V: [E.vest, 0.05, 3], A: [E.vest, -0.05, 1.5],
+      r: [E.stole, 0.05, 1], h: [E.bone, 0, 1], w: [WOOD, -0.1, 1], o: [R.gold, 0, 1] },
+    fixed: { k: VOID, e: EYE, g: R.gold[2], y: R.gold[1], G: SOUL[2] },
+    groundFrom: 19, head: "MgyUSke",
+    after: (m) => over(over(m, "w", vline(15, 5, 23), true), "G", [[16, 2]]),
+  },
+
+  // wraith fused with a broken church window: a crown of floating glass shards, stained-glass panes set in its
+  // chest, one cold eye in the hood's dark, a glass shard drawn to its outstretched hand
+  graveglass_arcanist: {
+    map: [
+      "......................", "...a.....b......c.....", "..aa....bb.....cc.....", ".......HHHH...........",
+      "......HHHHHH..........", ".....HHHkkkkH.........", ".....HHkkkkkk.........", "....HHHkkkekk.........",
+      "....HHHkkkkkk.........", "....HHHHkkkkH..AA.....", "...HHCCCCCCCCAAA.QQ...", "...HCCxbxaxCCC..QqQQ..",
+      "..CCCxbxaxcxCC...QQ...", "..CCCxxxxxxxCC........", "..CCCxcxbxaxCC..b.....", "...CCxxxxxxxC...bb....",
+      "...CCCCCCCCCC.........", "....CCCCCCCC....a.....", "....CCCCCCC...........", ".....CCCCCC...........",
+      "......CCCC............", "......CCC.............", ".......CC.............", "........C.............",
+    ],
+    parts: { H: [E.abyss, 0.2, 2.5], C: [E.abyss, 0.1, 3], A: [E.abyss, 0, 1] },
+    fixed: { k: VOID, e: EYE, x: VOID, a: GLASS[0], b: GLASS[1], c: GLASS[2], Q: GLASS[0], q: R.cyan[3] },
+    head: "Hke",
+  },
+
+  // palace swordsman, still on guard: a crown with every point snapped off, tattered royal doublet with gold
+  // buttons, a short cape, rapier held level at the party, feet set wide in a duelist's stance
+  crownless_duelist: {
+    map: [
+      "......................", "......................", ".....u.u..u...........", ".....yyyyyy...........",
+      ".....SSSSSS...........", ".....SkkSkeS..........", ".....SSSSkSS..........", ".....SkSkSkS..........",
+      "......SSSSS...........", "..cc.PPPPPP...........", ".cccPPTTTTPPAA........", ".cccPTTyTTTPAAhgsssssZ",
+      ".cccPTTyTTTP...g......", ".cccPTTTTTT...........", ".ccc.TTTTTT...........", ".cc..WWWWWW...........",
+      ".cc..TTT.TT...........", ".c..LLL..MMM..........", ".c..LLL...MMM.........", "...LLL.....MMM........",
+      "...LL.......MM........", "..LL.........MM.......", ".BBB.........CCC......", ".BBBB........CCCC.....",
+    ],
+    parts: { S: [E.bone, 0.1, 2.5], P: [E.iron, 0, 1.5], T: [E.royal, 0.1, 3], A: [E.royal, 0, 1], c: [E.stole, -0.05, 1.5],
+      W: [R.leather, -0.1, 1], L: [E.bone, -0.15, 1], M: [E.bone, -0.02, 1], B: [R.leather, -0.3, 1.5], C: [R.leather, -0.2, 1.5],
+      h: [E.bone, 0, 1], s: [E.iron, 0.25, 1] },
+    fixed: { k: VOID, e: EYE, y: R.gold[2], u: R.gold[1], g: R.gold[2], Z: E.iron[4] },
+    ground: "LMBC", head: "yuSke",
+  },
+
+  // grave-construct: a headstone for a head with one burning slit, a great tombstone slab for a chest carved with
+  // a cross, boulder shoulders and fists, moss on every upper face, a rusted iron girdle
+  tombstone_colossus: {
+    map: [
+      "..........TT..........", ".........TTTT.........", "........TTTTTT........", "........TkkkeT........",
+      "........TTTTTT........", "..AAA...TTTTTT..AAA...", ".AAAAASSSSSSSSSAAAAA..", ".AAAAASSSSSSSSSAAAAA..",
+      ".AAAASSSSSxSSSSSAAAA..", "..AAASSSSxxxSSSSAAA...", "..AAASSSSSxSSSSSAAA...", "..aaaSSSSSxSSSSSaaa...",
+      "..aaaSSSSSxSSSSSaaa...", ".FFFFSSSSSSSSSSSFFFF..", ".FFFFSSSSSSSSSSSFFFF..", ".FFFFSSSSSSSSSSSFFFF..",
+      "..FF.SSSSSSSSSSS.FF...", ".....rrrrrrrrrrr......", ".....LLLL...MMMM......", ".....LLLL...MMMM......",
+      ".....LLLL...MMMM......", "....BBBBB...CCCCC.....", "....BBBBB...CCCCC.....", "....BBBBB...CCCCC.....",
+    ],
+    parts: { T: [E.stone, 0.15, 2], S: [E.stone, 0.05, 4], A: [E.stone, 0.1, 2.5], a: [E.stone, -0.05, 1.5], F: [E.stone, 0.05, 2],
+      r: [E.rust, 0, 1], L: [E.stone, -0.1, 2], M: [E.stone, 0, 2], B: [E.stone, -0.25, 2], C: [E.stone, -0.15, 2] },
+    fixed: { k: VOID, e: E.fire[2], x: E.stone[0], m: MOSS },
+    ground: "LMBC", head: "Tke",
+    // moss creeps over the top faces of the head, shoulders and fists
+    after: (m) => over(m, "m", [[9, 1], [10, 1], [3, 5], [4, 5], [16, 5], [1, 6], [2, 6], [18, 6], [2, 13], [3, 13], [17, 13], [6, 6], [7, 6]]),
+  },
+
+  // a cracked funeral bell for a hood, green with age, a grinning skull swinging inside it like a clapper,
+  // a grave shroud trailing into tatters, one clawed hand reaching out
+  mourning_bell_wraith: {
+    map: [
+      "........cc............", ".........c............", "........YYY...........", ".......BBBBB..........",
+      "......BBBBBBB.........", "......BBBBBBB.........", "......BBBBBBB.........", ".....BBBBBBBBB........",
+      ".....BBBBBBBBB........", "....bBBBBBBBBBb.......", "...bbbkkkkkkkbbb......", "....kkkSSSSSkkk.......",
+      "....kkSkkSkekkk.......", ".....CCSSkSSCC........", "....CCCSkSkSCCCaa.....", "...CCCCCCCCCCCCaahh...",
+      "...CCCCCCCCCCC...h.h..", "...CCCCCCCCCCC........", "....CCCCCCCCCC........", "....CCC.CCCC.CC.......",
+      ".....CC..CCC..C.......", ".....C....CC..C.......", "..........C...........", "......................",
+    ],
+    parts: { Y: [E.bronze, -0.1, 1], B: [E.bronze, 0.15, 3.5], b: [E.bronze, 0, 1], S: [E.bone, 0, 1.5], C: [E.shroud, 0.05, 3],
+      a: [E.shroud, 0, 1], h: [E.bone, -0.05, 1] },
+    fixed: { k: VOID, e: EYE, c: E.iron[2], v: VERDIGRIS, z: E.bronze[0] },
+    head: "YBbkSecvz",
+    // verdigris patches and a crack running down the bell
+    after: (m) => over(over(m, "v", [[7, 5], [8, 5], [7, 6], [13, 8]]), "z", [[11, 6], [10, 7], [10, 8], [11, 9]]),
+  },
 };
 
 // Zoroa, Harvester of Souls: a cluster of eyes over a fanged maw in the hood's dark, ram horns, a clawed hand
@@ -282,6 +382,8 @@ const zoroa = (p2) => ({
 const bigZoroa = require("./zoroa.js");
 ENEMIES.zoroa_p1 = bigZoroa(P, R, E, SOUL, BLOOD, VOID, false);
 ENEMIES.zoroa_p2 = bigZoroa(P, R, E, SOUL, BLOOD, VOID, true);
+// Tutorial Prologue enemies (riftling, shard_wisp, veil_stalker, aetherion + its phase 2 art): see prologue.js
+Object.assign(ENEMIES, require("./prologue.js").PROLOGUE);
 
 for (const def of Object.values(ENEMIES)) {
   def.w = def.w || NW; def.h = def.h || NH; def.flip = true; def.lit = def.lit ?? E.iron[1];

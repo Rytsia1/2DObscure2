@@ -983,7 +983,8 @@ namespace Obscure
             var sep = new VisualElement { style = { height = 2, backgroundColor = Palette.Ink5, marginTop = 6, marginBottom = 6 } };
             card.Add(sep);
 
-            AddPauseRow("Return to Hub...", () => { closePause(); OpenAbandon(); }, true, "ABANDON", Palette.Hex(0xFFC7BB));
+            if (Run == null || !Run.IsPrologue) // the Prologue has no Hub to return to yet
+                AddPauseRow("Return to Hub...", () => { closePause(); OpenAbandon(); }, true, "ABANDON", Palette.Hex(0xFFC7BB));
 
             int gold = Run != null ? Run.Gold : 0;
             var footer = new VisualElement { style = { marginTop = 10, paddingTop = 8, borderTopWidth = 1, borderTopColor = Palette.Ink4 } };
@@ -1065,11 +1066,11 @@ namespace Obscure
             NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
             NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
             NodeType.Rest => "A QUIET ALCOVE. RECOVER THE PARTY OR IMPROVE A HERO.",
-            NodeType.Elite => EnemyNames(Database.Encounters[n.encounter]) + ". DANGEROUS — VALUABLE BOUNTY.",
+            NodeType.Elite => EnemyNames(Database.Encounter(n.encounter)) + ". DANGEROUS — VALUABLE BOUNTY.",
             NodeType.Boss => currentMap != null && !currentMap.IsFinalStage
-                ? $"STAGE {currentMap.stage} BOSS. " + EnemyNames(Database.Encounters[n.encounter]) + $". DEFEAT TO ADVANCE TO STAGE {currentMap.stage + 1}."
-                : "THE FINAL ENCOUNTER OF THIS DUNGEON. " + EnemyNames(Database.Encounters[n.encounter]) + ".",
-            _ => EnemyNames(Database.Encounters[n.encounter]),
+                ? $"STAGE {currentMap.stage} BOSS. " + EnemyNames(Database.Encounter(n.encounter)) + $". DEFEAT TO ADVANCE TO STAGE {currentMap.stage + 1}."
+                : "THE FINAL ENCOUNTER OF THIS DUNGEON. " + EnemyNames(Database.Encounter(n.encounter)) + ".",
+            _ => EnemyNames(Database.Encounter(n.encounter)),
         };
     }
 }

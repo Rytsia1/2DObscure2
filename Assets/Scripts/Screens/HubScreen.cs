@@ -23,7 +23,8 @@ namespace Obscure
                 PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(Run));
                 SaveManager.AutoSave(out _);
             }
-            else if (Run != null && (Game?.PreviousState == GameState.Map || Game?.PreviousState == GameState.CharacterCreation))
+            else if (Run != null && (Game?.PreviousState == GameState.Map || Game?.PreviousState == GameState.CharacterCreation
+                || Game?.PreviousState == GameState.OpeningSequence || Game?.PreviousState == GameState.PrologueClear))
             {
                 SaveManager.AutoSave(out _);
             }

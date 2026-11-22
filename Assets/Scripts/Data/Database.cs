@@ -5516,12 +5516,16 @@ namespace Obscure
 
             },
 
-        }.Concat(Dungeon1Roster.Enemies).ToArray(), e => e.id);
+        }.Concat(Dungeon1Roster.Enemies).Concat(PrologueRoster.Enemies).ToArray(), e => e.id);
 
 
 
         // Legacy skeleton/cursed_knight/warden defs remain in Enemies as test fixtures; the run's encounter pool is the Dungeon 1 roster.
         public static readonly Dictionary<string, EncounterDef> Encounters = Index(Dungeon1Roster.Encounters, e => e.id);
+
+        // Any encounter by id, including the Tutorial Prologue's (kept out of Encounters so dungeon maps never roll them).
+        public static EncounterDef Encounter(string id) =>
+            Encounters.TryGetValue(id, out var e) ? e : PrologueRoster.Encounters.First(x => x.id == id);
 
 
 

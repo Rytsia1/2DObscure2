@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 
 namespace Obscure.Tests
@@ -28,9 +29,8 @@ namespace Obscure.Tests
         [Test]
         public void EveryDungeon1EnemyLoadsArtSizedForItsBox()
         {
-            foreach (var id in new[] { "hollow_squire", "gravebound_archer", "cinder_wisp", "soulbound_hound", "possessed_royal_guard",
-                                       "crypt_leech", "forgotten_militia", "soul_reaper", "royal_ossuary_knight" })
-                AssertFrames(UnitArt.Enemy(id, Art.Skeleton), 24, 26, id);
+            foreach (var id in Dungeon1Roster.Enemies.Where(e => e.tier != Tier.Boss).Select(e => e.id))
+                AssertFrames(UnitArt.Enemy(id, null), 24, 26, id); // own art by id, never a rows fallback
             AssertFrames(UnitArt.Enemy("zoroa_p1", Art.Warden), 48, 60, "zoroa_p1"); // 4x in the 192x240 boss box
             AssertFrames(UnitArt.Enemy("zoroa_p2", Art.Warden), 48, 60, "zoroa_p2");
         }
@@ -80,8 +80,7 @@ namespace Obscure.Tests
         [Test]
         public void EveryDungeon1EnemyHasAnAttackClipSizedLikeItsIdle()
         {
-            foreach (var id in new[] { "hollow_squire", "gravebound_archer", "cinder_wisp", "soulbound_hound", "possessed_royal_guard",
-                                       "crypt_leech", "forgotten_militia", "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2" })
+            foreach (var id in Dungeon1Roster.Enemies.Select(e => e.id))
             {
                 var clip = UnitArt.EnemyClip(id, Art.Skeleton);
                 var idle = UnitArt.Enemy(id, Art.Skeleton)[0];
@@ -91,6 +90,35 @@ namespace Obscure.Tests
             }
             Assert.AreEqual("reap", UnitArt.EnemyClip("zoroa_p2", null).style);
             Assert.AreEqual("pounce", UnitArt.EnemyClip("soulbound_hound", null).style);
+        }
+
+        [Test]
+        public void EveryPrologueEnemyHasItsOwnIdleAndAttack()
+        {
+            foreach (var e in PrologueRoster.Enemies)
+            {
+                bool boss = e.tier == Tier.Boss;
+                foreach (var id in boss ? new[] { e.id, e.id + "_p2" } : new[] { e.id })
+                {
+                    var idle = UnitArt.Enemy(id, e.sprite);
+                    AssertFrames(idle, boss ? 48 : 24, boss ? 60 : 26, id);
+                    Assert.AreNotSame(UnitArt.Enemy("hollow_squire", null)[0], idle[0], id + " still borrows the squire");
+                    var clip = UnitArt.EnemyClip(id, e.sprite);
+                    Assert.IsNotNull(clip, id);
+                    AssertFrames(clip.frames, idle[0].width, idle[0].height, id, clip.delays.Length);
+                }
+            }
+            Assert.AreEqual("pounce", UnitArt.EnemyClip("shard_wisp", null).style);
+        }
+
+        [Test]
+        public void InPlacePhaseTwoSwapsToPhaseArt()
+        {
+            Assert.AreEqual("aetherion", UnitArt.EnemyArtId("aetherion", 1));
+            Assert.AreEqual("aetherion_p2", UnitArt.EnemyArtId("aetherion", 2));
+            Assert.AreEqual("zoroa_p2", UnitArt.EnemyArtId("zoroa_p2", 2)); // Zoroa already swaps its def
+            Assert.AreEqual("riftling", UnitArt.EnemyArtId("riftling", 2));  // no phase art: keep its own
+            Assert.IsNull(UnitArt.EnemyArtId(null, 2));
         }
 
         [Test]

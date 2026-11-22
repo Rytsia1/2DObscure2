@@ -2102,7 +2102,7 @@ namespace Obscure
             }
             Sfx.Play(Sound.Success);
             SetHint(Builder.LastFeedback);
-            if (Game != null) Game.EnterHubFromCreation();
+            if (Game != null) Game.EnterPrologueFromCreation();
             return true;
         }
 
@@ -2124,7 +2124,7 @@ namespace Obscure
                 Refresh();
                 return false;
             }
-            if (Game != null) Game.EnterHubFromCreation();
+            if (Game != null) Game.EnterPrologueFromCreation();
             return true;
         }
     }

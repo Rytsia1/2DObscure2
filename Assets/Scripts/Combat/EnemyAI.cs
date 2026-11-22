@@ -71,6 +71,7 @@ namespace Obscure
         public static BattleAction Use(Battle b, Combatant self, EnemyAttack move, Combatant target = null)
         {
             if (move.self || move.allTargets) return BattleAction.Strike(self, move, null);
+            if (move.Heals) return BattleAction.Strike(self, move, target ?? self); // ally support: no Interpose
             return BattleAction.Strike(self, move, b.Intercept(target ?? RandomTarget(b, self)));
         }
 

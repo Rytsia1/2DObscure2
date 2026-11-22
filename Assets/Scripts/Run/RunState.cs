@@ -815,6 +815,14 @@ namespace Obscure
         {
             if (!CanEnter(n)) throw new InvalidOperationException($"Node {n.id} is not reachable");
             Current = n;
+            if (IsPrologue && n.IsCombat)
+            {
+                Tutorial.Floor = n.floor;
+                Tutorial.Wipes = 0;
+                SnapshotNodeEntry();
+                Rng = Prologue.NodeRng(n.floor);
+                return;
+            }
             if (n.type == NodeType.Boss && IsFinalStage) Stats.bossReached = true;
             if (n.type == NodeType.Treasure)
             {
@@ -873,17 +881,15 @@ namespace Obscure
             }
         }
 
-        public EncounterDef CurrentEncounter => Current?.encounter == null ? null : Database.Encounters[Current.encounter];
+        public EncounterDef CurrentEncounter => Current?.encounter == null ? null : Database.Encounter(Current.encounter);
 
         bool Pending(NodeType type) => Status == RunStatus.Active && Current != null && Current.type == type && !Cleared.Contains(Current.id);
 
         // ---- combat ----
 
         // Same EXP to every standing hero (R031/R032 adjust it); results go on the offer for the reward screen.
-        void AwardBattleExp(Tier tier, bool[] standing)
+        void AwardBattleExp(int amount, bool[] standing)
         {
-            int amount = RunConfig.ExpFor(tier);
-            RelicManager.ModifyExpReward(ref amount);
             PendingReward.expGained = new int[Party.Count];
             PendingReward.levelsGained = new int[Party.Count];
             for (int i = 0; i < Party.Count; i++)
@@ -899,6 +905,7 @@ namespace Obscure
             var enc = CurrentEncounter;
             if (enc == null || !Current.IsCombat || Cleared.Contains(Current.id) || PendingReward != null || Status != RunStatus.Active)
                 throw new InvalidOperationException("No combat to win");
+            if (IsPrologue) { WinPrologueCombat(); return; }
             bool isFinalBoss = IsAtFinalDungeonBoss;
             bool isStageBoss = IsAtStageBoss;
             var standing = Party.Select(u => u.Alive).ToArray(); // only heroes standing at the end earn EXP
@@ -943,7 +950,9 @@ namespace Obscure
             foreach (var o in PendingReward.choices.Where(o => o.kind == RewardKind.Upgrade))
                 if (!Party.Any(p => p.id == o.id || p.classDef?.id == o.id))
                     o.id = Party[upgradeRng.Next(Party.Count)].id;
-            AwardBattleExp(enc.tier, standing);
+            int exp = RunConfig.ExpFor(enc.tier);
+            RelicManager.ModifyExpReward(ref exp);
+            AwardBattleExp(exp, standing);
             if (isStageBoss)
             {
                 PendingReward.title = $"Stage {Stage} Cleared";
@@ -979,6 +988,7 @@ namespace Obscure
         public void LoseCombat()
         {
             if (Status != RunStatus.Active) return;
+            if (IsPrologue) { RetryPrologueNode(); return; }
             SpendRetry();
             Status = RunStatus.Defeat;
             EndedUtc = DateTime.UtcNow;
@@ -1013,6 +1023,101 @@ namespace Obscure
             Status = RunStatus.Active;
         }
 
+
+        // ---- Tutorial Prologue (Run/Prologue.cs, Tutorial_Prologue_Design.md) ----
+
+        public PrologueScript Tutorial { get; private set; }
+        public bool IsPrologue => Map != null && Map.isPrologue;
+        MapDef dungeonMapAfterPrologue;
+        int[] entryHp, entryMp;
+        readonly List<string> entryItems = new List<string>();
+        readonly Dictionary<string, int> entryBag = new Dictionary<string, int>();
+
+        // Swaps in the 3-node Prologue map; the Dungeon 1 map comes back when the Prologue ends.
+        public void BeginPrologue()
+        {
+            dungeonMapAfterPrologue = Map;
+            Map = Prologue.Map();
+            Tutorial = new PrologueScript();
+            Current = null;
+            Cleared.Clear();
+            PendingReward = null;
+        }
+
+        // Skipping grants exactly what playing grants (design §4.2).
+        public void SkipPrologue()
+        {
+            foreach (var u in Party) u.GainExp(Prologue.TotalExp);
+            foreach (var id in Prologue.Node2Items) TryAddConsumable(id);
+            EndPrologue();
+        }
+
+        // Both paths end here, in the same state: full HP/MP, Prologue Gold banked, committed as the New Game baseline.
+        void EndPrologue()
+        {
+            if (dungeonMapAfterPrologue != null) Map = dungeonMapAfterPrologue;
+            dungeonMapAfterPrologue = null;
+            Tutorial = null;
+            Current = null;
+            Cleared.Clear();
+            PendingReward = null;
+            BattleBuffs.Clear();
+            Stats.nodesCompleted = Stats.battlesWon = 0;
+            foreach (var u in Party) { u.hp = u.stats.maxHp; u.mp = u.stats.maxMp; u.shield = 0; }
+            HubGold += Prologue.ClearGold;
+            Rng = new Random(Seed);
+            PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(this));
+        }
+
+        void SnapshotNodeEntry()
+        {
+            entryHp = Party.Select(u => u.hp).ToArray();
+            entryMp = Party.Select(u => u.mp).ToArray();
+            entryItems.Clear();
+            entryItems.AddRange(Items);
+            entryBag.Clear();
+            foreach (var c in Inventory.consumables) entryBag[c.itemId] = c.count;
+        }
+
+        // A Prologue wipe restarts the node as it was on entry (design §4.1); the hardcore rule starts at Dungeon 1.
+        void RetryPrologueNode()
+        {
+            Tutorial.Wipes++;
+            for (int i = 0; i < Party.Count; i++)
+            {
+                Party[i].hp = entryHp[i];
+                Party[i].mp = entryMp[i];
+                Party[i].shield = 0;
+            }
+            Items.Clear();
+            Items.AddRange(entryItems);
+            foreach (var id in entryBag.Keys.Union(Inventory.consumables.Select(c => c.itemId)).ToList())
+            {
+                int diff = (entryBag.TryGetValue(id, out var n) ? n : 0) - Inventory.GetConsumableCount(id);
+                if (diff > 0) Inventory.AddConsumable(id, diff);
+                else if (diff < 0) Inventory.RemoveConsumable(id, -diff);
+            }
+            PendingReward = null;
+            BattleBuffs.Clear();
+            Rng = Prologue.NodeRng(Current.floor);
+        }
+
+        void WinPrologueCombat()
+        {
+            var standing = Party.Select(u => u.Alive).ToArray();
+            Stats.battlesWon++;
+            foreach (var u in Party) if (!u.Alive) u.hp = 1;
+            bool boss = Current.type == NodeType.Boss;
+            PendingReward = new RewardOffer
+            {
+                title = boss ? "The Threshold Opens" : "Victory",
+                text = boss ? $"Aetherion yields. The path to Layer 1 is open. +{Prologue.ClearGold} Hub Gold."
+                    : Current.floor == 1 ? "Supplies recovered: 2 Draughts and 1 Ether."
+                    : "The rift residue fades.",
+            };
+            AwardBattleExp(Prologue.NodeExp[Math.Min(Current.floor, Prologue.NodeExp.Length - 1)], standing);
+            if (Current.floor == 1) foreach (var id in Prologue.Node2Items) TryAddConsumable(id);
+        }
 
         // ---- rewards ----
 
@@ -1516,6 +1621,7 @@ namespace Obscure
 
         void Complete()
         {
+            if (IsPrologue && Current.type == NodeType.Boss) { EndPrologue(); return; }
             Cleared.Add(Current.id);
             Stats.nodesCompleted++;
             if (Current.type == NodeType.Boss)

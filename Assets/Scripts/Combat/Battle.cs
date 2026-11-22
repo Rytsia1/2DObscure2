@@ -257,6 +257,7 @@ namespace Obscure
                 case ActionKind.Attack:
                     if (a.attack != null && a.actor.unit.mp < a.attack.mpCost) return "Not enough MP.";
                     if (a.attack != null && a.attack.self) return null;
+                    if (a.attack != null && a.attack.Heals) return IsAlly(a.actor, a.target) ? null : "Invalid target.";
                     if (a.attack != null && a.attack.allTargets) return Opponents(a.actor).Any(c => c.Alive) ? null : "Invalid target.";
                     return IsFoe(a.actor, a.target) ? null : "Invalid target.";
                 case ActionKind.Guard:
@@ -365,6 +366,12 @@ namespace Obscure
                         foreach (var ap in move.apply ?? Array.Empty<StatusApply>()) Apply(actor, ap, actor, 1f);
                         break;
                     }
+                    if (move != null && move.Heals)
+                    {
+                        Say($"{actor.name} uses {move.name} on {a.target.name}.");
+                        hits.Add(Heal(a.target, (int)Math.Floor(a.target.Stats.maxHp * move.healAlly)));
+                        break;
+                    }
                     var targets = move != null && move.allTargets ? Opponents(actor).Where(c => c.Alive).ToList() : new List<Combatant> { a.target };
                     Say(move == null ? $"{actor.name} attacks {a.target.name}."
                         : move.allTargets ? $"{actor.name} unleashes {move.name}!"
@@ -381,6 +388,12 @@ namespace Obscure
                             float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
                             int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng, physPen);
                             var hit = Deal(actor, t, raw, element, reaction, null, heavy, attackQte);
+                            if (move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
+                            {
+                                int hitBreak = hit.breakAmount;
+                                BreakHit(t, move.breakPower, actor, ref hit);
+                                hit.breakAmount += hitBreak;
+                            }
                             hits.Add(hit);
                             if (move != null && move.drain > 0f && actor.Alive)
                             {
@@ -649,7 +662,8 @@ namespace Obscure
                 dotScaling = ap.dotScaling
             };
 
-            bool applied = t.StatusController.TryApplyStatus(applyClone, source, t, out var inst, Rng, 1);
+            var roll = run?.Tutorial != null && run.Tutorial.ForcesStatus(source, ap) ? new SureRandom() : Rng; // Prologue: first Dread Pulse lands
+            bool applied = t.StatusController.TryApplyStatus(applyClone, source, t, out var inst, roll, 1);
             if (applied)
             {
                 t.AddStatus(ap.id, inst.remainingTurns, inst.magnitude, source);

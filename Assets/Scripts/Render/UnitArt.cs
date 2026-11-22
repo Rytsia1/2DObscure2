@@ -33,7 +33,15 @@ namespace Obscure
         {
             "hollow_squire", "gravebound_archer", "cinder_wisp", "soulbound_hound", "possessed_royal_guard",
             "crypt_leech", "forgotten_militia", "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2",
+            "reliquary_confessor", "graveglass_arcanist", "crownless_duelist", "tombstone_colossus", "mourning_bell_wraith", // roster v1.9 Elites
+            // Tutorial Prologue (Tools/PixelArt/prologue.js); aetherion_p2 is art only, shown once Aetherion reaches phase 2
+            "riftling", "shard_wisp", "veil_stalker", "aetherion", "aetherion_p2",
         };
+
+        // Art id for an enemy in its current boss phase. Zoroa swaps to a separate zoroa_p2 def; a boss that changes phase
+        // in place (phase2At, e.g. Aetherion) shows "<id>_p2" art from phase 2 on when that art exists.
+        public static string EnemyArtId(string enemyId, int phase) =>
+            enemyId != null && phase > 1 && enemies.Contains(enemyId + "_p2") ? enemyId + "_p2" : enemyId;
 
         // Legacy enemies (Skeleton Warrior, Cursed Knight, Abyssal Warden) reuse the closest Dungeon 1 art.
         static readonly Dictionary<string[], string> legacyEnemies = new Dictionary<string[], string>

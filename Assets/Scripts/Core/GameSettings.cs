@@ -16,6 +16,7 @@ namespace Obscure
         public int qteAssist;  // QteAssist: Standard, Relaxed, Auto (QTEs off)
         public int qteKey;     // index into QteKeys
         public bool reduceMotion; // skips combat screen shake and hit-stop freezes
+        public bool prologueCleared; // profile flag: offers Skip Prologue on New Game and silences tutorial prompts (not a gameplay unlock)
 
         public static readonly UnityEngine.InputSystem.Key[] QteKeys =
         {

@@ -1,7 +1,8 @@
 using System.Linq;
 
 // Dungeon 1 enemy roster, skills and encounters.
-// Source of truth: Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_7.xlsx (Enemy Roster, Skill Database, Encounter Plan, Zoroa Boss Phases).
+// Source of truth: Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx (Enemy Roster, Skill Database, Encounter Plan,
+// Zoroa Boss Phases, Elite Design Lock).
 // All stats are Dungeon 1 base values; Unit.ScaleEnemyStats applies dungeon/tier scaling exactly once.
 namespace Obscure
 {
@@ -13,10 +14,10 @@ namespace Obscure
         static readonly float[] ReaperAccelerando = { 0.350f, 0.310f, 0.310f }; // Elite minimum 310 ms
         static readonly float[] ZoroaAccelerando = { 0.350f, 0.298f, 0.280f };  // Boss minimum 280 ms
 
-        static StatusApply Chance(StatusId id, float chance) => new StatusApply { id = id, chance = chance };
+        internal static StatusApply Chance(StatusId id, float chance) => new StatusApply { id = id, chance = chance };
 
         // Stats(HP, MP, ATK, DEF, SPD, MATK) + MDEF.
-        static EnemyDef Enemy(string id, string name, string shortName, string tag, Tier tier, string type, string role,
+        internal static EnemyDef Enemy(string id, string name, string shortName, string tag, Tier tier, string type, string role,
             Stats stats, int mdef, string[] sprite, string description, params EnemyAttack[] attacks)
         {
             var d = new EnemyDef
@@ -39,20 +40,20 @@ namespace Obscure
             return d;
         }
 
-        static EnemyAttack Move(string name, Element element, params int[] damage) =>
+        internal static EnemyAttack Move(string name, Element element, params int[] damage) =>
             new EnemyAttack { name = name, element = element, hitDamage = damage, aiPriority = 1 };
 
         // Generic 0-MP Basic Attack for roster enemies whose workbook kit has only MP Skills
         // (placeholder: 1 Physical hit at 100% of base ATK; not in workbook v1.7).
-        static EnemyAttack BasicAttack(int atk) =>
+        internal static EnemyAttack BasicAttack(int atk) =>
             new EnemyAttack { name = "Basic Attack", element = Element.Physical, hitDamage = new[] { atk }, aiPriority = 0 };
 
         // Reusable MP Restoration Skill. Cost 0, self, restores 50% Max MP (capped), cooldown 4 turns, no damage, no QTE.
         // Assigned per enemy; usage is configured per instance (priority, MP threshold, cooldowns).
-        public static EnemyAttack ArcaneCharge(int priority, float useBelowMpFraction = 0.5f, int initialCooldown = 0) => new EnemyAttack
+        public static EnemyAttack ArcaneCharge(int priority, float useBelowMpFraction = 0.5f, int initialCooldown = 0, float unlessAllyHpBelow = 0f) => new EnemyAttack
         {
             name = "Arcane Charge", self = true, hits = 0, power = 0f, restoreMp = 0.50f, mpCost = 0, cooldown = 4,
-            aiPriority = priority, aiMpBelow = useBelowMpFraction, initialCooldown = initialCooldown,
+            aiPriority = priority, aiMpBelow = useBelowMpFraction, initialCooldown = initialCooldown, aiUnlessAllyHpBelow = unlessAllyHpBelow,
         };
 
         public static readonly EnemyDef[] Enemies =
@@ -115,6 +116,43 @@ namespace Obscure
                 Move("Ossuary Slam", Element.Physical, 32),
                 ArcaneCharge(priority: 3)),
 
+            // v1.9 FINAL: five random-pool Elites (Elite Design Lock sheet). Art: Resources/Enemies/<id>_* (Tools/PixelArt/enemies.js).
+            Enemy("reliquary_confessor", "Reliquary Confessor", "Confessor", "RCF", Tier.Elite, "Undead", "Cleric",
+                new Stats(380, 150, 15, 11, 12, 30), 20, Art.CursedKnight,
+                "A former royal priest guarding a tainted relic. Mends its allies and hoards MP with Arcane Charge.",
+                new EnemyAttack { name = "Mending Litany", hits = 0, power = 0f, healAlly = 0.15f, aiAllyHpBelow = 0.65f,
+                    mpCost = 24, cooldown = 3, aiPriority = 3 },
+                ArcaneCharge(priority: 2, useBelowMpFraction: 0.30f, unlessAllyHpBelow: 0.40f),
+                Move("Reliquary Staff", Element.Physical, 15)),
+
+            Enemy("graveglass_arcanist", "Graveglass Arcanist", "Arcanist", "GGA", Tier.Elite, "Wraith", "Arcane Caster",
+                new Stats(360, 180, 12, 9, 16, 38), 17, Art.CursedKnight,
+                "A royal sorcerer's ghost fused with stained-glass shards. Casts Shadow lances and recharges its MP.",
+                ArcaneCharge(priority: 3, useBelowMpFraction: 0.25f),
+                new EnemyAttack { name = "Umbral Lance", element = Element.Shadow, hitDamage = new[] { 38 }, mpCost = 22, aiPriority = 2 },
+                Move("Glass Shard", Element.Physical, 12)),
+
+            Enemy("crownless_duelist", "Crownless Duelist", "Duelist", "CDU", Tier.Elite, "Undead", "Skirmisher",
+                new Stats(410, 100, 36, 13, 18, 12), 12, Art.CursedKnight,
+                "A palace swordsman still bound by the royal dueling code. Presses one target with three quick cuts.",
+                new EnemyAttack { name = "Triple Feint", element = Element.Physical, hitDamage = new[] { 12, 12, 12 }, mpCost = 18, aiPriority = 1 }, // Steady 350 ms
+                Move("Crownless Cut", Element.Physical, 36)),
+
+            Enemy("tombstone_colossus", "Tombstone Colossus", "Colossus", "TSC", Tier.Elite, "Undead", "Construct",
+                new Stats(620, 70, 38, 24, 7, 9), 16, Art.CursedKnight,
+                "A giant of gravestones and royal armour. Extremely sturdy; Gravefall crushes the party's poise.",
+                new EnemyAttack { name = "Gravefall", element = Element.Physical, hitDamage = new[] { 38 }, breakPower = 30,
+                    mpCost = 18, cooldown = 3, aiPriority = 1 }, // no Heavy marker
+                Move("Monument Fist", Element.Physical, 38)),
+
+            Enemy("mourning_bell_wraith", "Mourning Bell Wraith", "Bell Wraith", "MBW", Tier.Elite, "Wraith", "Controller",
+                new Stats(400, 145, 15, 12, 14, 33), 22, Art.CursedKnight,
+                "The spirit of a funeral bell. Its toll disturbs the soul and washes the whole party in Shadow.",
+                new EnemyAttack { name = "Funeral Chorus", element = Element.Shadow, hitDamage = new[] { 20 }, allTargets = true, telegraph = true,
+                    mpCost = 32, cooldown = 3, minTargets = 3, aiPriority = 2 }, // shared QTE, telegraphed 1 turn prior
+                new EnemyAttack { name = "Tolling Note", element = Element.Shadow, hitDamage = new[] { 34 }, mpCost = 20, aiPriority = 1 },
+                Move("Echo Claw", Element.Physical, 15)),
+
             Enemy("zoroa_p1", "Zoroa, Harvester of Souls", "Zoroa", "ZOR", Tier.Boss, "Soul Entity", "Controller",
                 new Stats(1840, 600, 38, 20, 14, 42), 22, Art.Warden,
                 "Zoroa gathers the souls of Felna and tears them from the living. Health bar 1/2.",
@@ -165,6 +203,17 @@ namespace Obscure
                 enemies = new[] { "soul_reaper", "forgotten_militia", "soulbound_hound", "crypt_leech" }, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e7", name = "Ossuary Threshold", tier = Tier.Elite, minFloor = 2, focus = "Stage 2 Boss: Royal Ossuary Knight with 3 allies; Heavy & Break interrupt",
                 enemies = new[] { "royal_ossuary_knight", "possessed_royal_guard", "gravebound_archer", "hollow_squire" }, music = MusicIds.Battle2 },
+            // v1.9 FINAL random Elite pool (sheet E6-E10). d1_e6 / d1_e7 above are the special Miniboss nodes (stage bosses).
+            new EncounterDef { id = "d1_e8", name = "Reliquary Chamber", tier = Tier.Elite, minFloor = 2, focus = "Healing / sustain support; focus the Confessor",
+                enemies = new[] { "reliquary_confessor", "gravebound_archer" }, music = MusicIds.Battle2 },
+            new EncounterDef { id = "d1_e9", name = "Shattered Chapel", tier = Tier.Elite, minFloor = 2, focus = "Magic damage / MP management",
+                enemies = new[] { "graveglass_arcanist", "cinder_wisp" }, music = MusicIds.Battle2 },
+            new EncounterDef { id = "d1_e10", name = "Duelist's Gallery", tier = Tier.Elite, minFloor = 2, focus = "Physical multi-hit pressure",
+                enemies = new[] { "crownless_duelist", "forgotten_militia" }, music = MusicIds.Battle2 },
+            new EncounterDef { id = "d1_e11", name = "Fallen Mausoleum", tier = Tier.Elite, minFloor = 2, focus = "Durability / Break pressure",
+                enemies = new[] { "tombstone_colossus", "hollow_squire" }, music = MusicIds.Battle2 },
+            new EncounterDef { id = "d1_e12", name = "Mourning Bell Hall", tier = Tier.Elite, minFloor = 2, focus = "AoE / control pressure; telegraphed Funeral Chorus",
+                enemies = new[] { "mourning_bell_wraith", "soulbound_hound" }, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_boss", name = "Zoroa", tier = Tier.Boss, focus = "Signature multi-hit, resources, Break timing, Phase 2 escalation",
                 enemies = new[] { "zoroa_p1" }, music = MusicIds.ZoroaP1 }, // Phase 2 replaces Phase 1; never spawned alongside it
         };

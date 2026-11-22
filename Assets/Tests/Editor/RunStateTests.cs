@@ -68,7 +68,7 @@ namespace Obscure.Tests
                     if (stage == 1)
                         Assert.AreEqual(0, map.nodes.Count(n => n.type == NodeType.Elite), $"seed {seed} stage 1 has no mid-map elites");
                     foreach (var elite in map.nodes.Where(n => n.type == NodeType.Elite))
-                        CollectionAssert.DoesNotContain(d1Bosses.Skip(stage - 1), elite.encounter, $"seed {seed} stage {stage}: a boss still ahead is never met early");
+                        CollectionAssert.DoesNotContain(d1Bosses, elite.encounter, $"seed {seed} stage {stage}: stage bosses are special-node only");
                     Assert.GreaterOrEqual(Paths(map), 3, $"seed {seed} stage {stage}: needs real route choices");
 
                     var boss = map.nodes.Single(n => n.type == NodeType.Boss);

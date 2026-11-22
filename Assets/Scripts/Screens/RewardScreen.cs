@@ -921,6 +921,7 @@ namespace Obscure
                 ? Run.PendingReward.choices[choice]
                 : null;
             int prevEquipCount = Run?.Inventory?.equipment?.Count ?? 0;
+            bool endsPrologue = Run.IsPrologue && Run.Current?.type == NodeType.Boss;
 
             // The chosen element only applies to Elemental Attunement; other element modifiers keep their rolled element.
             var mods = Run.PendingReward?.modifierChoices;
@@ -956,7 +957,11 @@ namespace Obscure
             if (choice >= 0) Sfx.Play(Sound.Success);
             else if (gainedGold > 0) Sfx.Play(Sound.Coin);
 
-            if (Run.Won)
+            if (endsPrologue)
+            {
+                Game.Go(GameState.PrologueClear);
+            }
+            else if (Run.Won)
             {
                 PersistenceCommitHandler.CommitDungeonClear(Run);
                 SaveManager.AutoSave(out _);

@@ -501,6 +501,7 @@ namespace Obscure
                 ? r.ModifierManager.GetOffensiveQteWindowDelta()
                 : 0f;
             float windowBonus = Math.Clamp(charBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
+            if (r?.Tutorial != null && r.Tutorial.FirstTime("offense_" + kind)) profile = profile.Scaled(1f, Prologue.FirstTimeSlow);
             return kind switch
             {
                 OffenseQteKind.Typing => TypingQte.For(a.skill, profile, rng),
@@ -518,7 +519,7 @@ namespace Obscure
             rng ??= new Random();
             var move = a.attack;
             // Stances, charge turns and status-only actions have no direct damage, so no Defensive QTE (Bab 11 §2.3).
-            if (a.charging || (move != null && (move.self || move.StatusOnly))) return null;
+            if (a.charging || (move != null && (move.self || move.StatusOnly || move.Heals))) return null;
             int hits = move?.hits ?? 1;
             if (a.target != null && a.target.CannotReact) return new AutoQte(hits, QteResult.Poor); // Battle.Deal forces Poor anyway
             if (assist == QteAssist.Auto) return new AutoQte(hits);
@@ -533,6 +534,11 @@ namespace Obscure
                 : 0f;
             float totalTimingBonus = Math.Clamp(statTimingBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             var tier = a.actor.enemy?.tier ?? Tier.Normal;
+            // Tutorial Prologue: feint/stutter ramp, one scripted feint, and each QTE type runs slower the first time.
+            var tut = r?.Tutorial;
+            var ramp = tut?.Ramp(a.actor, move);
+            if (tut != null && tut.FirstTime(ramp?.forceFeint == true ? "feint" : PrologueScript.DefenseKind(move, hits)))
+                profile = profile.Scaled(1f, Prologue.FirstTimeSlow);
             // Drain attacks are fought off by mashing (Struggle); other magic is warded by typing runes.
             if (move != null && move.drain > 0f) return new StruggleQte(profile, hits, move.delay);
             if (move != null && move.UsesMagic) return WardQte.For(profile, hits, rng);
@@ -548,14 +554,14 @@ namespace Obscure
                     if (!heavy[i]) cues[i] = (DodgeDir)(1 + rng.Next(4));
             }
             bool[] feints = null;
-            if (rng.NextDouble() < QteConfig.FeintChance(tier))
+            if (ramp?.forceFeint == true || rng.NextDouble() < (ramp?.feint ?? QteConfig.FeintChance(tier)))
             {
                 feints = new bool[hits];
                 feints[rng.Next(hits)] = true;
             }
             var stutter = new (float, float)[hits];
             for (int i = 0; i < hits; i++)
-                if (rng.NextDouble() < QteConfig.StutterChance(tier))
+                if (rng.NextDouble() < (ramp?.stutter ?? QteConfig.StutterChance(tier)))
                     stutter[i] = rng.Next(2) == 0
                         ? (QteConfig.StutterSlowTime, QteConfig.StutterSlowDistance)
                         : (QteConfig.StutterFastTime, QteConfig.StutterFastDistance);

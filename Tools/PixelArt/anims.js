@@ -108,6 +108,12 @@ const ERIG = {
   forgotten_militia: { arm: { letters: "wXxQzA", minX: 12 }, style: "melee" },
   soul_reaper: { arm: { letters: "wsZQha", minX: 12 }, style: "melee" },
   royal_ossuary_knight: { arm: { letters: "rDKQ", minX: 12 }, style: "melee" }, // shield bash
+  // roster v1.9 Elites
+  reliquary_confessor: { arm: { letters: "woGh", minX: 13 }, style: "melee" },  // reliquary staff swing
+  graveglass_arcanist: { arm: { letters: "AQq", minX: 13 }, style: "melee" },   // glass shard thrust
+  crownless_duelist: { arm: { letters: "AhgsZ", minX: 12 }, style: "melee" },   // rapier lunge
+  tombstone_colossus: { arm: { letters: "AaFm", minX: 15 }, style: "melee" },   // monument fist
+  mourning_bell_wraith: { arm: { letters: "ah", minX: 14 }, style: "melee" },   // echo claw
   zoroa_p1: { arm: { letters: "AhcLlG", minX: 30 }, style: "reap", glow: [R.cyan[3], R.cyan[1]] },
   zoroa_p2: { arm: { letters: "AhcLlG", minX: 30 }, style: "reap", glow: [P.hsl(352, 0.85, 0.68), P.hsl(352, 0.8, 0.45)] },
 };
@@ -165,9 +171,13 @@ const EANIMS = {
   ] },
 };
 
+// tutorial enemies bring their own rigs; rig.fx = { frame: effect } adds a strike effect (bolt, rift slash) to that frame
+Object.assign(ERIG, require("./prologue.js").PROLOGUE_RIG);
+
 function enemyAttack(id) {
   const rig = ERIG[id], def = { ...ENEMIES[id], arm: rig.arm }, a = EANIMS[rig.style];
-  return { frames: a.poses(rig).map((p) => pose(def, p)), delay: a.delay, style: rig.style };
+  const poses = a.poses(rig).map((p, i) => (rig.fx && rig.fx[i] ? { ...p, fx: rig.fx[i] } : p));
+  return { frames: poses.map((p) => pose(def, p)), delay: a.delay, style: rig.style };
 }
 
 module.exports = { RIG, ANIMS, clips, ERIG, EANIMS, enemyAttack };

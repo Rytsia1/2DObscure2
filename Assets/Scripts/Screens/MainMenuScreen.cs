@@ -84,10 +84,12 @@ namespace Obscure
         }
     }
 
-    // Opening story sequence shown after confirming New Game party before the first expedition.
+    // Prologue intro, shown after confirming the New Game party (Tutorial_Prologue_Design.md §2, §10).
+    // Offers Skip once this profile has cleared the Prologue (§4.2).
     public class OpeningSequenceScreen : GameScreen
     {
         public UitkMenu.Item BeginExpeditionButton { get; private set; }
+        public UitkMenu.Item SkipButton { get; private set; }
 
         protected override void Build()
         {
@@ -110,7 +112,7 @@ namespace Obscure
             panel.AddToClassList("uitk-opening-panel");
             UiRoot.Add(panel);
 
-            var title = new UiLabel("PROLOGUE: THE SEALED ABYSS");
+            var title = new UiLabel("PROLOGUE: THE THRESHOLD");
             title.AddToClassList("uitk-opening-title");
             panel.Add(title);
 
@@ -119,9 +121,9 @@ namespace Obscure
             panel.Add(div);
 
             var story = new UiLabel(
-                "BENEATH THE ASHEN CITADEL, THE ANCIENT SEAL WEAKENS. " +
-                "FOUR SOULS BOUND BY OATH STEP BEYOND THE IRON GATE " +
-                "TO DESCEND INTO THE SHIFTING CORRIDORS OF THE ABYSS.");
+                "1631 AR. THE FULL MOON OPENS THE PORTAL IN GEISTWALD. " +
+                "BY ROYAL DECREE EVERY FAMILY SENDS ONE TO THE EXPEDITION. " +
+                "YOUR FOUR STEP THROUGH, INTO THE THRESHOLD OF THE WORLD'S BETWEEN.");
             story.AddToClassList("uitk-opening-story");
             panel.Add(story);
 
@@ -162,13 +164,59 @@ namespace Obscure
             footer.AddToClassList("uitk-opening-footer");
             UiRoot.Add(footer);
 
-            var btnEl = FigmaUi.CreateButton("BEGIN EXPEDITION", "button-primary", 320f);
+            var btnEl = FigmaUi.CreateButton("BEGIN PROLOGUE", "button-primary", 320f);
             footer.Add(btnEl);
+            bool canSkip = Game?.Settings != null && Game.Settings.prologueCleared;
+            var skipEl = canSkip ? FigmaUi.CreateButton("SKIP PROLOGUE", "button-slab", 320f) : null;
+            if (skipEl != null) footer.Add(skipEl);
 
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
-            menu.onBack = () => Game?.Go(GameState.CharacterCreation);
-            BeginExpeditionButton = menu.Add(btnEl, "BEGIN EXPEDITION", () => Game?.BeginFirstExpedition());
+            menu.onBack = () => { }; // the party is already committed; there is no way back into creation
+            BeginExpeditionButton = menu.Add(btnEl, "BEGIN PROLOGUE", () => Game?.BeginPrologue());
+            if (skipEl != null) SkipButton = menu.Add(skipEl, "SKIP PROLOGUE", () => Game?.SkipPrologue());
+        }
+    }
+
+    // After Aetherion: the tutorial-only retry ends here, so say so before the Hub (Tutorial_Prologue_Design.md §4.1).
+    public class PrologueClearScreen : GameScreen
+    {
+        protected override void Build()
+        {
+            var catalog = FigmaScreenCatalog.Instance;
+            var doc = Root.gameObject.AddComponent<UIDocument>();
+            doc.sortingOrder = 10;
+            if (catalog != null && catalog.GetPanelSettings() != null) doc.panelSettings = catalog.GetPanelSettings();
+            UiRoot = doc.rootVisualElement ?? new VisualElement();
+            if (catalog?.GetTokens() != null) UiRoot.styleSheets.Add(catalog.GetTokens());
+            if (catalog?.GetRuntimeStylesheet() != null) UiRoot.styleSheets.Add(catalog.GetRuntimeStylesheet());
+            UiRoot.AddToClassList("uitk-opening-root");
+
+            var panel = new VisualElement();
+            panel.AddToClassList("uitk-opening-panel");
+            UiRoot.Add(panel);
+            var title = new UiLabel("THE THRESHOLD OPENS");
+            title.AddToClassList("uitk-opening-title");
+            panel.Add(title);
+            var div = new VisualElement();
+            div.AddToClassList("uitk-modal-divider");
+            panel.Add(div);
+            var story = new UiLabel(
+                "AETHERION YIELDS AND THE PATH TO LAYER 1 STANDS OPEN. " +
+                "THE THRESHOLD SENT YOU BACK WHEN YOU FELL. THE WORLD'S BETWEEN WILL NOT. " +
+                "FROM HERE ON, IF THE WHOLE PARTY FALLS, THE EXPEDITION ENDS.");
+            story.AddToClassList("uitk-opening-story");
+            panel.Add(story);
+
+            var footer = new VisualElement();
+            footer.AddToClassList("uitk-opening-footer");
+            UiRoot.Add(footer);
+            var btnEl = FigmaUi.CreateButton("RETURN TO GEISTWALD", "button-primary", 320f);
+            footer.Add(btnEl);
+            var menu = Root.gameObject.AddComponent<UitkMenu>();
+            menu.AttachRoot(UiRoot);
+            menu.onBack = () => { };
+            menu.Add(btnEl, "RETURN TO GEISTWALD", () => Game?.FinishPrologue());
         }
     }
 }

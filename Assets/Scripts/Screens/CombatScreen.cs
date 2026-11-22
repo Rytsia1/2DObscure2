@@ -29,7 +29,7 @@ namespace Obscure
         }
     }
 
-    public class CombatView : MonoBehaviour
+    public partial class CombatView : MonoBehaviour
     {
         const float EnemyThink = 0.5f, AfterAction = 0.6f;
         const int LogLines = 6;
@@ -321,6 +321,7 @@ namespace Obscure
             screenRoot.Add(qteHost);
 
             battle.Logged += AddLog;
+            InitCoach(battle); // Tutorial Prologue prompts (PrologueCoach.cs); no-op outside the Prologue
             battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
             battle.StatusApplied += (target, id, isBuff) =>
             {
@@ -940,9 +941,9 @@ namespace Obscure
             {
                 var c = kv.Key;
                 var h = kv.Value;
-                if (c.IsEnemy && c.enemy?.id != h.artKey)
+                if (c.IsEnemy && UnitArt.EnemyArtId(c.enemy?.id, c.phase) != h.artKey)
                 {
-                    h.artKey = c.enemy?.id;
+                    h.artKey = UnitArt.EnemyArtId(c.enemy?.id, c.phase); // a boss phase (new def or in-place) swaps the art
                     h.idle = UnitArt.Enemy(h.artKey, c.unit.sprite);
                     h.idleFrame = -1;
                 }
@@ -1159,6 +1160,7 @@ namespace Obscure
         {
             Refresh();
             yield return new WaitForSeconds(0.4f);
+            yield return CoachBattleStart();
             while (Battle.Outcome == Outcome.None)
             {
                 var c = Battle.NextTurn();
@@ -1177,7 +1179,7 @@ namespace Obscure
                     yield return new WaitForSeconds(EnemyThink);
                     var act = EnemyAI.Choose(Battle, c);
                     if (act == null) continue;
-                    var qte = QteFactory.Defense(act, Assist, null, qteRng);
+                    var qte = QteFactory.Defense(act, Assist, Game.I?.Run, qteRng);
                     if (qte == null)
                     {
                         Telegraph(act);
@@ -1185,10 +1187,11 @@ namespace Obscure
                         yield return Resolve(act);
                         continue;
                     }
+                    yield return CoachDefense(act, qte);
                     yield return RunQte(qte, Telegraph(act), act);
                     if (qte.Cancelled) break;
                     var defender = act.target;
-                    yield return TryRetryQte(defender, qte, () => QteFactory.Defense(act, Assist, null, qteRng), Telegraph(act), act, retried => qte = retried);
+                    yield return TryRetryQte(defender, qte, () => QteFactory.Defense(act, Assist, Game.I?.Run, qteRng), Telegraph(act), act, retried => qte = retried);
                     if (qte.Cancelled) break;
                     yield return Resolve(act, 1f, qte switch
                     {
@@ -1201,6 +1204,7 @@ namespace Obscure
                 else
                 {
                     chosen = null;
+                    yield return CoachPlayerTurn(c);
                     ShowActions(c);
                     while (chosen == null) yield return null;
                     var qte = QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng);
@@ -1208,6 +1212,7 @@ namespace Obscure
                     if (qte != null)
                     {
                         c.ResetQteLuckyFlag();
+                        yield return CoachOffense();
                         yield return RunQte(qte, OffenseHeading(chosen), null);
                         if (qte.Cancelled) break;
                         yield return TryRetryQte(c, qte, () => QteFactory.Offense(chosen, Battle.Tier, Assist, qteRng), OffenseHeading(chosen), null, retried => qte = retried);
@@ -1272,7 +1277,7 @@ namespace Obscure
             // An enemy that only charges this turn does not attack yet.
             if (actor != null && !action.charging && attacking
                 && huds.TryGetValue(actor, out var actorHud)
-                && (actor.IsEnemy ? UnitArt.EnemyClip(actor.enemy?.id, actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act")) is UnitArt.Clip act)
+                && (actor.IsEnemy ? UnitArt.EnemyClip(UnitArt.EnemyArtId(actor.enemy?.id, actor.phase), actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act")) is UnitArt.Clip act)
             {
                 float lunge = act.style == "melee" || act.style == "pounce" ? (actor.IsEnemy ? -MeleeLunge : MeleeLunge) : 0f;
                 StartCoroutine(PlayClip(actorHud, act, lunge));
@@ -1353,7 +1358,12 @@ namespace Obscure
                 Hint($"{move.name.ToUpperInvariant()}: " + string.Join(", ", effects));
                 return null;
             }
-            string who = move != null && move.allTargets ? "ALL" : a.target.name.ToUpperInvariant();
+            if (move != null && move.Heals)
+            {
+                Hint($"{move.name.ToUpperInvariant()} > {a.target.name.ToUpperInvariant()}: RESTORES {move.healAlly * 100:0}% HP");
+                return null;
+            }
+            string who =move != null && move.allTargets ? "ALL" : a.target.name.ToUpperInvariant();
             if (a.charging)
             {
                 Hint($"{a.actor.name.ToUpperInvariant()} CHARGES {move.name.ToUpperInvariant()} > {who} - RELEASES NEXT TURN. BREAK IT TO INTERRUPT!");
@@ -1534,7 +1544,7 @@ namespace Obscure
             var tags = a.skill?.tags ?? Array.Empty<string>();
             var actor = a.actor;
             string style = actor?.unit == null ? null
-                : (actor.IsEnemy ? UnitArt.EnemyClip(actor.enemy?.id, actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act"))?.style;
+                : (actor.IsEnemy ? UnitArt.EnemyClip(UnitArt.EnemyArtId(actor.enemy?.id, actor.phase), actor.unit.sprite) : UnitArt.HeroClip(actor.unit.sprite, "act"))?.style;
 
             // Signature spells
             if (element == Element.Fire && Has("meteor", "inferno", "cataclysm")) return ("meteor", 0.52f);
@@ -1944,6 +1954,7 @@ namespace Obscure
             var contItem = m.Add(contBtn, "CONTINUE", () =>
             {
                 if (won) { Game.I.Run.WinCombat(); Game.I.Go(GameState.Reward); }
+                else if (Game.I.Run.IsPrologue) { Game.I.Run.LoseCombat(); Game.I.Go(GameState.Combat); } // retry the node (design §4.1)
                 else { Game.I.Run.LoseCombat(); SaveManager.SyncRetryState(Game.I.Run); Game.I.Go(GameState.GameOver); }
             });
             contItem.visual = on =>
