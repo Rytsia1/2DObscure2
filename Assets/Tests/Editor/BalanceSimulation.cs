@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -199,34 +200,176 @@ namespace Obscure.Tests
             public bool won, timedOut;
             public int rounds, playerTurns, skillTurns, guardTurns, damageDealt, damageTaken, partyDeaths, summonsSpawned;
             public float hpLeft;
+
+            // Spec §14.6 & Architecture §16.5 AI telemetry
+            public int enemyActions, wastedEnemyActions, repeatedEnemyActions;
+            public int singleTargetAttacks;
+            public readonly Dictionary<int, int> singleTargetByHeroSlot = new Dictionary<int, int>();
+            public int chargesStarted, chargesInterrupted, telegraphedActions, telegraphedGuardedOrInterrupted;
+            public int dangerousActions, dangerousTelegraphed;
+            public int totalEnemyMpSpent, totalEnemyMaxMp;
+            public int totalEnemyAliveRounds, totalEnemyCount;
+            public int lethalRoundDamage, lethalRoundOverkill;
+            public int healTurns, usefulHealTurns;
+            public int aiDecisions, adaptationDecisions;
+            public double totalDecisionMs, maxDecisionMs, maxRoundDecisionMs;
+            public int roleAlignedDecisions, totalRoleDecisions;
+            public readonly List<string> decisionSignatures = new List<string>();
         }
 
         public static Result Fight(string encounterId, int level, Build build, Execution ex, int seed, Gear gear = Gear.Starter,
-            Policy policy = Policy.Tactical)
+            Policy policy = Policy.Tactical, BattleRecord recordOut = null, bool collectSignatures = false)
         {
             var party = PartyPlan.Select(p => MakeHero(p, build, level, gear)).ToList();
             var enc = Database.Encounters[encounterId];
+            var enemyDefs = enc.enemies.Select(id => Database.Enemies[id]).ToList();
             var qteRng = new Random(seed);
-            var b = new Battle(party, enc.enemies.Select(id => Database.Enemies[id]), new List<string>(), new Random(unchecked(seed * 31 + 7)));
+            int battleSeed = unchecked(seed * 31 + 7);
+            if (recordOut != null)
+            {
+                var rec = BattleReplay.BeginRecord(battleSeed, party, enemyDefs, Array.Empty<string>());
+                recordOut.battleSeed = rec.battleSeed;
+                recordOut.party.Clear(); recordOut.party.AddRange(rec.party);
+                recordOut.enemyIds.Clear(); recordOut.enemyIds.AddRange(rec.enemyIds);
+                recordOut.initialItems.Clear(); recordOut.initialItems.AddRange(rec.initialItems);
+                recordOut.steps.Clear();
+            }
+            var b = new Battle(party, enemyDefs, new List<string>(), new Random(battleSeed));
             var res = new Result();
+            var lastMoveTargetByEnemy = new Dictionary<Combatant, (string move, int targetSlot)>();
+            var heroHpAtRoundStart = new Dictionary<int, int>();
+            var roundDmgToHero = new Dictionary<int, int>();
+            int trackedRound = 0;
+
+            void FlushRoundMetrics()
+            {
+                if (trackedRound <= 0) return;
+                res.totalEnemyAliveRounds += b.Enemies.Count(e => e.Alive);
+                foreach (var p in b.Party)
+                {
+                    if (!p.Alive && heroHpAtRoundStart.TryGetValue(p.slot, out int startHp) && startHp > 0
+                        && roundDmgToHero.TryGetValue(p.slot, out int dmg) && dmg > 0)
+                    {
+                        res.lethalRoundDamage += dmg;
+                        res.lethalRoundOverkill += Math.Max(0, dmg - startHp);
+                    }
+                }
+            }
+
+            void BeginRoundMetrics()
+            {
+                trackedRound = b.Round;
+                heroHpAtRoundStart.Clear();
+                roundDmgToHero.Clear();
+                foreach (var p in b.Party) heroHpAtRoundStart[p.slot] = p.unit.hp;
+            }
+
+            int statusCountBefore = 0;
+            b.StatusApplied += (_, _, _) => statusCountBefore++;
 
             for (int steps = 0; steps < 10000 && b.Outcome == Outcome.None && b.Round <= MaxRounds; steps++)
             {
                 var c = b.NextTurn();
                 if (c == null) continue;
+                if (b.Round != trackedRound)
+                {
+                    FlushRoundMetrics();
+                    BeginRoundMetrics();
+                }
                 if (c.IsEnemy)
                 {
+                    bool wasCharging = c.IsCharging;
+                    var planned = c.Intent;
                     var act = EnemyAI.Choose(b, c);
-                    if (act == null) continue;
+                    if (act == null)
+                    {
+                        res.wastedEnemyActions++;
+                        res.enemyActions++;
+                        continue;
+                    }
                     var qte = QteFactory.Defense(act, QteAssist.Standard, null, qteRng);
                     List<QteResult> defense = null;
-                    if (qte is WardQte ward) defense = Enumerable.Repeat(ex.Roll(qteRng), ward.Results.Count).ToList(); // one typed ward covers every hit
+                    if (qte is WardQte ward) defense = Enumerable.Repeat(ex.Roll(qteRng), ward.Results.Count).ToList();
                     else if (qte is DefenseQte d) defense = Enumerable.Range(0, d.Hits).Select(_ => ex.Roll(qteRng)).ToList();
-                    else if (qte is StruggleQte st) defense = Enumerable.Repeat(ex.Roll(qteRng), st.hits).ToList(); // one gauge covers every hit
+                    else if (qte is StruggleQte st) defense = Enumerable.Repeat(ex.Roll(qteRng), st.hits).ToList();
+                    if (recordOut != null) BattleReplay.RecordEnemyStep(recordOut, c, defense);
+
                     int enemiesBefore = b.Enemies.Count;
+                    int mpBefore = c.unit.mp;
+                    int statusesBefore = statusCountBefore;
+                    bool targetWasGuarding = act.target != null && act.target.IsPlayer && act.target.guarding;
+                    bool anyPartyGuarding = b.Party.Any(p => p.Alive && p.guarding);
+                    float healTargetHpFrac = (act.attack != null && act.attack.Heals && act.target != null)
+                        ? (float)act.target.unit.hp / Math.Max(1, act.target.Stats.maxHp) : 1f;
+
                     var hits = b.Perform(act, 1f, defense);
-                    res.summonsSpawned += Math.Max(0, b.Enemies.Count - enemiesBefore);
-                    res.damageTaken += hits.Where(h => !h.heal && h.target != null && h.target.IsPlayer).Sum(h => Math.Max(0, h.amount));
+
+                    res.enemyActions++;
+                    int mpSpent = Math.Max(0, mpBefore - c.unit.mp);
+                    res.totalEnemyMpSpent += mpSpent;
+                    int spawned = Math.Max(0, b.Enemies.Count - enemiesBefore);
+                    res.summonsSpawned += spawned;
+
+                    int dmgDone = 0;
+                    int healDone = 0;
+                    int breakDone = 0;
+                    foreach (var h in hits)
+                    {
+                        if (h.heal) healDone += Math.Abs(h.amount);
+                        else if (h.target != null && h.target.IsPlayer)
+                        {
+                            int dAmt = Math.Max(0, h.amount);
+                            dmgDone += dAmt;
+                            breakDone += Math.Max(0, h.breakAmount);
+                            roundDmgToHero[h.target.slot] = (roundDmgToHero.TryGetValue(h.target.slot, out int prev) ? prev : 0) + dAmt;
+                        }
+                    }
+                    res.damageTaken += dmgDone;
+
+                    var mv = act.attack;
+                    if (mv != null)
+                    {
+                        var livingFoes = b.Party.Where(p => p.Alive).ToList();
+                        var hurtAlly = b.Enemies.Where(e => e.Alive).OrderBy(e => (float)e.unit.hp / Math.Max(1, e.Stats.maxHp)).FirstOrDefault();
+                        res.totalRoleDecisions++;
+                        if (AiProfile.IsRoleAligned(c, mv, act.target, livingFoes, hurtAlly))
+                            res.roleAlignedDecisions++;
+                        if (mv.NeedsTelegraph)
+                        {
+                            res.dangerousActions++;
+                            if (planned != null || wasCharging) res.dangerousTelegraphed++;
+                        }
+                        if (act.charging)
+                        {
+                            res.chargesStarted++;
+                            res.telegraphedActions++;
+                        }
+                        else if (mv.NeedsTelegraph)
+                        {
+                            res.telegraphedActions++;
+                            if (mv.allTargets ? anyPartyGuarding : targetWasGuarding)
+                                res.telegraphedGuardedOrInterrupted++;
+                        }
+                        if (mv.Heals)
+                        {
+                            res.healTurns++;
+                            if (healTargetHpFrac <= 0.70f && healDone > 0) res.usefulHealTurns++;
+                        }
+                        if (!act.charging && !mv.allTargets && !mv.self && !mv.Heals && !mv.Summons && act.target != null && act.target.IsPlayer)
+                        {
+                            res.singleTargetAttacks++;
+                            int sl = act.target.slot;
+                            res.singleTargetByHeroSlot[sl] = (res.singleTargetByHeroSlot.TryGetValue(sl, out int cnt) ? cnt : 0) + 1;
+                        }
+                        bool nonWasted = act.charging || mv.Summons && spawned > 0 || mv.self || (mv.Heals && healDone > 0)
+                            || dmgDone > 0 || breakDone > 0 || statusCountBefore > statusesBefore;
+                        if (!nonWasted) res.wastedEnemyActions++;
+
+                        var key = (mv.name, act.target?.slot ?? -1);
+                        if (lastMoveTargetByEnemy.TryGetValue(c, out var prevKey) && prevKey == key)
+                            res.repeatedEnemyActions++;
+                        lastMoveTargetByEnemy[c] = key;
+                    }
                 }
                 else
                 {
@@ -235,9 +378,37 @@ namespace Obscure.Tests
                     if (act.kind == ActionKind.Skill) res.skillTurns++;
                     if (act.kind == ActionKind.Guard) res.guardTurns++;
                     float power = QteFactory.KindFor(act) == OffenseQteKind.None ? 1f : Battle.QtePower(act, ex.Roll(qteRng));
-                    res.damageDealt += b.Perform(act, power).Where(h => !h.heal && h.target != null && h.target.IsEnemy).Sum(h => Math.Max(0, h.amount));
+                    if (recordOut != null) BattleReplay.RecordPlayerStep(recordOut, act, power);
+                    var chargingBefore = b.Enemies.Where(e => e.Alive && e.IsCharging).ToList();
+                    var hits = b.Perform(act, power);
+                    res.damageDealt += hits.Where(h => !h.heal && h.target != null && h.target.IsEnemy).Sum(h => Math.Max(0, h.amount));
+                    foreach (var ce in chargingBefore)
+                    {
+                        if (ce.Alive && !ce.IsCharging && ce.IsBroken)
+                        {
+                            res.chargesInterrupted++;
+                            res.telegraphedGuardedOrInterrupted++;
+                        }
+                    }
                 }
             }
+
+            FlushRoundMetrics();
+            res.totalEnemyCount = b.Enemies.Count;
+            res.totalEnemyMaxMp = b.Enemies.Sum(e => e.Stats.maxMp);
+
+            // Aggregate AI trace stats
+            var roundMs = new Dictionary<int, double>();
+            foreach (var tr in b.AiTrace.Entries)
+            {
+                res.aiDecisions++;
+                if (tr.adaptationChangedDecision) res.adaptationDecisions++;
+                res.totalDecisionMs += tr.decisionMs;
+                if (tr.decisionMs > res.maxDecisionMs) res.maxDecisionMs = tr.decisionMs;
+                roundMs[tr.round] = (roundMs.TryGetValue(tr.round, out double rm) ? rm : 0.0) + tr.decisionMs;
+                if (collectSignatures) res.decisionSignatures.Add(tr.Signature());
+            }
+            if (roundMs.Count > 0) res.maxRoundDecisionMs = roundMs.Values.Max();
 
             res.won = b.Outcome == Outcome.Victory;
             res.timedOut = b.Outcome == Outcome.None;
@@ -245,6 +416,116 @@ namespace Obscure.Tests
             res.partyDeaths = b.Party.Count(p => !p.Alive);
             res.hpLeft = (float)b.Party.Sum(p => Math.Max(0, p.unit.hp)) / b.Party.Sum(p => p.Stats.maxHp);
             return res;
+        }
+
+        // Per-tier encounters used by the AI stage benchmark (Stage 0 baseline & Stages 1-10 gates).
+        public static readonly (string label, string encounterId, int level)[] AiTierBenchmarks =
+        {
+            ("Normal (d1_e5)", "d1_e5", 4),
+            ("Elite (d1_e8)", "d1_e8", 7),
+            ("Miniboss (d1_e7)", "d1_e7", 9),
+            ("Boss (d1_boss)", "d1_boss", 11),
+        };
+
+        public sealed class AiTierSummary
+        {
+            public string label;
+            public string execution;
+            public int seeds;
+            public double completionRate;
+            public double avgDeaths;
+            public double avgRounds;
+            public double wastedActionRate;
+            public double maxHeroTargetShare;
+            public double repeatedActionRate;
+            public double adaptationResponseRate;
+            public double telegraphInterruptRate;
+            public double telegraphCounterRate;
+            public double mpEfficiency;
+            public double enemySurvivalRounds;
+            public double overkillRate;
+            public double coordHealEfficiency;
+            public double playerCounterplayRate;
+            public double roleIdentityRate;
+            public double avgDecisionMs;
+            public double maxDecisionMs;
+            public double maxRoundDecisionMs;
+        }
+
+        public static AiTierSummary EvaluateAiTier(string label, string encounterId, int level, Execution ex, int seeds = 200, Gear gear = Gear.D1WeaponArmor)
+        {
+            var rs = Enumerable.Range(1, seeds)
+                .Select(s => Fight(encounterId, level, Build.Recommended, ex, s, gear))
+                .ToList();
+
+            int totalActions = Math.Max(1, rs.Sum(r => r.enemyActions));
+            int totalSingle = rs.Sum(r => r.singleTargetAttacks);
+            double avgMaxShare = rs.Where(r => r.singleTargetAttacks > 0)
+                .Select(r => (double)r.singleTargetByHeroSlot.Values.Max() / r.singleTargetAttacks)
+                .DefaultIfEmpty(0.0).Average();
+            int chargesStarted = rs.Sum(r => r.chargesStarted);
+            int telegraphed = rs.Sum(r => r.telegraphedActions);
+            int totalMaxMp = Math.Max(1, rs.Sum(r => r.totalEnemyMaxMp));
+            int totalEnemies = Math.Max(1, rs.Sum(r => r.totalEnemyCount));
+            int lethalDmg = rs.Sum(r => r.lethalRoundDamage);
+            int healTurns = rs.Sum(r => r.healTurns);
+            int dangerous = rs.Sum(r => r.dangerousActions);
+            int decisions = Math.Max(1, rs.Sum(r => r.aiDecisions));
+            int roleDecisions = Math.Max(1, rs.Sum(r => r.totalRoleDecisions));
+
+            return new AiTierSummary
+            {
+                label = label,
+                execution = ex.name,
+                seeds = seeds,
+                completionRate = 100.0 * rs.Count(r => r.won) / seeds,
+                avgDeaths = rs.Average(r => r.partyDeaths),
+                avgRounds = rs.Average(r => r.rounds),
+                wastedActionRate = 100.0 * rs.Sum(r => r.wastedEnemyActions) / totalActions,
+                maxHeroTargetShare = 100.0 * avgMaxShare,
+                repeatedActionRate = 100.0 * rs.Sum(r => r.repeatedEnemyActions) / totalActions,
+                adaptationResponseRate = 100.0 * rs.Sum(r => r.adaptationDecisions) / decisions,
+                telegraphInterruptRate = chargesStarted > 0 ? 100.0 * rs.Sum(r => r.chargesInterrupted) / chargesStarted : 0.0,
+                telegraphCounterRate = telegraphed > 0 ? 100.0 * rs.Sum(r => r.telegraphedGuardedOrInterrupted) / telegraphed : 0.0,
+                mpEfficiency = 100.0 * rs.Sum(r => r.totalEnemyMpSpent) / totalMaxMp,
+                enemySurvivalRounds = (double)rs.Sum(r => r.totalEnemyAliveRounds) / totalEnemies,
+                overkillRate = lethalDmg > 0 ? 100.0 * rs.Sum(r => r.lethalRoundOverkill) / lethalDmg : 0.0,
+                coordHealEfficiency = healTurns > 0 ? 100.0 * rs.Sum(r => r.usefulHealTurns) / healTurns : 100.0,
+                playerCounterplayRate = dangerous > 0 ? 100.0 * rs.Sum(r => r.dangerousTelegraphed) / dangerous : 100.0,
+                roleIdentityRate = 100.0 * rs.Sum(r => r.roleAlignedDecisions) / roleDecisions,
+                avgDecisionMs = rs.Sum(r => r.totalDecisionMs) / decisions,
+                maxDecisionMs = rs.Max(r => r.maxDecisionMs),
+                maxRoundDecisionMs = rs.Max(r => r.maxRoundDecisionMs),
+            };
+        }
+
+        [Test, Explicit("AI stage benchmark (200 seeds per tier, All Good & All Poor): run via -testFilter")]
+        public void AiMetricsReport()
+        {
+            const int seeds = 200;
+            var inv = CultureInfo.InvariantCulture;
+            var sb = new StringBuilder();
+            sb.AppendLine($"# Enemy AI Metrics Report ({DateTime.Now:yyyy-MM-dd}, {seeds} seeds/row, D1WeaponArmor)");
+            sb.AppendLine();
+            sb.AppendLine("| Tier | QTE | Win% | Deaths | Rnds | Waste% | TopTgt% | Repeat% | Adapt% | ChgInt% | TelCnt% | MP% | SurvR | Overkill% | Counter% | PlanMs(avg/max) | RndMaxMs |");
+            sb.AppendLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+
+            var scripts = new[] { Executions[1], Executions[3] }; // All Good, All Poor (Miss)
+            foreach (var (label, encId, level) in AiTierBenchmarks)
+            foreach (var ex in scripts)
+            {
+                var m = EvaluateAiTier(label, encId, level, ex, seeds);
+                sb.AppendLine(string.Format(inv,
+                    "| {0} | {1} | {2:0.0} | {3:0.00} | {4:0.0} | {5:0.0} | {6:0.0} | {7:0.0} | {8:0.0} | {9:0.0} | {10:0.0} | {11:0.0} | {12:0.0} | {13:0.0} | {14:0.0} | {15:0.000}/{16:0.000} | {17:0.000} |",
+                    m.label, m.execution, m.completionRate, m.avgDeaths, m.avgRounds, m.wastedActionRate,
+                    m.maxHeroTargetShare, m.repeatedActionRate, m.adaptationResponseRate, m.telegraphInterruptRate,
+                    m.telegraphCounterRate, m.mpEfficiency, m.enemySurvivalRounds, m.overkillRate,
+                    m.playerCounterplayRate, m.avgDecisionMs, m.maxDecisionMs, m.maxRoundDecisionMs));
+            }
+            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AiMetricsReport.md"));
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, sb.ToString());
+            TestContext.WriteLine(sb.ToString());
         }
 
         [Test]

@@ -46,62 +46,245 @@ namespace Obscure
                 return t == null && !self.Charge.move.allTargets ? null : EnemyAI.Use(b, self, self.Charge.move, t);
             }
             var plan = self.Intent;
+            // Telegraph lock (Spec §7.3 v1.1): a published intent is executed as published while still legal and NEVER re-scored.
+            // If a telegraphed single-target move's target fell before execution, redirect deterministically in party order without swapping skills.
+            if (plan != null && plan.target != null && !plan.target.Alive && plan.move.NeedsTelegraph && !plan.move.Heals
+                && self.unit.mp >= plan.move.mpCost && self.Cooldown(Combatant.MoveKey(plan.move)) == 0
+                && !(plan.move.telegraph && self.JustReleasedCharge))
+            {
+                var redirect = NextInPartyOrder(b, plan.target);
+                if (redirect != null)
+                {
+                    plan = new EnemyIntent { move = plan.move, target = redirect, charging = plan.charging };
+                    return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
+                }
+            }
             if (plan == null || (plan.target != null && !plan.target.Alive) || self.unit.mp < plan.move.mpCost || self.Cooldown(Combatant.MoveKey(plan.move)) > 0
                 || (plan.move.telegraph && self.JustReleasedCharge))
-                plan = Select(b, self); // planned action became invalid or unaffordable
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                plan = Select(b, self, out var fbTrace); // planned action became invalid or unaffordable
+                sw.Stop();
+                if (fbTrace != null)
+                {
+                    fbTrace.usedFallback = true;
+                    fbTrace.decisionMs = sw.Elapsed.TotalMilliseconds;
+                    b.AiTrace?.Record(fbTrace);
+                }
+            }
             if (plan == null) return null;
             return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
         }
 
-        public static EnemyIntent Select(Battle b, Combatant self)
+        public static EnemyIntent Select(Battle b, Combatant self) => Select(b, self, out _);
+
+        public static EnemyIntent Select(Battle b, Combatant self, out AiDecisionTrace trace)
+        {
+            trace = (b.AiTrace != null && b.AiTrace.Enabled && self.enemy != null)
+                ? new AiDecisionTrace
+                {
+                    round = b.Round,
+                    turnIndex = self.turnsTakenThisRound,
+                    enemyId = self.enemy.id,
+                    enemyName = self.name,
+                    enemySlot = self.slot,
+                    enemyTier = self.enemy.tier,
+                }
+                : null;
+
+            var ctx = BuildContext(b, self);
+            if (ctx.foes.Count == 0)
+            {
+                if (trace != null) trace.reason = "no_living_foes";
+                return null;
+            }
+
+            var moves = EnemyAI.Moves(self);
+            var legal = new List<(EnemyAttack move, int dataIndex)>();
+            for (int i = 0; i < moves.Count; i++)
+            {
+                var m = moves[i];
+                if (IsLegal(b, self, m, ctx, out string reject))
+                {
+                    legal.Add((m, i));
+                }
+                else if (trace != null)
+                {
+                    trace.candidates.Add(new AiCandidateTrace
+                    {
+                        moveName = m.name,
+                        aiPriority = m.aiPriority,
+                        mpCost = m.mpCost,
+                        legal = false,
+                        rejectReason = reject,
+                    });
+                }
+            }
+
+            if (legal.Count == 0)
+            {
+                if (trace != null) trace.reason = "no_legal_action";
+                return null;
+            }
+
+            // Mandatory layer (Spec §3.2, Architecture §8.2): pending charge release, threshold heal/MP restore, or top-priority summon.
+            var forced = ForcedChoice(b, self, legal, ctx, out string forcedReason);
+            if (forced != null)
+                return RecordChoice(trace, forced, forcedReason, wasForced: true);
+
+            // Utility layer (Spec §3.3, Architecture §8.4): scores only legal candidates and resolves targets deterministically (zero Rng).
+            var best = UtilityScorer.SelectBest(b, self, legal, ctx, trace);
+            if (best == null)
+            {
+                if (trace != null) trace.reason = "no_scored_candidate";
+                return null;
+            }
+
+            var intent = new EnemyIntent { move = best.move, target = best.target, charging = best.charging };
+            string pickReason = best.move.Summons ? "utility_summon"
+                : best.move.Heals ? "utility_heal"
+                : best.move.self ? "utility_self"
+                : best.move.allTargets ? "utility_aoe"
+                : "utility_single";
+            if (trace != null) trace.adaptationChangedDecision = best.adaptationShifted;
+            // Readable Adaptation (Spec §5.7, Arch §11.5): log a one-line "read" the first time an adaptation response changes a decision.
+            if (best.adaptationShifted && !string.IsNullOrEmpty(best.readKey))
+                b.Blackboard?.Memory?.TryLogRead(b, best.readKey, best.readText);
+            return RecordChoice(trace, intent, pickReason, wasForced: false);
+        }
+
+        public static AiPlanContext BuildContext(Battle b, Combatant self)
         {
             var foes = b.Opponents(self).Where(c => c.Alive).ToList();
-            if (foes.Count == 0) return null;
             bool heavyTaken = self.UsedHeavyThisRound
                 || b.Enemies.Any(e => e != self && e.Alive && (e.UsedHeavyThisRound || (e.Intent?.move.HasHeavy ?? false) || (e.Charge?.move.HasHeavy ?? false)));
             int livingSummons = b.Enemies.Count(e => e.Alive && e.IsSummon);
-            // Most-hurt ally (incl. self) by HP fraction: the heal target and the "ally in danger" check.
-            var hurt = b.Allies(self).Where(c => c.Alive).OrderBy(c => (float)c.unit.hp / c.Stats.maxHp).ThenBy(c => c.slot).First();
-            float hurtFrac = (float)hurt.unit.hp / hurt.Stats.maxHp;
-            foreach (var m in EnemyAI.Moves(self).OrderByDescending(m => m.aiPriority)) // stable: ties keep data order
+            var hurt = b.Allies(self).Where(c => c.Alive)
+                .OrderBy(c => (c.unit.hp + (b.Blackboard?.ExpectedHeal(c) ?? 0f)) / c.Stats.maxHp)
+                .ThenBy(c => c.slot).FirstOrDefault();
+            float hurtFrac = hurt != null ? (hurt.unit.hp + (b.Blackboard?.ExpectedHeal(hurt) ?? 0f)) / hurt.Stats.maxHp : 1f;
+            return new AiPlanContext
             {
-                if (self.Cooldown(Combatant.MoveKey(m)) > 0 || self.unit.mp < m.mpCost) continue;
-                if (m.telegraph && self.JustReleasedCharge) continue; // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
-                if (m.Summons)
+                foes = foes,
+                heavyTaken = heavyTaken,
+                livingSummons = livingSummons,
+                hurtAlly = hurt,
+                hurtAllyFrac = hurtFrac,
+            };
+        }
+
+        // Mandatory hard gates (Spec §3.2): every move must pass all applicable gates before entering UtilityScorer.
+        public static bool IsLegal(Battle b, Combatant self, EnemyAttack m, AiPlanContext ctx, out string rejectReason)
+        {
+            rejectReason = null;
+            if (self.Cooldown(Combatant.MoveKey(m)) > 0) { rejectReason = "cooldown"; return false; }
+            if (self.unit.mp < m.mpCost) { rejectReason = "mp"; return false; }
+            if (m.telegraph && self.JustReleasedCharge) { rejectReason = "charge_gap"; return false; } // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
+            if (m.Summons)
+            {
+                if (ctx.livingSummons >= m.summonCount) { rejectReason = "summon_cap"; return false; }
+                return true;
+            }
+            if (m.aiMpBelow > 0f && self.unit.mp >= self.Stats.maxMp * m.aiMpBelow) { rejectReason = "mp_above_threshold"; return false; }
+            if (m.aiUnlessAllyHpBelow > 0f && ctx.hurtAllyFrac <= m.aiUnlessAllyHpBelow) { rejectReason = "ally_critical_block"; return false; }
+            if (m.Heals)
+            {
+                if (ctx.hurtAlly == null || ctx.hurtAllyFrac > m.aiAllyHpBelow) { rejectReason = "heal_threshold"; return false; }
+                return true;
+            }
+            if (m.HasHeavy && ctx.heavyTaken) { rejectReason = "heavy_taken"; return false; }
+            if (m.aiBreakLeftBelow > 0f && self.HasBreakGauge && b.Round < m.aiBreakGateRound
+                && self.CurrentBreakGauge > self.MaxBreakGauge * m.aiBreakLeftBelow) { rejectReason = "break_gate"; return false; }
+            if (m.self) return true;
+            if (m.allTargets)
+            {
+                if (ctx.foes.Count < m.minTargets) { rejectReason = "min_targets"; return false; }
+                if (b.Blackboard != null && b.Blackboard.WouldViolateStunHeavy(m, null, ctx.foes))
                 {
-                    if (livingSummons < m.summonCount) return new EnemyIntent { move = m };
-                    continue;
+                    rejectReason = "stun_heavy_conflict";
+                    return false;
                 }
-                if (m.aiMpBelow > 0f && self.unit.mp >= self.Stats.maxMp * m.aiMpBelow) continue; // e.g. Arcane Charge only when low
-                if (m.aiUnlessAllyHpBelow > 0f && hurtFrac <= m.aiUnlessAllyHpBelow) continue;
-                if (m.Heals)
+                return true;
+            }
+            if (m.StatusOnly && m.apply != null && !ctx.foes.Any(f => !m.apply.Any(ap => f.Has(ap.id))))
+            {
+                rejectReason = "no_fresh_status_target";
+                return false;
+            }
+            if (b.Blackboard != null && (m.HasHeavy || (m.apply != null && m.apply.Any(ap => ap.id == StatusId.Stun))))
+            {
+                if (!ctx.foes.Any(f => !b.Blackboard.WouldViolateStunHeavy(m, f, ctx.foes)))
                 {
-                    if (hurtFrac <= m.aiAllyHpBelow) return new EnemyIntent { move = m, target = hurt };
-                    continue;
+                    rejectReason = "stun_heavy_conflict";
+                    return false;
                 }
-                if (m.HasHeavy && heavyTaken) continue; // at most one Heavy-marked attack per round
-                if (m.aiBreakLeftBelow > 0f && self.HasBreakGauge && b.Round < m.aiBreakGateRound
-                    && self.CurrentBreakGauge > self.MaxBreakGauge * m.aiBreakLeftBelow) continue;
-                if (m.self) return new EnemyIntent { move = m };
-                if (m.allTargets)
+            }
+            return ctx.foes.Count > 0;
+        }
+
+        // Mandatory forced choices (Handoff Architecture table): pending charge release, threshold heal, threshold MP restore,
+        // or summon when allowed and not outranked by a higher-priority legal move.
+        public static EnemyIntent ForcedChoice(Battle b, Combatant self, List<(EnemyAttack move, int dataIndex)> legal,
+            AiPlanContext ctx, out string reason)
+        {
+            reason = null;
+            if (self.Charge != null)
+            {
+                reason = "forced_charge_release";
+                return new EnemyIntent { move = self.Charge.move, target = self.Charge.target };
+            }
+            int topPriority = legal.Max(x => x.move.aiPriority);
+            foreach (var (m, _) in legal.OrderByDescending(x => x.move.aiPriority).ThenBy(x => x.dataIndex))
+            {
+                if (m.Heals && ctx.hurtAlly != null && ctx.hurtAllyFrac <= m.aiAllyHpBelow)
                 {
-                    if (foes.Count >= m.minTargets) return new EnemyIntent { move = m, charging = m.telegraph };
-                    continue;
+                    reason = "forced_heal";
+                    return new EnemyIntent { move = m, target = ctx.hurtAlly };
                 }
-                // Status moves aim at someone not already afflicted; a status-only move with nobody left is pointless.
-                var fresh = m.apply == null ? foes : foes.Where(f => !m.apply.Any(ap => f.Has(ap.id))).ToList();
-                if (m.StatusOnly && fresh.Count == 0) continue;
-                return new EnemyIntent { move = m, target = PickTarget(b, self, fresh.Count > 0 ? fresh : foes), charging = m.telegraph };
+                if (m.aiMpBelow > 0f && self.unit.mp < self.Stats.maxMp * m.aiMpBelow)
+                {
+                    reason = "forced_mp_restore";
+                    return new EnemyIntent { move = m };
+                }
+                if (m.Summons && ctx.livingSummons < m.summonCount && m.aiPriority >= topPriority)
+                {
+                    reason = "forced_summon";
+                    return new EnemyIntent { move = m };
+                }
             }
             return null;
         }
 
-        static Combatant PickTarget(Battle b, Combatant self, List<Combatant> pool) => self.enemy.targetRule switch
+        static EnemyIntent RecordChoice(AiDecisionTrace trace, EnemyIntent intent, string reason, bool wasForced)
         {
-            TargetRule.LowestHp => pool.OrderBy(p => p.unit.hp).ThenBy(p => p.slot).First(),
-            TargetRule.LowestDef => pool.OrderBy(p => p.Def).ThenBy(p => p.slot).First(),
-            _ => EnemyAI.Pick(b, pool),
-        };
+            if (trace != null && intent != null)
+            {
+                trace.chosenMove = intent.move.name;
+                trace.chosenTarget = intent.target?.name;
+                trace.chosenTargetSlot = intent.target?.slot ?? -1;
+                trace.charging = intent.charging;
+                trace.telegraphed = intent.move.NeedsTelegraph;
+                trace.wasForced = wasForced;
+                trace.reason = reason;
+                if (wasForced)
+                {
+                    trace.candidates.Add(new AiCandidateTrace
+                    {
+                        moveName = intent.move.name,
+                        targetName = intent.target?.name,
+                        targetSlot = intent.target?.slot ?? -1,
+                        aiPriority = intent.move.aiPriority,
+                        mpCost = intent.move.mpCost,
+                        charging = intent.charging,
+                        legal = true,
+                        forced = true,
+                        baseScore = intent.move.aiPriority * 10f,
+                        totalScore = intent.move.aiPriority * 10f,
+                    });
+                }
+            }
+            return intent;
+        }
 
         static Combatant NextInPartyOrder(Battle b, Combatant fallen)
         {

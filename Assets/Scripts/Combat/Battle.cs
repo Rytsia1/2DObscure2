@@ -13,6 +13,8 @@ namespace Obscure
         public readonly List<string> Items; // shared with the run, consumed in place
         public readonly Random Rng;
         public readonly List<string> Log = new List<string>();
+        public readonly AiTraceLog AiTrace = new AiTraceLog();
+        public readonly EncounterBlackboard Blackboard = new EncounterBlackboard();
         public event Action<string> Logged;
         public event Action<Combatant> BossPhaseTransitioning;
         public event Action<Combatant, StatusId, bool> StatusApplied;
@@ -154,7 +156,9 @@ namespace Obscure
                 c.UsedHeavyThisRound = false;
             }
             queue.AddRange(TurnOrder.Build(All));
-            foreach (var e in Enemies) EnemyAI.Plan(this, e); // intents are telegraphed from the start of the round
+            Blackboard.BeginRound(this);
+            // Fixed planning order (Spec §4.5, Arch §13.2): Support -> Controller -> other roles, slot ties (independent of initiative).
+            foreach (var e in EncounterBlackboard.PlanningOrder(Enemies)) EnemyAI.Plan(this, e); // intents are telegraphed from the start of the round
         }
 
         // Start of the bearer's turn: cooldowns and status durations tick, DoTs bite, Break recovers.
@@ -331,6 +335,11 @@ namespace Obscure
 
             var actor = a.actor;
             var hits = new List<Hit>();
+            bool statusAppliedDuringAction = false;
+            void TrackStatus(Combatant _t, StatusId _id, bool _isBuff) => statusAppliedDuringAction = true;
+            StatusApplied += TrackStatus;
+            try
+            {
             if (actor.IsEnemy) actor.Intent = null; // the round's plan is being carried out
 
             // GDD Section 11 & 12: Check Action Disruption (Shock / Despair)
@@ -438,6 +447,7 @@ namespace Obscure
                 case ActionKind.Guard:
                     actor.guarding = true;
                     Say($"{actor.name} raises a guard.");
+                    Blackboard.Memory.ObserveGuard(actor, Round);
                     break;
 
                 case ActionKind.Skill:
@@ -607,12 +617,19 @@ namespace Obscure
                     }
                     break;
             }
+            if (a.kind != ActionKind.Guard)
+                Blackboard.Memory.ObserveAction(this, a, hits, statusAppliedDuringAction, Round);
             if (a.actor.turnsTakenThisRound == 1)
                 a.actor.StatusController.DecrementControlImmunities();
             if (a.actor.IsEnemy && a.actor.Alive && a.actor.turnsTakenThisRound < a.actor.TurnsPerRound)
                 EnemyAI.Plan(this, a.actor); // Plan turn B's intent at the end of turn A and show it right away
             Active = null;
             return hits;
+            }
+            finally
+            {
+                StatusApplied -= TrackStatus;
+            }
         }
 
         // Spawns a summoned enemy (Harvest Call) at 70% normal HP. Summons join at the next round (never act in the round they appear).
@@ -649,6 +666,7 @@ namespace Obscure
                     foreach (var cd in first.cooldowns) renamed.cooldowns[cd.Key] = cd.Value;
                     Enemies[idx] = renamed;
                     for (int q = 0; q < queue.Count; q++) if (queue[q] == first) queue[q] = renamed;
+                    Blackboard.ReplaceEnemy(first, renamed);
                 }
             }
             char letter = (char)('A' + priorSame);
@@ -990,6 +1008,8 @@ namespace Obscure
             if (!hit.brokeTarget) return;
             Say(t.IsPlayer ? $"{t.name} is staggered! (BROKEN)" : $"{t.name}'s guard shatters! (BROKEN)");
             if (charging) Say($"{t.name}'s charge is interrupted!");
+            if (t.IsEnemy) Blackboard.ClearEnemy(this, t);
+            Blackboard.Memory.ObserveBreak(attacker, t, charging, Round);
         }
 
         // A boss whose HP bar is depleted continues as its next phase with a fresh bar (same encounter, same combatant).

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Obscure
@@ -43,9 +44,42 @@ namespace Obscure
             if (self.enemy?.ai != AiKind.Priority) return;
             self.Intent = null;
             if (!self.Alive || self.stunTurns > 0 || self.StatusController.HasStatus(StatusId.Stun) || self.StatusController.HasStatus(StatusId.Sleep)) return;
-            self.Intent = self.Charge != null
-                ? new EnemyIntent { move = self.Charge.move, target = self.Charge.target }
-                : PriorityBrain.Select(b, self);
+            var sw = Stopwatch.StartNew();
+            AiDecisionTrace trace = null;
+            if (self.Charge != null)
+            {
+                self.Intent = new EnemyIntent { move = self.Charge.move, target = self.Charge.target };
+                if (b.AiTrace != null && b.AiTrace.Enabled)
+                {
+                    trace = new AiDecisionTrace
+                    {
+                        round = b.Round,
+                        turnIndex = self.turnsTakenThisRound,
+                        enemyId = self.enemy.id,
+                        enemyName = self.name,
+                        enemySlot = self.slot,
+                        enemyTier = self.enemy.tier,
+                        chosenMove = self.Intent.move.name,
+                        chosenTarget = self.Intent.target?.name,
+                        chosenTargetSlot = self.Intent.target?.slot ?? -1,
+                        charging = false,
+                        telegraphed = self.Intent.move.NeedsTelegraph,
+                        wasForced = true,
+                        reason = "charge_release",
+                    };
+                }
+            }
+            else
+            {
+                self.Intent = PriorityBrain.Select(b, self, out trace);
+            }
+            b.Blackboard?.Publish(b, self, self.Intent);
+            sw.Stop();
+            if (trace != null)
+            {
+                trace.decisionMs = sw.Elapsed.TotalMilliseconds;
+                b.AiTrace?.Record(trace);
+            }
         }
 
         public static bool HasLegalAction(Battle b, Combatant self) =>

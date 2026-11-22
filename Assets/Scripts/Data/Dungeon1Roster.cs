@@ -110,6 +110,7 @@ namespace Obscure
                 maxBreakGauge = tier == Tier.Boss ? 200 : 100, // not scaled by dungeon
                 gold = tier == Tier.Boss ? BossGold : tier == Tier.Elite ? EliteGold : NormalGold,
                 targetRule = tier == Tier.Elite ? TargetRule.LowestHp : TargetRule.Random,
+                aiTier = tier == Tier.Boss ? AiTier.Boss : tier == Tier.Elite ? AiTier.Elite : AiTier.Normal,
                 sprite = sprite, description = description, attacks = attacks,
             };
             return d;
@@ -286,6 +287,31 @@ namespace Obscure
             p2.turnsPerRound = ZoroaTurnsPerRound;
             // Confirmed targeting: Elites -> lowest current HP, Archer -> lowest DEF, everyone else random.
             Enemies.First(e => e.id == "gravebound_archer").targetRule = TargetRule.LowestDef;
+
+            // Spec §6.2 tactical personalities & Architecture §12 v1.1 intelligence tiers for all 15 D1 roster enemies (16 defs incl. Zoroa P2).
+            SetAi("hollow_squire", AiRole.Vanguard, AiTier.Normal);
+            SetAi("gravebound_archer", AiRole.RangedOpportunist, AiTier.Normal);
+            SetAi("cinder_wisp", AiRole.ElementalAttacker, AiTier.Normal);
+            SetAi("soulbound_hound", AiRole.Disruptor, AiTier.Normal);
+            SetAi("possessed_royal_guard", AiRole.Bruiser, AiTier.Normal);
+            SetAi("crypt_leech", AiRole.Attrition, AiTier.Normal);
+            SetAi("forgotten_militia", AiRole.ComboAttacker, AiTier.Normal);
+            SetAi("soul_reaper", AiRole.Executioner, AiTier.Miniboss);
+            SetAi("royal_ossuary_knight", AiRole.DefensivePunisher, AiTier.Miniboss);
+            SetAi("reliquary_confessor", AiRole.Support, AiTier.Elite);
+            SetAi("graveglass_arcanist", AiRole.ArcaneCaster, AiTier.Elite);
+            SetAi("crownless_duelist", AiRole.Skirmisher, AiTier.Elite);
+            SetAi("tombstone_colossus", AiRole.BreakBruiser, AiTier.Elite);
+            SetAi("mourning_bell_wraith", AiRole.AreaController, AiTier.Elite);
+            SetAi("zoroa_p1", AiRole.AdaptiveController, AiTier.Boss);
+            SetAi("zoroa_p2", AiRole.AdaptiveController, AiTier.Boss);
+        }
+
+        static void SetAi(string id, AiRole role, AiTier tier)
+        {
+            var e = Enemies.First(x => x.id == id);
+            e.aiRole = role;
+            e.aiTier = tier;
         }
 
         public static readonly EncounterDef[] Encounters =

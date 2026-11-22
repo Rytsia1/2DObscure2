@@ -49,6 +49,28 @@ namespace Obscure
     public enum AiKind { Basic, Tactical, Boss, Priority }
     public enum TargetRule { Random, LowestHp, LowestDef }
 
+    // Enemy tactical role (Spec §6.2) and intelligence tier (Architecture §12 v1.1).
+    public enum AiRole
+    {
+        Vanguard,
+        RangedOpportunist,
+        ElementalAttacker,
+        Disruptor,
+        Bruiser,
+        Attrition,
+        ComboAttacker,
+        Executioner,
+        DefensivePunisher,
+        Support,
+        ArcaneCaster,
+        Skirmisher,
+        BreakBruiser,
+        AreaController,
+        AdaptiveController,
+    }
+
+    public enum AiTier { Normal, Elite, Miniboss, Boss }
+
     public enum CreationMethod
     {
         Manual = 0,
@@ -135,6 +157,8 @@ namespace Obscure
         public string nextPhase;       // boss: EnemyDef id that replaces this one when its HP bar is depleted (separate full bar)
         public string type, role;      // roster flavour: "Undead", "Vanguard"
         public TargetRule targetRule;  // Priority AI: who single-target moves aim at
+        public AiRole aiRole = AiRole.Vanguard; // Spec §6.2 tactical personality
+        public AiTier aiTier = AiTier.Normal;   // Architecture §12 v1.1 intelligence capability tier
         // Number of full turns per round (posture-B starting value, untested: Zoroa P1 = 2, P2 = 2; everyone else 1).
         // If it fails: if P1 feels unfair, set P1 = 1 and keep the double turn as the Phase 2 escalation.
         public int turnsPerRound = 1;
