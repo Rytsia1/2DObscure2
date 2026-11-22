@@ -59,6 +59,10 @@ namespace Obscure
                     if (mpG != null) mpG.style.display = DisplayStyle.None;
                     if (hpVal != null) hpVal.style.display = DisplayStyle.None;
                     if (mpVal != null) mpVal.style.display = DisplayStyle.None;
+                    var hpTag = UiRoot.Q<UiLabel>(className: $"hp-vars-{11 + i}");
+                    var mpTag = UiRoot.Q<UiLabel>(className: $"mp-vars-{10 + i}");
+                    if (hpTag != null) hpTag.style.display = DisplayStyle.None;
+                    if (mpTag != null) mpTag.style.display = DisplayStyle.None;
                     continue;
                 }
 
@@ -83,14 +87,20 @@ namespace Obscure
                 if (r != null) r.style.display = DisplayStyle.None;
             }
 
+            var titleLbl = UiRoot.Q<UiLabel>(className: "campfire-sanctuary-vars");
+            if (titleLbl != null) { titleLbl.style.left = 0; titleLbl.style.right = 0; titleLbl.style.unityTextAlign = TextAnchor.MiddleCenter; }
             var screen = UiRoot.Q<VisualElement>(className: "_19-rest-campfire-sanctuary") ?? UiRoot;
 
             // The layout's flat 96px flame icon (left 892, top 172) becomes a live campfire standing on the same spot,
             // tucked behind the section header so its embers drift under the text.
-            var flameIcon = screen.Children().FirstOrDefault(e => e.style.left.value.value == 892f && e.style.top.value.value == 172f);
-            if (flameIcon != null) flameIcon.style.display = DisplayStyle.None;
-            var campfire = Fx.Spawn(screen, "campfire", 940f, 268f, 2f, loops: 0);
             var header = UiRoot.Q<VisualElement>(className: "section-header__i-22");
+            if (header != null && header.parent == screen)
+            {
+                int hIdx = screen.IndexOf(header);
+                if (hIdx + 1 < screen.childCount)
+                    screen[hIdx + 1].style.display = DisplayStyle.None;
+            }
+            var campfire = Fx.Spawn(screen, "campfire", 940f, 268f, 2f, loops: 0);
             if (campfire != null && header != null && header.parent == screen) campfire.PlaceBehind(header);
 
             var actionScroll = FigmaUi.CreateVerticalScrollView();
@@ -159,6 +169,10 @@ namespace Obscure
 
             var inner = row.Q<VisualElement>(className: "list-row-2") ?? row;
             inner.style.width = Length.Percent(100);
+            inner.style.height = StyleKeyword.Auto;
+            inner.style.minHeight = 60;
+            var t0 = row.Q<UiLabel>("text-0"); if (t0 != null) t0.style.fontSize = 17;
+            var t1 = row.Q<UiLabel>("text-1"); if (t1 != null) t1.style.fontSize = 12;
             if (inner.childCount > 0) inner[0].style.display = DisplayStyle.None;
             var item = menu.Add(row, title, onClick, tooltip: sub ?? "");
             item.visual = on =>
@@ -190,6 +204,7 @@ namespace Obscure
         void ShowCampModifiers()
         {
             NewMenu();
+            feedbackLbl.text = "CHOOSE ONE CAMP BOON FOR THIS DUNGEON LAYER.";
             menu.onBack = ShowMain;
             string[] campIds = { "MOD-011", "MOD-012", "MOD-007" };
             foreach (var mid in campIds)
@@ -209,6 +224,7 @@ namespace Obscure
         void ShowImprove()
         {
             NewMenu();
+            feedbackLbl.text = "CHOOSE A HERO TO RECEIVE A PERMANENT UPGRADE.";
             menu.onBack = ShowMain;
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             foreach (var u in party)

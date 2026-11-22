@@ -43,7 +43,11 @@ namespace Obscure
 
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
-            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} SPOILS");
+            if (runGold != null)
+            {
+                FigmaUi.SetInstanceText(runGold, "text-0", $"{gold:#,##0} SPOILS");
+                FigmaUi.AnchorRight(runGold, 24f);
+            }
 
             var eyebrow = UiRoot.Q<UiLabel>(className: "event-vars-2");
             if (eyebrow != null)
@@ -273,6 +277,7 @@ namespace Obscure
             var numLbl = new UiLabel(number.ToString());
             numLbl.style.fontSize = compact ? 18 : 20;
             numLbl.style.width = 28;
+            numLbl.style.flexShrink = 0;
             numLbl.style.color = enabled ? Palette.Mist2 : Palette.Mist3;
             card.Add(numLbl);
 
@@ -290,7 +295,7 @@ namespace Obscure
             titleLbl.style.whiteSpace = WhiteSpace.Normal;
             textCol.Add(titleLbl);
 
-            string sub = enabled ? ChoiceCostSubtitle(c, goldBack) : status.blockedReason.ToUpperInvariant();
+            string sub = enabled ? ChoiceCostSubtitle(c, goldBack) : "";
             if (!string.IsNullOrEmpty(sub))
             {
                 var subLbl = new UiLabel(sub);
@@ -377,7 +382,16 @@ namespace Obscure
             string outcome = Run.ChooseEvent(index);
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
-            if (runGold != null) FigmaUi.SetInstanceText(runGold, "text-0", $"{gold} SPOILS");
+            if (runGold != null)
+            {
+                FigmaUi.SetInstanceText(runGold, "text-0", $"{gold:#,##0} SPOILS");
+                FigmaUi.AnchorRight(runGold, 24f);
+            }
+
+            var upHint = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "UP DN")?.GetFirstAncestorOfType<TemplateContainer>();
+            if (upHint != null) upHint.style.display = DisplayStyle.None;
+            var entHint = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "ENTER");
+            if (entHint != null) FigmaUi.SetInstanceText(entHint, "text-1", "CONTINUE");
 
             ResetMenu();
 
@@ -396,7 +410,8 @@ namespace Obscure
             box.style.borderLeftColor = Palette.Gold3;
             box.style.borderRightColor = Palette.Gold3;
 
-            var hdr = FigmaUi.CreateSectionHeader("Outcome", 560f);
+            var hdr = FigmaUi.CreateSectionHeader("Outcome", 550f);
+            hdr.style.width = Length.Percent(100);
             hdr.style.marginBottom = 12;
             box.Add(hdr);
 

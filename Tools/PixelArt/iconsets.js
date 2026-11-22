@@ -516,4 +516,21 @@ const RACIAL = {
   },
 };
 
-module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, RACIAL, gearIcon };
+// ---------------- elements (keyed by the Element enum name in Combat/Elements.cs) ----------------
+const ELEMENTS = {
+  Physical: g("sword", {}, { r: 45, s: 0.9 }),
+  Fire: g("flame", { k: "F" }, { y: 7.5, s: 1.1 }),
+  Ice: g("snow", {}),
+  Lightning: g("bolt", {}, { s: 1.15 }),
+  Holy: all(g("star", { n: 4, r1: 4.4, r0: 1.4, k: "H", core: false }, { r: 45 }), g("star", { n: 4, r1: 6.6, r0: 1.8, k: "H", coreR: 1.4 })),
+  Dark: g("moon", { k: "D" }, { r: -25, s: 1.25 }),
+  Earth: (c) => { c.poly([[0.5, 12.5], [5, 2.5], [7.8, 7], [9.8, 4.5], [13.5, 12.5]], "V"); c.poly([[3.4, 6], [5, 2.5], [6.6, 5.2], [5.6, 6.2], [4.8, 5.2]], "b"); c.line(5, 7, 6, 12, "w"); },
+  Wind: (c) => {
+    c.cap([[0.5, 4.5], [8, 4.5], [10, 3.5], [10, 1.8], [8.6, 1.6]], 0.55, 0.55, "T");
+    c.cap([[0.5, 8.5], [10.5, 8.5], [12.6, 9.6], [12.4, 11.6], [10.8, 11.4]], 0.55, 0.55, "T");
+    c.cap([[3, 12.5], [7, 12.5]], 0.55, 0.55, "T");
+  },
+  Water: g("drop", { k: "B" }, { s: 1.3, y: 6.6 }),
+};
+
+module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, RACIAL, ELEMENTS, gearIcon };

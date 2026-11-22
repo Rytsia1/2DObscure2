@@ -24,6 +24,7 @@ namespace Obscure
         UiLabel dirtyBadgeLabel;
         UiLabel sectionHeaderLabel;
         VisualElement resetBtn, revertBtn, applyBtn, backBtn;
+        UiLabel savedFeedbackLbl;
         UitkMenu.Item revertItem, applyItem;
         readonly List<VisualElement> categoryEls = new List<VisualElement>();
 
@@ -49,6 +50,8 @@ namespace Obscure
             menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);
             menu.onBack = Leave;
+            menu.onPrevPage = () => SwitchCategory(-1);
+            menu.onNextPage = () => SwitchCategory(1);
             menu.onFocus = item =>
             {
                 if (!rebuilding && item != null)
@@ -132,6 +135,51 @@ namespace Obscure
             resetBtn = FigmaUi.FindButton(screenContainer, "Reset to Default");
             revertBtn = FigmaUi.FindButton(screenContainer, "Revert");
             applyBtn = FigmaUi.FindButton(screenContainer, "Apply");
+
+            if (resetBtn?.parent != null)
+            {
+                FigmaUi.AnchorRight(resetBtn.parent, 24f);
+                resetBtn.style.marginRight = 10;
+            }
+            if (revertBtn != null) revertBtn.style.marginRight = 10;
+            foreach (var cEl in categoryEls)
+                cEl.style.marginBottom = 4;
+
+            var hintsRow = new VisualElement
+            {
+                style =
+                {
+                    position = Position.Absolute,
+                    left = 28,
+                    top = 664,
+                    flexDirection = FlexDirection.Row,
+                    alignItems = UnityEngine.UIElements.Align.Center
+                }
+            };
+            foreach (var (k, txt) in new[] { ("←/→", "ADJUST"), ("Q/E", "TAB"), ("ESC", "BACK") })
+            {
+                var kh = FigmaUi.InstantiateTemplate("Key-Hint");
+                if (kh != null)
+                {
+                    FigmaUi.SetInstanceText(kh, "text-0", k);
+                    FigmaUi.SetInstanceText(kh, "text-1", txt);
+                    hintsRow.Add(kh);
+                }
+            }
+            savedFeedbackLbl = new UiLabel("")
+            {
+                style = { fontSize = 13, color = Palette.Ok, marginLeft = 10 }
+            };
+            hintsRow.Add(savedFeedbackLbl);
+            screenContainer.Add(hintsRow);
+        }
+
+        void SwitchCategory(int delta)
+        {
+            int next = ((int)category + delta + CategoryNames.Length) % CategoryNames.Length;
+            category = (Category)next;
+            focusIndex = next + 1;
+            Rebuild();
         }
 
         void Rebuild()
@@ -175,8 +223,8 @@ namespace Obscure
                     }
                     else if (el is Button b)
                     {
-                        string baseText = c == Category.Qte ? "QTE  ›" : CategoryNames[(int)c];
-                        b.text = (focused || sel) ? $"▸  {baseText}" : baseText;
+                        string baseText = CategoryNames[(int)c];
+                        b.text = (focused || sel) ? $"▸ {baseText}" : baseText;
                     }
                 });
             }
@@ -204,8 +252,8 @@ namespace Obscure
                     SegRow(6, "Screen shake", "SHAKE AND FREEZE ON CRITS AND PERFECT DEFENSES", new[] { "On", "Off" }, s.reduceMotion ? 1 : 0, v => s.reduceMotion = v == 1);
                     break;
                 case Category.Controls:
-                    SegRow(5, "QTE key", "KEY USED FOR REACTION PROMPTS", GameSettings.QteKeys.Select(k => k.ToString()).ToArray(), s.qteKey, v => s.qteKey = v);
-                    SegRow(7, "Guard key", "KEY USED FOR GUARD, SLIP, FLURRY, AND ROLL CUES", GameSettings.GuardKeys.Select(k => k.ToString()).ToArray(), s.guardKey, v => s.guardKey = v);
+                    SegRow(5, "QTE key", "KEY USED FOR REACTION PROMPTS", GameSettings.QteKeys.Select(FormatKeyName).ToArray(), s.qteKey, v => s.qteKey = v);
+                    SegRow(7, "Guard key", "KEY USED FOR GUARD, SLIP, FLURRY, AND ROLL CUES", GameSettings.GuardKeys.Select(FormatKeyName).ToArray(), s.guardKey, v => s.guardKey = v);
                     ToggleRow(8, "Single-key QTE", "ALLOW THE QTE KEY TO TRIGGER GUARD-KEY VARIANTS", s.singleKeyMode, v => s.singleKeyMode = v);
                     InfoRow("Navigation", "ARROWS / WASD / D-PAD");
                     InfoRow("Confirm / Interact", "ENTER / SPACE / Z / A-BUTTON");
@@ -285,10 +333,19 @@ namespace Obscure
 
         VisualElement RowShell(int dirtyIndex, string name, string desc) => RowShellWithDot(dirtyIndex, name, desc).row;
 
+        static string FormatKeyName(UnityEngine.InputSystem.Key k) => k switch
+        {
+            UnityEngine.InputSystem.Key.LeftShift => "L-SHIFT",
+            UnityEngine.InputSystem.Key.RightShift => "R-SHIFT",
+            UnityEngine.InputSystem.Key.LeftCtrl => "L-CTRL",
+            UnityEngine.InputSystem.Key.RightCtrl => "R-CTRL",
+            _ => k.ToString()
+        };
+
         void InfoRow(string name, string bindingText)
         {
             var row = new VisualElement();
-            row.AddToClassList("uitk-settings-row");
+            row.AddToClassList("uitk-settings-info");
             row.Add(new UiLabel(name) { style = { fontSize = 18, color = Palette.Mist2, marginLeft = 18 } });
             row.Add(new UiLabel(bindingText) { style = { fontSize = 14, color = Palette.Gold2, letterSpacing = 0.5f } });
             rowsContainer.Add(row);
@@ -311,10 +368,6 @@ namespace Obscure
             track.style.borderRightWidth = 2;
             track.style.borderBottomWidth = 2;
             track.style.borderLeftWidth = 2;
-            track.style.borderTopColor = Palette.Ink5;
-            track.style.borderRightColor = Palette.Ink5;
-            track.style.borderBottomColor = Palette.Ink5;
-            track.style.borderLeftColor = Palette.Ink5;
             track.style.paddingLeft = 2;
             track.style.paddingTop = 2;
             track.style.paddingBottom = 2;
@@ -333,7 +386,7 @@ namespace Obscure
             thumb.style.backgroundColor = Palette.Gold1;
             thumb.style.position = Position.Absolute;
             thumb.style.top = -8;
-            thumb.style.left = Mathf.RoundToInt(value / 10f * 268f);
+            thumb.style.left = Mathf.RoundToInt(value / 10f * 266f);
             thumb.pickingMode = PickingMode.Ignore;
             track.Add(thumb);
 
@@ -354,8 +407,9 @@ namespace Obscure
                 currentVal = next;
                 set(next);
                 fill.style.width = new Length(next * 10f, LengthUnit.Percent);
-                thumb.style.left = Mathf.RoundToInt(next / 10f * 268f);
+                thumb.style.left = Mathf.RoundToInt(next / 10f * 266f);
                 valLbl.text = $"{next * 10}%";
+                if (savedFeedbackLbl != null) savedFeedbackLbl.text = "";
                 bool dirty = Dirty(index) == 1;
                 dot.EnableInClassList("uitk-dirty-dot", dirty);
                 dot.EnableInClassList("uitk-dirty-dot-off", !dirty);
@@ -363,10 +417,12 @@ namespace Obscure
                 RefreshDirtyChrome();
             }
 
+            UitkMenu.Item sliderMenuItem = null;
             track.pickingMode = PickingMode.Position;
             track.RegisterCallback<PointerDownEvent>(e =>
             {
                 e.StopPropagation();
+                if (sliderMenuItem != null) menu.Focus(sliderMenuItem, false);
                 dragging = true;
                 track.CapturePointer(e.pointerId);
                 ApplyValue(Mathf.RoundToInt(e.localPosition.x / 280f * 10f), true);
@@ -391,7 +447,7 @@ namespace Obscure
             right.Add(valLbl);
             row.Add(right);
 
-            menu.Add(row, name, () => ApplyValue((currentVal + 1) % 11, false),
+            sliderMenuItem = menu.Add(row, name, () => ApplyValue(currentVal < 10 ? currentVal + 1 : 0, false),
                 visual: on => row.EnableInClassList("uitk-focus", on),
                 onAdjust: d => ApplyValue(currentVal + d, false));
         }
@@ -422,7 +478,7 @@ namespace Obscure
             knob.style.width = 14;
             knob.style.height = 14;
             knob.style.position = Position.Absolute;
-            knob.style.left = value ? 28 : 6;
+            knob.style.left = value ? 28 : 4;
             knob.style.backgroundColor = value ? Palette.Gold2 : Palette.Mist3;
             box.Add(knob);
 
@@ -453,6 +509,7 @@ namespace Obscure
                 int optIdx = i;
                 var pill = new UiLabel(options[i].ToUpperInvariant());
                 pill.AddToClassList("uitk-seg-opt");
+                if (i == options.Length - 1) pill.style.marginRight = 0;
                 if (i == value) pill.AddToClassList("uitk-selected");
                 pill.RegisterCallback<ClickEvent>(e =>
                 {
@@ -479,15 +536,23 @@ namespace Obscure
             s.Save();
             saved = Snapshot();
             Sfx.Play(Sound.Success);
+            if (savedFeedbackLbl != null) savedFeedbackLbl.text = "SETTINGS SAVED";
             Rebuild();
         }
 
         void ResetDefaults()
         {
-            var d = new GameSettings();
-            s.volume = d.volume; s.musicVolume = d.musicVolume; s.musicMuted = d.musicMuted;
-            s.fullscreen = d.fullscreen; s.qteAssist = d.qteAssist; s.qteKey = d.qteKey; s.guardKey = d.guardKey; s.singleKeyMode = d.singleKeyMode; s.reduceQteDistortions = d.reduceQteDistortions; s.reduceMotion = d.reduceMotion;
-            Rebuild();
+            FigmaUi.ShowConfirmationModal(UiRoot, "RESET TO DEFAULT",
+                "Reset all Audio, Graphics, Controls, and QTE settings to their defaults?",
+                "RESET",
+                () =>
+                {
+                    var d = new GameSettings();
+                    s.volume = d.volume; s.musicVolume = d.musicVolume; s.musicMuted = d.musicMuted;
+                    s.fullscreen = d.fullscreen; s.qteAssist = d.qteAssist; s.qteKey = d.qteKey; s.guardKey = d.guardKey; s.singleKeyMode = d.singleKeyMode; s.reduceQteDistortions = d.reduceQteDistortions; s.reduceMotion = d.reduceMotion;
+                    if (savedFeedbackLbl != null) savedFeedbackLbl.text = "";
+                    Rebuild();
+                });
         }
 
         void Leave()

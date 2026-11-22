@@ -96,9 +96,9 @@ namespace Obscure
                 onAdjust = onAdjust,
                 interactable = interactable,
                 selected = selected,
-                visual = visual ?? (focused => FigmaUi.ApplyDefaultFocusVisual(el, focused, selected, interactable)),
                 menu = this,
             };
+            item.visual = visual ?? (focused => FigmaUi.ApplyDefaultFocusVisual(el, focused, item.selected, item.interactable));
 
             EventCallback<PointerEnterEvent> onEnter = _ =>
             {
@@ -186,7 +186,12 @@ namespace Obscure
 
         static void ScrollIntoView(VisualElement el)
         {
-            if (el == null || el.layout.height <= 0f) return;
+            if (el == null) return;
+            if (el.layout.height <= 0f)
+            {
+                FigmaUi.OnFirstLayout(el, () => ScrollIntoView(el));
+                return;
+            }
             for (var p = el.parent; p != null; p = p.parent)
             {
                 if (p is ScrollView sv && sv.contentViewport != null && sv.contentViewport.layout.height > 0f)
@@ -247,12 +252,11 @@ namespace Obscure
             {
                 int dir = Controls.Up ? 0 : Controls.Right ? 1 : Controls.Down ? 2 : 3;
                 int target = nav(dir);
+                if (target < 0) target = NearestInDirection(dir);
                 if (target >= 0 && target < items.Count)
                     Focus(target);
-                else if (dir == 0 || dir == 3)
-                    Focus((index - 1 + items.Count) % items.Count);
                 else
-                    Focus((index + 1) % items.Count);
+                    Focus(NextInteractableInOrder(dir == 0 || dir == 3 ? -1 : 1));
             }
             else if (Controls.Up || Controls.Right || Controls.Down || Controls.Left)
             {
@@ -261,7 +265,7 @@ namespace Obscure
                 int dir = Controls.Up ? 0 : Controls.Right ? 1 : Controls.Down ? 2 : 3;
                 int target = NearestInDirection(dir);
                 if (target >= 0) Focus(target);
-                else Focus(dir == 0 || dir == 3 ? (index - 1 + items.Count) % items.Count : (index + 1) % items.Count);
+                else Focus(NextInteractableInOrder(dir == 0 || dir == 3 ? -1 : 1));
             }
 
             if (Controls.Confirm) Activate();
@@ -285,6 +289,7 @@ namespace Obscure
             float bestScore = float.MaxValue;
             for (int i = 0; i < items.Count; i++)
             {
+                if (!items[i].interactable) continue;
                 var el = items[i]?.element;
                 if (i == index || el == null || el.panel == null) continue;
                 Rect r = el.worldBound;
@@ -297,6 +302,17 @@ namespace Obscure
                 if (score < bestScore) { bestScore = score; best = i; }
             }
             return best;
+        }
+
+        int NextInteractableInOrder(int step)
+        {
+            if (items.Count == 0) return 0;
+            for (int offset = 1; offset <= items.Count; offset++)
+            {
+                int cand = (index + step * offset + items.Count * 2) % items.Count;
+                if (items[cand].interactable) return cand;
+            }
+            return (index + step + items.Count) % items.Count;
         }
 
         public void Activate()

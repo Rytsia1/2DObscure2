@@ -46,9 +46,9 @@ namespace Obscure
         // Lower staging positions for 22c Boss Combat HUD so party sits below the 840px top boss bar
         static readonly Vector2[] PartySlotsBoss =
         {
-            new Vector2(260, 134),
+            new Vector2(210, 148),
             new Vector2(310, 238),
-            new Vector2(130, 166),
+            new Vector2(120, 178),
             new Vector2(180, 272)
         };
 
@@ -127,7 +127,7 @@ namespace Obscure
             1 => new[] { new Vector2(930, 124) },
             2 => new[] { new Vector2(840, 86), new Vector2(1040, 182) },
             3 => new[] { new Vector2(760, 76), new Vector2(920, 174), new Vector2(1080, 82) },
-            _ => new[] { new Vector2(730, 56), new Vector2(790, 206), new Vector2(960, 56), new Vector2(1060, 206) },
+            _ => new[] { new Vector2(670, 32), new Vector2(810, 162), new Vector2(950, 32), new Vector2(1090, 162) },
         };
 
         public void Init(Battle battle, EncounterDef encounter, VisualElement root)
@@ -227,7 +227,7 @@ namespace Obscure
                 {
                     var addSlots = adds.Count == 1
                         ? new[] { new Vector2(680, 176) }
-                        : new[] { new Vector2(660, 148), new Vector2(680, 248) };
+                        : new[] { new Vector2(650, 130), new Vector2(680, 182) };
                     for (int i = 0; i < adds.Count; i++)
                         AddEnemyCombatant(adds[i], addSlots[Mathf.Min(i, addSlots.Length - 1)]);
                 }
@@ -238,8 +238,7 @@ namespace Obscure
                 for (int i = 0; i < battle.Enemies.Count; i++) AddEnemyCombatant(battle.Enemies[i], eSlots[Mathf.Min(i, eSlots.Length - 1)]);
             }
 
-            if (!isBossHud)
-                modifierStrip = ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, 700f, stageHost);
+            modifierStrip = ModifierHudHelper.BuildStrip(stageHost, battle.run, 14f, 6f, isBossHud ? 200f : 700f, stageHost);
 
             // Command menu column inside right console panel (scrollable when 5+ items/skills/targets exist)
             var menuScroll = FigmaUi.CreateVerticalScrollView();
@@ -393,13 +392,18 @@ namespace Obscure
                         toRemove.Add(child);
                         continue;
                     }
-                    // On 22c, keep the subtle ground aura (design 800,380) right behind the Boss sprite
+                    // On 22c, reparent the subtle ground aura inside stageHost behind the Boss sprite
                     if (child == bossAura)
+                    {
+                        toRemove.Add(child);
+                        stageHost.Insert(0, bossAura);
+                        bossAura.style.top = 298;
                         continue;
+                    }
 
                     child.style.display = DisplayStyle.None;
                 }
-                foreach (var el in toRemove) el.RemoveFromHierarchy();
+                foreach (var el in toRemove) if (el != bossAura) el.RemoveFromHierarchy();
             }
         }
 
@@ -435,8 +439,8 @@ namespace Obscure
             if (bossIntentLbl != null)
             {
                 bossIntentLbl.style.left = 220;
-                bossIntentLbl.style.width = 840;
-                bossIntentLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+                bossIntentLbl.style.width = 700;
+                bossIntentLbl.style.unityTextAlign = TextAnchor.MiddleLeft;
             }
 
             // Boss status badge row (design 434,128): clear its baked icons so live statuses go there.
@@ -531,7 +535,7 @@ namespace Obscure
                 foreach (var b in bakedBadges) b.RemoveFromHierarchy();
             }
 
-            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, right = 8, top = 8, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, right = 8, top = 8, maxWidth = 92, overflow = Overflow.Hidden, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
             var statusLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, marginRight = 3 } };
             statusRow.Add(statusLbl);
             card?.Add(statusRow);
@@ -745,7 +749,7 @@ namespace Obscure
                 tpl.style.marginRight = 3;
                 tpl.style.flexShrink = 0;
 
-                var row = tpl.childCount > 0 ? tpl[0] : tpl;
+                var row = tpl;
                 row.style.alignItems = UnityEngine.UIElements.Align.Center;
                 var iconEl = IconArt.Inline(IconArt.Status(id), 1, 3f);
                 if (iconEl != null)
@@ -753,6 +757,8 @@ namespace Obscure
                     iconEl.style.alignSelf = UnityEngine.UIElements.Align.Center;
                     row.Insert(0, iconEl);
                 }
+                var t0 = tpl.Q<UiLabel>("text-0");
+                if (t0 != null) t0.style.marginRight = 3;
                 return tpl;
             }
             return IconArt.StatusBadge(id, turns, stacks, 1, 3f);
@@ -1111,7 +1117,7 @@ namespace Obscure
 
         void AddLog(string line)
         {
-            logLines.AddRange(PixelFont.Wrap(line.ToUpperInvariant(), 158).Split('\n'));
+            logLines.AddRange(PixelFont.Wrap(line.ToUpperInvariant(), 296).Split('\n'));
             while (logLines.Count > LogLines) logLines.RemoveAt(0);
             for (int i = 0; i < LogLines && i < logLabels.Count; i++)
                 logLabels[i].text = i < logLines.Count ? logLines[i] : "";
@@ -1198,13 +1204,13 @@ namespace Obscure
             {
                 topCol.Add(new UiLabel(subText)
                 {
-                    style = { fontSize = 11, color = Palette.Gold2, letterSpacing = 0.48f, marginBottom = 6 }
+                    style = { fontSize = 11, color = Palette.Gold2, letterSpacing = 0.48f, whiteSpace = WhiteSpace.Normal, marginBottom = 4 }
                 });
             }
             if (cand.IsEnemy && cand.Alive && cand.HasBreakGauge)
                 topCol.Add(new UiLabel(cand.ShieldHelp)
                 {
-                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, marginBottom = 6 }
+                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, marginBottom = 4 }
                 });
 
             // Row 3..N: Active Status rows (22b style: Figma Status-Icon badge + Name/Turns + Description)
@@ -1213,13 +1219,13 @@ namespace Obscure
             {
                 topCol.Add(new UiLabel(cand.guarding ? "GUARDING — DAMAGE HALVED, PERFECT FULLY PARRIES" : "NO ACTIVE STATUS EFFECTS")
                 {
-                    style = { fontSize = 12, color = Palette.Mist2, marginTop = 6 }
+                    style = { fontSize = 12, color = Palette.Mist2, marginTop = 4 }
                 });
             }
             else
             {
                 int shown = 0;
-                foreach (var s in active.Take(3))
+                foreach (var s in active.Take(2))
                 {
                     var row = new VisualElement
                     {
@@ -1847,15 +1853,17 @@ namespace Obscure
         {
             var btn = FigmaUi.CreateButton(text, "button-slab", null);
             btn.style.width = Length.Percent(100);
-            btn.style.height = 46;
-            btn.style.marginBottom = 6;
+            btn.style.height = 38;
+            btn.style.marginBottom = 4;
+            btn.style.paddingTop = 4;
+            btn.style.paddingBottom = 4;
             btn.style.paddingLeft = icon != null ? 44 : 10;
             btn.style.paddingRight = 8;
             btn.style.overflow = Overflow.Hidden;
             var iconEl = IconArt.Inline(icon, 2, 0);
             if (iconEl != null)
             {
-                iconEl.style.position = Position.Absolute; iconEl.style.left = 6; iconEl.style.top = 5;
+                iconEl.style.position = Position.Absolute; iconEl.style.left = 6; iconEl.style.top = 3;
                 if (!enabled) iconEl.style.opacity = 0.45f;
                 btn.Add(iconEl);
             }
@@ -2024,19 +2032,30 @@ namespace Obscure
                 // Add target row in command menu (with Codex-known effectiveness tag when targeting enemies with a damaging move)
                 var activeStatuses = CollectActiveStatuses(cand);
                 string btnLabel = string.IsNullOrEmpty(effTag) ? cand.name.ToUpperInvariant() : $"{cand.name.ToUpperInvariant()}  [{effTag}]";
-                var btn = FigmaUi.CreateButton(btnLabel, "button-slab", null);
+                var btn = FigmaUi.CreateCompactButton(btnLabel, null);
                 btn.style.width = Length.Percent(100);
-                btn.style.height = 46;
-                btn.style.marginBottom = 6;
-                btn.style.fontSize = 16;
+                btn.style.height = 40;
+                btn.style.marginBottom = 4;
+                btn.style.paddingLeft = 8;
+                btn.style.paddingRight = 8;
+                btn.style.flexDirection = FlexDirection.Row;
+                btn.style.justifyContent = Justify.SpaceBetween;
                 btn.style.overflow = Overflow.Hidden;
                 var tgtLbl = btn.Q<UiLabel>("uitkLabel");
+                if (tgtLbl != null)
+                {
+                    tgtLbl.style.flexShrink = 1;
+                    tgtLbl.style.minWidth = 0;
+                    tgtLbl.style.fontSize = btnLabel.Length > 20 ? 13 : 15;
+                    tgtLbl.style.whiteSpace = WhiteSpace.Normal;
+                    tgtLbl.style.unityTextAlign = TextAnchor.MiddleLeft;
+                }
                 if (activeStatuses.Count > 0)
                 {
                     var iconStrip = new VisualElement
                     {
                         pickingMode = PickingMode.Ignore,
-                        style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginLeft = 6 }
+                        style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginLeft = 4, flexShrink = 0 }
                     };
                     foreach (var s in activeStatuses.Take(3))
                     {
@@ -2099,7 +2118,7 @@ namespace Obscure
                 style =
                 {
                     position = Position.Absolute,
-                    top = 56, left = Length.Percent(25), width = Length.Percent(50),
+                    top = 442, left = Length.Percent(25), width = Length.Percent(50),
                     paddingTop = 6, paddingBottom = 6, paddingLeft = 14, paddingRight = 14,
                     backgroundColor = Palette.Ink1,
                     borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
@@ -2133,8 +2152,11 @@ namespace Obscure
             RenderAnalysisOverlay();
         }
 
+        UitkMenu analysisMenu;
+
         void CloseAnalysis()
         {
+            FigmaUi.DestroyMenu(ref analysisMenu);
             if (analysisOverlay != null) { analysisOverlay.RemoveFromHierarchy(); analysisOverlay = null; }
             var resume = analysisOnClose;
             analysisOnClose = null;
@@ -2255,11 +2277,14 @@ namespace Obscure
             analysisOverlay.Add(panel);
             screenRoot.Add(analysisOverlay);
 
-            var m = phaseGo.AddComponent<UitkMenu>();
-            m.AttachRoot(analysisOverlay);
-            m.onBack = CloseAnalysis;
-            m.Add(closeBtn, "CLOSE", CloseAnalysis);
-            Hint("ANALYSIS · LEFT/RIGHT CYCLE UNIT · CLICK ENEMIES/ALLIES TABS · ESC TO RETURN");
+            FigmaUi.DestroyMenu(ref analysisMenu);
+            analysisMenu = phaseGo.AddComponent<UitkMenu>();
+            analysisMenu.AttachRoot(analysisOverlay);
+            analysisMenu.onBack = CloseAnalysis;
+            analysisMenu.onPrevPage = () => { analysisOnAllies = false; analysisUnitIdx = 0; RenderAnalysisOverlay(); };
+            analysisMenu.onNextPage = () => { analysisOnAllies = true; analysisUnitIdx = 0; RenderAnalysisOverlay(); };
+            analysisMenu.Add(closeBtn, "CLOSE", CloseAnalysis);
+            Hint("ANALYSIS · LEFT/RIGHT CYCLE UNIT · Q/E ENEMIES/ALLIES · ESC TO RETURN");
         }
 
         // Enemies/fallen: first valid in order. Living allies: the most injured (lowest HP %), so heals and potions

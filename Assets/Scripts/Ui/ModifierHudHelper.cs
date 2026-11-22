@@ -79,7 +79,7 @@ namespace Obscure
 
             // Keyboard route to the same text: TAB lists every effect (see ToggleDetails).
             var hint = new UiLabel("TAB: DETAILS") { pickingMode = PickingMode.Ignore };
-            hint.style.fontSize = 10;
+            hint.style.fontSize = 12;
             hint.style.color = Palette.Mist2;
             hint.style.marginLeft = 4;
             strip.Add(hint);
@@ -157,7 +157,9 @@ namespace Obscure
             var box = new VisualElement { name = "DungeonModifierTooltip" };
             box.pickingMode = PickingMode.Ignore;
             box.style.position = Position.Absolute;
-            box.style.width = 360;
+            box.style.width = 420;
+            box.style.maxHeight = 290;
+            box.style.overflow = Overflow.Hidden;
             box.style.paddingLeft = 10;
             box.style.paddingRight = 10;
             box.style.paddingTop = 8;

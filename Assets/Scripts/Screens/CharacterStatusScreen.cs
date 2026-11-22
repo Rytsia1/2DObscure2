@@ -119,8 +119,10 @@ namespace Obscure
             tooltipStrip = new VisualElement { name = "StatusTooltipStrip" };
             tooltipStrip.style.position = Position.Absolute;
             tooltipStrip.style.left = 326;
-            tooltipStrip.style.bottom = 20;
+            tooltipStrip.style.bottom = 26;
             tooltipStrip.style.width = 914;
+            tooltipStrip.style.maxHeight = 52;
+            tooltipStrip.style.overflow = Overflow.Hidden;
             tooltipStrip.style.paddingLeft = 10;
             tooltipStrip.style.paddingRight = 10;
             tooltipStrip.style.paddingTop = 6;
@@ -164,7 +166,8 @@ namespace Obscure
         public void ShowTab(Tab t)
         {
             CurrentTab = t;
-            focusIndex = 0;
+            // Focus first stat row on Attributes/Combat so DetailPane populates immediately
+            focusIndex = (t == Tab.Attributes || t == Tab.Combat) ? 1 + units.Count + TabNames.Length : 0;
             Refresh();
         }
 
@@ -276,12 +279,20 @@ namespace Obscure
                 };
                 pItem.visual(false);
             }
-            if (switcherRow != null && units.Count > 1)
+            if (switcherRow != null)
             {
                 var qCap = FigmaUi.FindLabel(switcherRow, "Q")?.parent;
                 var eCap = FigmaUi.FindLabel(switcherRow, "E")?.parent;
-                if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
-                if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                if (units.Count > 1)
+                {
+                    if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
+                    if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                }
+                else
+                {
+                    if (qCap != null && qCap != switcherRow) qCap.style.display = DisplayStyle.None;
+                    if (eCap != null && eCap != switcherRow) eCap.style.display = DisplayStyle.None;
+                }
             }
 
             var hubTag = UiRoot.Q<VisualElement>(className: "currency-tag-hub");
@@ -318,7 +329,7 @@ namespace Obscure
                 {
                     var tagRow = nameLbl.parent[idx + 2];
                     tagRow.Clear();
-                    tagRow.style.flexWrap = Wrap.NoWrap;
+                    tagRow.style.flexWrap = Wrap.Wrap;
                     tagRow.style.maxWidth = 240;
                     foreach (var tText in new[] { u.race?.name ?? "Human", u.classDef?.name ?? u.role }.Where(s => !string.IsNullOrEmpty(s)))
                     {
@@ -327,6 +338,7 @@ namespace Obscure
                         {
                             FigmaUi.SetInstanceText(tag, "text-0", tText.ToUpperInvariant());
                             tag.style.marginRight = 4;
+                            tag.style.marginBottom = 4;
                             tagRow.Add(tag);
                         }
                     }
@@ -335,13 +347,29 @@ namespace Obscure
 
             float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
             float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
-            FigmaUi.SetGaugeFill(UiRoot.Q<VisualElement>(className: "gauge-hp"), hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
-            FigmaUi.SetGaugeFill(UiRoot.Q<VisualElement>(className: "gauge-mp"), mpRatio, Palette.Mp);
+            var hpG = UiRoot.Q<VisualElement>(className: "gauge-hp");
+            var mpG = UiRoot.Q<VisualElement>(className: "gauge-mp");
+            if (hpG != null) hpG.style.width = 128;
+            if (mpG != null) mpG.style.width = 128;
+            FigmaUi.SetGaugeFill(hpG, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);
+            FigmaUi.SetGaugeFill(mpG, mpRatio, Palette.Mp);
 
             var hpLbl = UiRoot.Q<UiLabel>(className: "_125-125-vars");
-            if (hpLbl != null) hpLbl.text = $"{u.hp}/{u.stats.maxHp}";
+            if (hpLbl != null)
+            {
+                hpLbl.text = $"{u.hp}/{u.stats.maxHp}";
+                hpLbl.style.left = 194;
+                hpLbl.style.width = 86;
+                hpLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+            }
             var mpLbl = UiRoot.Q<UiLabel>(className: "_20-20-vars");
-            if (mpLbl != null) mpLbl.text = $"{u.mp}/{u.stats.maxMp}";
+            if (mpLbl != null)
+            {
+                mpLbl.text = $"{u.mp}/{u.stats.maxMp}";
+                mpLbl.style.left = 194;
+                mpLbl.style.width = 86;
+                mpLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+            }
 
             var perkBox = UiRoot.Q<VisualElement>(className: "frame-vars-17");
             if (perkBox != null)
@@ -354,21 +382,39 @@ namespace Obscure
                 else
                 {
                     perkBox.style.display = DisplayStyle.Flex;
+                    perkBox.style.flexDirection = FlexDirection.Column;
+                    perkBox.style.paddingLeft = 8;
+                    perkBox.style.paddingRight = 8;
+                    perkBox.style.paddingTop = 6;
+                    perkBox.style.paddingBottom = 8;
                     perkBox.style.height = StyleKeyword.Auto;
                     perkBox.style.minHeight = 118;
-                    perkBox.style.maxHeight = 250;
+                    perkBox.style.maxHeight = 264;
                     perkBox.style.overflow = Overflow.Hidden;
                     var rank = bg.GetRank(u.level);
                     string[] numerals = { "I", "II", "III", "IV", "V" };
                     int r = Mathf.Clamp(BackgroundRankResolver.GetRankForLevel(u.level), 1, 5);
                     var rLbl = UiRoot.Q<UiLabel>(className: "background-perk-rank-i-vars");
-                    if (rLbl != null) rLbl.text = $"BACKGROUND PERK · RANK {numerals[r - 1]}";
+                    if (rLbl != null)
+                    {
+                        rLbl.text = $"BACKGROUND PERK · RANK {numerals[r - 1]}";
+                        rLbl.style.position = Position.Relative; rLbl.style.left = StyleKeyword.Auto; rLbl.style.top = StyleKeyword.Auto;
+                        rLbl.style.marginBottom = 2;
+                    }
                     var pLbl = UiRoot.Q<UiLabel>(className: "watchful-guard-vars");
-                    if (pLbl != null) pLbl.text = rank?.perkName ?? bg.perkName;
+                    if (pLbl != null)
+                    {
+                        pLbl.text = rank?.perkName ?? bg.perkName;
+                        pLbl.style.position = Position.Relative; pLbl.style.left = StyleKeyword.Auto; pLbl.style.top = StyleKeyword.Auto;
+                        pLbl.style.marginBottom = 4;
+                        pLbl.style.whiteSpace = WhiteSpace.Normal;
+                    }
                     var dLbl = UiRoot.Q<UiLabel>(className: "physical-damage-taken-is-reduced-by-3-vars");
                     if (dLbl != null)
                     {
                         dLbl.text = (rank?.perkDescription ?? "").ToUpperInvariant();
+                        dLbl.style.position = Position.Relative; dLbl.style.left = StyleKeyword.Auto; dLbl.style.top = StyleKeyword.Auto;
+                        dLbl.style.width = StyleKeyword.Auto;
                         dLbl.style.whiteSpace = WhiteSpace.Normal;
                     }
                 }
@@ -385,13 +431,15 @@ namespace Obscure
                     : tab == Tab.Skills ? () => Game?.Go(GameState.Skills)
                     : (Action)(() => ShowTab(tab));
 
-                var btn = FigmaUi.CreateTabButton(TabNames[i], active, null, 38f, 18f);
+                bool external = tab == Tab.Equipment || tab == Tab.Skills;
+                string tabLbl = external ? $"{TabNames[i]} ›" : TabNames[i];
+                var btn = FigmaUi.CreateTabButton(tabLbl, active, null, 38f, 18f);
                 btn.style.paddingLeft = 14;
                 btn.style.paddingRight = 14;
                 btn.style.marginRight = 6;
                 tabHost.Add(btn);
 
-                var item = menu.Add(btn, TabNames[i], go, selected: active, tooltip: $"{TabNames[i].ToUpperInvariant()} TAB");
+                var item = menu.Add(btn, TabNames[i], go, selected: active, tooltip: external ? $"OPEN {TabNames[i].ToUpperInvariant()} SCREEN" : $"{TabNames[i].ToUpperInvariant()} TAB");
                 item.visual = on => FigmaUi.ApplyTabVisual(btn, active, on, true);
                 item.visual(false);
             }
@@ -400,7 +448,7 @@ namespace Obscure
         void BuildOverview(Unit u)
         {
             var topRow = new VisualElement { style = { flexDirection = FlexDirection.Row, height = 276, marginBottom = 12, overflow = Overflow.Hidden } };
-            var botRow = new VisualElement { style = { flexDirection = FlexDirection.Row, height = 236, overflow = Overflow.Hidden } };
+            var botRow = new VisualElement { style = { flexDirection = FlexDirection.Row, height = 200, overflow = Overflow.Hidden } };
             mainHost.Add(topRow);
             mainHost.Add(botRow);
 
@@ -447,23 +495,24 @@ namespace Obscure
             {
                 if (et == ElementType.None) continue;
                 float v = u.elementalResistances.GetFinalResistance(et);
-                entries.Add((ToElement(et), v, v > 0 ? "RESIST" : v < 0 ? "WEAK" : ""));
+                entries.Add((ToElement(et), v, v > 0 ? "RES" : v < 0 ? "WK" : ""));
             }
             foreach (var (el, v, note) in entries)
             {
-                var cell = new VisualElement { style = { width = 148, height = 32, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+                var cell = new VisualElement { style = { width = 148, height = 32, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, overflow = Overflow.Hidden } };
                 string code = Palette.ElementCode(el);
                 var chip = FigmaUi.InstantiateTemplate($"Element-Chip-{code}");
                 if (chip != null)
                 {
                     FigmaUi.SetInstanceText(chip, "text-0", code);
                     chip.style.marginRight = 5;
+                    chip.style.flexShrink = 0;
                     cell.Add(chip);
                 }
                 string pct = v == 0 ? "0%" : $"{(v > 0 ? "+" : "-")}{Mathf.RoundToInt(Mathf.Abs(v) * 100)}%";
                 string elName = Palette.ElementName(el).ToUpperInvariant();
                 var pctLbl = new UiLabel(note != "" ? $"{elName} {pct} {note}" : $"{elName} {pct}");
-                pctLbl.style.fontSize = 11;
+                pctLbl.style.fontSize = 12;
                 pctLbl.style.color = v > 0 ? Palette.Ok : v < 0 ? Palette.Err : Palette.Mist1;
                 cell.Add(pctLbl);
                 resGrid.Add(cell);
@@ -483,16 +532,6 @@ namespace Obscure
                     if (chip != null) buffRow.Add(chip);
                 }
                 stCol.Add(buffRow);
-            }
-            else
-            {
-                var sampleRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8 } };
-                foreach (var sid in new[] { StatusId.AttackUp, StatusId.DefenseUp, StatusId.Burn, StatusId.Poison, StatusId.Stun, StatusId.Silence })
-                {
-                    var sIcon = IconArt.Inline(IconArt.Status(sid), 2, 6f);
-                    if (sIcon != null) sampleRow.Add(sIcon);
-                }
-                stCol.Add(sampleRow);
             }
             var activeSummaries = BuildActiveEffectsSummary(u);
             string ovStatus = activeSummaries.Count > 0
@@ -706,9 +745,12 @@ namespace Obscure
 
                 var tCol = new VisualElement { style = { flexGrow = 1, flexShrink = 1 } };
                 tCol.Add(new UiLabel($"{StatusInfo.Name(sid).ToUpperInvariant()} [{StatusInfo.Tag(sid)}]") { style = { fontSize = 14, color = titleCol, marginBottom = 2 } });
-                tCol.Add(new UiLabel((def?.description ?? "").ToUpperInvariant()) { style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
+                tCol.Add(new UiLabel((def?.description ?? "").ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });
                 cell.Add(tCol);
                 grid.Add(cell);
+                var stItem = menu.Add(cell, StatusInfo.Name(sid), () => { }, tooltip: def?.description);
+                stItem.visual = on => cell.EnableInClassList("uitk-focus", on);
+                stItem.visual(false);
             }
             scroll.Add(grid);
             mainHost.Add(scroll);
@@ -802,12 +844,6 @@ namespace Obscure
         {
             if (rebuilding || item == null) return;
             focusIndex = menu.items.IndexOf(item);
-            if (portraitItems.TryGetValue(item, out int idx) && idx != currentIndex)
-            {
-                currentIndex = idx;
-                Refresh();
-                return;
-            }
             ShowTip(item.tooltip);
         }
 

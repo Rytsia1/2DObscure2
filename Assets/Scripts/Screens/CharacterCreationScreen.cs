@@ -276,7 +276,7 @@ namespace Obscure
             {
                 style =
                 {
-                    position = Position.Absolute, left = 480, top = 656, width = 500, height = 40,
+                    position = Position.Absolute, left = 460, top = 656, width = 480, height = 40,
                     fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal,
                     unityTextAlign = TextAnchor.MiddleCenter, overflow = Overflow.Hidden,
                 },
@@ -380,7 +380,11 @@ namespace Obscure
 
             if (previewNameLbl != null) previewNameLbl.text = HeroName;
             if (previewRaceTag != null)
+            {
+                previewRaceTag.style.maxWidth = 218;
+                previewRaceTag.style.overflow = Overflow.Hidden;
                 FigmaUi.SetInstanceText(previewRaceTag, "text-0", $"{Session.Race.name} · {Session.Class.name}".ToUpperInvariant());
+            }
 
             var fin = Session.FinalScores;
             var race = Session.RacialModifiers;
@@ -396,9 +400,14 @@ namespace Obscure
                 var lbl = chip.Q<UiLabel>("text-0");
                 if (lbl != null)
                 {
-                    lbl.text = delta != 0 ? $"{a} {fin[a]} ({(delta > 0 ? "+" : "")}{delta})" : $"{a} {fin[a]}";
+                    lbl.text = delta != 0 ? $"{a} {fin[a]}({(delta > 0 ? "+" : "")}{delta})" : $"{a} {fin[a]}";
+                    lbl.style.fontSize = delta != 0 ? 11 : 13;
                     lbl.style.color = delta > 0 ? Palette.Gold1 : (delta < 0 ? Palette.Mist2 : (bonus ? Palette.Gold1 : Palette.Mist1));
                 }
+                chip.style.maxWidth = 72;
+                chip.style.paddingLeft = 4;
+                chip.style.paddingRight = 4;
+                chip.style.overflow = Overflow.Hidden;
                 var inner = chip; // FindInstanceWithText returns the box itself; chip[0] is its label
                 // STR/VIT come from the gold Tag-Keep template (the Human mock-up), so set the fill too or they never un-highlight.
                 inner.style.backgroundColor = bonus ? Palette.Hex(0x1D1608) : Palette.Ink3;
@@ -476,7 +485,9 @@ namespace Obscure
                 int topTabIdx = CurrentPage == Page.Race ? (PresetMode ? 1 : 0) : -1;
                 int afterListIdx = CurrentPage == Page.Abilities
                     ? menu.items.FindIndex(it => it.text == "Reset")
-                    : (nextIdx >= 0 ? nextIdx : backIdx);
+                    : CurrentPage == Page.CharacterSheet
+                        ? menu.items.FindIndex(it => it.text == "Edit" || it.text == "Reset")
+                        : (nextIdx >= 0 ? nextIdx : backIdx);
 
                 for (int i = 0; i < listCount; i++)
                 {
@@ -683,9 +694,14 @@ namespace Obscure
             var k = new UiLabel(label);
             k.style.fontSize = 14;
             k.style.color = Palette.Mist2;
+            k.style.flexShrink = 0;
+            k.style.marginRight = 8;
             var v = new UiLabel(value);
             v.style.fontSize = 14;
             v.style.color = valueColor ?? Palette.Mist1;
+            v.style.flexShrink = 1;
+            v.style.whiteSpace = WhiteSpace.Normal;
+            v.style.unityTextAlign = TextAnchor.MiddleRight;
             row.Add(k);
             row.Add(v);
             parent.Add(row);
@@ -861,13 +877,12 @@ namespace Obscure
                     int baseVal = Session.BaseScores[bonusAb];
                     int finalVal = baseVal + lin.abilityModifiers[bonusAb];
                     string linLabel = $"{lin.name.ToUpperInvariant()} ({lin.element.ToString().ToUpperInvariant()}) · {bonusAb} {baseVal} → {finalVal}";
-                    var linBtn = FigmaUi.CreateButton(linLabel, picked ? "button-primary" : "button-slab", null);
+                    var linBtn = FigmaUi.CreateCompactButton(linLabel, null, picked ? "button-primary" : "button-slab");
                     linBtn.style.marginRight = 6;
                     linBtn.style.marginBottom = 6;
-                    linBtn.style.height = 34;
                     string capturedId = lin.id;
-                    linBtn.RegisterCallback<ClickEvent>(_ => { Session.SelectLineage(capturedId); Refresh(); });
                     bonusRow.Add(linBtn);
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(linBtn, lin.name, () => { Session.SelectLineage(capturedId); Refresh(); }, selected: picked), linBtn);
                 }
             }
             else if (race.bonusPickCount > 0 && race.bonusOptions != null && race.bonusOptions.Length > 0)
@@ -888,12 +903,11 @@ namespace Obscure
                     int baseVal = Session.BaseScores[ab];
                     int previewVal = baseVal + opt.bonus;
                     string chipText = $"{ab} +{opt.bonus} ({baseVal} → {previewVal})";
-                    var chipBtn = FigmaUi.CreateButton(chipText, picked ? "button-primary" : "button-slab", null);
+                    var chipBtn = FigmaUi.CreateCompactButton(chipText, null, picked ? "button-primary" : "button-slab");
                     chipBtn.style.marginRight = 6;
                     chipBtn.style.marginBottom = 6;
-                    chipBtn.style.height = 32;
-                    chipBtn.RegisterCallback<ClickEvent>(_ => { Session.ToggleRacialBonus(ab); Refresh(); });
                     bonusRow.Add(chipBtn);
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(chipBtn, $"{ab} +{opt.bonus}", () => { Session.ToggleRacialBonus(ab); Refresh(); }, selected: picked), chipBtn);
                 }
             }
             else
@@ -1306,7 +1320,7 @@ namespace Obscure
                     pickingMode = PickingMode.Ignore,
                     style =
                     {
-                        position = Position.Absolute, left = 20, top = 5, width = 208,
+                        position = Position.Absolute, left = 20, top = 5, width = 216,
                         flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center
                     }
                 };
@@ -1314,7 +1328,7 @@ namespace Obscure
                 var abTitle = new UiLabel(AbilityFullName(ab))
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { fontSize = 15, color = defaultTitleCol, flexShrink = 1, overflow = Overflow.Hidden }
+                    style = { fontSize = 14, color = defaultTitleCol, flexShrink = 1, overflow = Overflow.Hidden }
                 };
                 titleRow.Add(abTitle);
 
@@ -1374,7 +1388,7 @@ namespace Obscure
                 row.Add(new UiLabel(costVal.ToString())
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { position = Position.Absolute, left = 388, top = 16, width = 32, fontSize = 14, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleCenter }
+                    style = { position = Position.Absolute, left = 378, top = 16, width = 32, fontSize = 14, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleCenter }
                 });
 
                 if (rBonus != 0)
@@ -1384,7 +1398,7 @@ namespace Obscure
                     {
                         rTag.pickingMode = PickingMode.Ignore;
                         rTag.style.position = Position.Absolute;
-                        rTag.style.left = 438;
+                        rTag.style.left = 428;
                         rTag.style.top = 13;
                         FigmaUi.SetInstanceText(rTag, "text-0", rBonus > 0 ? $"+{rBonus}" : rBonus.ToString());
                         row.Add(rTag);
@@ -1395,20 +1409,20 @@ namespace Obscure
                     row.Add(new UiLabel("—")
                     {
                         pickingMode = PickingMode.Ignore,
-                        style = { position = Position.Absolute, left = 450, top = 16, fontSize = 14, color = Palette.Mist3 }
+                        style = { position = Position.Absolute, left = 440, top = 16, fontSize = 14, color = Palette.Mist3 }
                     });
                 }
 
                 row.Add(new UiLabel(finVal.ToString())
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { position = Position.Absolute, left = 510, top = 11, width = 40, fontSize = 22, color = rBonus > 0 ? Palette.Gold1 : Palette.Mist1, unityTextAlign = TextAnchor.MiddleCenter }
+                    style = { position = Position.Absolute, left = 500, top = 11, width = 40, fontSize = 22, color = rBonus > 0 ? Palette.Gold1 : Palette.Mist1, unityTextAlign = TextAnchor.MiddleCenter }
                 });
 
                 row.Add(new UiLabel(AbilityScores.FormatMod(modVal))
                 {
                     pickingMode = PickingMode.Ignore,
-                    style = { position = Position.Absolute, left = 566, top = 16, width = 32, fontSize = 14, color = modVal > 0 ? Palette.Ok : modVal < 0 ? Palette.Err : Palette.Mist2, unityTextAlign = TextAnchor.MiddleCenter }
+                    style = { position = Position.Absolute, left = 556, top = 16, width = 32, fontSize = 14, color = modVal > 0 ? Palette.Ok : modVal < 0 ? Palette.Err : Palette.Mist2, unityTextAlign = TextAnchor.MiddleCenter }
                 });
 
                 abilitiesHost.Add(row);
@@ -1733,9 +1747,12 @@ namespace Obscure
             btnRow.style.justifyContent = Justify.SpaceBetween;
             btnRow.style.marginTop = 8;
             btnRow.style.flexShrink = 0;
-            var editBtn = FigmaUi.CreateButton(inReview ? "Edit" : "Reset", "button-slab", 76f);
-            var randBtn = FigmaUi.CreateButton(inReview ? "Reroll" : "Random", "button-slab", 78f);
-            var randAllBtn = FigmaUi.CreateButton("Rand All", "button-slab", 82f);
+            var editBtn = FigmaUi.CreateCompactButton(inReview ? "Edit" : "Reset", 84f);
+            editBtn.style.marginBottom = 6;
+            var randBtn = FigmaUi.CreateCompactButton(inReview ? "Reroll" : "Random", 84f);
+            randBtn.style.marginBottom = 6;
+            var randAllBtn = FigmaUi.CreateCompactButton("Rand All", 88f);
+            randAllBtn.style.marginBottom = 6;
             btnRow.Add(editBtn);
             btnRow.Add(randBtn);
             btnRow.Add(randAllBtn);
@@ -1744,8 +1761,7 @@ namespace Obscure
             menu.Add(randAllBtn, "Rand All", () => RandomizeAll());
             if (inReview && Builder.PendingParty.Count > 0)
             {
-                var remBtn = FigmaUi.CreateButton("Remove", "button-slab", 76f);
-                remBtn.style.marginTop = 4;
+                var remBtn = FigmaUi.CreateCompactButton("Remove", 126f);
                 btnRow.Add(remBtn);
                 menu.Add(remBtn, "Remove", () =>
                 {
@@ -1756,8 +1772,7 @@ namespace Obscure
             }
             if (inReview && Builder.PendingParty.Count < CharacterRoster.PartySize)
             {
-                var addMoreBtn = FigmaUi.CreateButton("Add Hero", "button-primary", 92f);
-                addMoreBtn.style.marginTop = 4;
+                var addMoreBtn = FigmaUi.CreateCompactButton("Add Hero", 134f, "button-primary");
                 btnRow.Add(addMoreBtn);
                 menu.Add(addMoreBtn, "Add Hero", () =>
                 {

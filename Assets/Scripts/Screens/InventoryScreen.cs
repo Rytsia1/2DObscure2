@@ -67,6 +67,8 @@ namespace Obscure
                 menu = Root.gameObject.AddComponent<UitkMenu>();
                 menu.AttachRoot(UiRoot);
                 menu.onBack = () => Game?.Back(returnState);
+                menu.onPrevPage = () => { if (pageIndex > 0) ChangePage(-1); };
+                menu.onNextPage = () => ChangePage(1);
                 menu.onFocus = item => { if (!rebuilding && item != null) focusIndex = menu.items.IndexOf(item); };
 
             var backBtn = FigmaUi.FindButton(UiRoot, "Back");
@@ -126,11 +128,19 @@ namespace Obscure
 
             bool isEqTab = currentCategory == InventoryCategory.Equipment;
             var topCtrl = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 12 } };
-            var sortBtn = FigmaUi.CreateButton($"SORT: {currentSortMode.ToString().ToUpperInvariant()}", "button-slab", 270f);
+            string sortLbl = currentSortMode switch
+            {
+                EquipmentSortMode.RarityDesc => "RARITY",
+                EquipmentSortMode.LevelDesc => "LEVEL",
+                EquipmentSortMode.Slot => "SLOT",
+                EquipmentSortMode.Name => "NAME",
+                _ => "VALUE"
+            };
+            var sortBtn = FigmaUi.CreateCompactButton($"SORT: {sortLbl}", 240f);
             sortBtn.style.marginRight = 10;
             sortBtn.SetEnabled(isEqTab);
             string fltName = currentSlotFilter.HasValue ? EquipmentSlots.DisplayName(currentSlotFilter.Value).ToUpperInvariant() : "ALL";
-            var filterBtn = FigmaUi.CreateButton($"FILTER: {fltName}", "button-slab", 270f);
+            var filterBtn = FigmaUi.CreateCompactButton($"FILTER: {fltName}", 240f);
             filterBtn.SetEnabled(isEqTab);
             topCtrl.Add(sortBtn);
             topCtrl.Add(filterBtn);
@@ -139,13 +149,13 @@ namespace Obscure
             FigmaUi.ApplyDefaultFocusVisual(menu.Add(filterBtn, "Filter", CycleFilter, interactable: isEqTab));
 
             // 10x4 Item Grid
-            int total = CategoryCount(currentCategory);
+            int total = isEqTab ? GetCurrentEquipmentList().Count : CategoryCount(currentCategory);
             int totalPages = Math.Max(1, (total + ItemsPerPage - 1) / ItemsPerPage);
             if (pageIndex >= totalPages) pageIndex = totalPages - 1;
             int pageCount = Math.Max(0, Math.Min(ItemsPerPage, total - pageIndex * ItemsPerPage));
             selectedIndex = pageCount > 0 ? Mathf.Clamp(selectedIndex, 0, pageCount - 1) : 0;
 
-            var grid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 680, height = 270 } };
+            var grid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, width = 780, height = 316 } };
             int gridStartMenuIdx = menu.items.Count;
             var gridMenuItems = new List<UitkMenu.Item>();
             for (int i = 0; i < ItemsPerPage; i++)
@@ -155,10 +165,10 @@ namespace Obscure
                 var info = CellContent(itemIdx);
                 bool has = info.has, sel = has && i == selectedIndex;
                 var cell = FigmaUi.InstantiateTemplate(sel ? "Item-Slot-Selected" : has ? "Item-Slot-Filled" : "Item-Slot-Empty") ?? new VisualElement();
-                cell.style.width = 56;
-                cell.style.height = 56;
-                cell.style.marginRight = 8;
-                cell.style.marginBottom = 8;
+                cell.style.width = 68;
+                cell.style.height = 68;
+                cell.style.marginRight = (i % Cols) < Cols - 1 ? 10 : 0;
+                cell.style.marginBottom = 10;
                 FigmaUi.SetInstanceText(cell, "text-0", has ? info.badge : "");
                 if (has && info.tint.HasValue)
                 {
@@ -352,12 +362,9 @@ namespace Obscure
             bool canDiscard = hasSel && currentCategory != InventoryCategory.KeyItems;
             bool canUse = hasSel && currentCategory == InventoryCategory.Consumables;
             var r1 = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginBottom = 8, flexShrink = 0 } };
-            var eqBtn = FigmaUi.CreateButton("Equip", "button-slab", 110f); eqBtn.SetEnabled(isEq);
-            eqBtn.style.paddingLeft = 8; eqBtn.style.paddingRight = 8;
-            var upBtn = FigmaUi.CreateButton("Upgrade", "button-slab", 110f); upBtn.SetEnabled(isEq);
-            upBtn.style.paddingLeft = 8; upBtn.style.paddingRight = 8;
-            var sellBtn = FigmaUi.CreateButton(confirmSellActive ? "Confirm?" : "Sell", confirmSellActive ? "button-danger" : "button-slab", 110f); sellBtn.SetEnabled(isEq);
-            sellBtn.style.paddingLeft = 8; sellBtn.style.paddingRight = 8;
+            var eqBtn = FigmaUi.CreateCompactButton("Equip", 110f); eqBtn.SetEnabled(isEq);
+            var upBtn = FigmaUi.CreateCompactButton("Upgrade", 110f); upBtn.SetEnabled(isEq);
+            var sellBtn = FigmaUi.CreateCompactButton(confirmSellActive ? "Confirm?" : "Sell", 110f, confirmSellActive ? "button-danger" : "button-slab"); sellBtn.SetEnabled(isEq);
             r1.Add(eqBtn); r1.Add(upBtn); r1.Add(sellBtn);
             host.Add(r1);
 
@@ -378,6 +385,7 @@ namespace Obscure
 
         void CycleSortMode()
         {
+            confirmSellActive = false;
             currentSortMode = currentSortMode switch
             {
                 EquipmentSortMode.RarityDesc => EquipmentSortMode.LevelDesc,
@@ -391,6 +399,7 @@ namespace Obscure
 
         void CycleFilter()
         {
+            confirmSellActive = false;
             currentSlotFilter = currentSlotFilter switch
             {
                 null => EquipmentSlot.MainHand,
@@ -406,7 +415,7 @@ namespace Obscure
             Refresh();
         }
 
-        void ChangePage(int delta) { pageIndex = Math.Max(0, pageIndex + delta); selectedIndex = 0; Refresh(); }
+        void ChangePage(int delta) { confirmSellActive = false; pageIndex = Math.Max(0, pageIndex + delta); selectedIndex = 0; Refresh(); }
         void SelectItem(int slotIndex) { selectedIndex = slotIndex; confirmSellActive = false; Refresh(); }
 
         EquipmentInstance GetSelectedEquipment()
@@ -470,9 +479,15 @@ namespace Obscure
             if (currentCategory == InventoryCategory.Equipment)
             {
                 var eq = GetSelectedEquipment(); if (eq == null) return;
-                if (eq.isEquipped) { Say("CANNOT DISCARD EQUIPPED ITEM. UNEQUIP IT FIRST."); return; }
-                inventory.RemoveEquipment(eq.instanceId);
-                Say($"DISCARDED {eq.Definition?.name}.");
+                if (eq.isEquipped) { Sfx.Play(Sound.Deny); Say("CANNOT DISCARD EQUIPPED ITEM. UNEQUIP IT FIRST."); return; }
+                FigmaUi.ShowConfirmationModal(UiRoot, "DISCARD EQUIPMENT",
+                    $"Permanently discard {eq.Definition?.name ?? "item"}?\nThis cannot be undone.",
+                    "DISCARD",
+                    () =>
+                    {
+                        inventory.RemoveEquipment(eq.instanceId);
+                        Say($"DISCARDED {eq.Definition?.name}.");
+                    });
             }
             else if (currentCategory == InventoryCategory.Consumables && SelectedStackIndex < inventory.consumables.Count)
             {
@@ -497,24 +512,95 @@ namespace Obscure
             if (currentCategory != InventoryCategory.Consumables) return;
             if (SelectedStackIndex >= inventory.consumables.Count || party == null || party.Count == 0) return;
             var c = inventory.consumables[SelectedStackIndex]; var itemDef = c.Definition; if (itemDef == null) return;
-            if (itemDef.isRevive)
+
+            OpenHeroTargetModal($"Use {itemDef.name}", u =>
             {
-                var deadTarget = party.FirstOrDefault(u => !u.Alive);
-                if (deadTarget == null) { Say("NO FALLEN ALLY TO REVIVE."); return; }
-                float pct = itemDef.reviveHpPercent > 0 ? itemDef.reviveHpPercent : 0.30f;
-                deadTarget.hp = Math.Max(1, (int)Math.Round(deadTarget.stats.maxHp * pct));
-                deadTarget.RecalculateStats();
+                if (itemDef.isRevive) return !u.Alive ? "FAINTED · REVIVE" : "ALREADY ALIVE";
+                if (!u.Alive) return "FAINTED";
+                bool needsHp = itemDef.heal > 0 && u.hp < u.stats.maxHp;
+                bool needsMp = itemDef.mana > 0 && u.mp < u.stats.maxMp;
+                if (!needsHp && !needsMp && (itemDef.heal > 0 || itemDef.mana > 0)) return "FULL HP/MP";
+                return $"HP {u.hp}/{u.stats.maxHp} · MP {u.mp}/{u.stats.maxMp}";
+            }, u =>
+            {
+                if (itemDef.isRevive) return !u.Alive;
+                if (!u.Alive) return false;
+                if (itemDef.heal > 0 && u.hp < u.stats.maxHp) return true;
+                if (itemDef.mana > 0 && u.mp < u.stats.maxMp) return true;
+                return itemDef.heal <= 0 && itemDef.mana <= 0;
+            }, target =>
+            {
+                if (itemDef.isRevive)
+                {
+                    float pct = itemDef.reviveHpPercent > 0 ? itemDef.reviveHpPercent : 0.30f;
+                    target.hp = Math.Max(1, (int)Math.Round(target.stats.maxHp * pct));
+                    target.RecalculateStats();
+                    inventory.RemoveConsumable(c.itemId, 1); Game.I?.Run?.Items?.Remove(c.itemId);
+                    Sfx.Play(Sound.Heal);
+                    Say($"REVIVED {target.name} WITH {target.hp} HP!");
+                    return;
+                }
+                if (itemDef.heal > 0) target.Heal(itemDef.heal);
+                if (itemDef.mana > 0) target.mp = Math.Min(target.stats.maxMp, target.mp + itemDef.mana);
                 inventory.RemoveConsumable(c.itemId, 1); Game.I?.Run?.Items?.Remove(c.itemId);
                 Sfx.Play(Sound.Heal);
-                Say($"REVIVED {deadTarget.name} WITH {deadTarget.hp} HP!");
-                return;
+                Say($"USED {itemDef.name} ON {target.name}.");
+            });
+        }
+
+        void OpenHeroTargetModal(string title, Func<Unit, string> subOf, Func<Unit, bool> canUseOn, Action<Unit> onPick)
+        {
+            if (UiRoot == null || party == null || party.Count == 0) return;
+            Sfx.Play(Sound.ModalOpen);
+            var backdrop = new VisualElement { name = "InventoryHeroPickerModal" };
+            backdrop.AddToClassList("uitk-modal-backdrop");
+            backdrop.pickingMode = PickingMode.Position;
+
+            var panel = new VisualElement();
+            panel.AddToClassList("uitk-modal-panel");
+            panel.style.width = 520;
+
+            var tLbl = new UiLabel(title.ToUpperInvariant());
+            tLbl.AddToClassList("uitk-modal-title");
+            panel.Add(tLbl);
+            var div = new VisualElement();
+            div.AddToClassList("uitk-modal-divider");
+            panel.Add(div);
+
+            var modalGo = new GameObject("InventoryHeroPickerMenu");
+            var modalMenu = modalGo.AddComponent<UitkMenu>();
+            modalMenu.AttachRoot(backdrop);
+            bool closed = false;
+            void Close()
+            {
+                if (closed) return;
+                closed = true;
+                backdrop.RemoveFromHierarchy();
+                if (modalGo == null) return;
+                if (Application.isPlaying) UnityEngine.Object.Destroy(modalGo);
+                else UnityEngine.Object.DestroyImmediate(modalGo);
             }
-            var target = party.FirstOrDefault(u => u.Alive && (u.hp < u.stats.maxHp || u.mp < u.stats.maxMp)) ?? party[0];
-            if (itemDef.heal > 0) target.Heal(itemDef.heal);
-            if (itemDef.mana > 0) target.mp = Math.Min(target.stats.maxMp, target.mp + itemDef.mana);
-            inventory.RemoveConsumable(c.itemId, 1); Game.I?.Run?.Items?.Remove(c.itemId);
-            Sfx.Play(Sound.Heal);
-            Say($"USED {itemDef.name} ON {target.name}.");
+            backdrop.RegisterCallback<DetachFromPanelEvent>(_ => Close());
+            modalMenu.onBack = Close;
+
+            foreach (var u in party)
+            {
+                var unit = u;
+                bool ok = canUseOn(unit);
+                var row = FigmaUi.CreateFlatRow($"{unit.name}  ({subOf(unit)})", ok ? "SELECT" : "NO", ok ? "uitk-badge-ok" : "uitk-badge-err", 464f);
+                row.style.marginBottom = 6;
+                panel.Add(row);
+                FigmaUi.ApplyDefaultFocusVisual(modalMenu.Add(row, unit.name, () => { Close(); onPick(unit); }, interactable: ok), row);
+            }
+
+            var cancelBtn = FigmaUi.CreateButton("CANCEL", "button-slab", 160f);
+            cancelBtn.style.marginTop = 10;
+            cancelBtn.style.alignSelf = UnityEngine.UIElements.Align.Center;
+            panel.Add(cancelBtn);
+            FigmaUi.ApplyDefaultFocusVisual(modalMenu.Add(cancelBtn, "CANCEL", Close), cancelBtn);
+
+            backdrop.Add(panel);
+            UiRoot.Add(backdrop);
         }
     }
 }

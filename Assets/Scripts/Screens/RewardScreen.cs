@@ -89,7 +89,10 @@ namespace Obscure
             var goldTotalLbl = UiRoot.Q<UiLabel>(className: "_120-144-vars");
             if (goldTotalLbl != null)
             {
-                goldTotalLbl.text = Run != null ? $"{Run.Gold} › {Run.Gold + currentOffer.gold}" : $"+{currentOffer.gold}";
+                goldTotalLbl.text = Run != null ? $"{Run.Gold:#,##0} › {Run.Gold + currentOffer.gold:#,##0}" : $"+{currentOffer.gold:#,##0}";
+                goldTotalLbl.style.left = StyleKeyword.Auto;
+                goldTotalLbl.style.right = 10;
+                goldTotalLbl.style.unityTextAlign = TextAnchor.MiddleRight;
             }
 
             string[] spriteClasses = { "sprite-knight", "sprite-rogue", "sprite-mage", "sprite-healer" };
@@ -152,12 +155,20 @@ namespace Obscure
                         }).StartingIn(300 + leveled.Count * 200);
                 }
 
+                if (frame != null)
+                {
+                    var border = levels > 0 ? Palette.Gold2 : Palette.Ink5;
+                    frame.style.borderTopColor = border; frame.style.borderBottomColor = border;
+                    frame.style.borderLeftColor = border; frame.style.borderRightColor = border;
+                }
                 if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = fell ? Palette.Mist3 : Palette.Mist1; }
                 if (dLbl != null)
                 {
                     dLbl.text = fell ? "KO · +0 EXP" : u.IsMaxLevel && gained == 0 ? "MAX LEVEL" : $"+{gained} EXP";
                     dLbl.style.color = fell ? Palette.HpLow : Palette.Xp;
-                    dLbl.style.left = 292;
+                    dLbl.style.left = 264;
+                    dLbl.style.width = 114;
+                    dLbl.style.unityTextAlign = TextAnchor.MiddleRight;
                 }
                 FigmaUi.SetGaugeFill(g, u.IsMaxLevel ? 1f : (float)u.exp / Mathf.Max(1, u.ExpToNext), Palette.Xp);
                 if (bLbl != null)
@@ -209,7 +220,22 @@ namespace Obscure
                 }
             }
 
-            // Right header
+            if (noteTop != null && noteBottom != null)
+            {
+                var notesCol = new VisualElement
+                {
+                    style = { position = Position.Absolute, left = 40, top = 594, width = 340, height = 84, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden }
+                };
+                screen.Add(notesCol);
+                noteTop.RemoveFromHierarchy();
+                noteBottom.RemoveFromHierarchy();
+                noteTop.style.position = Position.Relative; noteTop.style.left = StyleKeyword.Auto; noteTop.style.top = StyleKeyword.Auto;
+                noteTop.style.width = StyleKeyword.Auto; noteTop.style.marginBottom = 4;
+                noteBottom.style.position = Position.Relative; noteBottom.style.left = StyleKeyword.Auto; noteBottom.style.top = StyleKeyword.Auto;
+                noteBottom.style.width = StyleKeyword.Auto;
+                notesCol.Add(noteTop);
+                notesCol.Add(noteBottom);
+            }
             var rewardHdr = UiRoot.Q<VisualElement>(className: "section-header__i-32");
             if (rewardHdr != null)
                 FigmaUi.SetInstanceText(rewardHdr, "text-0", currentOffer.choices.Count > 0 ? "Choose one reward" : "No prize this time");
@@ -244,7 +270,8 @@ namespace Obscure
                 name = "RewardConfirmHost",
                 style =
                 {
-                    position = Position.Absolute, left = 428, top = 528, width = 812, height = 150,
+                    position = Position.Absolute, left = 428, top = 524, width = 812, height = 160,
+                    paddingLeft = 10, paddingRight = 10, paddingTop = 6, paddingBottom = 12,
                     flexDirection = FlexDirection.Column, justifyContent = Justify.SpaceBetween,
                     overflow = Overflow.Hidden
                 }
@@ -482,140 +509,142 @@ namespace Obscure
                 var selOpt = currentOffer.choices[selectedChoiceIdx];
                 var (selLabel, selDetail) = RewardGenerator.Describe(selOpt, Run?.ModifierManager, currentParty);
 
+                // State B/C: Hero selector for Equipment OR Relic/Consumable/Upgrade/Gold + Modifier picker if offered
                 if (selOpt.kind == RewardKind.Equipment && Database.Equipment.TryGetValue(selOpt.id, out var eqDef))
-                {
-                    // State B: Equipment Selected — Hero selector + Back + Store in bag + Confirm & equip
-                    var hdr = new UiLabel($"GIVE {eqDef.name.ToUpperInvariant()} TO")
                     {
-                        style = { fontSize = 13, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
-                    };
-                    confirmHost.Add(hdr);
-
-                    var heroRow = new VisualElement
-                    {
-                        style = { flexDirection = FlexDirection.Row, alignItems = UiAlign.Center, marginBottom = 6 }
-                    };
-                    int bestHeroIdx = FindBestHeroForEquipment(eqDef);
-
-                    int heroCount = Mathf.Min(currentParty.Count, 4);
-                    for (int h = 0; h < heroCount; h++)
-                    {
-                        int hIdx = h;
-                        var u = currentParty[h];
-                        bool canEquip = CanHeroEquip(u, eqDef, out _);
-                        bool isPicked = selectedHeroIdx == h;
-                        bool isBest = canEquip && h == bestHeroIdx;
-
-                        var hCard = new VisualElement
+                        var hdr = new UiLabel($"GIVE {eqDef.name.ToUpperInvariant()} TO")
                         {
-                            style =
-                            {
-                                flexDirection = FlexDirection.Row, alignItems = UiAlign.Center,
-                                paddingTop = 5, paddingBottom = 5, paddingLeft = 8, paddingRight = 8,
-                                marginRight = h < heroCount - 1 ? 8 : 0,
-                                flexGrow = 1, flexBasis = 0, minWidth = 0, maxWidth = 197, height = 52,
-                                overflow = Overflow.Hidden,
-                                borderTopWidth = isPicked ? 3 : 2, borderBottomWidth = isPicked ? 3 : 2,
-                                borderLeftWidth = isPicked ? 3 : 2, borderRightWidth = isPicked ? 3 : 2,
-                                backgroundColor = isPicked ? Palette.Hex(0x2B2210) : Palette.Ink2,
-                                borderTopColor = isPicked ? Palette.Gold2 : Palette.Ink5,
-                                borderBottomColor = isPicked ? Palette.Gold2 : Palette.Ink5,
-                                borderLeftColor = isPicked ? Palette.Gold2 : Palette.Ink5,
-                                borderRightColor = isPicked ? Palette.Gold2 : Palette.Ink5,
-                                opacity = canEquip ? 1f : 0.45f
-                            }
+                            style = { fontSize = 13, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
                         };
+                        confirmHost.Add(hdr);
 
-                        var spr = new VisualElement { style = { width = 28, height = 34, marginRight = 8, flexShrink = 0 } };
-                        if (u.sprite != null && u.sprite.Length > 0)
-                            FigmaUi.SetBackgroundContain(spr, FigmaUi.GetSpriteTexture(u.sprite, "rw_h_" + (u.classDef?.id ?? u.name)));
-                        hCard.Add(spr);
-
-                        var txtCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
-                        txtCol.Add(new UiLabel(u.name) { style = { fontSize = 15, color = Palette.Mist1 } });
-                        string subTxt = !canEquip ? "CAN'T USE" : (isBest ? "✓ " : "") + GainText(u, eqDef);
-                        txtCol.Add(new UiLabel(subTxt)
+                        var heroRow = new VisualElement
                         {
-                            style = { fontSize = 11, color = !canEquip ? Palette.Mist3 : (isBest ? Palette.Ok : Palette.Gold2) }
-                        });
-                        hCard.Add(txtCol);
-                        heroRow.Add(hCard);
+                            style = { flexDirection = FlexDirection.Row, alignItems = UiAlign.Center, marginBottom = 6 }
+                        };
+                        int bestHeroIdx = FindBestHeroForEquipment(eqDef);
 
-                        if (canEquip)
+                        int heroCount = Mathf.Min(currentParty.Count, 4);
+                        for (int h = 0; h < heroCount; h++)
                         {
-                            var hItem = menu.Add(hCard, $"Give to {u.name}", () =>
+                            int hIdx = h;
+                            var u = currentParty[h];
+                            bool canEquip = CanHeroEquip(u, eqDef, out _);
+                            bool isPicked = selectedHeroIdx == h;
+                            bool isBest = canEquip && h == bestHeroIdx;
+
+                            var hCard = new VisualElement
                             {
-                                selectedHeroIdx = hIdx;
-                                RebuildInteractive(focusConfirm: true);
-                            });
-                            hItem.visual = on =>
-                            {
-                                hCard.style.backgroundColor = isPicked ? Palette.Hex(0x2B2210) : (on ? Palette.Hex(0x1E2640) : Palette.Ink2);
-                                var b = on ? Palette.Mist1 : (isPicked ? Palette.Gold2 : Palette.Ink5);
-                                hCard.style.borderTopColor = b; hCard.style.borderBottomColor = b;
-                                hCard.style.borderLeftColor = b; hCard.style.borderRightColor = b;
+                                style =
+                                {
+                                    flexDirection = FlexDirection.Row, alignItems = UiAlign.Center,
+                                    paddingTop = 5, paddingBottom = 5, paddingLeft = 8, paddingRight = 8,
+                                    marginRight = h < heroCount - 1 ? 8 : 0,
+                                    flexGrow = 1, flexBasis = 0, minWidth = 0, maxWidth = 197, height = 52,
+                                    overflow = Overflow.Hidden,
+                                    borderTopWidth = isPicked ? 3 : 2, borderBottomWidth = isPicked ? 3 : 2,
+                                    borderLeftWidth = isPicked ? 3 : 2, borderRightWidth = isPicked ? 3 : 2,
+                                    backgroundColor = isPicked ? Palette.Hex(0x2B2210) : Palette.Ink2,
+                                    borderTopColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                    borderBottomColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                    borderLeftColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                    borderRightColor = isPicked ? Palette.Gold2 : Palette.Ink5,
+                                    opacity = canEquip ? 1f : 0.45f
+                                }
                             };
-                            hItem.visual(false);
+
+                            var spr = new VisualElement { style = { width = 28, height = 34, marginRight = 8, flexShrink = 0 } };
+                            if (u.sprite != null && u.sprite.Length > 0)
+                                FigmaUi.SetBackgroundContain(spr, FigmaUi.GetSpriteTexture(u.sprite, "rw_h_" + (u.classDef?.id ?? u.name)));
+                            hCard.Add(spr);
+
+                            var txtCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                            txtCol.Add(new UiLabel(u.name) { style = { fontSize = 15, color = Palette.Mist1 } });
+                            string subTxt = !canEquip ? "CAN'T USE" : (isBest ? "✓ " : "") + GainText(u, eqDef);
+                            txtCol.Add(new UiLabel(subTxt)
+                            {
+                                style = { fontSize = 11, color = !canEquip ? Palette.Mist3 : (isBest ? Palette.Ok : Palette.Gold2) }
+                            });
+                            hCard.Add(txtCol);
+                            heroRow.Add(hCard);
+
+                            if (canEquip)
+                            {
+                                var hItem = menu.Add(hCard, $"Give to {u.name}", () =>
+                                {
+                                    selectedHeroIdx = hIdx;
+                                    RebuildInteractive(focusConfirm: true);
+                                });
+                                hItem.visual = on =>
+                                {
+                                    hCard.style.backgroundColor = isPicked ? Palette.Hex(0x2B2210) : (on ? Palette.Hex(0x1E2640) : Palette.Ink2);
+                                    var b = on ? Palette.Mist1 : (isPicked ? Palette.Gold2 : Palette.Ink5);
+                                    hCard.style.borderTopColor = b; hCard.style.borderBottomColor = b;
+                                    hCard.style.borderLeftColor = b; hCard.style.borderRightColor = b;
+                                };
+                                hItem.visual(false);
+                            }
                         }
-                    }
-                    confirmHost.Add(heroRow);
+                        confirmHost.Add(heroRow);
 
-                    var btnRow = new VisualElement
-                    {
-                        style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
-                    };
-                    btnRow.Add(MakeSlabActionButton("Back", () =>
-                    {
-                        int prev = selectedChoiceIdx;
-                        selectedChoiceIdx = -1;
-                        selectedHeroIdx = -1;
-                        RebuildInteractive(focusIndex: prev);
-                    }, marginRight: 8));
-                    btnRow.Add(MakeSlabActionButton("Store in bag", () => Claim(selectedChoiceIdx, -1), marginRight: 8));
+                        if (hasModifierOffers)
+                            confirmHost.Add(BuildCompactModifierRow());
 
-                    string confirmText = selectedHeroIdx >= 0 && selectedHeroIdx < currentParty.Count
-                        ? $"Confirm & equip on {currentParty[selectedHeroIdx].name}"
-                        : "Confirm & store in bag";
-                    confirmFocusIdx = menu.items.Count;
-                    btnRow.Add(MakePrimaryConfirmButton(confirmText, () => Claim(selectedChoiceIdx, selectedHeroIdx)));
-                    confirmHost.Add(btnRow);
-                }
-                else
-                {
-                    // State C: Relic / Consumable / Upgrade / Gold Selected
-                    var topCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
-                    topCol.Add(new UiLabel($"CONFIRM REWARD · {FormatCardTitle(selOpt, selLabel).ToUpperInvariant()}")
-                    {
-                        style = { fontSize = 14, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
-                    });
+                        var btnRow = new VisualElement
+                        {
+                            style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
+                        };
+                        btnRow.Add(MakeSlabActionButton("Back", () =>
+                        {
+                            int prev = selectedChoiceIdx;
+                            selectedChoiceIdx = -1;
+                            selectedHeroIdx = -1;
+                            RebuildInteractive(focusIndex: prev);
+                        }, marginRight: 8));
+                        btnRow.Add(MakeSlabActionButton("Store in bag", () => Claim(selectedChoiceIdx, -1), marginRight: 8));
 
-                    if (hasModifierOffers)
-                    {
-                        topCol.Add(BuildCompactModifierRow());
+                        string confirmText = selectedHeroIdx >= 0 && selectedHeroIdx < currentParty.Count
+                            ? $"Confirm & equip on {currentParty[selectedHeroIdx].name}"
+                            : "Confirm & store in bag";
+                        confirmFocusIdx = menu.items.Count;
+                        btnRow.Add(MakePrimaryConfirmButton(confirmText, () => Claim(selectedChoiceIdx, selectedHeroIdx)));
+                        confirmHost.Add(btnRow);
                     }
                     else
                     {
-                        topCol.Add(new UiLabel(selDetail.ToUpperInvariant())
+                        var topCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                        topCol.Add(new UiLabel($"CONFIRM REWARD · {FormatCardTitle(selOpt, selLabel).ToUpperInvariant()}")
                         {
-                            style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                            style = { fontSize = 14, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
                         });
-                    }
-                    confirmHost.Add(topCol);
 
-                    var btnRow = new VisualElement
-                    {
-                        style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
-                    };
-                    btnRow.Add(MakeSlabActionButton("Back", () =>
-                    {
-                        int prev = selectedChoiceIdx;
-                        selectedChoiceIdx = -1;
-                        RebuildInteractive(focusIndex: prev);
-                    }, marginRight: 8));
-                    confirmFocusIdx = menu.items.Count;
-                    btnRow.Add(MakePrimaryConfirmButton("Confirm reward", () => Claim(selectedChoiceIdx, -1)));
-                    confirmHost.Add(btnRow);
-                }
+                        if (hasModifierOffers)
+                        {
+                            topCol.Add(BuildCompactModifierRow());
+                        }
+                        else
+                        {
+                            topCol.Add(new UiLabel(selDetail.ToUpperInvariant())
+                            {
+                                style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                            });
+                        }
+                        confirmHost.Add(topCol);
+
+                        var btnRow = new VisualElement
+                        {
+                            style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
+                        };
+                        btnRow.Add(MakeSlabActionButton("Back", () =>
+                        {
+                            int prev = selectedChoiceIdx;
+                            selectedChoiceIdx = -1;
+                            RebuildInteractive(focusIndex: prev);
+                        }, marginRight: 8));
+                        confirmFocusIdx = menu.items.Count;
+                        btnRow.Add(MakePrimaryConfirmButton("Confirm reward", () => Claim(selectedChoiceIdx, -1)));
+                        confirmHost.Add(btnRow);
+                    }
             }
 
             // Focus target item cleanly
@@ -668,8 +697,8 @@ namespace Obscure
                 {
                     style =
                     {
-                        width = 262, height = 60, marginRight = i < 2 ? 8 : 0,
-                        paddingLeft = 8, paddingRight = 8, paddingTop = 2, paddingBottom = 2,
+                        width = 262, minHeight = 52, marginRight = i < 2 ? 8 : 0,
+                        paddingLeft = 8, paddingRight = 8, paddingTop = 4, paddingBottom = 4,
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                         backgroundColor = isSel ? Palette.Hex(0x1E3328) : Palette.Ink2,
                         borderTopColor = isSel ? Palette.Ok : Palette.Ink5,
@@ -681,12 +710,12 @@ namespace Obscure
                 };
                 box.Add(new UiLabel((isSel ? "✓ " : "") + mLabel.ToUpperInvariant())
                 {
-                    style = { fontSize = 10, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.NoWrap, flexShrink = 0 }
+                    style = { fontSize = 12, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.NoWrap, flexShrink = 0, overflow = Overflow.Hidden }
                 });
                 // The effect itself, so the choice is informed (not only in the tooltip).
                 box.Add(new UiLabel(mDetail)
                 {
-                    style = { fontSize = 10, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
                 });
                 row.Add(box);
 

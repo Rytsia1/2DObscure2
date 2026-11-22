@@ -26,6 +26,8 @@ namespace Obscure
         bool feedbackBad;
         int focusIndex;
         int dialogFocusIndex = -1;
+        float savedScrollY;
+        ScrollView poolScroll;
         bool rebuilding;
         readonly Dictionary<UitkMenu.Item, int> portraitItems = new Dictionary<UitkMenu.Item, int>();
 
@@ -54,7 +56,7 @@ namespace Obscure
         List<TalentDef> Pool(Unit hero)
         {
             string cid = hero.classDef?.id ?? "";
-            return TalentSystem.AllTalents.Values.Where(t => t.IsCompatibleWithClass(cid))
+            return TalentSystem.AllTalents.Values.Where(t => t.IsCompatibleWithClass(cid) && t.isDesignFinalized)
                 .OrderBy(t => hero.HasTalent(t.id)).ThenBy(t => t.category).ThenBy(t => t.name).ToList();
         }
 
@@ -85,6 +87,7 @@ namespace Obscure
             rebuilding = true;
             try
             {
+                if (poolScroll != null) savedScrollY = poolScroll.scrollOffset.y;
                 UiRoot = FigmaUi.Mount(Root.gameObject, "17---Talent-Selection");
                 FigmaUi.DestroyMenu(ref dialogMenu);
                 FigmaUi.DestroyMenu(ref menu);
@@ -96,13 +99,6 @@ namespace Obscure
                 {
                     if (rebuilding || s == null) return;
                     focusIndex = menu.items.IndexOf(s);
-                    if (portraitItems.TryGetValue(s, out int idx) && idx != heroIndex && !respecOpen)
-                    {
-                        heroIndex = idx;
-                        selectedId = null;
-                        feedback = null;
-                        Rebuild();
-                    }
                 };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
@@ -177,19 +173,34 @@ namespace Obscure
                 };
                 it.visual(false);
             }
-            if (switcherRow != null && party.Count > 1)
+            if (switcherRow != null)
             {
                 var qCap = FigmaUi.FindLabel(switcherRow, "Q")?.parent;
                 var eCap = FigmaUi.FindLabel(switcherRow, "E")?.parent;
-                if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
-                if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                if (party.Count > 1)
+                {
+                    if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
+                    if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                }
+                else
+                {
+                    if (qCap != null && qCap != switcherRow) qCap.style.display = DisplayStyle.None;
+                    if (eCap != null && eCap != switcherRow) eCap.style.display = DisplayStyle.None;
+                }
             }
+
+            var heroLbl = new UiLabel($"{hero.name} · {ClassName(hero)} · Lv {hero.level}")
+            {
+                style = { position = Position.Absolute, left = 460, top = 26, fontSize = 16, color = Palette.Mist1, maxWidth = 340, overflow = Overflow.Hidden }
+            };
+            UiRoot.Add(heroLbl);
 
             var scrollTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "SCROLL OF EMPTINESS × 1");
             if (scrollTag != null)
             {
                 scrollTag.AddToClassList("uitk-tag-btn");
-                FigmaUi.SetInstanceText(scrollTag, "text-0", $"SCROLL OF EMPTINESS × {Scrolls}");
+                FigmaUi.SetInstanceText(scrollTag, "text-0", $"RESPEC · SCROLL × {Scrolls}");
+                FigmaUi.AnchorRight(scrollTag, 24f);
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(scrollTag, "Scroll of Emptiness", () => { respecOpen = true; respecTarget = heroIndex; dialogFocusIndex = -1; Rebuild(); }));
             }
         }
@@ -210,7 +221,10 @@ namespace Obscure
                 cell.Add(node);
                 var col = new VisualElement();
                 col.Add(new UiLabel($"LV {lv}") { style = { fontSize = 12, color = now ? Palette.Gold1 : done ? Palette.Mist1 : Palette.Mist3 } });
-                col.Add(new UiLabel(done ? (TalentSystem.GetTalent(hero.selectedTalentIds[i])?.name ?? "OWNED") : now ? "CHOOSING" : "LOCKED") { style = { fontSize = 12, color = now ? Palette.Gold2 : Palette.Mist3, maxWidth = 125 } });
+                col.Add(new UiLabel(done ? (TalentSystem.GetTalent(hero.selectedTalentIds[i])?.name ?? "OWNED") : now ? "CHOOSING" : "LOCKED")
+                {
+                    style = { fontSize = 12, color = now ? Palette.Gold2 : Palette.Mist3, maxWidth = 125, maxHeight = 32, whiteSpace = WhiteSpace.Normal, overflow = Overflow.Hidden }
+                });
                 cell.Add(col);
                 strip.Add(cell);
             }
@@ -241,7 +255,7 @@ namespace Obscure
             }
             screen.Add(tabRow);
 
-            var scroll = FigmaUi.CreateVerticalScrollView();
+            var scroll = poolScroll = FigmaUi.CreateVerticalScrollView();
             scroll.style.position = Position.Absolute;
             scroll.style.left = 44;
             scroll.style.top = 232;
@@ -263,7 +277,7 @@ namespace Obscure
                 {
                     style =
                     {
-                        width = 246, height = 148, marginRight = 8, marginBottom = 10,
+                        width = 246, minHeight = 166, marginRight = 8, marginBottom = 10,
                         paddingLeft = 12, paddingRight = 12, paddingTop = 10, paddingBottom = 10,
                         overflow = Overflow.Hidden,
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
@@ -274,7 +288,7 @@ namespace Obscure
                 if (tag != null)
                 {
                     FigmaUi.SetInstanceText(tag, "text-0", td.category == TalentCategory.Shared ? "SHARED" : ClassName(hero).ToUpperInvariant());
-                    tag.style.marginBottom = 8;
+                    tag.style.marginBottom = 6;
                     card.Add(tag);
                 }
                 string fx = (owned ? "OWNED · " : "") + (td.description ?? "");
@@ -286,6 +300,8 @@ namespace Obscure
                 {
                     if (dir == 0 && cardIdx >= cols) return firstCardMenuIdx + cardIdx - cols;
                     if (dir == 2 && cardIdx + cols < shown.Count) return firstCardMenuIdx + cardIdx + cols;
+                    if (dir == 3 && cardIdx % cols > 0) return firstCardMenuIdx + cardIdx - 1;
+                    if (dir == 1 && cardIdx % cols < cols - 1 && cardIdx + 1 < shown.Count) return firstCardMenuIdx + cardIdx + 1;
                     return -1;
                 };
                 it.visual = on =>
@@ -297,6 +313,8 @@ namespace Obscure
                 it.visual(false);
             }
             screen.Add(scroll);
+            if (savedScrollY > 0f)
+                FigmaUi.OnFirstLayout(scroll, () => { if (poolScroll == scroll) scroll.scrollOffset = new Vector2(0, savedScrollY); });
         }
 
         void BuildDetail(VisualElement screen, Unit hero)
@@ -351,7 +369,7 @@ namespace Obscure
             backdrop.AddToClassList("uitk-modal-backdrop");
             var card = new VisualElement();
             card.AddToClassList("uitk-modal-panel");
-            card.style.width = 620;
+            card.style.width = 660;
             card.style.borderTopColor = Palette.Gold3; card.style.borderBottomColor = Palette.Gold3;
             card.style.borderLeftColor = Palette.Gold3; card.style.borderRightColor = Palette.Gold3;
 
@@ -367,8 +385,8 @@ namespace Obscure
             for (int i = 0; i < party.Count; i++)
             {
                 int idx = i; var u = party[i]; bool sel = i == respecTarget;
-                var cCard = FigmaUi.CreateButton($"{u.name} ({u.selectedTalentIds.Count})", "button-slab", 136f);
-                cCard.style.marginRight = 8; cCard.style.fontSize = 14;
+                var cCard = FigmaUi.CreateCompactButton($"{u.name} ({u.selectedTalentIds.Count})", 144f);
+                cCard.style.marginRight = i < party.Count - 1 ? 8 : 0;
                 charRow.Add(cCard);
                 var it = dialogMenu.Add(cCard, u.name, () => { respecTarget = idx; Rebuild(); }, selected: sel);
                 FigmaUi.ApplyDefaultFocusVisual(it);
@@ -384,7 +402,7 @@ namespace Obscure
 
             var btnRow = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd } };
             var cancel = FigmaUi.CreateButton("Cancel", "button-slab", 140f); cancel.style.marginRight = 10;
-            bool canUse = Scrolls > 0 && Bag != null;
+            bool canUse = Scrolls > 0 && Bag != null && target.selectedTalentIds.Count > 0;
             var use = FigmaUi.CreateButton($"Use on {target.name}", canUse ? "button-primary" : "button-slab", 220f);
             use.SetEnabled(canUse);
             btnRow.Add(cancel); btnRow.Add(use);

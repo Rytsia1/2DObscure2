@@ -167,8 +167,8 @@ namespace Obscure.Tests
         {
             yield return Begin();
             Assert.AreEqual("NEW GAME", Focus);
-            yield return Tap(Key.DownArrow); // LOAD GAME
-            yield return Tap(Key.DownArrow); // SETTINGS
+            yield return Tap(Key.DownArrow); // skips disabled LOAD GAME -> SETTINGS (or LOAD GAME if save exists)
+            if (Focus == "LOAD GAME") yield return Tap(Key.DownArrow);
             Assert.AreEqual("SETTINGS", Focus);
             yield return TapAndSettle(Key.Enter);
             Assert.AreEqual(GameState.Settings, State);
@@ -267,7 +267,7 @@ namespace Obscure.Tests
 
                 var texts = ActiveUiTexts();
                 foreach (var p in b.Party) CollectionAssert.Contains(texts, $"{p.unit.hp}/{p.Stats.maxHp}", p.name + " HP row");
-                CollectionAssert.Contains(texts, PixelFont.Wrap(b.Log.Last().ToUpperInvariant(), 158).Split('\n').Last(), "log shows latest line");
+                CollectionAssert.Contains(texts, PixelFont.Wrap(b.Log.Last().ToUpperInvariant(), 296).Split('\n').Last(), "log shows latest line");
                 CollectionAssert.Contains(texts, $"ROUND {b.Round}");
             }
         }
@@ -297,7 +297,8 @@ namespace Obscure.Tests
             {
                 yield return WaitFor(() => stop() || PartyMenuOpen(b), "a turn");
                 if (stop()) yield break;
-                yield return Tap(Key.UpArrow); // wraps from ATTACK to GUARD
+                yield return Tap(Key.UpArrow); // wraps from ATTACK to ANALYSIS
+                yield return Tap(Key.UpArrow); // moves from ANALYSIS to GUARD
                 yield return Tap(Key.Enter);
             }
             Assert.IsTrue(stop(), "condition never reached");

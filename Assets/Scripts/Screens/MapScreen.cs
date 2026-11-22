@@ -33,6 +33,7 @@ namespace Obscure
         readonly List<UitkMenu.Item> nodeItems = new List<UitkMenu.Item>();
 
         VisualElement pauseOverlay;
+        UitkMenu pauseModalMenu;
         VisualElement effectsOverlay;
         UitkMenu effectsModalMenu;
 
@@ -50,6 +51,7 @@ namespace Obscure
             MountFigma("12---Dungeon-Map");
             StripStaticNodesAndPreview();
             FigmaUi.HideByClass(UiRoot, "toast-info__i-2"); // baked "ONE-WAY: OTHER PATHS CLOSE…" rule note
+            FigmaUi.HideInstancesWithText(UiRoot, "RUN PROGRESS");
 
             var available = Run != null ? Run.Available.ToList() : map.nodes.Where(n => n.floor == 0).ToList();
             var current = Run?.Current;
@@ -133,13 +135,13 @@ namespace Obscure
                     var nodeEl = el;
                     item.visual = on =>
                     {
-                        bool lit = on || nd == selected;
-                        var col = lit ? Palette.Gold1 : Palette.Mist1;
+                        bool sel = nd == selected;
+                        var col = on ? Palette.Hex(0xFFF4D2) : sel ? Palette.Gold2 : Palette.Mist1;
                         nodeEl.style.borderTopColor = col;
                         nodeEl.style.borderBottomColor = col;
                         nodeEl.style.borderLeftColor = col;
                         nodeEl.style.borderRightColor = col;
-                        nodeEl.style.backgroundColor = lit ? Palette.Hex(0x2B2210) : Palette.Ink3;
+                        nodeEl.style.backgroundColor = sel ? Palette.Hex(0x2B2210) : on ? Palette.Ink4 : Palette.Ink3;
                     };
                     item.visual(false);
                     nodeOf[item] = nd;
@@ -153,19 +155,22 @@ namespace Obscure
             var partyBtn = FigmaUi.FindButton(UiRoot, "Party");
             if (partyBtn != null)
             {
+                if (partyBtn.parent != null)
+                    FigmaUi.AnchorRight(partyBtn.parent, 24f);
                 partyBtn.style.marginRight = 10;
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(partyBtn, "Party", () => Game.Go(GameState.Party), tooltip: "PARTY, STATUS AND EQUIPMENT"), partyBtn);
             }
 
-            // Add clean horizontal spacing to the baked bottom map legend row
+            // Add clean horizontal spacing to the baked bottom map legend row (outer container holds [chip, label] pairs)
             var combatLegend = FigmaUi.FindLabel(UiRoot, "COMBAT");
-            if (combatLegend?.parent != null)
+            var legendRow = combatLegend?.parent?.parent;
+            if (legendRow != null)
             {
-                var legendRow = combatLegend.parent;
                 for (int i = 0; i < legendRow.childCount; i++)
                 {
-                    var ch = legendRow[i];
-                    ch.style.marginRight = ch is UiLabel ? 14 : 6;
+                    var grp = legendRow[i];
+                    grp.style.marginRight = 14;
+                    if (grp.childCount >= 2) grp[0].style.marginRight = 6;
                 }
             }
 
@@ -186,11 +191,17 @@ namespace Obscure
 
             if (Run != null && Run.HasRace("halfling"))
             {
-                sneakBtn = FigmaUi.CreateButton("Sneak (Halfling)", "button-slab", 180);
-                sneakBtn.style.position = Position.Absolute;
-                sneakBtn.style.left = 736;
-                sneakBtn.style.top = 656;
-                (UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot).Add(sneakBtn);
+                sneakBtn = FigmaUi.CreateCompactButton("Sneak", null, "button-slab");
+                sneakBtn.style.marginRight = 10;
+                if (partyBtn?.parent != null)
+                    partyBtn.parent.Insert(0, sneakBtn);
+                else
+                {
+                    sneakBtn.style.position = Position.Absolute;
+                    sneakBtn.style.left = 736;
+                    sneakBtn.style.top = 656;
+                    (UiRoot.Q<VisualElement>(className: "_12-dungeon-map") ?? UiRoot).Add(sneakBtn);
+                }
                 sneakItem = menu.Add(sneakBtn, "Sneak", () =>
                 {
                     if (selected != null && Run != null && Run.CanSneakNode(selected))
@@ -208,6 +219,8 @@ namespace Obscure
             {
                 if (item != null && nodeOf.TryGetValue(item, out var nd))
                     ShowNode(nd, nodeElOf[nd]);
+                else if ((item == travelItem || item == sneakItem) && selected != null && nodeElOf.TryGetValue(selected, out var selEl))
+                    ShowNode(selected, selEl);
             };
 
             if (available.Count > 0) ShowNode(available[0], nodeElOf[available[0]]);
@@ -383,7 +396,7 @@ namespace Obscure
                 el.style.borderLeftColor = col;
                 el.style.borderRightColor = col;
             }
-            else if (cleared)
+            else if (cleared && !current)
             {
                 el.style.borderTopColor = Palette.Mist3;
                 el.style.borderBottomColor = Palette.Mist3;
@@ -469,7 +482,7 @@ namespace Obscure
                 bool canSneak = Run != null && Run.CanSneakNode(selected);
                 sneakItem.interactable = canSneak;
                 sneakBtn.style.display = canSneak ? DisplayStyle.Flex : DisplayStyle.None;
-                sneakItem.visual?.Invoke(false);
+                sneakItem.visual?.Invoke(menu != null && menu.Current == sneakItem);
             }
 
             if (view != null && arrowLbl != null)
@@ -510,7 +523,14 @@ namespace Obscure
                 var u = party[i];
                 if (fig != null && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fig, FigmaUi.GetSpriteTexture(u.sprite, "map_mini_" + (u.classDef?.id ?? u.name)));
-                if (nLbl != null) { nLbl.text = u.name; nLbl.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow; }
+                if (nLbl != null)
+                {
+                    nLbl.text = u.name;
+                    nLbl.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow;
+                    nLbl.style.maxWidth = 122;
+                    nLbl.style.fontSize = 16;
+                    nLbl.style.overflow = Overflow.Hidden;
+                }
                 float hp = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
                 FigmaUi.SetGaugeFill(hpG, hp, hp < 0.25f ? Palette.HpLow : Palette.Hp);
                 FigmaUi.SetGaugeFill(mpG, (float)u.mp / Mathf.Max(1, u.stats.maxMp), Palette.Mp);
@@ -602,25 +622,27 @@ namespace Obscure
                 int shown = Math.Min(2, chips.Count);
                 for (int i = 0; i < shown; i++)
                 {
-                    var chip = InstantiateEffectChip(chips[i].template, chips[i].glyph, chips[i].name, chips[i].meta);
+                    var compactMeta = chips[i].meta == "DUNGEON" || chips[i].meta == "RELIC" ? "" : chips[i].meta;
+                    var chip = InstantiateEffectChip(chips[i].template, chips[i].glyph, chips[i].name, compactMeta);
                     if (chip != null)
                     {
                         chip.style.marginRight = 8;
                         chipsRow.Add(chip);
                     }
                 }
+                bar.Add(chipsRow);
                 if (chips.Count > shown)
                 {
                     var ov = FigmaUi.InstantiateTemplate("Effect-Chip-Overflow");
                     if (ov != null)
                     {
                         ov.style.flexShrink = 0;
+                        ov.style.marginRight = 10;
                         FigmaUi.SetInstanceText(ov, "text-0", "+");
                         FigmaUi.SetInstanceText(ov, "text-1", $"+{chips.Count - shown}");
-                        chipsRow.Add(ov);
+                        bar.Add(ov);
                     }
                 }
-                bar.Add(chipsRow);
             }
 
             bar.Add(new UiLabel("TAB › DETAILS")
@@ -785,7 +807,7 @@ namespace Obscure
                 {
                     style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, justifyContent = Justify.SpaceBetween, marginBottom = 6 }
                 };
-                var leftGroup = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+                var leftGroup = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 1, overflow = Overflow.Hidden, marginRight = 8 } };
                 if (chip != null) leftGroup.Add(chip);
                 if (statusIcon.HasValue)
                 {
@@ -795,7 +817,7 @@ namespace Obscure
                 topRow.Add(leftGroup);
                 topRow.Add(new UiLabel(rightMeta.ToUpperInvariant())
                 {
-                    style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Mist3, whiteSpace = WhiteSpace.NoWrap }
+                    style = { fontSize = 11, letterSpacing = 0.48f, color = Palette.Mist3, whiteSpace = WhiteSpace.NoWrap, flexShrink = 0 }
                 });
                 box.Add(topRow);
                 box.Add(new UiLabel((desc ?? "").ToUpperInvariant())
@@ -887,6 +909,7 @@ namespace Obscure
         void CloseModals()
         {
             CloseRunEffectsModal();
+            FigmaUi.DestroyMenu(ref pauseModalMenu);
             pauseOverlay?.RemoveFromHierarchy();
             pauseOverlay = null;
         }
@@ -927,15 +950,10 @@ namespace Obscure
             title.style.marginBottom = 14;
             card.Add(title);
 
-            var modalMenu = Root.gameObject.AddComponent<UitkMenu>();
-            modalMenu.AttachRoot(UiRoot);
-            Action closePause = () =>
-            {
-                if (Application.isPlaying) UnityEngine.Object.Destroy(modalMenu);
-                else UnityEngine.Object.DestroyImmediate(modalMenu);
-                CloseModals();
-            };
-            modalMenu.onBack = closePause;
+            pauseModalMenu = Root.gameObject.AddComponent<UitkMenu>();
+            pauseModalMenu.AttachRoot(pauseOverlay);
+            Action closePause = CloseModals;
+            pauseModalMenu.onBack = closePause;
 
             void AddPauseRow(string text, Action go, bool enabled = true, string note = null, Color? tint = null)
             {
@@ -960,7 +978,7 @@ namespace Obscure
                     row.Add(new UiLabel(note) { style = { fontSize = 12, color = Palette.Mist3 } });
                 card.Add(row);
 
-                var item = modalMenu.Add(row, text, go, interactable: enabled);
+                var item = pauseModalMenu.Add(row, text, go, interactable: enabled);
                 item.visual = on =>
                 {
                     row.style.backgroundColor = on && enabled ? Palette.Hex(0x2B2210) : Color.clear;

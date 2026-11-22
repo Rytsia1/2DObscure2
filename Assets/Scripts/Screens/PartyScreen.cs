@@ -117,7 +117,7 @@ namespace Obscure
                     if (numLbl != null) numLbl.text = numerals[i];
                     if (lvLbl != null) lvLbl.text = "";
                     if (fig != null) fig.style.display = DisplayStyle.None;
-                    if (nameLbl != null) { nameLbl.text = "+ Create member"; nameLbl.style.color = Palette.Mist3; }
+                    if (nameLbl != null) { nameLbl.text = "EMPTY SLOT"; nameLbl.style.color = Palette.Mist3; }
                     if (tagRow != null) tagRow.style.display = DisplayStyle.None;
                     if (hpCap != null) hpCap.style.display = DisplayStyle.None;
                     if (mpCap != null) mpCap.style.display = DisplayStyle.None;
@@ -129,9 +129,17 @@ namespace Obscure
                 }
 
                 int cardIdx = i;
+                float cardLeft = 28 + i * 310;
                 var u = party[i];
                 if (numLbl != null) { numLbl.text = numerals[i]; numLbl.style.color = Palette.Mist3; }
-                if (lvLbl != null) { lvLbl.text = $"LV {u.level}"; lvLbl.style.color = Palette.Gold1; }
+                if (lvLbl != null)
+                {
+                    lvLbl.text = $"LV {u.level}";
+                    lvLbl.style.color = Palette.Gold1;
+                    lvLbl.style.left = cardLeft + 216;
+                    lvLbl.style.width = 60;
+                    lvLbl.style.unityTextAlign = TextAnchor.MiddleRight;
+                }
 
                 if (fig != null)
                 {
@@ -152,6 +160,8 @@ namespace Obscure
                 if (tagRow != null)
                 {
                     tagRow.Clear();
+                    tagRow.style.maxWidth = 264;
+                    tagRow.style.overflow = Overflow.Hidden;
                     foreach (var tagText in new[] { u.race?.name ?? "Human", u.classDef?.name ?? u.role ?? "" }.Where(s => !string.IsNullOrEmpty(s)))
                     {
                         var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
@@ -159,6 +169,8 @@ namespace Obscure
                         {
                             FigmaUi.SetInstanceText(tag, "text-0", tagText.ToUpperInvariant());
                             tag.style.marginRight = 6;
+                            var tl = tag.Q<UiLabel>("text-0");
+                            if (tl != null) tl.style.fontSize = 12;
                             tagRow.Add(tag);
                         }
                     }
@@ -168,8 +180,21 @@ namespace Obscure
                 float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
                 FigmaUi.SetGaugeFill(hpGauge, hpRatio, u.Alive && IsLowHp(u) ? Palette.HpLow : Palette.Hp);
                 FigmaUi.SetGaugeFill(mpGauge, mpRatio, Palette.Mp);
-                if (hpVal != null) { hpVal.text = u.hp.ToString(); hpVal.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow; }
-                if (mpVal != null) mpVal.text = u.mp.ToString();
+                if (hpVal != null)
+                {
+                    hpVal.text = u.hp.ToString();
+                    hpVal.style.color = u.Alive ? Palette.Mist1 : Palette.HpLow;
+                    hpVal.style.left = cardLeft + 232;
+                    hpVal.style.width = 44;
+                    hpVal.style.unityTextAlign = TextAnchor.MiddleRight;
+                }
+                if (mpVal != null)
+                {
+                    mpVal.text = u.mp.ToString();
+                    mpVal.style.left = cardLeft + 232;
+                    mpVal.style.width = 44;
+                    mpVal.style.unityTextAlign = TextAnchor.MiddleRight;
+                }
 
                 // Interactive card overlay button for keyboard/mouse selection + KO badge
                 var cardBtn = new Button { name = $"PartyCard_{i}", text = "" };
@@ -241,6 +266,7 @@ namespace Obscure
             {
                 confirmBtn.text = "Done"; // nothing to confirm: party order is fixed and placement is automatic
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(confirmBtn, "Done", () => Game?.Back(BackTo)), confirmBtn);
+                FigmaUi.AnchorRight(confirmBtn.parent, 28f);
             }
 
             menu.onFocus = item =>
@@ -277,9 +303,10 @@ namespace Obscure
             bool cardFocused = menu != null && menu.Current?.element is Button fb && fb.name != null && fb.name.StartsWith("PartyCard_");
             if (cursorArrow != null && party.Count > 0)
             {
+                cursorArrow.text = "▾";
                 cursorArrow.style.display = cardFocused ? DisplayStyle.Flex : DisplayStyle.None;
-                cursorArrow.style.left = 8 + SelectedIndex * 310;
-                cursorArrow.style.top = 230;
+                cursorArrow.style.left = 28 + SelectedIndex * 310 + 138;
+                cursorArrow.style.top = 56;
                 cursorArrow.style.color = Palette.Gold2;
             }
             for (int i = 0; i < cardPanels.Length; i++)
@@ -369,7 +396,7 @@ namespace Obscure
                         {
                             style =
                             {
-                                fontSize = 11,
+                                fontSize = 12,
                                 color = Palette.Mist2,
                                 whiteSpace = WhiteSpace.NoWrap
                             }
@@ -394,7 +421,7 @@ namespace Obscure
                 noteLbl.style.color = ko.Count > 0 ? Palette.Err : low.Count > 0 ? Palette.Ember1 : Palette.Ok;
 
                 // Placement is automatic and cosmetic (CombatView.StagePositions); anchor directly under noteLbl inside Party Overview.
-                var rowsLbl = new UiLabel("IN BATTLE: MELEE STAND IN FRONT, RANGED IN BACK, ROGUE FILLS IN. ROWS DON'T CHANGE WHO GETS HIT.")
+                var rowsLbl = new UiLabel("IN BATTLE: MELEE FRONT, RANGED BACK, ROGUE FILLS IN. ROWS ARE COSMETIC.")
                 {
                     style =
                     {
@@ -402,7 +429,7 @@ namespace Obscure
                         left = 876,
                         top = 564,
                         width = 350,
-                        fontSize = 11,
+                        fontSize = 12,
                         color = Palette.Mist2,
                         whiteSpace = WhiteSpace.Normal,
                     }
@@ -411,7 +438,7 @@ namespace Obscure
                 FigmaUi.OnFirstLayout(noteLbl, () =>
                 {
                     rowsLbl.style.left = noteLbl.layout.x;
-                    rowsLbl.style.top = Mathf.Min(noteLbl.layout.yMax + 8f, 594f);
+                    rowsLbl.style.top = Mathf.Min(noteLbl.layout.yMax + 6f, 598f);
                 });
             }
         }

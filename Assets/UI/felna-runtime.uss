@@ -51,7 +51,9 @@
 .the-sunken-crypt-vars-4,
 .create-character-vars-2,
 .victory-vars-2,
-.zoroa-harvester-of-souls-vars {
+.zoroa-harvester-of-souls-vars,
+.whispering-shrine-vars,
+.campfire-sanctuary-vars {
     -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaDisplayFont.asset");
 }
 
@@ -93,6 +95,14 @@ Button,
 
 .section-header__e.section-header__e.section-header__e.section-header__e.section-header__e.section-header__e.section-header__e {
     overflow: visible;
+}
+
+.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2.section-header__e-2 {
+    margin-right: 10px;
+}
+
+.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4.section-header__e-4 {
+    margin-top: 4px;
 }
 
 .uitk-hidden {
@@ -194,6 +204,16 @@ Button,
     background-color: rgba(242, 194, 91, 0.24);
 }
 
+.button-flat-2.uitk-selected {
+    background-color: rgba(242, 194, 91, 0.14);
+    border-color: var(--gold-3);
+    color: var(--text-highlight);
+}
+
+.button-flat-2.uitk-selected > Label {
+    color: var(--text-highlight);
+}
+
 .mouse-active .button-flat-2:hover > Label,
 .mouse-active .button-flat-2.uitk-hover > Label,
 .button-flat-2.uitk-focus > Label {
@@ -204,11 +224,44 @@ Button,
     background-color: var(--bg-panel);
     border-width: 2px;
     border-color: var(--border-default);
+    padding-top: 6px;
+    padding-right: 16px;
+    padding-bottom: 6px;
+    padding-left: 16px;
+    min-height: 38px;
+    font-size: 20px;
+    white-space: nowrap;
+    justify-content: center;
+    align-items: center;
     color: var(--text-primary);
 }
 
 .button-slab > Label {
     color: var(--text-primary);
+    font-size: 20px;
+}
+
+.button-slab.uitk-selected {
+    background-color: #231D10;
+    border-color: var(--gold-2);
+    color: var(--text-highlight);
+}
+
+.button-slab.uitk-selected > Label {
+    color: var(--text-highlight);
+}
+
+.button-compact {
+    padding-top: 4px;
+    padding-right: 8px;
+    padding-bottom: 4px;
+    padding-left: 8px;
+    min-height: 32px;
+    font-size: 15px;
+}
+
+.button-compact > Label {
+    font-size: 15px;
 }
 
 .mouse-active .button-slab:hover,
@@ -661,9 +714,72 @@ Button,
     margin-right: 10px;
 }
 
+.stat-stepper__e.stat-stepper__e.stat-stepper__e.stat-stepper__e.stat-stepper__e.stat-stepper__e.stat-stepper__e,
+.stat-stepper__e-3.stat-stepper__e-3.stat-stepper__e-3.stat-stepper__e-3.stat-stepper__e-3.stat-stepper__e-3.stat-stepper__e-3,
 .stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e.stat-stepper-2__e,
-.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3 {
+.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3.stat-stepper-2__e-3,
+.stat-stepper-3__e.stat-stepper-3__e.stat-stepper-3__e.stat-stepper-3__e.stat-stepper-3__e.stat-stepper-3__e.stat-stepper-3__e,
+.stat-stepper-3__e-3.stat-stepper-3__e-3.stat-stepper-3__e-3.stat-stepper-3__e-3.stat-stepper-3__e-3.stat-stepper-3__e-3.stat-stepper-3__e-3,
+.stat-stepper-4__e.stat-stepper-4__e.stat-stepper-4__e.stat-stepper-4__e.stat-stepper-4__e.stat-stepper-4__e.stat-stepper-4__e,
+.stat-stepper-4__e-3.stat-stepper-4__e-3.stat-stepper-4__e-3.stat-stepper-4__e-3.stat-stepper-4__e-3.stat-stepper-4__e-3.stat-stepper-4__e-3,
+.stat-stepper-5__e.stat-stepper-5__e.stat-stepper-5__e.stat-stepper-5__e.stat-stepper-5__e.stat-stepper-5__e.stat-stepper-5__e,
+.stat-stepper-5__e-3.stat-stepper-5__e-3.stat-stepper-5__e-3.stat-stepper-5__e-3.stat-stepper-5__e-3.stat-stepper-5__e-3.stat-stepper-5__e-3 {
     margin-right: 4px;
+}
+
+.mouse-active .uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn:hover,
+.mouse-active .uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-hover {
+    border-color: var(--border-accent);
+    background-color: rgba(242, 194, 91, 0.22);
+}
+
+.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn.uitk-stepper-btn:active {
+    background-color: rgba(242, 194, 91, 0.34);
+    border-color: #FFF4D2;
+}
+
+.slot-card__e.slot-card__e.slot-card__e.slot-card__e.slot-card__e.slot-card__e.slot-card__e,
+.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e.slot-card-2__e {
+    margin-bottom: 6px;
+}
+
+.slot-card__e-5.slot-card__e-5.slot-card__e-5.slot-card__e-5.slot-card__e-5.slot-card__e-5.slot-card__e-5,
+.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5.slot-card-2__e-5 {
+    margin-bottom: 4px;
+    overflow: hidden;
+}
+
+.reward-card,
+.reward-card-2 {
+    overflow: hidden;
+}
+
+.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4.reward-card__e-4,
+.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4.reward-card-2__e-4 {
+    height: 84px;
+}
+
+.reward-card__e-8.reward-card__e-8.reward-card__e-8.reward-card__e-8.reward-card__e-8.reward-card__e-8.reward-card__e-8,
+.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8.reward-card-2__e-8 {
+    margin-bottom: 6px;
+}
+
+.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14.reward-card-2__e-14 {
+    right: 6px;
+    top: 6px;
+}
+
+.uitk-slot-badge {
+    position: absolute;
+    right: 2px;
+    bottom: 1px;
+    padding-top: 0px;
+    padding-right: 3px;
+    padding-bottom: 0px;
+    padding-left: 3px;
+    font-size: 11px;
+    background-color: rgba(7, 10, 20, 0.88);
+    -unity-text-align: middle-right;
 }
 
 .reward-card__e.reward-card__e.reward-card__e.reward-card__e.reward-card__e.reward-card__e.reward-card__e,
@@ -717,10 +833,30 @@ Button,
     background-color: #252B3D;
 }
 
-.uitk-slot-interactive.uitk-selected,
+.uitk-slot-interactive.uitk-selected {
+    border-color: var(--gold-2);
+    background-color: #231D10;
+}
+
 .uitk-slot-interactive.uitk-focus {
-    border-color: var(--border-accent);
-    background-color: var(--bg-raised);
+    border-color: #FFF4D2;
+    background-color: #2A344D;
+}
+
+.uitk-slot-interactive.uitk-selected.uitk-focus {
+    border-color: #FFF4D2;
+    background-color: #382D14;
+}
+
+.uitk-card-static {
+    background-color: var(--bg-panel);
+    border-width: 2px;
+    border-color: var(--border-line);
+    padding-top: 6px;
+    padding-right: 10px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    overflow: hidden;
 }
 
 /* Selectable Cards (Character Creation Race / Class / Background / Gear / Party) */
@@ -860,6 +996,17 @@ Button,
 
 .uitk-settings-row.uitk-focus {
     background-color: rgba(242, 194, 91, 0.12);
+}
+
+.uitk-settings-info {
+    height: 60px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom-width: 2px;
+    border-bottom-color: var(--border-line);
+    padding-right: 12px;
+    padding-left: 12px;
 }
 
 .uitk-dirty-dot {
@@ -1172,7 +1319,9 @@ Button,
 }
 
 .button-primary.uitk-disabled > Label,
-.mouse-active .button-primary.uitk-disabled:hover > Label {
+.mouse-active .button-primary.uitk-disabled:hover > Label,
+.button-primary-2.uitk-disabled Label,
+.mouse-active .button-primary-2.uitk-disabled:hover Label {
     color: var(--text-muted);
 }
 

@@ -645,7 +645,9 @@ function catalogue() {
   const enumSrc = fs.readFileSync(path.join(__dirname, "../../Assets/Scripts/Combat/Status.cs"), "utf8").match(/enum StatusId\s*\{([^}]*)\}/)[1];
   const status = enumSrc.replace(/\/\/.*$/gm, "").split(",").map((x) => x.trim()).filter(Boolean).map((id) => row(id, id.replace(/([a-z])([A-Z])/g, "$1 $2"), S.STATUS[id], "status"));
   const racial = [...blocks(A, "RacialFeatDef").map((b) => row(f(b, "id"), f(b, "name"), S.RACIAL[f(b, "id")] || S.RACIAL._sigil, "racial")), row("_sigil", "Racial", S.RACIAL._sigil, "racial")];
-  return { items, gear, skills, passives, status, racial };
+  const elSrc = fs.readFileSync(path.join(__dirname, "../../Assets/Scripts/Combat/Elements.cs"), "utf8").match(/enum Element\s*\{([^}]*)\}/)[1];
+  const elements = elSrc.replace(/\/\/.*$/gm, "").split(",").map((x) => x.trim()).filter((x) => x && !x.includes("= Dark")).map((x) => x.split("=")[0].trim()).map((id) => row(id, id, S.ELEMENTS[id], "elements"));
+  return { items, gear, skills, passives, status, racial, elements };
 }
 module.exports.catalogue = catalogue;
 
@@ -693,7 +695,7 @@ if (require.main === module && process.argv.includes("--test")) {
 if (require.main === module && process.argv.includes("--export")) {
   const fs = require("fs"), path = require("path"), crypto = require("crypto");
   const assets = path.resolve(__dirname, "../../Assets"), meta = fs.readFileSync(path.join(assets, "Resources/Fx/hit.png.meta"), "utf8");
-  const folders = { items: "Items", gear: "Gear", skills: "Skills", passives: "Passives", status: "Status", racial: "Racial" };
+  const folders = { items: "Items", gear: "Gear", skills: "Skills", passives: "Passives", status: "Status", racial: "Racial", elements: "Elements" };
   for (const [group, rows] of Object.entries(catalogue())) {
     const dir = path.join(assets, "Resources/Icons", folders[group]), done = new Set();
     fs.mkdirSync(dir, { recursive: true });

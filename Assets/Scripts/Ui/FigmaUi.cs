@@ -337,7 +337,7 @@ namespace Obscure
             if (item == null) return;
             var target = el ?? item.element;
             item.visual = on => ApplyDefaultFocusVisual(target, on, item.selected, item.interactable);
-            item.visual(false);
+            item.visual(item.menu != null && item.menu.Current == item);
         }
 
         public static void ApplyDefaultFocusVisual(VisualElement el, bool focused, bool selected, bool interactable)
@@ -404,6 +404,13 @@ namespace Obscure
             var lbl = new UiLabel(text) { name = "uitkLabel" };
             lbl.style.unityTextAlign = TextAnchor.MiddleCenter;
             btn.Add(lbl);
+            return btn;
+        }
+
+        public static VisualElement CreateCompactButton(string text, float? width = null, string baseClass = "button-slab")
+        {
+            var btn = CreateButton(text, baseClass, width);
+            btn.AddToClassList("button-compact");
             return btn;
         }
 
@@ -597,8 +604,9 @@ namespace Obscure
         public static void AnchorRight(VisualElement el, float rightPx = 24f)
         {
             if (el == null) return;
-            el.style.left = StyleKeyword.Auto;
-            el.style.right = rightPx;
+            var target = el.parent is TemplateContainer tc ? tc : el;
+            target.style.left = StyleKeyword.Auto;
+            target.style.right = rightPx;
         }
 
         public static void DestroyMenu(ref UitkMenu m)

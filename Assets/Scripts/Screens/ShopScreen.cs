@@ -51,7 +51,10 @@ namespace Obscure
 
                 var backBtn = FigmaUi.FindButton(UiRoot, "Back");
                 if (backBtn != null)
-                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Back", OnLeaveShop));
+                {
+                    backBtn.text = "Leave";
+                    FigmaUi.ApplyDefaultFocusVisual(menu.Add(backBtn, "Leave", OnLeaveShop));
+                }
 
                 int currentRunGold = Run != null ? Run.Gold : 0;
                 var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
@@ -125,15 +128,16 @@ namespace Obscure
                             borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                         }
                     };
-                    row.Add(new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2, flexShrink = 0 } });
+                    var ptr = new UiLabel(chosen ? "▸" : "") { style = { width = 18, fontSize = 18, color = Palette.Gold2, flexShrink = 0 } };
+                    row.Add(ptr);
                     var icon = IconArt.Inline(e.icon, 3);
                     if (icon != null) { if (e.dim) icon.style.opacity = 0.5f; row.Add(icon); }
-                    var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden, marginRight = 8 } };
-                    col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : Palette.Mist1 } });
+                    var col = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, justifyContent = Justify.Center, overflow = Overflow.Hidden, marginRight = 8 } };
+                    col.Add(new UiLabel(e.title) { style = { fontSize = 18, color = e.dim ? Palette.Mist3 : (e.titleCol ?? Palette.Mist1) } });
                     col.Add(new UiLabel(e.sub) { style = { fontSize = 12, color = Palette.Mist3 } });
                     row.Add(col);
-                    row.Add(new UiLabel(e.stock) { style = { width = 100, flexShrink = 0, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
-                    row.Add(new UiLabel(e.priceText) { style = { width = 94, flexShrink = 0, fontSize = 16, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
+                    row.Add(new UiLabel(e.stock) { style = { width = 90, marginRight = 8, flexShrink = 0, fontSize = 13, color = Palette.Mist2, unityTextAlign = TextAnchor.MiddleRight } });
+                    row.Add(new UiLabel(e.priceText) { style = { width = 120, flexShrink = 0, fontSize = 15, color = e.dim ? Palette.Mist3 : Palette.Gold1, unityTextAlign = TextAnchor.MiddleRight } });
                     scroll.Add(row);
 
                     var it = menu.Add(row, e.title, () =>
@@ -146,17 +150,26 @@ namespace Obscure
                         row.style.backgroundColor = on || chosen ? Palette.Hex(0x2B2210) : Palette.Ink2;
                         var b = on ? Palette.Gold1 : chosen ? Palette.Gold2 : Palette.Ink5;
                         row.style.borderTopColor = b; row.style.borderBottomColor = b; row.style.borderLeftColor = b; row.style.borderRightColor = b;
+                        ptr.text = on || chosen ? "▸" : "";
                     };
                     it.visual(false);
                 }
 
                 if (entries.Count == 0)
-                    scroll.Add(new UiLabel("NO EQUIPMENT IN INVENTORY TO SELL.") { style = { fontSize = 15, color = Palette.Mist3, alignSelf = UnityEngine.UIElements.Align.Center, marginTop = 80 } });
-
-                listHost.Add(new UiLabel(feedback)
                 {
-                    style = { fontSize = 13, color = feedbackBad ? Palette.Err : Palette.Gold1, marginTop = 10, whiteSpace = WhiteSpace.Normal }
-                });
+                    string emptyMsg = currentTab == ShopTab.Sell ? "NO EQUIPMENT IN INVENTORY TO SELL."
+                        : currentTab == ShopTab.BuyEquipment ? "NO EQUIPMENT AVAILABLE." : "NO SUPPLIES AVAILABLE.";
+                    scroll.Add(new UiLabel(emptyMsg) { style = { fontSize = 15, color = Palette.Mist3, alignSelf = UnityEngine.UIElements.Align.Center, marginTop = 80 } });
+                }
+
+                if (!string.IsNullOrEmpty(feedback))
+                {
+                    listHost.Add(new UiLabel(feedback)
+                    {
+                        style = { fontSize = 13, color = feedbackBad ? Palette.Err : Palette.Gold1, marginTop = 8, whiteSpace = WhiteSpace.Normal }
+                    });
+                }
+                listHost.Add(new UiLabel("SPOILS ARE SPENT HERE AND LOST IF THE PARTY FALLS.") { style = { fontSize = 12, color = Palette.Mist3, marginTop = 6 } });
 
                 BuildDetail(screen, entries.Count > 0 ? entries[selectedIndex] : null, currentRunGold);
 
@@ -168,8 +181,10 @@ namespace Obscure
 
         class Entry
         {
-            public string title, sub, desc, stock, priceText, btnText, tagText;
+            public string title, sub, desc, stock, priceText, btnText, tagText, discountNote;
             public Texture2D icon;
+            public Color? titleCol;
+            public EquipmentInstance eqInstance;
             public int owned, price;
             public bool dim, canAct;
             public Action action;
@@ -185,6 +200,7 @@ namespace Obscure
                     var item = c;
                     bool soldOut = !item.isUnlimitedStock && item.stockCount <= 0;
                     int own = Run?.Inventory?.GetConsumableCount(item.itemId) ?? 0;
+                    int space = Run?.CarrySpace(item.itemId) ?? 99;
                     int effectivePrice = Run != null ? Run.GetDungeonShopDiscountedPrice(item.cost) : item.cost;
                     bool hasDiscount = effectivePrice < item.cost;
                     list.Add(new Entry
@@ -194,13 +210,14 @@ namespace Obscure
                         sub = item.description.ToUpperInvariant(),
                         desc = item.description.ToUpperInvariant(),
                         stock = item.isUnlimitedStock ? "UNLIMITED" : $"× {item.stockCount}",
-                        priceText = soldOut ? "SOLD" : hasDiscount ? $"{effectivePrice} (-15%)" : effectivePrice.ToString(),
-                        btnText = soldOut ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Spoils",
+                        priceText = soldOut ? "SOLD" : hasDiscount ? $"{effectivePrice:#,##0} (-15%)" : effectivePrice.ToString("#,##0"),
+                        btnText = soldOut ? "Sold Out" : space <= 0 ? "Carry Cap" : $"Buy · {effectivePrice:#,##0} Spoils",
                         tagText = item.isReviveItem ? "REVIVE ITEM" : "CONSUMABLE",
+                        discountNote = hasDiscount ? "DRACONIC -15% APPLIED" : null,
                         owned = own,
                         price = effectivePrice,
                         dim = soldOut,
-                        canAct = !soldOut && (Run?.Gold ?? 0) >= effectivePrice,
+                        canAct = !soldOut && space > 0 && (Run?.Gold ?? 0) >= effectivePrice,
                         action = () => BuyConsumable(item),
                     });
                 }
@@ -210,19 +227,23 @@ namespace Obscure
                 foreach (var eq in shopData.equipmentShop.items)
                 {
                     var item = eq;
-                    string name = item.item?.Definition?.name ?? "Equipment";
+                    var inst = item.item;
+                    string name = inst?.Definition?.name ?? "Equipment";
                     int effectivePrice = Run != null ? Run.GetDungeonShopDiscountedPrice(item.cost) : item.cost;
                     bool hasDiscount = effectivePrice < item.cost;
                     list.Add(new Entry
                     {
-                        title = name,
-                        icon = IconArt.Gear(item.item?.Definition),
-                        sub = item.item?.Definition != null ? EquipmentSlots.DisplayName(item.item.Definition.slot).ToUpperInvariant() : "GEAR",
-                        desc = item.item?.Definition?.description?.ToUpperInvariant() ?? "",
+                        title = inst != null && inst.upgradeLevel > 0 ? $"{name} +{inst.upgradeLevel}" : name,
+                        icon = IconArt.Gear(inst?.Definition),
+                        titleCol = inst != null ? EquipmentRarities.GetColor(inst.rarity) : (Color?)null,
+                        eqInstance = inst,
+                        sub = inst?.Definition != null ? $"{inst.rarity.ToString().ToUpperInvariant()} · {EquipmentSlots.DisplayName(inst.Definition.slot).ToUpperInvariant()}" : "GEAR",
+                        desc = inst?.Definition?.description?.ToUpperInvariant() ?? "",
                         stock = item.isSold ? "SOLD OUT" : "× 1",
-                        priceText = item.isSold ? "—" : hasDiscount ? $"{effectivePrice} (-15%)" : effectivePrice.ToString(),
-                        btnText = item.isSold ? "Sold Out" : hasDiscount ? $"Buy · {effectivePrice}G (-15% DRACONIC)" : $"Buy · {effectivePrice} Spoils",
-                        tagText = "EQUIPMENT",
+                        priceText = item.isSold ? "—" : hasDiscount ? $"{effectivePrice:#,##0} (-15%)" : effectivePrice.ToString("#,##0"),
+                        btnText = item.isSold ? "Sold Out" : $"Buy · {effectivePrice:#,##0} Spoils",
+                        tagText = inst != null ? inst.rarity.ToString().ToUpperInvariant() : "EQUIPMENT",
+                        discountNote = hasDiscount ? "DRACONIC -15% APPLIED" : null,
                         owned = 0,
                         price = effectivePrice,
                         dim = item.isSold,
@@ -238,21 +259,30 @@ namespace Obscure
                 {
                     var item = eq;
                     int val = item.CalculateSellValue();
+                    string baseName = item.Definition?.name ?? "Equipment";
                     list.Add(new Entry
                     {
-                        title = item.Definition?.name ?? "Equipment",
+                        title = item.upgradeLevel > 0 ? $"{baseName} +{item.upgradeLevel}" : baseName,
                         icon = IconArt.Gear(item.Definition),
-                        sub = item.Definition != null ? EquipmentSlots.DisplayName(item.Definition.slot).ToUpperInvariant() : "GEAR",
-                        desc = $"SELL FOR {val} SPOILS.",
+                        titleCol = EquipmentRarities.GetColor(item.rarity),
+                        eqInstance = item,
+                        sub = item.Definition != null ? $"{item.rarity.ToString().ToUpperInvariant()} · {EquipmentSlots.DisplayName(item.Definition.slot).ToUpperInvariant()}" : "GEAR",
+                        desc = $"SELL FOR {val:#,##0} SPOILS.",
                         stock = "OWNED",
-                        priceText = $"+{val}",
-                        btnText = $"Sell · {val} Spoils",
+                        priceText = $"+{val:#,##0}",
+                        btnText = $"Sell · {val:#,##0} Spoils",
                         tagText = item.isEquipped ? "EQUIPPED" : "BAG",
                         owned = 1,
                         price = -val,
                         dim = item.isEquipped,
                         canAct = !item.isEquipped,
-                        action = () => SellEquipment(item),
+                        action = () =>
+                        {
+                            if (EquipmentRarities.HasSpecialEffect(item.rarity))
+                                FigmaUi.ShowConfirmationModal(UiRoot, "CONFIRM SELL", $"Sell {item.rarity} {baseName} for {val:#,##0} Spoils?", "SELL", () => SellEquipment(item));
+                            else
+                                SellEquipment(item);
+                        },
                     });
                 }
             }
@@ -275,22 +305,51 @@ namespace Obscure
             detailScroll.style.marginBottom = 10;
             host.Add(detailScroll);
 
+            var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginBottom = 10 } };
             var t = FigmaUi.InstantiateTemplate("Tag-Temp");
-            if (t != null) { FigmaUi.SetInstanceText(t, "text-0", e.tagText); t.style.marginBottom = 10; detailScroll.Add(t); }
+            if (t != null) { FigmaUi.SetInstanceText(t, "text-0", e.tagText); t.style.marginRight = 6; tagRow.Add(t); }
+            if (!string.IsNullOrEmpty(e.discountNote))
+            {
+                var dt = FigmaUi.InstantiateTemplate("Tag-Gold");
+                if (dt != null) { FigmaUi.SetInstanceText(dt, "text-0", e.discountNote); tagRow.Add(dt); }
+            }
+            detailScroll.Add(tagRow);
 
-            detailScroll.Add(new UiLabel(e.desc) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 18 } });
+            detailScroll.Add(new UiLabel(e.desc) { style = { fontSize = 14, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 14 } });
 
-            VisualElement Line(string l, string r)
+            VisualElement Line(string l, string r, Color? rc = null)
             {
                 var v = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, height = 28, borderBottomWidth = 2, borderBottomColor = Palette.Ink3 } };
                 v.Add(new UiLabel(l) { style = { fontSize = 13, color = Palette.Mist2 } });
-                v.Add(new UiLabel(r) { style = { fontSize = 13, color = Palette.Mist1 } });
+                v.Add(new UiLabel(r) { style = { fontSize = 13, color = rc ?? Palette.Mist1 } });
                 return v;
+            }
+            if (e.eqInstance != null)
+            {
+                var eq = e.eqInstance;
+                if (eq.EffectiveWeaponPower > 0) detailScroll.Add(Line("ATK", $"+{eq.EffectiveWeaponPower}"));
+                if (eq.EffectivePhysicalDefense > 0) detailScroll.Add(Line("DEF", $"+{eq.EffectivePhysicalDefense}"));
+                if (eq.EffectiveMagicDefense > 0) detailScroll.Add(Line("MDEF", $"+{eq.EffectiveMagicDefense}"));
+                if (eq.EffectiveBreakPowerModifier > 0) detailScroll.Add(Line("BRK", $"+{eq.EffectiveBreakPowerModifier}"));
+                if (eq.affixes != null && eq.affixes.Count > 0)
+                    detailScroll.Add(new UiLabel(string.Join("\n", eq.affixes.Select(a => "• " + a.GetDescription())).ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Xp, whiteSpace = WhiteSpace.Normal, marginTop = 6, marginBottom = 6 } });
+                if (eq.SpecialEffect != null)
+                    detailScroll.Add(new UiLabel($"★ {eq.SpecialEffect.name}: {eq.SpecialEffect.description}".ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Gold2, whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
+                var party = Run?.Party;
+                if (party != null && party.Count > 0 && eq.Definition != null)
+                {
+                    var usable = party.Where(u => EquipmentValidator.Validate(eq.Definition, eq.Definition.slot, u.classDef, u.race, u.level, u.FinalScores, u.id) == null).Select(u => u.name).ToList();
+                    detailScroll.Add(new UiLabel(usable.Count > 0 ? $"CAN USE: {string.Join(", ", usable).ToUpperInvariant()}" : "NO PARTY MEMBER CAN EQUIP") { style = { fontSize = 12, color = usable.Count > 0 ? Palette.Ok : Palette.Err, whiteSpace = WhiteSpace.Normal, marginBottom = 8 } });
+                }
             }
             detailScroll.Add(Line("IN STOCK", e.stock));
             detailScroll.Add(Line("YOU OWN", e.owned.ToString()));
-            detailScroll.Add(Line("PRICE", e.price >= 0 ? $"{e.price} SPOILS" : $"+{-e.price} SPOILS"));
-            detailScroll.Add(Line("SPOILS AFTER", $"{runGold} › {runGold - e.price}"));
+            detailScroll.Add(Line("PRICE", e.price >= 0 ? $"{e.price:#,##0} SPOILS" : $"+{-e.price:#,##0} SPOILS"));
+            if (!e.dim)
+            {
+                int after = runGold - e.price;
+                detailScroll.Add(Line("SPOILS AFTER", $"{runGold:#,##0} › {after:#,##0}", after < 0 ? Palette.Err : Palette.Mist1));
+            }
 
             var btn = FigmaUi.CreateButton(e.btnText, e.canAct ? "button-primary" : "button-slab", 346f);
             btn.style.flexShrink = 0;
@@ -302,10 +361,11 @@ namespace Obscure
         void BuyConsumable(ConsumableShopEntry c)
         {
             if (Run == null) return;
+            int paid = Run.GetDungeonShopDiscountedPrice(c.cost);
             if (shopData.TryBuyConsumable(Run, c.itemId, out _, out string err))
             {
                 Sfx.Play(Sound.Coin);
-                feedback = $"PURCHASED {c.name.ToUpperInvariant()} FOR {c.cost} SPOILS!";
+                feedback = $"PURCHASED {c.name.ToUpperInvariant()} FOR {paid:#,##0} SPOILS!";
                 feedbackBad = false;
                 Rebuild();
             }
@@ -315,10 +375,11 @@ namespace Obscure
         void BuyEquipment(ShopItem eqItem)
         {
             if (Run == null) return;
+            int paid = Run.GetDungeonShopDiscountedPrice(eqItem.cost);
             if (shopData.TryBuyEquipment(Run, eqItem.shopItemId, out var bought, out string err))
             {
                 Sfx.Play(Sound.Coin);
-                feedback = $"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {eqItem.cost} SPOILS!";
+                feedback = $"PURCHASED {bought.Definition?.name.ToUpperInvariant()} FOR {paid:#,##0} SPOILS!";
                 feedbackBad = false;
                 Rebuild();
             }

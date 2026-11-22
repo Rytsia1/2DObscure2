@@ -62,7 +62,7 @@ namespace Obscure
                 if (list.All(x => x.id != n.skillId)) list.Add(new Node { id = n.skillId, passive = n.isPassive, tier = Mathf.Clamp(n.tier, 1, 5) });
 
             const float colW = 161f;
-            const float topY = 92f, spanH = 380f;
+            const float topY = 48f, spanH = 446f;
             foreach (var g in list.GroupBy(n => n.tier))
             {
                 var ordered = g.OrderBy(n => n.passive).ToList();
@@ -124,13 +124,6 @@ namespace Obscure
                 {
                     if (rebuilding || s == null) return;
                     focusIndex = menu.items.IndexOf(s);
-                    if (portraitItems.TryGetValue(s, out int idx) && idx != heroIndex)
-                    {
-                        heroIndex = idx;
-                        selectedSkillId = null;
-                        feedback = null;
-                        Rebuild();
-                    }
                 };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
@@ -191,22 +184,47 @@ namespace Obscure
                 };
                 it.visual(false);
             }
-            if (switcherRow != null && party.Count > 1)
+            if (switcherRow != null)
             {
                 var qCap = FigmaUi.FindLabel(switcherRow, "Q")?.parent;
                 var eCap = FigmaUi.FindLabel(switcherRow, "E")?.parent;
-                if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
-                if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                if (party.Count > 1)
+                {
+                    if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
+                    if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                }
+                else
+                {
+                    if (qCap != null && qCap != switcherRow) qCap.style.display = DisplayStyle.None;
+                    if (eCap != null && eCap != switcherRow) eCap.style.display = DisplayStyle.None;
+                }
             }
 
             var heroLbl = UiRoot.Q<UiLabel>(className: "knight-knight-lv-1-vars");
-            if (heroLbl != null) heroLbl.text = $"{hero.name} · {hero.classDef?.name} · Lv {hero.level}";
+            if (heroLbl != null)
+            {
+                heroLbl.text = $"{hero.name} · {hero.classDef?.name} · Lv {hero.level}";
+                heroLbl.style.fontSize = 16;
+                heroLbl.style.maxWidth = 300;
+                heroLbl.style.overflow = Overflow.Hidden;
+            }
 
             var talBtn = FigmaUi.FindButton(UiRoot, "Talents ›");
-            if (talBtn != null) FigmaUi.ApplyDefaultFocusVisual(menu.Add(talBtn, "Talents", () => Game?.Go(GameState.Talents)));
+            if (talBtn != null)
+            {
+                FigmaUi.AnchorRight(talBtn, 212f);
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(talBtn, "Talents", () => Game?.Go(GameState.Talents)));
+            }
 
             var spVal = UiRoot.Q<UiLabel>(className: "_0-vars-11");
-            if (spVal != null) spVal.text = hero.skillLoadout.SkillPoints.ToString();
+            if (spVal != null)
+            {
+                spVal.text = hero.skillLoadout.SkillPoints.ToString();
+                spVal.style.left = StyleKeyword.Auto;
+                spVal.style.right = 10;
+                spVal.style.width = 48;
+                spVal.style.unityTextAlign = TextAnchor.MiddleRight;
+            }
         }
 
         void BuildTree(VisualElement screen, List<Node> nodes)
@@ -216,8 +234,9 @@ namespace Obscure
             screen.Add(host);
 
             var topBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 0 } };
-            topBar.Add(FigmaUi.CreateSectionHeader($"{hero.classDef?.name ?? "Class"} skill tree", 580f));
-            topBar.Add(new UiLabel("□ ACTIVE   ◇ PASSIVE") { style = { fontSize = 13, color = Palette.Mist2 } });
+            var hdr = FigmaUi.CreateSectionHeader($"{hero.classDef?.name ?? "Class"} skill tree", 806f);
+            hdr.Add(new UiLabel("□ ACTIVE   ○ PASSIVE") { style = { position = Position.Absolute, right = 0, top = 4, fontSize = 13, color = Palette.Mist2 } });
+            topBar.Add(hdr);
             host.Add(topBar);
 
             var canvas = new VisualElement { style = { flexGrow = 1, marginTop = 8, marginBottom = 8, overflow = Overflow.Hidden } };
@@ -263,11 +282,6 @@ namespace Obscure
                         foreach (var pid in prereqs)
                             if (!string.IsNullOrEmpty(pid) && byId.TryGetValue(pid, out var pa))
                                 targets.Add(pa);
-                    }
-                    else if (b.tier > 1)
-                    {
-                        var fallback = nodes.FirstOrDefault(x => x.tier == b.tier - 1 && x.row == b.row);
-                        if (fallback != null) targets.Add(fallback);
                     }
 
                     foreach (var a in targets)
@@ -354,9 +368,10 @@ namespace Obscure
             {
                 int max = n.passive ? (Database.Passives.TryGetValue(n.id, out var p) ? p.maxRank : 3) : (Database.Skills.TryGetValue(n.id, out var s) ? s.maxRank : 3);
                 int rank = hero.skillLoadout.GetRank(n.id);
-                var pips = new VisualElement { style = { position = Position.Absolute, left = n.x - 16, top = n.y + size / 2f + 4, flexDirection = FlexDirection.Row } };
+                float totalW = max * 12f - 4f;
+                var pips = new VisualElement { style = { position = Position.Absolute, left = n.x - totalW / 2f, top = n.y + size / 2f + 4, flexDirection = FlexDirection.Row } };
                 for (int i = 0; i < max; i++)
-                    pips.Add(new VisualElement { style = { width = 8, height = 6, marginRight = 4, backgroundColor = i < rank ? Palette.Gold2 : Palette.Ink5 } });
+                    pips.Add(new VisualElement { style = { width = 8, height = 6, marginRight = i < max - 1 ? 4 : 0, backgroundColor = i < rank ? Palette.Gold2 : Palette.Ink5 } });
                 canvas.Add(pips);
             }
 
@@ -366,8 +381,9 @@ namespace Obscure
             }, selected: sel);
             it.visual = on =>
             {
-                var b = on || sel ? Palette.Gold1 : learned ? Palette.Gold2 : avail ? Palette.Mist1 : Palette.Ink5;
+                var b = on ? Palette.Hex(0xFFF4D2) : sel ? Palette.Gold1 : learned ? Palette.Gold2 : avail ? Palette.Mist1 : Palette.Ink5;
                 el.style.borderTopColor = b; el.style.borderBottomColor = b; el.style.borderLeftColor = b; el.style.borderRightColor = b;
+                el.style.backgroundColor = on ? Palette.Hex(0x382D14) : sel ? Palette.Hex(0x2B2210) : StyleKeyword.Null;
             };
             it.visual(false);
         }
@@ -446,7 +462,8 @@ namespace Obscure
             int req = node?.requiredLevel ?? TierLevel[Mathf.Clamp(tier - 1, 0, 4)];
             bool lvOk = hero.level >= req;
             detailScroll.Add(new UiLabel($"{(lvOk ? "✓" : "X")} LEVEL {req} · {hero.name.ToUpperInvariant()} IS LV {hero.level}") { style = { fontSize = 12, color = lvOk ? Palette.Ok : Palette.Err, whiteSpace = WhiteSpace.Normal } });
-            foreach (var pre in node?.prerequisites ?? Array.Empty<string>())
+            var allPre = (node?.prerequisites ?? Array.Empty<string>()).Concat(a?.prerequisites ?? Array.Empty<string>()).Distinct();
+            foreach (var pre in allPre)
             {
                 bool met = lo.UnlockedActiveSkills.Contains(pre) || lo.UnlockedPassiveSkills.Contains(pre);
                 detailScroll.Add(new UiLabel($"{(met ? "✓" : "X")} {NameOf(pre, !Database.Skills.ContainsKey(pre)).ToUpperInvariant()} LEARNED") { style = { fontSize = 12, color = met ? Palette.Ok : Palette.Err, whiteSpace = WhiteSpace.Normal } });
@@ -476,7 +493,7 @@ namespace Obscure
                 {
                     int slot = i;
                     bool inThisSlot = slot < slotArr.Length && slotArr[slot] == selectedSkillId;
-                    var sBtn = FigmaUi.CreateButton((i + 1).ToString(), inThisSlot ? "button-primary" : "button-slab", 52f);
+                    var sBtn = FigmaUi.CreateCompactButton((i + 1).ToString(), 52f, inThisSlot ? "button-primary" : "button-slab");
                     sBtn.style.marginRight = 8;
                     eqRow.Add(sBtn);
                     FigmaUi.ApplyDefaultFocusVisual(menu.Add(sBtn, $"Slot {i + 1}", () => Equip(slot), selected: inThisSlot));

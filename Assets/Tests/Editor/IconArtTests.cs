@@ -76,6 +76,19 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void EveryElementHasAnIcon()
+        {
+            foreach (Element e in System.Enum.GetValues(typeof(Element)))
+            {
+                var tex = IconArt.Element(e);
+                Assert.IsNotNull(tex, $"Missing element icon for {e}");
+                Assert.AreEqual(IconArt.Size, tex.width, e.ToString());
+                Assert.AreEqual(FilterMode.Point, tex.filterMode, e.ToString());
+            }
+            Assert.AreSame(IconArt.Element(Element.Dark), IconArt.Element(Element.Shadow));
+        }
+
+        [Test]
         public void IconsAreCrispAndDistinct()
         {
             var a = IconArt.Skill("firebolt");

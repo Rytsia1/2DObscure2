@@ -620,7 +620,7 @@ namespace Obscure.Tests
             yield return ClickMenuItem("ATTACK");
             AssertActiveMenuAudit("Combat-Targets");
 
-            var targetNames = UitkMenu.ActiveMenu.items.Select(i => i.text).ToList();
+            var targetNames = UitkMenu.ActiveMenu.items.Select(i => i.text).Where(t => t != "ANALYSIS").ToList();
             Assert.AreEqual(3, targetNames.Count, "Only the 3 living enemies should appear in ATTACK target selection.");
             CollectionAssert.DoesNotContain(targetNames, defeated.name.ToUpperInvariant(), "Defeated enemy must be removed from attack selection.");
             CollectionAssert.Contains(targetNames, cb.Enemies[0].name.ToUpperInvariant());

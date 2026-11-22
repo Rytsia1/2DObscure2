@@ -12,6 +12,7 @@ namespace Obscure
     public partial class CombatView
     {
         UiLabel coachLabel;
+        static readonly System.Collections.Generic.HashSet<string> shownVariantTips = new();
 
         static PrologueScript Tut => Game.I?.Run?.Tutorial;
         static bool Coaching => Tut != null && !(Game.I?.Settings?.prologueCleared ?? false);
@@ -19,18 +20,18 @@ namespace Obscure
 
         void InitCoach(Battle battle)
         {
-            if (!Coaching) return;
             coachLabel = new UiLabel("")
             {
                 style =
                 {
-                    position = Position.Absolute, left = 120, top = 88, width = 1040,
+                    position = Position.Absolute, left = 120, top = 436, width = 1040,
                     paddingLeft = 12, paddingRight = 12, paddingTop = 6, paddingBottom = 6,
                     fontSize = 15, color = Palette.Gold1, backgroundColor = Palette.Hex(0x070A14, 220),
                     unityTextAlign = TextAnchor.MiddleCenter, whiteSpace = WhiteSpace.Normal, display = DisplayStyle.None,
                 },
             };
             screenRoot.Add(coachLabel);
+            if (!Coaching) return;
 
             battle.Logged += line =>
             {
@@ -59,10 +60,23 @@ namespace Obscure
             AddLog("TIP: " + text);
         }
 
+        void ShowVariantTip(string key, string text)
+        {
+            if (coachLabel == null || !shownVariantTips.Add(key)) return;
+            coachLabel.text = text.ToUpperInvariant();
+            coachLabel.style.display = DisplayStyle.Flex;
+            AddLog("TIP: " + text);
+        }
+
         // Blocking: the fight waits for Confirm, so the player reads it before the bar moves.
         IEnumerator Coach(string key, string text)
         {
-            if (!Coaching || coachLabel == null || !Tut.FirstTime("tip:" + key)) yield break;
+            if (coachLabel == null) yield break;
+            if (key.StartsWith("var_"))
+            {
+                if (Tut != null ? !Tut.FirstTime("tip:" + key) : !shownVariantTips.Add(key)) yield break;
+            }
+            else if (!Coaching || !Tut.FirstTime("tip:" + key)) yield break;
             coachLabel.text = (text + "   ▸ CONFIRM").ToUpperInvariant();
             coachLabel.style.display = DisplayStyle.Flex;
             AddLog("TIP: " + text);
@@ -126,7 +140,7 @@ namespace Obscure
                     };
                     if (vText != null)
                     {
-                        yield return Coach("var_" + v, vText);
+                        ShowVariantTip("var_" + v, vText);
                         break;
                     }
                 }

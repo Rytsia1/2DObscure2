@@ -78,7 +78,6 @@ namespace Obscure
             heroIndex = (heroIndex + delta + party.Count) % party.Count;
             if (wasPortraitFocused)
                 focusIndex = FindPortraitFocusIndex(heroIndex, focusIndex);
-            selectedSlotIndex = 0;
             candidateIndex = -1;
             feedback = null;
             Refresh();
@@ -95,9 +94,9 @@ namespace Obscure
 
         void SelectCandidate(int index, List<RowData> rows)
         {
-            candidateIndex = index < rows.Count && !rows[index].equipped && rows[index].lockReason == null ? index : -1;
+            candidateIndex = index < rows.Count && !rows[index].equipped ? index : -1;
             feedback = null;
-            focusEquipOnRefresh = candidateIndex >= 0;
+            focusEquipOnRefresh = candidateIndex >= 0 && rows[candidateIndex].lockReason == null;
             Refresh();
         }
 
@@ -163,14 +162,6 @@ namespace Obscure
                 {
                     if (rebuilding || item == null) return;
                     focusIndex = menu.items.IndexOf(item);
-                    if (portraitItems.TryGetValue(item, out int idx) && idx != heroIndex)
-                    {
-                        heroIndex = idx;
-                        selectedSlotIndex = 0;
-                        candidateIndex = -1;
-                        feedback = null;
-                        Refresh();
-                    }
                 };
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
@@ -208,18 +199,27 @@ namespace Obscure
                     };
                     it.visual(false);
                 }
-                if (switcherRow != null && party.Count > 1)
+                if (switcherRow != null)
                 {
                     var qCap = FigmaUi.FindLabel(switcherRow, "Q")?.parent;
                     var eCap = FigmaUi.FindLabel(switcherRow, "E")?.parent;
-                    if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
-                    if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                    if (party.Count > 1)
+                    {
+                        if (qCap != null && qCap != switcherRow) FigmaUi.StyleKeyButton(qCap, () => SwitchHero(-1), 6f);
+                        if (eCap != null && eCap != switcherRow) FigmaUi.StyleKeyButton(eCap, () => SwitchHero(1), 0f);
+                    }
+                    else
+                    {
+                        if (qCap != null && qCap != switcherRow) qCap.style.display = DisplayStyle.None;
+                        if (eCap != null && eCap != switcherRow) eCap.style.display = DisplayStyle.None;
+                    }
                 }
 
                 var bagBtn = FigmaUi.FindButton(UiRoot, "BAG 12 / 100");
                 if (bagBtn != null)
                 {
                     bagBtn.text = $"BAG {inventory.EquipmentCount} / {InventoryRuntime.MaxEquipmentCapacity}";
+                    FigmaUi.AnchorRight(bagBtn, 24f);
                     FigmaUi.ApplyDefaultFocusVisual(menu.Add(bagBtn, "Bag", () => Game?.Go(GameState.Inventory)));
                 }
 
@@ -260,8 +260,10 @@ namespace Obscure
             screen.Add(host);
 
             var topBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center } };
-            topBar.Add(FigmaUi.CreateSectionHeader($"{hero.name} · {hero.classDef?.name ?? hero.role}", 248f));
-            topBar.Add(new UiLabel($"{CoreSlots.Count(s => Equipped(s).def != null)}/{CoreSlots.Length}") { style = { fontSize = 14, color = Palette.Mist2 } });
+            var hdr = FigmaUi.CreateSectionHeader($"{hero.name} · {hero.classDef?.name ?? hero.role}", 248f);
+            hdr.style.overflow = Overflow.Hidden;
+            topBar.Add(hdr);
+            topBar.Add(new UiLabel($"{CoreSlots.Count(s => Equipped(s).def != null)}/{CoreSlots.Length}") { style = { fontSize = 14, color = Palette.Mist2, flexShrink = 0 } });
             host.Add(topBar);
 
             var doll = new VisualElement { style = { flexGrow = 1, marginTop = 10, justifyContent = Justify.SpaceBetween } };
@@ -299,7 +301,8 @@ namespace Obscure
             var box = FigmaUi.InstantiateTemplate(sel ? "Item-Slot-Selected" : def != null ? "Item-Slot-Filled" : "Item-Slot-Empty") ?? new VisualElement();
             box.style.width = 58; box.style.height = 58;
             var r = inst?.rarity ?? def?.rarity;
-            FigmaUi.SetInstanceText(box, "text-0", def != null && r.HasValue ? Palette.RarityBadge(r.Value) : "");
+            string slotBadge = def != null ? (inst != null && inst.upgradeLevel > 0 ? $"+{inst.upgradeLevel}" : (r.HasValue ? Palette.RarityBadge(r.Value) : "")) : "";
+            FigmaUi.SetInstanceText(box, "text-0", slotBadge);
             if (def != null && r.HasValue)
             {
                 var lbl = box.Q<UiLabel>("text-0");
@@ -385,7 +388,7 @@ namespace Obscure
                 row.Add(new UiLabel(right) { style = { fontSize = 14, color = rightCol, minWidth = 54, flexShrink = 0, unityTextAlign = TextAnchor.MiddleRight } });
                 scroll.Add(row);
 
-                bool canPick = !d.equipped && d.lockReason == null;
+                bool canPick = !d.equipped;
                 var it = menu.Add(row, d.def.name, () => SelectCandidate(rIdx, rows), interactable: canPick, selected: chosen);
                 it.visual = on =>
                 {
@@ -437,8 +440,9 @@ namespace Obscure
                 if (cand != null)
                 {
                     int delta = EquipmentManager.CalculateStatDelta(hero, slot, cand, st);
+                    string pctUnit = DerivedStats.IsPercentage(st) ? "%" : "";
                     row.Add(new UiLabel(StatValue(st, a + delta)) { style = { flexGrow = 1, fontSize = 13, color = Palette.Mist1, unityTextAlign = TextAnchor.MiddleRight } });
-                    row.Add(new UiLabel(delta > 0 ? $"+{delta}" : delta < 0 ? delta.ToString() : "=") { style = { width = 46, fontSize = 13, color = delta > 0 ? Up : delta < 0 ? Down : Palette.Mist3, unityTextAlign = TextAnchor.MiddleRight } });
+                    row.Add(new UiLabel(delta > 0 ? $"+{delta}{pctUnit}" : delta < 0 ? $"{delta}{pctUnit}" : "=") { style = { width = 52, fontSize = 13, color = delta > 0 ? Up : delta < 0 ? Down : Palette.Mist3, unityTextAlign = TextAnchor.MiddleRight } });
                 }
                 else
                 {
@@ -455,20 +459,32 @@ namespace Obscure
                 var cAff = cand.affixes?.Select(x => x.GetDescription().ToUpperInvariant()).ToList() ?? new List<string>();
                 lines.AddRange(eqAff.Except(cAff).Select(x => ("LOSE " + x, Down)));
                 lines.AddRange(cAff.Except(eqAff).Select(x => ("GAIN " + x, Up)));
+                if (eqInst?.SpecialEffect != null && eqInst.SpecialEffect.id != cand.SpecialEffect?.id)
+                    lines.Add(($"LOSE ★ {eqInst.SpecialEffect.name}: {eqInst.SpecialEffect.description}".ToUpperInvariant(), Down));
+                if (cand.SpecialEffect != null && cand.SpecialEffect.id != eqInst?.SpecialEffect?.id)
+                    lines.Add(($"GAIN ★ {cand.SpecialEffect.name}: {cand.SpecialEffect.description}".ToUpperInvariant(), Up));
             }
-            else lines.AddRange(eqAff.Select(x => ("• " + x, Palette.ArcaneViolet)));
+            else
+            {
+                lines.AddRange(eqAff.Select(x => ("• " + x, Palette.ArcaneViolet)));
+                if (eqInst?.SpecialEffect != null)
+                    lines.Add(($"★ {eqInst.SpecialEffect.name}: {eqInst.SpecialEffect.description}".ToUpperInvariant(), Palette.Gold2));
+            }
             if (lines.Count == 0) lines.Add(("NO AFFIXES", Palette.Mist3));
             foreach (var (txt, col) in lines)
                 cmpScroll.Add(new UiLabel(txt) { style = { fontSize = 12, color = col, whiteSpace = WhiteSpace.Normal, marginBottom = 2 } });
 
-            string noteText = feedback ?? (cand == null ? "PICK GEAR FROM THE LIST TO COMPARE." : eqDef != null ? $"{ItemName(eqInst, eqDef)} RETURNS TO THE BAG." : "SLOT IS EMPTY.");
-            host.Add(new UiLabel(noteText) { style = { fontSize = 12, color = Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginBottom = 8, flexShrink = 0 } });
+            string candLock = candidateIndex >= 0 && candidateIndex < rows.Count ? rows[candidateIndex].lockReason : null;
+            bool canEquip = cand != null && candLock == null;
+            string noteText = feedback ?? (cand == null ? "PICK GEAR FROM THE LIST TO COMPARE." : candLock != null ? $"LOCKED: {candLock.ToUpperInvariant()}" : eqDef != null ? $"{ItemName(eqInst, eqDef)} RETURNS TO THE BAG." : "SLOT IS EMPTY.");
+            host.Add(new UiLabel(noteText) { style = { fontSize = 12, color = candLock != null ? Down : Palette.Mist3, whiteSpace = WhiteSpace.Normal, marginBottom = 8, flexShrink = 0 } });
 
-            var eqBtn = FigmaUi.CreateButton(cand != null ? $"EQUIP {cand.Definition?.name.ToUpperInvariant()}" : "EQUIP", cand != null ? "button-primary" : "button-slab", 348f);
+            string eqBtnText = canEquip ? (eqDef != null ? "SWAP GEAR" : "EQUIP ITEM") : cand != null ? "LOCKED" : "EQUIP";
+            var eqBtn = FigmaUi.CreateButton(eqBtnText, canEquip ? "button-primary" : "button-slab", 348f);
             eqBtn.style.flexShrink = 0;
-            eqBtn.SetEnabled(cand != null);
+            eqBtn.SetEnabled(canEquip);
             host.Add(eqBtn);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(eqBtn, "EQUIP", () => OnEquipClicked(rows), interactable: cand != null));
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(eqBtn, "EQUIP", () => OnEquipClicked(rows), interactable: canEquip));
         }
 
         void OnEquipClicked(List<RowData> rows)

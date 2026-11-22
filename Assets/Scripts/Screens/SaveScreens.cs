@@ -45,15 +45,17 @@ namespace Obscure
             }
             else
             {
+                bool isCorrupted = meta.partySummary == "[CORRUPTED SAVE]";
+                bool isLost = meta.expeditionLost;
                 if (placeLbl != null)
                 {
-                    placeLbl.text = $"ACT {meta.committedAct} · {meta.committedDungeonName}".ToUpperInvariant();
-                    placeLbl.style.color = Palette.Ok;
+                    placeLbl.text = isCorrupted ? "CORRUPTED" : isLost ? "EXPEDITION LOST" : $"ACT {meta.committedAct} · {meta.committedDungeonName}".ToUpperInvariant();
+                    placeLbl.style.color = (isCorrupted || isLost) ? Palette.Err : Palette.Ok;
                 }
                 if (partyLbl != null)
                 {
                     partyLbl.text = meta.partySummary.ToUpperInvariant();
-                    partyLbl.style.color = Palette.Mist1;
+                    partyLbl.style.color = (isCorrupted || isLost) ? Palette.Mist3 : Palette.Mist1;
                 }
                 if (detailLbl != null)
                 {
@@ -64,6 +66,26 @@ namespace Obscure
 
             card.AddToClassList("uitk-slot-interactive");
             card.EnableInClassList("uitk-selected", selected);
+        }
+
+        public static void DockSystemBadge(VisualElement root, VisualElement autoCard)
+        {
+            if (root == null || autoCard == null) return;
+            var sysTag = FigmaUi.FindInstanceWithText(root, "text-0", "SYSTEM");
+            var sysContainer = sysTag?.GetFirstAncestorOfType<TemplateContainer>() ?? sysTag;
+            var titleLbl = autoCard.Q<UiLabel>("text-0");
+            if (sysContainer != null && titleLbl?.parent != null)
+            {
+                sysContainer.RemoveFromHierarchy();
+                sysContainer.pickingMode = PickingMode.Ignore;
+                sysContainer.style.position = Position.Relative;
+                sysContainer.style.left = StyleKeyword.Auto;
+                sysContainer.style.top = StyleKeyword.Auto;
+                sysContainer.style.marginLeft = 10;
+                sysContainer.style.flexShrink = 0;
+                var row = titleLbl.parent;
+                row.Insert(row.IndexOf(titleLbl) + 1, sysContainer);
+            }
         }
     }
 
@@ -90,9 +112,11 @@ namespace Obscure
 
             backBtn = FigmaUi.FindButton(UiRoot, "Back");
             slotCards = SaveSlotUitkHelper.FindSlotCards(UiRoot);
+            SaveSlotUitkHelper.DockSystemBadge(UiRoot, slotCards[0]);
             detailTitleLbl = FigmaUi.FindLabel(UiRoot, "SELECTED: MANUAL SLOT 1");
             detailBodyLbl = FigmaUi.FindLabel(UiRoot, "This manual slot is empty.\nSave to record your current campaign.");
             feedbackLabel = FigmaUi.FindLabel(UiRoot, "Select a slot to save campaign progress.");
+            if (feedbackLabel != null) feedbackLabel.style.whiteSpace = WhiteSpace.Normal;
             var savePrimary = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "SAVE GAME");
             actionRow = savePrimary?.parent?.parent;
 
@@ -109,6 +133,7 @@ namespace Obscure
                 detailTitleLbl.text = $"SELECTED: {SaveSlotMetadata.FormatSlotName(selectedSlot)}";
 
             actionEls.Clear();
+            btnActions.Clear();
             if (actionRow != null) actionRow.Clear();
 
             if (selectedSlot == SaveSlotId.AutoSave)
@@ -165,6 +190,11 @@ namespace Obscure
                     menu.Add(slotCards[i], SaveSlotMetadata.FormatSlotName(slot), () =>
                     {
                         selectedSlot = slot;
+                        if (feedbackLabel != null)
+                        {
+                            feedbackLabel.text = "Select a slot to save campaign progress.";
+                            feedbackLabel.style.color = Palette.Mist3;
+                        }
                         RefreshAll(false);
                     }, selected: selectedSlot == slot);
                 }
@@ -273,9 +303,11 @@ namespace Obscure
 
             backBtn = FigmaUi.FindButton(UiRoot, "Back");
             slotCards = SaveSlotUitkHelper.FindSlotCards(UiRoot);
+            SaveSlotUitkHelper.DockSystemBadge(UiRoot, slotCards[0]);
             detailTitleLbl = FigmaUi.FindLabel(UiRoot, "SELECTED: AUTO SAVE");
             detailBodyLbl = UiRoot.Query<UiLabel>().ToList().FirstOrDefault(l => l.text != null && l.text.StartsWith("Campaign:", StringComparison.Ordinal));
             feedbackLabel = FigmaUi.FindLabel(UiRoot, "Loading restores your campaign and returns to the Sanctuary Hub.");
+            if (feedbackLabel != null) feedbackLabel.style.whiteSpace = WhiteSpace.Normal;
             var loadPrimary = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "LOAD CAMPAIGN");
             actionRow = loadPrimary?.parent?.parent;
 
@@ -294,10 +326,20 @@ namespace Obscure
             actionEls.Clear();
             if (actionRow != null) actionRow.Clear();
 
+            bool isCorrupted = meta.isOccupied && meta.partySummary == "[CORRUPTED SAVE]";
+            bool isLost = meta.isOccupied && meta.expeditionLost;
             if (!meta.isOccupied)
             {
                 if (detailBodyLbl != null)
                     detailBodyLbl.text = "This slot is empty and cannot be loaded.\nSelect an occupied slot.";
+                AddAction("BACK", "button-slab", () => Game?.Go(returnState));
+            }
+            else if (isCorrupted || isLost)
+            {
+                if (detailBodyLbl != null)
+                    detailBodyLbl.text = isCorrupted
+                        ? "This save file is corrupted and cannot be loaded."
+                        : "This expedition was lost with 0 retries remaining.\nStart a New Game or choose another slot.";
                 AddAction("BACK", "button-slab", () => Game?.Go(returnState));
             }
             else
@@ -335,6 +377,11 @@ namespace Obscure
                     menu.Add(slotCards[i], SaveSlotMetadata.FormatSlotName(slot), () =>
                     {
                         selectedSlot = slot;
+                        if (feedbackLabel != null)
+                        {
+                            feedbackLabel.text = "Loading restores your campaign and returns to the Sanctuary Hub.";
+                            feedbackLabel.style.color = Palette.Mist3;
+                        }
                         RefreshAll(false);
                     }, selected: selectedSlot == slot);
                 }

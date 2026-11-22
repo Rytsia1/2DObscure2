@@ -26,11 +26,13 @@ namespace Obscure
             bool legacySave = !hasSave && GameSave.HasSavedGame();
             bool canContinue = hasSave || legacySave;
 
+            var pipsLbl = UiRoot.Q<UiLabel>(className: "node-vars");
+            if (pipsLbl != null) pipsLbl.style.marginRight = 12;
+
             var continueInst = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "CONTINUE");
             var continueSub = FigmaUi.FindLabel(UiRoot, "AUTO SAVE · GEISTWALD CITY · 0 OF 8 CLEARED");
             if (continueSub != null)
             {
-                continueSub.style.left = 117f;
                 if (hasSave)
                 {
                     var m = SaveManager.GetSlotMetadata(best);
@@ -43,6 +45,23 @@ namespace Obscure
                     continueSub.text = legacySave ? "LEGACY SAVE READY" : "NO SAVED CAMPAIGN";
                     continueSub.EnableInClassList("uitk-disabled", !canContinue);
                 }
+                continueSub.style.position = Position.Relative;
+                continueSub.style.left = StyleKeyword.Auto;
+                continueSub.style.top = StyleKeyword.Auto;
+                continueSub.style.marginLeft = 14;
+                continueSub.style.marginTop = 2;
+                continueSub.style.marginBottom = 10;
+                continueSub.style.maxWidth = 440;
+                continueSub.style.whiteSpace = WhiteSpace.Normal;
+                if (continueInst?.parent != null)
+                {
+                    var col = continueInst.parent;
+                    int cIdx = col.IndexOf(continueInst);
+                    if (cIdx + 1 < col.childCount && col[cIdx + 1] != continueSub)
+                        col[cIdx + 1].style.display = DisplayStyle.None; // hide baked 20px spacer
+                    continueSub.RemoveFromHierarchy();
+                    col.Insert(cIdx + 1, continueSub);
+                }
             }
 
             if (continueInst != null)
@@ -50,7 +69,7 @@ namespace Obscure
                 ContinueButton = menu.Add(continueInst, "CONTINUE", () => Game?.ContinueGame(), interactable: canContinue, visual: focused =>
                 {
                     var arrow = continueInst.Q<UiLabel>("text-0");
-                    if (arrow != null) arrow.style.display = focused ? DisplayStyle.Flex : DisplayStyle.None;
+                    if (arrow != null) arrow.style.display = (focused && canContinue) ? DisplayStyle.Flex : DisplayStyle.None;
                     FigmaUi.ApplyDefaultFocusVisual(continueInst, focused, false, canContinue);
                 });
             }
@@ -67,19 +86,23 @@ namespace Obscure
 
             var versionLbl = FigmaUi.FindLabel(UiRoot, "V1.0");
             if (versionLbl != null)
+            {
                 versionLbl.text = "V" + Application.version;
+                FigmaUi.AnchorRight(versionLbl, 24f);
+            }
         }
 
         static UitkMenu.Item AddFlatButton(UitkMenu menu, VisualElement root, string text, Action onClick, bool interactable)
         {
             var btn = FigmaUi.FindButton(root, text);
             if (btn == null) return null;
+            btn.style.marginBottom = 4;
             btn.SetEnabled(interactable);
             return menu.Add(btn, text, onClick, interactable: interactable, visual: focused =>
             {
-                btn.EnableInClassList("uitk-focus", focused);
+                btn.EnableInClassList("uitk-focus", focused && interactable);
                 btn.EnableInClassList("uitk-disabled", !interactable);
-                btn.text = focused ? $"▸  {text}" : text;
+                btn.text = (focused && interactable) ? $"▸ {text}" : text;
             });
         }
     }
@@ -136,7 +159,7 @@ namespace Obscure
             {
                 var hero = party[i];
                 var card = new VisualElement();
-                card.AddToClassList("uitk-card");
+                card.AddToClassList("uitk-card-static");
                 card.AddToClassList("uitk-opening-card");
 
                 var portrait = new VisualElement();
@@ -162,13 +185,19 @@ namespace Obscure
 
             var footer = new VisualElement();
             footer.AddToClassList("uitk-opening-footer");
+            footer.style.flexDirection = FlexDirection.Row;
+            footer.style.justifyContent = Justify.Center;
             UiRoot.Add(footer);
 
-            var btnEl = FigmaUi.CreateButton("BEGIN PROLOGUE", "button-primary", 320f);
+            var btnEl = FigmaUi.CreateButton("BEGIN PROLOGUE", "button-primary", 280f);
             footer.Add(btnEl);
             bool canSkip = Game?.Settings != null && Game.Settings.prologueCleared;
-            var skipEl = canSkip ? FigmaUi.CreateButton("SKIP PROLOGUE", "button-slab", 320f) : null;
-            if (skipEl != null) footer.Add(skipEl);
+            var skipEl = canSkip ? FigmaUi.CreateButton("SKIP PROLOGUE", "button-slab", 280f) : null;
+            if (skipEl != null)
+            {
+                btnEl.style.marginRight = 16;
+                footer.Add(skipEl);
+            }
 
             var menu = Root.gameObject.AddComponent<UitkMenu>();
             menu.AttachRoot(UiRoot);

@@ -64,6 +64,12 @@ namespace Obscure
             }
 
             var saveBtn = FigmaUi.FindButton(UiRoot, "Save");
+            if (saveBtn?.parent != null)
+            {
+                var btnRow = saveBtn.parent;
+                btnRow.style.left = StyleKeyword.Auto;
+                btnRow.style.right = 210;
+            }
             if (saveBtn != null)
             {
                 saveBtn.style.marginRight = 8;
@@ -74,6 +80,13 @@ namespace Obscure
             {
                 loadBtn.style.marginRight = 8;
                 menu.Add(loadBtn, "Load", () => Game?.Go(GameState.Load), tooltip: "LOAD A SAVED CAMPAIGN.");
+            }
+            if (saveBtn?.parent != null)
+            {
+                var settingsBtn = FigmaUi.CreateButton("Settings", "button-slab");
+                settingsBtn.style.marginRight = 8;
+                saveBtn.parent.Insert(saveBtn.parent.childCount - 1, settingsBtn);
+                menu.Add(settingsBtn, "Settings", () => Game?.Go(GameState.Settings), tooltip: "AUDIO, GRAPHICS, CONTROLS AND QTE SETTINGS (ESC).");
             }
             var mainMenuBtn = FigmaUi.FindButton(UiRoot, "Main Menu");
             if (mainMenuBtn != null) menu.Add(mainMenuBtn, "Main Menu", OnTitleClicked, tooltip: "RETURN TO THE TITLE SCREEN.");
@@ -116,8 +129,25 @@ namespace Obscure
 
             int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
             var gate = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "Dungeon Entrance");
+            var enterTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "ENTER");
             if (gate != null)
             {
+                var gateRoot = gate.parent is TemplateContainer ? gate.parent : gate;
+                gateRoot.style.left = 44;
+                gateRoot.style.width = 298;
+                gate.style.width = 298;
+                var gateInner = gate.childCount > 0 ? gate[0] : gate;
+                if (enterTag != null)
+                {
+                    var enterTc = enterTag.GetFirstAncestorOfType<TemplateContainer>() ?? enterTag;
+                    enterTc.RemoveFromHierarchy();
+                    enterTc.pickingMode = PickingMode.Ignore;
+                    enterTc.style.position = Position.Relative;
+                    enterTc.style.left = StyleKeyword.Auto;
+                    enterTc.style.top = StyleKeyword.Auto;
+                    enterTc.style.marginLeft = StyleKeyword.Auto;
+                    gateInner.Add(enterTc);
+                }
                 int retries = Run?.RetriesLeft ?? RunConfig.RetriesPerExpedition;
                 string tip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR."
                     : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH NO SPOILS.\nRETRIES LEFT: {retries}. A WIPE OR ABANDON SPENDS ONE.";
@@ -133,16 +163,29 @@ namespace Obscure
             if (row == null) return;
 
             row.AddToClassList("uitk-flat-item");
+            row.style.left = 44;
+            row.style.width = 298;
+            row.style.height = 38;
+            row.style.paddingTop = 4;
+            row.style.paddingBottom = 4;
+            row.style.paddingRight = 10;
+            row.style.overflow = Overflow.Hidden;
             var cursor = new UiLabel("▸") { name = "uitkCursor" };
             cursor.AddToClassList("uitk-flat-cursor");
             cursor.AddToClassList("uitk-cursor-hidden");
             row.Insert(0, cursor);
             lbl.AddToClassList("uitk-flat-label");
+            lbl.style.flexGrow = 1;
+            lbl.style.flexShrink = 1;
+            lbl.style.minWidth = 0;
 
-            if (!string.IsNullOrEmpty(replaceRightText) && row.childCount > 2 && row[2] is UiLabel rightLbl)
+            if (row.childCount > 2 && row[2] is UiLabel rightLbl)
             {
-                rightLbl.text = replaceRightText;
-                rightLbl.style.marginLeft = 8;
+                if (!string.IsNullOrEmpty(replaceRightText))
+                    rightLbl.text = replaceRightText;
+                rightLbl.style.fontSize = 11;
+                rightLbl.style.marginLeft = 6;
+                rightLbl.style.flexShrink = 0;
             }
 
             if (!string.IsNullOrEmpty(badgeText))
@@ -204,7 +247,9 @@ namespace Obscure
                 var portraitBox = card[0];
                 if (portraitBox != null)
                 {
-                    portraitBox.style.marginRight = 10;
+                    portraitBox.style.width = 44;
+                    portraitBox.style.height = 44;
+                    portraitBox.style.marginRight = 8;
                     if (portraitBox.childCount > 0 && u.sprite != null)
                         FigmaUi.SetBackgroundContain(portraitBox[0], FigmaUi.GetSpriteTexture(u.sprite, "unit_" + (u.classDef?.id ?? u.name)));
                 }
@@ -216,17 +261,21 @@ namespace Obscure
                 {
                     labels[0].text = u.name;
                     labels[0].style.color = u.Alive ? Palette.Mist1 : Palette.Mist3;
-                    labels[0].style.maxWidth = 96;
-                    labels[0].style.marginRight = 8;
+                    labels[0].style.maxWidth = 76;
+                    labels[0].style.flexShrink = 1;
+                    labels[0].style.marginRight = 6;
                     labels[0].style.overflow = Overflow.Hidden;
                 }
                 if (labels.Count > 1)
+                {
                     labels[1].text = $"LV {u.level}";
+                    labels[1].style.flexShrink = 0;
+                }
 
                 var hpGauge = infoCol.Q<VisualElement>(className: "gauge-hp");
                 var mpGauge = infoCol.Q<VisualElement>(className: "gauge-mp");
-                if (hpGauge != null) hpGauge.style.marginTop = 4;
-                if (mpGauge != null) mpGauge.style.marginTop = 4;
+                if (hpGauge != null) { hpGauge.style.width = Length.Percent(100); hpGauge.style.height = 8; hpGauge.style.marginTop = 4; }
+                if (mpGauge != null) { mpGauge.style.width = Length.Percent(100); mpGauge.style.height = 8; mpGauge.style.marginTop = 4; }
                 float hpRatio = u.Alive ? (float)u.hp / Mathf.Max(1, u.stats.maxHp) : 0f;
                 float mpRatio = (float)u.mp / Mathf.Max(1, u.stats.maxMp);
                 FigmaUi.SetGaugeFill(hpGauge, hpRatio, hpRatio < 0.25f ? Palette.HpLow : Palette.Hp);

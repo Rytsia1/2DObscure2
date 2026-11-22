@@ -41,16 +41,17 @@ namespace Obscure
             if (host != null)
             {
                 host.Clear();
+                host.style.overflow = Overflow.Hidden;
                 host.style.paddingLeft = 24;
                 host.style.paddingRight = 24;
-                host.style.paddingTop = 16;
-                host.style.paddingBottom = 16;
+                host.style.paddingTop = 12;
+                host.style.paddingBottom = 12;
                 host.style.alignItems = UnityEngine.UIElements.Align.Center;
                 host.style.justifyContent = Justify.SpaceBetween;
 
-                headingLbl = new UiLabel(heading ?? "") { style = { fontSize = 22, color = Palette.Gold1 } };
+                headingLbl = new UiLabel(heading ?? "") { style = { fontSize = 20, color = Palette.Gold1, whiteSpace = WhiteSpace.Normal, unityTextAlign = TextAnchor.MiddleCenter } };
                 host.Add(headingLbl);
-                infoLbl = new UiLabel("") { style = { fontSize = 14, color = Palette.Mist2 } };
+                infoLbl = new UiLabel("") { style = { fontSize = 13, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, unityTextAlign = TextAnchor.MiddleCenter } };
                 host.Add(infoLbl);
 
                 switch (q)
@@ -108,7 +109,7 @@ namespace Obscure
                                     : Palette.Gold1;
                                 markers[i].Add(new UiLabel(label)
                                 {
-                                    style = { position = Position.Absolute, left = -22, top = TrackH + 14, width = 50, fontSize = useGuardStyle || d.heavy[i] ? 13 : 22, color = col, unityTextAlign = TextAnchor.MiddleCenter }
+                                    style = { position = Position.Absolute, left = -31, top = TrackH + 10, width = 68, fontSize = useGuardStyle || d.heavy[i] ? 12 : 20, color = col, unityTextAlign = TextAnchor.MiddleCenter }
                                 });
                             }
                         }
@@ -196,6 +197,7 @@ namespace Obscure
                 style =
                 {
                     width = TrackW, height = TrackH,
+                    marginBottom = 20,
                     backgroundColor = Palette.Ink1,
                     borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                     borderTopColor = Palette.Mist2, borderBottomColor = Palette.Mist2,
@@ -334,7 +336,7 @@ namespace Obscure
         {
             if (chargeFill != null)
             {
-                chargeFill.style.width = c.Fill * TrackW;
+                chargeFill.style.width = Mathf.Clamp(c.Fill, 0f, 1f) * (TrackW - 4f);
                 bool overcharging = c.Hold > c.target + c.EffectiveGood; // past the zone: about to overcharge
                 chargeFill.style.backgroundColor = overcharging
                     ? new Color(Palette.SpecCrimson.r, Palette.SpecCrimson.g, Palette.SpecCrimson.b, 0.45f)
@@ -371,7 +373,7 @@ namespace Obscure
 
         void RenderStruggle(StruggleQte s)
         {
-            if (chargeFill != null) chargeFill.style.width = s.Gauge * TrackW;
+            if (chargeFill != null) chargeFill.style.width = Mathf.Clamp01(s.Gauge) * (TrackW - 4f);
             if (s.InTelegraph) infoLbl.text = $"GET READY: MASH [{Key}] TO RESIST THE SIPHON";
             else if (!defenseActiveStarted)
             {
@@ -388,10 +390,21 @@ namespace Obscure
             var dodge = System.Array.Find(d.cues, c => c != DodgeDir.None);
             bool anyHeavy = System.Array.IndexOf(d.heavy, true) >= 0;
             if (d.InTelegraph)
-                infoLbl.text = dodge != DodgeDir.None
-                    ? $"GET READY: PRESS {DirName(dodge)} (ARROW KEY OR W/A/S/D)"
-                    : anyHeavy ? $"GET READY: HOLD [{key}] THROUGH THE RED HIT"
-                    : $"GET READY: PRESS [{key}] WHEN IT LANDS";
+            {
+                string guardName = Controls.GuardKey.ToString().ToUpperInvariant();
+                var v0 = d.Hits > 0 ? d.VariantAt(0) : QteVariant.None;
+                infoLbl.text = v0 switch
+                {
+                    QteVariant.GuardCue => $"GET READY: PRESS [{guardName}] AS IT LANDS",
+                    QteVariant.Slip => $"GET READY: HOLD [{guardName}], RELEASE AT IMPACT",
+                    QteVariant.Flurry => $"GET READY: PRESS [{guardName}] TWICE AT IMPACT",
+                    QteVariant.Roll => $"GET READY: {DirName(d.cues[0])} + [{guardName}] AT IMPACT",
+                    _ => dodge != DodgeDir.None
+                        ? $"GET READY: PRESS {DirName(dodge)} (ARROW KEY OR W/A/S/D)"
+                        : anyHeavy ? $"GET READY: HOLD [{key}] THROUGH THE RED HIT"
+                        : $"GET READY: PRESS [{key}] WHEN IT LANDS",
+                };
+            }
             else if (!defenseActiveStarted)
             {
                 defenseActiveStarted = true;
@@ -482,7 +495,7 @@ namespace Obscure
             for (int i = 0; i < letters.Count; i++)
                 letters[i].style.color = i < t.Index ? Palette.Gold1 : i == t.Index ? Palette.WarmIvory : i >= t.wordLength ? Palette.ArcaneViolet : Palette.MutedGray;
             float left = Mathf.Clamp01(1f - t.T / t.timeLimit);
-            if (timeFill != null) timeFill.style.width = left * TrackW;
+            if (timeFill != null) timeFill.style.width = left * (TrackW - 4f);
             var ward = t as WardQte;
             infoLbl.text = t.Mistakes > 0 ? $"WRONG LETTER - MISTAKES {t.Mistakes}/{QteConfig.TypingMaxMistakes}"
                 : ward == null ? "RECITE THE ANCIENT WORDS"
