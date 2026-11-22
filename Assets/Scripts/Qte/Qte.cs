@@ -6,6 +6,9 @@ using System.Text;
 // QTE state machines. Pure logic driven by Tick(dt) + input calls, so they test without Unity.
 namespace Obscure
 {
+    public enum SweepCurve { Linear, EaseIn, EaseOut }
+    public enum QteDistortion { None, Fear, Confusion, Despair, Shock, Slow, Freeze, DoT }
+
     public abstract class Qte
     {
         public float T { get; protected set; }          // seconds since start
@@ -15,6 +18,7 @@ namespace Obscure
         public QteOutcomeCategory Category { get; protected set; } = QteOutcomeCategory.Failure;
         public float TimingBonusFraction { get; set; }  // small window bonus from DEX / WIS
         public bool RetriedWithSecondChance { get; protected set; }
+        public QteDistortion Distortion { get; set; }   // presentation-only status distortion (Spec Part E); never affects judgment
 
         public virtual void Tick(float dt) { if (!Done) T += dt; }
         public virtual void Press() { }
@@ -39,23 +43,73 @@ namespace Obscure
     }
 
     // Indicator sweeps the bar; press while it is over the target zone.
+    // Additive variants (Spec §C.2): optional curve (EaseIn, EaseOut) and passes (2 = Double-pass). Defaults match base sweep.
     public class TimingQte : Qte
     {
         public readonly QteProfile profile;
-        public readonly float target;   // ideal press time, seconds
+        public readonly float target;   // ideal press time, seconds (pass 1)
+        public readonly SweepCurve curve;
+        public readonly int passes;
         public float Sweep => profile.sweep;
         public float EffectivePerfect => QteConfig.ScalePerfect(profile, TimingBonusFraction);
         public float EffectiveGood => QteConfig.ScaleGood(profile, TimingBonusFraction);
 
-        public TimingQte(QteProfile profile, float zoneFraction, float timingBonusFraction = 0f)
+        public TimingQte(QteProfile profile, float zoneFraction, float timingBonusFraction = 0f,
+            SweepCurve curve = SweepCurve.Linear, int passes = 1)
         {
             this.profile = profile;
             target = profile.sweep * zoneFraction;
             TimingBonusFraction = timingBonusFraction;
+            this.curve = curve;
+            this.passes = Math.Max(1, passes);
         }
 
-        public static TimingQte Random(QteProfile p, Random rng, float timingBonusFraction = 0f) =>
-            new TimingQte(p, QteConfig.ZoneMin + (float)rng.NextDouble() * (QteConfig.ZoneMax - QteConfig.ZoneMin), timingBonusFraction);
+        public float MarkFraction
+        {
+            get
+            {
+                float u = Math.Clamp(T / profile.sweep, 0f, 1f);
+                if (passes == 2)
+                {
+                    float half = u <= 0.5f ? u * 2f : 2f - u * 2f;
+                    return ApplyCurve(half, curve);
+                }
+                return ApplyCurve(u, curve);
+            }
+        }
+
+        public float ZoneFraction => target / profile.sweep;
+
+        static float ApplyCurve(float u, SweepCurve c) => c switch
+        {
+            SweepCurve.EaseIn => u * u,
+            SweepCurve.EaseOut => 1f - (1f - u) * (1f - u),
+            _ => u,
+        };
+
+        static float InvertCurve(float y, SweepCurve c)
+        {
+            y = Math.Clamp(y, 0f, 1f);
+            return c switch
+            {
+                SweepCurve.EaseIn => (float)Math.Sqrt(y),
+                SweepCurve.EaseOut => 1f - (float)Math.Sqrt(1f - y),
+                _ => y,
+            };
+        }
+
+        public float IdealTime(bool secondPass = false)
+        {
+            float u = InvertCurve(ZoneFraction, curve);
+            if (passes == 2)
+                return profile.sweep * (secondPass ? 1f - u * 0.5f : u * 0.5f);
+            return curve == SweepCurve.Linear ? target : profile.sweep * u;
+        }
+
+        public static TimingQte Random(QteProfile p, Random rng, float timingBonusFraction = 0f,
+            SweepCurve curve = SweepCurve.Linear, int passes = 1) =>
+            new TimingQte(p, QteConfig.ZoneMin + (float)rng.NextDouble() * (QteConfig.ZoneMax - QteConfig.ZoneMin),
+                timingBonusFraction, curve, passes);
 
         public override void Tick(float dt)
         {
@@ -66,7 +120,13 @@ namespace Obscure
         public override void Press()
         {
             if (Done) return;
-            float error = T - target;
+            float ideal = IdealTime(false);
+            if (passes == 2)
+            {
+                float ideal2 = IdealTime(true);
+                if (Math.Abs(T - ideal2) < Math.Abs(T - ideal)) ideal = ideal2;
+            }
+            float error = T - ideal;
             var res = QteConfig.Judge(error, profile, TimingBonusFraction);
             var cat = QteConfig.JudgeCategory(error, profile, TimingBonusFraction);
             Finish(res, cat);
@@ -91,10 +151,12 @@ namespace Obscure
     }
 
     // Heavy skills: hold the key, the gauge fills, release in the gold zone. A full gauge is an overcharge (Poor).
+    // Thrust variant (Spec §C.2): short hold with a narrow release zone, same Perfect/Good windows.
     public class ChargeQte : Qte
     {
         public readonly QteProfile profile;
         public readonly float target;   // ideal hold duration, seconds
+        public readonly bool isThrust;
         float holdStart = -1f;
 
         public bool Charging => holdStart >= 0f && !Done;
@@ -104,10 +166,11 @@ namespace Obscure
         public float EffectivePerfect => QteConfig.ScalePerfect(profile, TimingBonusFraction);
         public float EffectiveGood => QteConfig.ScaleGood(profile, TimingBonusFraction);
 
-        public ChargeQte(QteProfile profile, float zoneFraction, float timingBonusFraction = 0f)
+        public ChargeQte(QteProfile profile, float zoneFraction, float timingBonusFraction = 0f, bool isThrust = false)
         {
             this.profile = profile;
-            target = profile.sweep * zoneFraction;
+            this.isThrust = isThrust;
+            target = profile.sweep * (isThrust ? Math.Min(zoneFraction, 0.45f) : zoneFraction);
             TimingBonusFraction = timingBonusFraction;
         }
 
@@ -182,7 +245,7 @@ namespace Obscure
         public IReadOnlyList<QteResult> Results => results.Select(r => r ?? QteResult.Miss).ToList();
         float Good => QteConfig.ScaleGood(profile, TimingBonusFraction);
 
-        public ComboQte(QteProfile profile, int zones, Random rng, float timingBonusFraction = 0f)
+        public ComboQte(QteProfile profile, int zones, Random rng, float timingBonusFraction = 0f, bool echoZones = false)
         {
             this.profile = profile;
             TimingBonusFraction = timingBonusFraction;
@@ -196,6 +259,8 @@ namespace Obscure
                 f += ((float)rng.NextDouble() * 2f - 1f) * QteConfig.ComboJitter;
                 zoneTimes[i] = duration * f;
             }
+            if (echoZones && zones >= 2)
+                zoneTimes[1] = duration - zoneTimes[0];
         }
 
         public float AveragePower(Func<QteResult, float> power) => (float)Results.Average(r => power(r));
@@ -237,24 +302,26 @@ namespace Obscure
         public readonly string sequence;
         public readonly int wordLength;    // letters before the rune suffix
         public readonly float timeLimit;
+        public readonly bool cadence;      // Cadence variant (Spec §C.2): metronome beat prompt; same Perfect/Good grading
         public int Index { get; private set; }
         public int Mistakes { get; private set; }
         public float PerfectTime => timeLimit * QteConfig.TypingPerfectFraction;
 
-        public TypingQte(string sequence, int wordLength, float timeLimit)
+        public TypingQte(string sequence, int wordLength, float timeLimit, bool cadence = false)
         {
             this.sequence = sequence.ToUpperInvariant();
             this.wordLength = wordLength;
             this.timeLimit = timeLimit;
+            this.cadence = cadence;
         }
 
-        public static TypingQte For(SkillDef skill, QteProfile p, Random rng, float intBonusFraction = 0f)
+        public static TypingQte For(SkillDef skill, QteProfile p, Random rng, float intBonusFraction = 0f, bool cadence = false)
         {
             var (extra, timeScale) = QteConfig.Typing(skill.difficulty);
             var sb = new StringBuilder(skill.word.ToUpperInvariant());
             for (int i = 0; i < p.runeLetters + extra; i++) sb.Append(QteConfig.RuneLetters[rng.Next(QteConfig.RuneLetters.Length)]);
             float limit = sb.Length * p.letterTime * timeScale * Math.Clamp(1f + intBonusFraction, 0.9f, 1.2f);
-            return new TypingQte(sb.ToString(), skill.word.Length, limit);
+            return new TypingQte(sb.ToString(), skill.word.Length, limit, cadence);
         }
 
         public override void Tick(float dt)
@@ -323,28 +390,35 @@ namespace Obscure
         }
     }
 
-    public enum DodgeDir { None, Up, Down, Left, Right }
-
     // Enemy telegraph, then one cue per hit sliding toward the impact line. Press as each lands.
     // A cue may carry a dodge arrow (press that arrow, not the QTE key) or open with a feint (a fake cue that recoils).
     // A stutter cue changes speed on its way in (impact time unchanged); a Heavy hit must be held (braced) through impact.
+    // Additive variants (QTE Variation Spec §C.1): GuardCue, Slip, Flurry, Roll via optional variants[].
     public class DefenseQte : Qte
     {
         public readonly QteProfile profile;
         public readonly float[] impacts, delays;  // impact time and extra hold per hit
         public readonly bool[] heavy;             // Heavy marker per hit: brace (press and hold through impact)
         public readonly DodgeDir[] cues;          // None = press the QTE key; otherwise press this arrow
+        public readonly QteVariant[] variants;    // None = established cue behavior
+        public readonly bool singleKeyMode;       // Accessibility: Guard-key variants also accept the QTE key
+        public readonly bool isRemix;           // Spec §D.4: deterministic remix active (always shown in telegraph)
         readonly (float time, float dist)[] stutter; // per hit speed break; time 0 = steady cue
         readonly float[] feintStarts;             // when the fake cue appears; < 0 = no feint
         readonly QteResult?[] results;
         readonly QteOutcomeCategory?[] categories;
         readonly bool[] wrong;                    // hit spent by the wrong input (key vs arrow, or wrong arrow)
         readonly bool[] bracing, letGo;           // Heavy hit pressed and still held / released before impact
+        readonly bool[] slipping;                 // Slip: Guard held from cue spawn, waiting for release at impact
+        readonly QteResult?[] flurryFirstResult;  // Flurry: grade of press 1 (at impact); press 2 is at impact + FlurryGap
+        readonly QteOutcomeCategory?[] flurryFirstCategory;
+        readonly float[] rollArrowTime;           // Roll: timestamp of arrow press (< 0 = not pressed)
+        readonly float[] rollGuardTime;           // Roll: timestamp of Guard press (< 0 = not pressed)
 
         // intervals: seconds between consecutive markers (Accelerando etc.); null = profile.hitInterval (Steady).
         public DefenseQte(QteProfile profile, int hits, float firstHitDelay = 0f, float timingBonusFraction = 0f,
             float[] intervals = null, bool[] heavy = null, DodgeDir[] cues = null, bool[] feints = null,
-            (float time, float dist)[] stutter = null)
+            (float time, float dist)[] stutter = null, QteVariant[] variants = null, bool singleKeyMode = false, bool isRemix = false)
         {
             this.profile = profile;
             TimingBonusFraction = timingBonusFraction;
@@ -352,6 +426,9 @@ namespace Obscure
             delays = new float[hits];
             this.heavy = heavy ?? new bool[hits];
             this.cues = cues ?? new DodgeDir[hits];
+            this.variants = variants ?? new QteVariant[hits];
+            this.singleKeyMode = singleKeyMode;
+            this.isRemix = isRemix;
             this.stutter = stutter ?? new (float, float)[hits];
             feintStarts = Enumerable.Repeat(-1f, hits).ToArray();
             results = new QteResult?[hits];
@@ -359,6 +436,11 @@ namespace Obscure
             wrong = new bool[hits];
             bracing = new bool[hits];
             letGo = new bool[hits];
+            slipping = new bool[hits];
+            flurryFirstResult = new QteResult?[hits];
+            flurryFirstCategory = new QteOutcomeCategory?[hits];
+            rollArrowTime = Enumerable.Repeat(-1f, hits).ToArray();
+            rollGuardTime = Enumerable.Repeat(-1f, hits).ToArray();
             delays[0] = firstHitDelay;
             float t = profile.telegraph + profile.windup + firstHitDelay;
             for (int i = 0; i < hits; i++)
@@ -378,11 +460,13 @@ namespace Obscure
         public float FeintStart(int i) => feintStarts[i];
         public bool InTelegraph => T < profile.telegraph;
         public int Hits => impacts.Length;
+        public QteVariant VariantAt(int i) => i >= 0 && i < variants.Length ? variants[i] : QteVariant.None;
         public QteResult? HitResult(int i) => results[i];
         public QteOutcomeCategory? HitCategory(int i) => categories[i];
         public bool WrongInput(int i) => wrong[i];
         public bool LetGo(int i) => letGo[i];
         public bool Stutters(int i) => stutter[i].time > 0f;
+        public bool IsSlipping(int i) => i >= 0 && i < slipping.Length && slipping[i];
 
         // Visual progress of hit i's cue for a linear run fraction x (0 = spawn, 1 = impact). Steady cues return x;
         // a stutter cue covers `dist` of the track in `time` of its run, then the rest. Past 1 it keeps the last speed.
@@ -404,25 +488,58 @@ namespace Obscure
             if (Done) return;
             float effectiveGood = QteConfig.ScaleGood(profile, TimingBonusFraction);
             for (int i = 0; i < results.Length; i++)
-                if (results[i] == null && T > impacts[i] + effectiveGood)
+            {
+                if (results[i] != null) continue;
+                var v = VariantAt(i);
+                float deadline = v == QteVariant.Flurry ? impacts[i] + QteConfig.FlurryGap + effectiveGood : impacts[i] + effectiveGood;
+                if (v == QteVariant.Flurry && flurryFirstResult[i] == null && T > impacts[i] + effectiveGood)
                 {
+                    // Missed the first press of a Flurry -> whole cue is Miss
                     results[i] = QteResult.Miss;
                     categories[i] = QteOutcomeCategory.Failure;
                 }
+                else if (T > deadline)
+                {
+                    results[i] = QteResult.Miss;
+                    categories[i] = QteOutcomeCategory.Failure;
+                    slipping[i] = false;
+                }
+            }
             CheckDone();
         }
 
         // Presses during the telegraph are ignored; a press commits to the next unresolved hit,
         // so pressing too early (or on a feint) counts as a miss for that hit (no free mashing).
-        public override void Press() => Commit(DodgeDir.None);
+        public override void Press()
+        {
+            if (singleKeyMode)
+            {
+                int i = Array.FindIndex(results, r => r == null);
+                if (i >= 0 && IsGuardKeyVariant(VariantAt(i)))
+                {
+                    PressGuard();
+                    return;
+                }
+            }
+            Commit(DodgeDir.None, isGuardKey: false);
+        }
 
         // Arrow input. The wrong input for the cue (arrow on a key cue, key or wrong arrow on an arrow cue) is a miss.
-        public override void PressDirection(DodgeDir d) => Commit(d);
+        public override void PressDirection(DodgeDir d) => Commit(d, isGuardKey: false);
 
-        // Brace: letting go of a Heavy hit before it lands drops that hit to Poor.
+        // Guard key press (GuardCue, Slip, Flurry, Roll).
+        public void PressGuard() => Commit(DodgeDir.None, isGuardKey: true);
+
+        // Brace or Slip release.
         public override void Release()
         {
             if (Done) return;
+            if (singleKeyMode)
+            {
+                bool anySlip = false;
+                for (int i = 0; i < slipping.Length; i++) if (slipping[i]) anySlip = true;
+                if (anySlip) ReleaseGuard();
+            }
             for (int i = 0; i < bracing.Length; i++)
             {
                 if (!bracing[i]) continue;
@@ -435,23 +552,147 @@ namespace Obscure
             CheckDone();
         }
 
-        void Commit(DodgeDir input)
+        public void ReleaseGuard()
+        {
+            if (Done) return;
+            for (int i = 0; i < slipping.Length; i++)
+            {
+                if (!slipping[i] || results[i] != null) continue;
+                slipping[i] = false;
+                float err = T - impacts[i];
+                var r = QteConfig.Judge(err, profile, TimingBonusFraction);
+                var c = QteConfig.JudgeCategory(err, profile, TimingBonusFraction);
+                if (r == QteResult.Miss && err < 0f) letGo[i] = true;
+                results[i] = r;
+                categories[i] = c;
+            }
+            CheckDone();
+        }
+
+        static bool IsGuardKeyVariant(QteVariant v) =>
+            v == QteVariant.GuardCue || v == QteVariant.Slip || v == QteVariant.Flurry || v == QteVariant.Roll;
+
+        void Commit(DodgeDir input, bool isGuardKey)
         {
             if (Done || InTelegraph) return;
             int i = Array.FindIndex(results, r => r == null);
             if (i < 0) return;
-            if (input != cues[i])
+
+            var v = VariantAt(i);
+            if (v == QteVariant.None)
             {
-                wrong[i] = true;
-                results[i] = QteResult.Miss;
-                categories[i] = QteOutcomeCategory.Failure;
+                if (isGuardKey || input != cues[i])
+                {
+                    wrong[i] = true;
+                    results[i] = QteResult.Miss;
+                    categories[i] = QteOutcomeCategory.Failure;
+                }
+                else
+                {
+                    float err = T - impacts[i];
+                    results[i] = QteConfig.Judge(err, profile, TimingBonusFraction);
+                    categories[i] = QteConfig.JudgeCategory(err, profile, TimingBonusFraction);
+                    if (heavy[i] && input == DodgeDir.None && err < 0f && results[i] != QteResult.Miss) bracing[i] = true;
+                }
+                CheckDone();
+                return;
             }
-            else
+
+            switch (v)
             {
-                float err = T - impacts[i];
-                results[i] = QteConfig.Judge(err, profile, TimingBonusFraction);
-                categories[i] = QteConfig.JudgeCategory(err, profile, TimingBonusFraction);
-                if (heavy[i] && input == DodgeDir.None && err < 0f && results[i] != QteResult.Miss) bracing[i] = true;
+                case QteVariant.GuardCue:
+                    if (!isGuardKey)
+                    {
+                        wrong[i] = true;
+                        results[i] = QteResult.Miss;
+                        categories[i] = QteOutcomeCategory.Failure;
+                    }
+                    else
+                    {
+                        float err = T - impacts[i];
+                        results[i] = QteConfig.Judge(err, profile, TimingBonusFraction);
+                        categories[i] = QteConfig.JudgeCategory(err, profile, TimingBonusFraction);
+                    }
+                    break;
+
+                case QteVariant.Slip:
+                    if (!isGuardKey)
+                    {
+                        wrong[i] = true;
+                        results[i] = QteResult.Miss;
+                        categories[i] = QteOutcomeCategory.Failure;
+                    }
+                    else if (!slipping[i])
+                    {
+                        if (T < SpawnTime(i))
+                        {
+                            // Pressed before cue spawned
+                            results[i] = QteResult.Miss;
+                            categories[i] = QteOutcomeCategory.Failure;
+                        }
+                        else
+                        {
+                            slipping[i] = true; // hold until ReleaseGuard() at impact
+                        }
+                    }
+                    break;
+
+                case QteVariant.Flurry:
+                    if (!isGuardKey)
+                    {
+                        wrong[i] = true;
+                        results[i] = QteResult.Miss;
+                        categories[i] = QteOutcomeCategory.Failure;
+                    }
+                    else if (flurryFirstResult[i] == null)
+                    {
+                        float err1 = T - impacts[i];
+                        flurryFirstResult[i] = QteConfig.Judge(err1, profile, TimingBonusFraction);
+                        flurryFirstCategory[i] = QteConfig.JudgeCategory(err1, profile, TimingBonusFraction);
+                    }
+                    else
+                    {
+                        float err2 = T - (impacts[i] + QteConfig.FlurryGap);
+                        var r2 = QteConfig.Judge(err2, profile, TimingBonusFraction);
+                        var c2 = QteConfig.JudgeCategory(err2, profile, TimingBonusFraction);
+                        // Cue grade is the worse of the two presses
+                        results[i] = (QteResult)Math.Max((int)flurryFirstResult[i].Value, (int)r2);
+                        categories[i] = (QteOutcomeCategory)Math.Max((int)flurryFirstCategory[i].Value, (int)c2);
+                    }
+                    break;
+
+                case QteVariant.Roll:
+                    if (isGuardKey)
+                    {
+                        rollGuardTime[i] = T;
+                    }
+                    else if (input == cues[i] && input != DodgeDir.None)
+                    {
+                        rollArrowTime[i] = T;
+                    }
+                    else
+                    {
+                        wrong[i] = true;
+                        results[i] = QteResult.Miss;
+                        categories[i] = QteOutcomeCategory.Failure;
+                        break;
+                    }
+
+                    if (rollArrowTime[i] >= 0f && rollGuardTime[i] >= 0f)
+                    {
+                        if (Math.Abs(rollArrowTime[i] - rollGuardTime[i]) > QteConfig.ChordTolerance)
+                        {
+                            results[i] = QteResult.Miss;
+                            categories[i] = QteOutcomeCategory.Failure;
+                        }
+                        else
+                        {
+                            float err = T - impacts[i]; // judge on the later input
+                            results[i] = QteConfig.Judge(err, profile, TimingBonusFraction);
+                            categories[i] = QteConfig.JudgeCategory(err, profile, TimingBonusFraction);
+                        }
+                    }
+                    break;
             }
             CheckDone();
         }
@@ -463,6 +704,93 @@ namespace Obscure
                 if (bracing[i] && T < impacts[i]) return;
             if (results.All(r => r != null))
                 Finish(Results.Max(), Categories.Max()); // overall = worst hit (Miss > Good > Perfect)
+        }
+    }
+
+    // Validates authored QteMotifs against QTE Variation Spec §D.2 (rhythm floors) and §D.3 (complexity budget).
+    public static class QteMotifValidator
+    {
+        public static bool Validate(EnemyDef enemy, EnemyAttack move, out List<string> errors)
+        {
+            errors = new List<string>();
+            if (enemy == null || move == null) { errors.Add("enemy or move is null"); return false; }
+            var motif = move.motif;
+            if (motif == null) return true;
+
+            int hits = motif.hits?.Length ?? 0;
+            if (hits != move.hits)
+                errors.Add($"{enemy.id}.{move.name}: motif hits ({hits}) != move.hits ({move.hits})");
+
+            bool isBoss = enemy.tier == Tier.Boss;
+            bool isElite = enemy.tier == Tier.Elite;
+            bool isEnhanced = enemy.isEnhanced;
+
+            int maxHits = isBoss ? (move.HasHeavy && move.telegraph ? 6 : 4)
+                : isElite ? 4
+                : isEnhanced ? 3
+                : 2;
+            if (hits > maxHits)
+                errors.Add($"{enemy.id}.{move.name}: hits ({hits}) exceeds tier budget ({maxHits})");
+
+            int maxDistinctVerbs = isBoss ? 4 : isElite ? 3 : 2;
+            var distinctVerbs = new HashSet<string>();
+            for (int i = 0; i < hits; i++)
+            {
+                var hc = motif.hits[i];
+                bool allowed = hc.variant switch
+                {
+                    QteVariant.None => true,
+                    QteVariant.GuardCue => true,
+                    QteVariant.Slip => true,
+                    QteVariant.Flurry => isEnhanced || isElite || isBoss,
+                    QteVariant.Roll => isElite || isBoss,
+                    _ => false,
+                };
+                if (!allowed)
+                    errors.Add($"{enemy.id}.{move.name}[{i}]: variant {hc.variant} is not allowed for tier {(isEnhanced ? "Enhanced" : enemy.tier.ToString())}");
+
+                string verbKey = hc.variant != QteVariant.None ? hc.variant.ToString()
+                    : move.HeavyAt(i) ? "Brace"
+                    : hc.dir != DodgeDir.None ? "Dodge"
+                    : "Tap";
+                distinctVerbs.Add(verbKey);
+
+                if (hc.variant == QteVariant.Roll && hc.dir == DodgeDir.None)
+                    errors.Add($"{enemy.id}.{move.name}[{i}]: Roll requires a DodgeDir");
+            }
+
+            if (distinctVerbs.Count > maxDistinctVerbs)
+                errors.Add($"{enemy.id}.{move.name}: distinct verbs ({distinctVerbs.Count}) exceeds tier budget ({maxDistinctVerbs})");
+
+            // Rhythm validation (Spec §D.2)
+            if (move.intervals != null && move.intervals.Length > 0)
+            {
+                float floor = isBoss ? 0.280f : 0.310f;
+                if (!isBoss && !isElite && !isEnhanced)
+                    errors.Add($"{enemy.id}.{move.name}: Normal tier must use Steady (intervals == null)");
+                foreach (var iv in move.intervals)
+                    if (iv < floor - 1e-6f)
+                        errors.Add($"{enemy.id}.{move.name}: interval {iv * 1000f:0} ms below tier floor {floor * 1000f:0} ms");
+
+                bool hasIncrease = false, hasDecrease = false;
+                for (int i = 1; i < move.intervals.Length; i++)
+                {
+                    if (move.intervals[i] > move.intervals[i - 1] + 1e-6f) hasIncrease = true;
+                    if (move.intervals[i] < move.intervals[i - 1] - 1e-6f) hasDecrease = true;
+                }
+                if (hasIncrease && hasDecrease)
+                {
+                    bool isBossSignature = isBoss && move.telegraph && move.HasHeavy;
+                    if (!isBossSignature)
+                        errors.Add($"{enemy.id}.{move.name}: Syncopated rhythm is allowed on Boss signatures only");
+                }
+                else if (hasIncrease && !isBoss && !isElite)
+                {
+                    errors.Add($"{enemy.id}.{move.name}: Ritardando is allowed on Elite and Boss only");
+                }
+            }
+
+            return errors.Count == 0;
         }
     }
 
@@ -489,6 +817,23 @@ namespace Obscure
             return OffenseQteKind.Timing;
         }
 
+        // Weapon Strike Signatures (QTE Variation Spec §C.3): sets the shape only for Basic Attack and single-hit physical skills, never the windows.
+        public static (SweepCurve curve, int passes, bool thrust) StrikeSignatureFor(WeaponType weapon) => weapon switch
+        {
+            WeaponType.Dagger or WeaponType.RitualBlade => (SweepCurve.EaseIn, 1, false),
+            WeaponType.DualDaggers or WeaponType.Fist or WeaponType.Gauntlet => (SweepCurve.Linear, 2, false),
+            WeaponType.Greatsword or WeaponType.Greataxe or WeaponType.Warhammer or WeaponType.Scythe => (SweepCurve.EaseOut, 1, false),
+            WeaponType.Spear or WeaponType.Polearm or WeaponType.Rapier => (SweepCurve.Linear, 1, true),
+            _ => (SweepCurve.Linear, 1, false),
+        };
+
+        static WeaponType MainHandWeapon(Combatant actor)
+        {
+            if (actor?.unit?.equipped != null && actor.unit.equipped.TryGetValue(EquipmentSlot.MainHand, out var eq) && eq != null)
+                return eq.weaponType;
+            return WeaponType.None;
+        }
+
         public static Qte Offense(BattleAction a, Tier tier, QteAssist assist, Random rng, RunState run = null)
         {
             var kind = KindFor(a);
@@ -502,14 +847,26 @@ namespace Obscure
                 : 0f;
             float windowBonus = Math.Clamp(charBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             if (r?.Tutorial != null && r.Tutorial.FirstTime("offense_" + kind)) profile = profile.Scaled(1f, Prologue.FirstTimeSlow);
-            return kind switch
+
+            bool reduceDistortions = Game.I?.Settings?.reduceQteDistortions ?? false;
+            var distortion = QteConfig.ActiveDistortion(a.actor, reduceDistortions);
+
+            bool isSingleHitPhysical = a.kind == ActionKind.Attack
+                || (a.kind == ActionKind.Skill && a.skill != null && a.skill.kind == SkillKind.Physical && kind == OffenseQteKind.Timing);
+            var sig = isSingleHitPhysical ? StrikeSignatureFor(MainHandWeapon(a.actor)) : (curve: SweepCurve.Linear, passes: 1, thrust: false);
+
+            Qte created = kind switch
             {
                 OffenseQteKind.Typing => TypingQte.For(a.skill, profile, rng),
                 OffenseQteKind.Charge => new ChargeQte(profile, QteConfig.ZoneMin + (float)rng.NextDouble() * (QteConfig.ZoneMax - QteConfig.ZoneMin), windowBonus),
                 OffenseQteKind.MovingTarget => new MovingTargetQte(profile, (float)(rng.NextDouble() * 2 * Math.PI), windowBonus),
                 OffenseQteKind.Combo => new ComboQte(profile, a.skill.hits > 1 ? Math.Clamp(a.skill.hits, 2, 4) : QteConfig.ComboZones, rng, windowBonus),
-                _ => TimingQte.Random(profile, rng, windowBonus),
+                _ => sig.thrust
+                    ? new ChargeQte(profile, 0.40f, windowBonus, isThrust: true)
+                    : TimingQte.Random(profile, rng, windowBonus, sig.curve, sig.passes),
             };
+            created.Distortion = distortion;
+            return created;
         }
 
         // Enemy hits: reaction QTE at the attacker's tier. Self stances need none (null).
@@ -534,46 +891,173 @@ namespace Obscure
                 : 0f;
             float totalTimingBonus = Math.Clamp(statTimingBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             var tier = a.actor.enemy?.tier ?? Tier.Normal;
+            bool isEnhanced = a.actor.enemy != null && a.actor.enemy.isEnhanced;
+            bool reduceDistortions = Game.I?.Settings?.reduceQteDistortions ?? false;
+            var distortion = QteConfig.ActiveDistortion(a.target, reduceDistortions);
+
             // Tutorial Prologue: feint/stutter ramp, one scripted feint, and each QTE type runs slower the first time.
             var tut = r?.Tutorial;
             var ramp = tut?.Ramp(a.actor, move);
             if (tut != null && tut.FirstTime(ramp?.forceFeint == true ? "feint" : PrologueScript.DefenseKind(move, hits)))
                 profile = profile.Scaled(1f, Prologue.FirstTimeSlow);
             // Drain attacks are fought off by mashing (Struggle); other magic is warded by typing runes.
-            if (move != null && move.drain > 0f) return new StruggleQte(profile, hits, move.delay);
-            if (move != null && move.UsesMagic) return WardQte.For(profile, hits, rng);
+            if (move != null && move.drain > 0f)
+            {
+                var st = new StruggleQte(profile, hits, move.delay) { Distortion = distortion };
+                return st;
+            }
+            if (move != null && move.UsesMagic)
+            {
+                var w = WardQte.For(profile, hits, rng);
+                w.Distortion = distortion;
+                return w;
+            }
 
-            // Physical hits: Heavy hits are braced (press and hold); single hits and Elite/Boss multi-hit chains are
-            // dodged by arrow; any tier may feint one hit, stutter a cue, and untimed multi-hits land on uneven beats.
             var heavy = move == null ? new bool[hits] : Enumerable.Range(0, hits).Select(move.HeavyAt).ToArray();
-            DodgeDir[] cues = null;
-            if (hits == 1 || tier >= Tier.Elite)
+            bool singleKey = Game.I?.Settings?.singleKeyMode ?? Controls.SingleKeyMode;
+
+            // Authored QTE motif path (QTE Variation Spec Part D): deterministic cues/variants/feint/stutter + optional Remix.
+            if (move?.motif != null && move.motif.hits != null && move.motif.hits.Length == hits)
             {
-                cues = new DodgeDir[hits];
+                var motif = move.motif;
+                var cues = new DodgeDir[hits];
+                var variants = new QteVariant[hits];
                 for (int i = 0; i < hits; i++)
-                    if (!heavy[i]) cues[i] = (DodgeDir)(1 + rng.Next(4));
-            }
-            bool[] feints = null;
-            if (ramp?.forceFeint == true || rng.NextDouble() < (ramp?.feint ?? QteConfig.FeintChance(tier)))
-            {
-                feints = new bool[hits];
-                feints[rng.Next(hits)] = true;
-            }
-            var stutter = new (float, float)[hits];
-            for (int i = 0; i < hits; i++)
-                if (rng.NextDouble() < (ramp?.stutter ?? QteConfig.StutterChance(tier)))
-                    stutter[i] = rng.Next(2) == 0
+                {
+                    cues[i] = motif.hits[i].dir;
+                    variants[i] = motif.hits[i].variant;
+                }
+                bool[] feints = null;
+                if (motif.feintHit >= 0 && motif.feintHit < hits)
+                {
+                    feints = new bool[hits];
+                    feints[motif.feintHit] = true;
+                }
+                else if (motif.feintHit < 0 && (ramp?.forceFeint == true || rng.NextDouble() < (ramp?.feint ?? QteConfig.FeintChance(tier))))
+                {
+                    feints = new bool[hits];
+                    feints[rng.Next(hits)] = true;
+                }
+                var stutter = new (float, float)[hits];
+                if (motif.stutterHit >= 0 && motif.stutterHit < hits)
+                {
+                    stutter[motif.stutterHit] = motif.stutterSlowFirst
                         ? (QteConfig.StutterSlowTime, QteConfig.StutterSlowDistance)
                         : (QteConfig.StutterFastTime, QteConfig.StutterFastDistance);
-            float[] intervals = move?.intervals;
-            if (intervals == null && hits > 1)
+                }
+                float[] intervals = move.intervals != null ? (float[])move.intervals.Clone() : null;
+
+                // Remix (Spec §D.4): Elite 25%, Boss 35%, Enhanced always 100%, Normal never.
+                bool isRemix = false;
+                if (motif.remixes != null && motif.remixes.Length > 0)
+                {
+                    float remixChance = isEnhanced ? 1f
+                        : tier == Tier.Boss ? QteConfig.BossRemixChance
+                        : tier == Tier.Elite ? QteConfig.EliteRemixChance
+                        : 0f;
+                    if (remixChance > 0f && (remixChance >= 1f || rng.NextDouble() < remixChance))
+                    {
+                        isRemix = true;
+                        var kind = motif.remixes[rng.Next(motif.remixes.Length)];
+                        ApplyRemix(kind, tier, isEnhanced, heavy, cues, variants, ref intervals);
+                    }
+                }
+
+                // First-encounter slowdown in Dungeon 1 when a new Defense QTE variant appears.
+                if (tut != null)
+                {
+                    for (int i = 0; i < hits; i++)
+                    {
+                        if (variants[i] != QteVariant.None && tut.FirstTime("var_" + variants[i]))
+                        {
+                            profile = profile.Scaled(1f, Prologue.FirstTimeSlow);
+                            break;
+                        }
+                    }
+                }
+
+                return new DefenseQte(profile, hits, move.delay, totalTimingBonus, intervals, heavy, cues, feints, stutter,
+                    variants, singleKey, isRemix) { Distortion = distortion };
+            }
+
+            // Unauthored moves keep today's established random generator path, byte for byte in behavior.
+            DodgeDir[] randCues = null;
+            if (hits == 1 || tier >= Tier.Elite)
             {
-                intervals = new float[hits - 1];
-                for (int i = 0; i < intervals.Length; i++)
-                    intervals[i] = Math.Max(QteConfig.MinHitInterval,
+                randCues = new DodgeDir[hits];
+                for (int i = 0; i < hits; i++)
+                    if (!heavy[i]) randCues[i] = (DodgeDir)(1 + rng.Next(4));
+            }
+            bool[] randFeints = null;
+            if (ramp?.forceFeint == true || rng.NextDouble() < (ramp?.feint ?? QteConfig.FeintChance(tier)))
+            {
+                randFeints = new bool[hits];
+                randFeints[rng.Next(hits)] = true;
+            }
+            var randStutter = new (float, float)[hits];
+            for (int i = 0; i < hits; i++)
+                if (rng.NextDouble() < (ramp?.stutter ?? QteConfig.StutterChance(tier)))
+                    randStutter[i] = rng.Next(2) == 0
+                        ? (QteConfig.StutterSlowTime, QteConfig.StutterSlowDistance)
+                        : (QteConfig.StutterFastTime, QteConfig.StutterFastDistance);
+            float[] randIntervals = move?.intervals;
+            if (randIntervals == null && hits > 1)
+            {
+                randIntervals = new float[hits - 1];
+                for (int i = 0; i < randIntervals.Length; i++)
+                    randIntervals[i] = Math.Max(QteConfig.MinHitInterval,
                         profile.hitInterval + ((float)rng.NextDouble() * 2f - 1f) * QteConfig.IntervalJitter);
             }
-            return new DefenseQte(profile, hits, move?.delay ?? 0f, totalTimingBonus, intervals, heavy, cues, feints, stutter);
+            return new DefenseQte(profile, hits, move?.delay ?? 0f, totalTimingBonus, randIntervals, heavy, randCues, randFeints, randStutter,
+                variants: null, singleKeyMode: singleKey) { Distortion = distortion };
+        }
+
+        public static void ApplyRemix(RemixKind kind, Tier tier, bool isEnhanced, bool[] heavy, DodgeDir[] cues, QteVariant[] variants, ref float[] intervals)
+        {
+            switch (kind)
+            {
+                case RemixKind.Mirror:
+                    for (int i = 0; i < cues.Length; i++)
+                        cues[i] = cues[i] switch
+                        {
+                            DodgeDir.Left => DodgeDir.Right,
+                            DodgeDir.Right => DodgeDir.Left,
+                            DodgeDir.Up => DodgeDir.Down,
+                            DodgeDir.Down => DodgeDir.Up,
+                            _ => DodgeDir.None,
+                        };
+                    break;
+                case RemixKind.Upgrade:
+                    for (int i = 0; i < variants.Length; i++)
+                    {
+                        if (heavy[i]) continue;
+                        if (variants[i] == QteVariant.None && cues[i] == DodgeDir.None)
+                        {
+                            variants[i] = QteVariant.GuardCue;
+                            return;
+                        }
+                        if (variants[i] == QteVariant.None && cues[i] != DodgeDir.None && (tier == Tier.Elite || tier == Tier.Boss))
+                        {
+                            variants[i] = QteVariant.Roll;
+                            return;
+                        }
+                        if (variants[i] == QteVariant.GuardCue && (isEnhanced || tier == Tier.Elite || tier == Tier.Boss))
+                        {
+                            variants[i] = QteVariant.Flurry;
+                            return;
+                        }
+                    }
+                    break;
+                case RemixKind.Tempo:
+                    if (variants.Length > 1)
+                    {
+                        float floor = tier == Tier.Boss ? 0.280f : 0.310f;
+                        intervals = new float[variants.Length - 1];
+                        for (int i = 0; i < intervals.Length; i++)
+                            intervals[i] = Math.Max(floor, 0.350f - i * 0.040f);
+                    }
+                    break;
+            }
         }
     }
 

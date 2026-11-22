@@ -45,6 +45,33 @@ namespace Obscure
         }
     }
 
+    public enum DodgeDir { None, Up, Down, Left, Right }
+    public enum QteVariant { None, GuardCue, Slip, Flurry, Roll }
+    public enum RemixKind { Mirror, Upgrade, Tempo }
+
+    [Serializable]
+    public struct HitCue
+    {
+        public QteVariant variant;
+        public DodgeDir dir;
+
+        public HitCue(QteVariant variant, DodgeDir dir = DodgeDir.None)
+        {
+            this.variant = variant;
+            this.dir = dir;
+        }
+    }
+
+    // Authored per-move QTE motif (QTE Variation Spec Part D). null on EnemyAttack preserves established random behavior.
+    public class QteMotif
+    {
+        public HitCue[] hits;
+        public int feintHit = -1;
+        public int stutterHit = -1;
+        public bool stutterSlowFirst;
+        public RemixKind[] remixes;
+    }
+
     // Priority: data-driven, deterministic policy (EnemyAttack.aiPriority / cooldown) planned at round start (Bab 10 §8.9).
     public enum AiKind { Basic, Tactical, Boss, Priority }
     public enum TargetRule { Random, LowestHp, LowestDef, LowestMdef, HighestThreat }
@@ -237,6 +264,7 @@ namespace Obscure
         // Gives the party a real interrupt window (Tutorial_Prologue_Design §3 Node 3).
         public float aiBreakLeftBelow;
         public int aiBreakGateRound;
+        public QteMotif motif;        // optional authored QTE motif (QTE Variation Spec Part D); null = established random generator
 
         public bool StatusOnly => hits == 0 && !self && !Heals && !Summons;
         public bool Heals => healAlly > 0f;

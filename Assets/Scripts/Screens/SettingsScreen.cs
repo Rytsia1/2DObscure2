@@ -61,8 +61,8 @@ namespace Obscure
             Rebuild();
         }
 
-        int[] Snapshot() => new[] { s.volume, s.musicVolume, s.musicMuted ? 1 : 0, s.fullscreen ? 1 : 0, s.qteAssist, s.qteKey, s.reduceMotion ? 1 : 0 };
-        void Restore(int[] v) { s.volume = v[0]; s.musicVolume = v[1]; s.musicMuted = v[2] == 1; s.fullscreen = v[3] == 1; s.qteAssist = v[4]; s.qteKey = v[5]; s.reduceMotion = v[6] == 1; }
+        int[] Snapshot() => new[] { s.volume, s.musicVolume, s.musicMuted ? 1 : 0, s.fullscreen ? 1 : 0, s.qteAssist, s.qteKey, s.reduceMotion ? 1 : 0, s.guardKey, s.singleKeyMode ? 1 : 0, s.reduceQteDistortions ? 1 : 0 };
+        void Restore(int[] v) { s.volume = v[0]; s.musicVolume = v[1]; s.musicMuted = v[2] == 1; s.fullscreen = v[3] == 1; s.qteAssist = v[4]; s.qteKey = v[5]; s.reduceMotion = v[6] == 1; s.guardKey = v[7]; s.singleKeyMode = v[8] == 1; s.reduceQteDistortions = v[9] == 1; }
         int Dirty(int i) => Snapshot()[i] != saved[i] ? 1 : 0;
         int DirtyCount => Enumerable.Range(0, saved.Length).Sum(Dirty);
 
@@ -205,6 +205,8 @@ namespace Obscure
                     break;
                 case Category.Controls:
                     SegRow(5, "QTE key", "KEY USED FOR REACTION PROMPTS", GameSettings.QteKeys.Select(k => k.ToString()).ToArray(), s.qteKey, v => s.qteKey = v);
+                    SegRow(7, "Guard key", "KEY USED FOR GUARD, SLIP, FLURRY, AND ROLL CUES", GameSettings.GuardKeys.Select(k => k.ToString()).ToArray(), s.guardKey, v => s.guardKey = v);
+                    ToggleRow(8, "Single-key QTE", "ALLOW THE QTE KEY TO TRIGGER GUARD-KEY VARIANTS", s.singleKeyMode, v => s.singleKeyMode = v);
                     InfoRow("Navigation", "ARROWS / WASD / D-PAD");
                     InfoRow("Confirm / Interact", "ENTER / SPACE / Z / A-BUTTON");
                     InfoRow("Back / Pause", "ESC / BACKSPACE / X / B-BUTTON");
@@ -213,6 +215,8 @@ namespace Obscure
                 default:
                     SegRow(4, "QTE assist", "STANDARD, RELAXED WINDOWS, OR AUTO (QTES OFF)", new[] { "Standard", "Relaxed", "Auto" }, s.qteAssist, v => s.qteAssist = v);
                     SegRow(5, "QTE key", "KEY USED FOR REACTION PROMPTS", GameSettings.QteKeys.Select(k => k.ToString()).ToArray(), s.qteKey, v => s.qteKey = v);
+                    ToggleRow(8, "Single-key QTE", "ALLOW THE QTE KEY TO TRIGGER GUARD-KEY VARIANTS", s.singleKeyMode, v => s.singleKeyMode = v);
+                    ToggleRow(9, "Reduce QTE distortions", "DISABLE STATUS DISTORTION EFFECTS ON QTE BARS", s.reduceQteDistortions, v => s.reduceQteDistortions = v);
                     break;
             }
 
@@ -482,7 +486,7 @@ namespace Obscure
         {
             var d = new GameSettings();
             s.volume = d.volume; s.musicVolume = d.musicVolume; s.musicMuted = d.musicMuted;
-            s.fullscreen = d.fullscreen; s.qteAssist = d.qteAssist; s.qteKey = d.qteKey; s.reduceMotion = d.reduceMotion;
+            s.fullscreen = d.fullscreen; s.qteAssist = d.qteAssist; s.qteKey = d.qteKey; s.guardKey = d.guardKey; s.singleKeyMode = d.singleKeyMode; s.reduceQteDistortions = d.reduceQteDistortions; s.reduceMotion = d.reduceMotion;
             Rebuild();
         }
 

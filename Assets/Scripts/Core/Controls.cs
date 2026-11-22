@@ -39,6 +39,14 @@ namespace Obscure
             (!Locked && !SuppressKeyboardNavigation && Keyboard.current != null && Keyboard.current[QteKey].wasReleasedThisFrame)
             || (!Locked && Gamepad.current != null && Gamepad.current.buttonSouth.wasReleasedThisFrame);
 
+        // Guard key (QTE Variation Spec Part B): used only by new Guard-key defense variants (Guard cue, Slip, Flurry, Roll).
+        public static Key GuardKey = Key.LeftShift;
+        public static bool SingleKeyMode;
+        public static bool GuardPress => Pressed(GuardKey) || Pad(p => p.buttonEast);
+        public static bool GuardReleased =>
+            (!Locked && !SuppressKeyboardNavigation && Keyboard.current != null && Keyboard.current[GuardKey].wasReleasedThisFrame)
+            || (!Locked && Gamepad.current != null && Gamepad.current.buttonEast.wasReleasedThisFrame);
+
         // Last device the player touched wins. A keyboard or gamepad press hides the cursor and stops hover from moving
         // the menu selection; the mouse takes over again only once it really moves, clicks or scrolls.
         // MouseWakeDistance is a starting value, untested: raise it if testers still see the selection jump while

@@ -121,6 +121,39 @@ namespace Obscure
         // Slow-then-fast = (0.6 time, 0.3 distance); fast-then-slow = (0.4 time, 0.7 distance).
         public const float StutterSlowTime = 0.6f, StutterSlowDistance = 0.3f, StutterFastTime = 0.4f, StutterFastDistance = 0.7f;
 
+        // QTE Variation starting values: posture-B starting values (untested, QTE_Variation_Spec_v1.md).
+        // FlurryGap: Pass test = Good+ rate on Flurry cues within 15 pp of Tap cues at the same tier. If it fails: 0.180f.
+        public const float FlurryGap = 0.150f;
+        // ChordTolerance: Pass test = Roll Good+ rate >= 60%. If it fails: 0.110f.
+        public const float ChordTolerance = 0.080f;
+        // ClearZone: Pass test = Good+ rate on distorted cues within 5 pp of undistorted ones. If it fails: 0.220f.
+        public const float ClearZone = 0.150f;
+        // ShakePx: Pass test = same as ClearZone. If it fails: 2f.
+        public const float ShakePx = 4f;
+        // Remix chances: Pass test = >= 70% of players call remixes "noticeable but fair". If it fails: +/- 0.10f.
+        public const float EliteRemixChance = 0.25f;
+        public const float BossRemixChance = 0.35f;
+        // Rhythm vocabulary examples (Spec §D.2): Ritardando (growing gaps, Elite/Boss) & Syncopated (Boss signature only).
+        public static readonly float[] RitardandoExample = { 0.350f, 0.420f, 0.490f };
+        public static readonly float[] SyncopatedExample = { 0.420f, 0.280f, 0.420f };
+
+        // Status distortions (QTE Variation Spec Part E): presentation-only, priority order Fear > Confusion > Despair > Shock > Slow > Freeze > DoT.
+        public static QteDistortion ActiveDistortion(Combatant c, bool reduceDistortions = false)
+        {
+            if (reduceDistortions || c == null) return QteDistortion.None;
+            if (c.Has(StatusId.Fear)) return QteDistortion.Fear;
+            if (c.Has(StatusId.Confusion)) return QteDistortion.Confusion;
+            if (c.Has(StatusId.Despair)) return QteDistortion.Despair;
+            if (c.Has(StatusId.Shock)) return QteDistortion.Shock;
+            if (c.Has(StatusId.Slow)) return QteDistortion.Slow;
+            if (c.Has(StatusId.Freeze)) return QteDistortion.Freeze;
+            if (c.Has(StatusId.Burn) || c.Has(StatusId.Poison) || c.Has(StatusId.Bleed)) return QteDistortion.DoT;
+            return QteDistortion.None;
+        }
+
+        // Last ClearZone (150 ms) before impact is always undistorted (Spec Part E).
+        public static bool IsInClearZone(float timeToImpact) => timeToImpact >= 0f && timeToImpact <= ClearZone;
+
         // Struggle (drain attacks): mash to fill a draining gauge before impact. Starting values, untested.
         // Normal (1.5 s of mashing): Perfect ~6 presses/s, Good ~4.3/s; Boss (1.2 s): Perfect ~7/s.
         public const float MashFill = 0.15f, MashDecay = 0.25f, StruggleWindup = 1.5f; // window = telegraph + windup * this

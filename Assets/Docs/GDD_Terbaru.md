@@ -4,10 +4,10 @@
 
 | Item | Keterangan |
 | --- | --- |
-| Dokumen | GDD Terpadu v1.5 |
-| Tanggal | 5 November 2026 |
-| Status | Konsolidasi seluruh dokumen desain project ke dalam satu GDD. Isi bab mengikuti versi terbaru setiap dokumen sumber setelah sinkronisasi QTE, equipment, dan race pada November 2026. |
-| Cakupan | Visi dan core loop, dunia dan cerita, karakter (character creation, race, background, class, talent), combat (struktur, damage dan status, QTE), item, relic, dungeon modifier, dan ekonomi, presentasi (art, style guide, UI, audio), serta status proyek |
+| Dokumen | GDD Terpadu v1.6 |
+| Tanggal | 22 November 2026 |
+| Status | Konsolidasi seluruh dokumen desain dan implementasi project ke dalam satu GDD. Disinkronkan dengan implementasi kode terbaru (Tutorial Prologue, Dungeon 1 Difficulty & Roster v1.9, Charge Pacing, Zoroa Double Turn & Harvest Call, Enemy AI System v1.1 Stages 0–3, serta Enhanced Common Variants & On-Defeat Transformation v1.1). |
+| Cakupan | Visi dan core loop, dunia dan cerita, karakter (character creation, race, background, class, talent), combat (struktur, damage dan status, QTE, Enemy AI, Enhanced Variants), item, relic, dungeon modifier, dan ekonomi, presentasi (art, style guide, UI, audio), serta status proyek |
 
 ## Ringkasan Game
 
@@ -17,9 +17,9 @@
 | Dunia | Felna; kerajaan terakhir Emerose, dengan hub di Geistwald City |
 | Party | 4 karakter |
 | Karakter | 7 race, 9 class, 10 background, 6 Ability Score |
-| Struktur | 8 dungeon berurutan (8 layer The World's Between), masing-masing dengan boss |
+| Struktur | Tutorial Prologue (3 node linear) + 8 dungeon berurutan (8 layer The World's Between), masing-masing dengan boss |
 | Difficulty | Hardcore Tactical Survival dengan filosofi Relentless Tactical Survival: kejam tetapi tidak sewenang-wenang; party wipe mengakhiri run |
-| Combat | Shared initiative queue berbasis Speed tanpa RNG, satu giliran per unit per round, dengan reaction-based QTE ofensif dan defensif |
+| Combat | Shared initiative queue berbasis Speed tanpa RNG, satu giliran per unit per round (kecuali mekanik eksplisit seperti Zoroa dua giliran per round), reaction-based QTE ofensif dan defensif, Hybrid Utility Enemy AI dengan Shared Blackboard & Encounter Memory, serta On-Defeat Transformation (Enhanced Common Variants) |
 | Equipment | 8 slot, 6 rarity, random affix, Legendary dan Mythic Effect |
 | Relic | Item pasif permanen milik party, maksimal 5, tanpa duplikat; dibeli dan dijual di Magic Shop |
 | Dungeon Modifier | Efek sementara yang dapat di-stack dan diambil lagi, dengan cap per efek; hilang saat dungeon clear |
@@ -120,7 +120,10 @@ Party-based turn-based roguelike RPG. Pemain membentuk party empat karakter, men
 
 #### 2.1 Sequential Progression
 
-Delapan dungeon diselesaikan dalam urutan yang telah ditentukan. Tidak ada pemilihan urutan dungeon. Tema, layout, node count, encounter, boss, dan reward per dungeon masih TBD.
+Delapan dungeon diselesaikan dalam urutan yang telah ditentukan. Tidak ada pemilihan urutan dungeon. Tema, layout, node count, encounter, boss, dan reward per dungeon selain Dungeon 1 masih TBD.
+
+- **Tutorial Prologue (*The Threshold*, terimplementasi):** Jalur linear 3 node sebelum masuk Hub (`tut_n1` Riftling, `tut_n2` Shard Wisp & Veil Stalker, `tut_boss` Aetherion), memberi EXP tetap `40 + 60 + 0 = 100` (naik ke Level 2), suplai consumable (`2 Draught`, `1 Ether`), dan `40` Hub Gold setelah selesai.
+- **Dungeon 1 (*Ashen Ruins*, terimplementasi):** Terdiri dari 3 stage dengan Stage 1 miniboss (`d1_e6` Soul Reaper), Stage 2 miniboss (`d1_e7` Royal Ossuary Knight), 5 encounter Normal (`d1_e1`–`d1_e5`), 5 encounter Elite acak (`d1_e8`–`d1_e12`), dan Final Boss (`d1_boss` Zoroa).
 
 #### 2.2 Gold dan persistensi antar dungeon
 
@@ -3129,7 +3132,10 @@ Ringkasan struktur combat dan definisi kerja Broken. Aturan QTE lengkap ada di B
 
 #### 5.3 Broken
 
-Broken digunakan oleh beberapa class mechanic (contoh: reset combo Martial Artist). Definisi kerja (asumsi A5 di Bab 12 (QTE System), menunggu konfirmasi): setiap karakter dan musuh memiliki Break gauge (100; boss 200) yang diisi Break Power dari hit lawan dan berkurang 20 di awal giliran pemiliknya. Saat penuh, target menjadi Broken sampai akhir giliran berikutnya miliknya, lalu gauge kembali ke 0. Selama Broken, karakter pemain tidak bisa meraih Perfect pada Defensive QTE, dan musuh yang sedang charge membatalkan serangannya.
+Broken digunakan oleh beberapa class mechanic (contoh: reset combo Martial Artist). Definisi implementasi saat ini:
+- **Enemy Break Gauge:** 100 (Normal/Elite), 200 (Boss); berkurang oleh Break Power dari serangan pemain, dan pulih 20 di awal giliran pemiliknya (jika tidak Broken). Saat mencapai 0, musuh menjadi Broken (skip giliran berikutnya, menerima `1.5×` damage, dan membatalkan serangan charge yang sedang aktif).
+- **Player Poise:** setiap hero memiliki `PlayerPoiseGauge = 60` (pulih 20 di awal giliran hanya jika tidak menerima hit sejak giliran terakhir). Selama Broken, hero menerima `1.25×` damage dan tidak bisa meraih Perfect pada Defensive QTE (terbatas hingga Good).
+- **Enemy Break Power (D1 Difficulty Pass):** base Break Power per tier adalah Normal `12`, Elite `20`, Boss `28` (`+ STR/INT mod × 2`), ditambah `breakPower` spesifik move pada serangan besar/multi-hit (mis. Final Reaping `20`/`25`, Soulstorm `10`, Triple Feint `8`, Funeral Chorus `8`, Accelerating Rend & Graveward Charge `15`, Gravefall `30`). `breakPower` tambahan diterapkan sekali pada hit terakhir dan dimitigasi `0.5×` saat Good/Perfect Defensive QTE atau Guard.
 
 ### 6. Enemy Scaling dan Turn Order — Purpose
 
@@ -3541,9 +3547,10 @@ This document works alongside, and does not replace, the following systems:
 | Minimum Speed modifier | 0.50× |
 | Maximum Speed modifier | 1.50× |
 | Initiative randomness | None |
-| Normal turns per unit per round | 1 |
+| Normal turns per unit per round | 1 (`Zoroa`: 2, dengan giliran B pada `SPD × 0.50`) |
 | Normal main actions per unit turn | 1 |
-| Break Gauge reduction at start of owner's turn | 20 |
+| Charge gap after release (`ChargeGapTurns`) | 1 giliran sendiri sebelum boleh mulai charge lagi |
+| Break Gauge recovery at start of owner's turn | 20 |
 | Initiative recalculation | At the beginning of every round |
 | Mid-round Speed change | Applied to the next round's queue |
 
@@ -3569,9 +3576,40 @@ This document incorporates the following existing project decisions and approved
 
 - The GDD defines an 8-dungeon sequential expedition, four-character party, individual character turns, and reaction QTE combat.
 - The GDD requires dangerous enemy actions to be telegraphed and charge actions to be cancelled when the enemy becomes Broken.
-- The GDD's existing Broken definition includes a 20-point Break Gauge reduction at the beginning of the owner's turn.
+- The GDD's existing Broken definition includes a 20-point Break Gauge recovery at the beginning of the owner's turn.
 - The GDD's Background System states that Speed affects turn order and that Wayfarer's Speed perk does not directly grant extra turns.
-- Enemy stat growth rates and the initiative/turn-order specifications in this document are the confirmed design decisions established for this system. The example enemy base stats are reference examples from the proposed Dungeon 1 enemy roster and should be maintained in the enemy roster data source.
+- Enemy stat growth rates and the initiative/turn-order specifications in this document are the confirmed design decisions established for this system.
+- **Dungeon 1 Difficulty Pass (shipped):** Elite HP/ATK/MATK `×1.25`, Boss HP `×1.30`, Boss ATK/MATK `×1.20` (diganti `ZoroaAtkMult = 0.80` khusus Zoroa karena double turn + summon).
+- **Charge Pacing & Instant Soulbind (shipped):** `ChargeGapTurns = 1` mencegah musuh langsung memulai charge baru tepat setelah melepas charge; `Soulbind` milik Zoroa bersifat instant (tidak ditelegraph).
+- **Zoroa Double Turn & Harvest Call (shipped):** Zoroa (Fase 1 & Fase 2) mendapat `turnsPerRound = 2` (giliran B bertindak di `SPD × 0.50` pada `TurnOrder.Build`, upkeep/cooldown/status tetap per round, Stun/Sleep/Broken membatalkan seluruh round, batas 1 Heavy per round berlaku gabungan kedua giliran, dan giliran B di-replan setelah giliran A). `Harvest Call` (instant, CD 5, initial CD 2, MP 30 P1 / 35 P2) memanggil hingga 2 summon hidup (`80%` D1 Normal / `20%` D1 random Elite, HP `70%`) yang bergabung di round berikutnya, bertahan lintas fase, tanpa reward/relic trigger, dan ikut hancur saat bar terakhir Zoroa habis.
+
+### 17. Enemy AI System (v1.1 — Stages 0–3 Shipped)
+
+> Sumber: `Felna_Enemy_AI_System_Spec_v1_1.md`, `Felna_Enemy_AI_Architecture_v1_1.md`, dan `Enemy_AI_Implementation_Handoff.md`.
+
+- **Hybrid Decision Pipeline (`PriorityBrain` + `UtilityScorer`):**
+  - Mandatory layer (`IsLegal` & `ForcedChoice`) menegakkan seluruh aturan keras (MP, cooldown, `ChargeGapTurns`, batas 1 Heavy per round, summon cap, heal/MP thresholds, dan pelepasan charge).
+  - Utility layer menghitung `score = aiPriority × 10 + clamp(Immediate + Future + Role + Synergy + Objective + Adaptation − Resource − Repetition − Risk, -15, +15)` hanya atas kandidat legal, dengan tie-break deterministik dan **nol panggilan `Rng`** pada jalur AI roster.
+- **Fixed Planning Order & Shared `EncounterBlackboard`:**
+  - Perencanaan awal round berjalan dalam urutan tetap **`Support → Controller → role lain`** (tie-break slot spawn), terpisah total dari initiative / Speed.
+  - `EncounterBlackboard` (1 per `Battle`, dipakai bersama seluruh musuh termasuk summon) melacak intent terpublikasi, lethal reservation (target lock `LowestHp`/`LowestDef` hanya melompati target yang sudah lethal-reserved lalu memilih berikutnya dengan aturan yang sama), `FocusCapNormal = 2`, larangan Stun + Heavy pada target sama di round yang sama, serta telegraph lock (intent yang sudah dipublikasikan tidak pernah di-score ulang saat eksekusi jika masih legal).
+- **Player Modeling & Shared `EncounterTacticalMemory`:**
+  - Melacak 7 kategori perilaku per hero (`Aggressive`, `Defensive`, `BurstDamage`, `ElementalSpecialist`, `SupportDependent`, `FocusFire`, `BreakSpecialist`) dengan `confidence = clamp(s / (s + 2), 0, 1)`, decay per round `0.7` (`0.8` untuk Boss), recognition threshold `0.50` (`0.45` untuk Boss), dan pasangan kontradiksi (`Aggressive ↔ Defensive`, `SupportDependent ↔ BurstDamage`).
+  - Memori bersifat encounter-local (kosong di awal battle, bertahan melewati transisi fase Zoroa, dibaca oleh summon sejak spawn), hanya memakai informasi yang teramati di HUD/event combat, memicu 7 respons adaptasi + penalti pengulangan (`-3` per streak gagal), dan mencatat maksimal satu baris log "read" per pemicu adaptasi dalam satu encounter.
+- **Status Stage:** Stages 0–3 (AI Trace, `BattleReplay` deterministik, Utility + `AiProfile` pada 15 musuh D1, Blackboard Coordination, dan Player Modeling) sudah terimplementasi dan diverifikasi; Stages 4–10 (H=2 Prediction, Strategic Planner, Synergy Chains, `conditionList`, Resource Planner, `CounterplayValidator`) dijeda di ship point Stage 3 untuk playtest.
+
+### 18. Enhanced Common Variants & On-Defeat Transformation (v1.1 — Shipped)
+
+> Sumber: `Felna_Enhanced_Common_Variant_Spec_v1_1.md`, `Felna_On_Defeat_Transformation_Spec_v1_1.md`, dan `Enhanced_Variant_Transformation_Handoff.md`.
+
+- **Enhanced Common Variant (`AiTier.Enhanced`):**
+  - Varian yang dibangun dari definisi musuh Common dengan aset sprite/animasi dan identitas skill yang sama, mempertahankan `Tier.Normal` untuk scaling dungeon (`EnhancedStat = floor(NormalScaledStat × VariantModifier)` diterapkan sekali) dan QTE window Normal (`90/240 ms`, lead `1000 ms`).
+  - `AiTier.Enhanced` tetap dihitung sebagai Normal untuk seluruh pembatasan Normal (termasuk `FocusCapNormal = 2`), serta menambah aturan targeting terkonfigurasi (`LowestDef`, `LowestMdef`, `HighestThreat`) dan kesadaran resource/cooldown 1 giliran ke depan.
+  - **Pengecualian Accelerando:** pola alternatif Enhanced Common diizinkan memakai Accelerando dengan interval `≥ 310 ms` (pola standar tetap Steady; Syncopated dan Charge tetap dilarang).
+- **On-Defeat Transformation:**
+  - Saat musuh Common yang memenuhi syarat mencapai `0` HP (dari serangan langsung maupun DoT awal giliran), ia mendapat **satu** roll independen (`10%` via seeded `Battle.Rng`) untuk bangkit sebagai varian Enhanced dengan HP & MP penuh, Break Gauge penuh (Broken dihapus), seluruh status/stun/intent/charge/cooldown di-reset, dan overkill/sisa hit serangan pembunuh dibatalkan (co-target AoE tidak terpengaruh).
+  - **Aturan Desain v1.1:** tanpa indikasi pra-roll, tanpa counterplay, tanpa reward ekstra (EXP/Gold/Relic trigger tetap dihitung sekali saat kekalahan final), serta dikecualikan untuk summon, Tutorial Prologue, encounter node Boss, dan forced removal.
+  - **Keluarga Pilot (D1):** `Hollow Squire` (`HP ×1.6, DEF ×1.3, ATK ×1.15`, Repeated Assault `2 × 12` Steady, `LowestDef`), `Soulbound Hound` (`HP ×1.4, SPD ×1.25, ATK ×1.2`, Rending Bite `8/7/7` Accelerando `350/310 ms`, `HighestThreat`), dan `Cinder Wisp` (`HP ×1.4, MATK ×1.25, MP ×1.5`, Ember Bolt `2 × 13` Burn `30%`, `LowestMdef`). Ditampilkan dengan log khusus, sound sting, flash/FX fase, dan tag nameplate `[ENHANCED]`.
 
 ## Bab 11 — Damage dan Status Effect
 
@@ -4660,7 +4698,7 @@ Nilai dasar (dungeon 1–3, *tuning*):
 
 - Pola ditentukan per serangan di data musuh, bukan di-roll saat battle. Revisi 21 November 2026: serangan multi-hit tanpa pola di data (Steady) kini memakai jitter ±80 ms per interval (§6.6); pola yang ditulis di data tidak berubah.
 - Semua marker terlihat sejak bar muncul (4.2), jadi pola terbaca sebelum hit pertama.
-- Musuh normal hanya memakai Steady. Elite memakai maksimal 2 pola. Boss boleh memakai semuanya.
+- Musuh normal hanya memakai Steady (**kecuali** pola alternatif Enhanced Common Variant yang boleh memakai Accelerando `≥ 310 ms` dengan QTE timing window tetap Normal). Elite memakai maksimal 2 pola. Boss boleh memakai semuanya.
 - Serangan single-hit tidak punya pola; variasinya hanya pada T\_lead tier (6.1).
 - Contoh Accelerando untuk elite dengan 4 marker: 350 → 310 (minimum) → 310 → 310 ms.
 
@@ -4687,7 +4725,7 @@ Nilai dasar (dungeon 1–3, *tuning*):
 **2. Aturan/mekanik.**
 
 - Setiap boss punya 3–5 serangan, termasuk tepat 1 **serangan signature**: 4–6 hit, pola Accelerando atau Syncopated, dengan marker Heavy di akhir.
-- **Fase 2 di 50% HP:** boss membuka 1 serangan baru atau 1 pola baru, ditandai animasi transisi dan teks singkat di layar.
+- **Fase 2 (Zoroa):** diimplementasikan sebagai bar HP penuh kedua yang terpisah (`zoroa_p2`, membuka serangan AoE `Soulstorm`) setelah bar HP Phase 1 habis, disertai transisi animasi/teks; boss umum lain tetap memakai `phase2At` di 50% HP.
 - Batasan keadilan:
   - Maksimal 1 serangan berisi marker Heavy per round.
   - Tidak boleh memberi Stun dan serangan Heavy ke target yang sama dalam round yang sama (3.3).
@@ -8937,7 +8975,8 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Tidak ada atribut yang memengaruhi QTE (Bab 12 §8.2 lama) | DEX melebarkan window QTE timing 3% per modifier, di dalam cap +25%; atribut lain tetap tidak memengaruhi QTE (Bab 12 §8.2, November 2026) |
 | Offensive QTE 1.5× / 1.0× / 0.5× untuk damage dan Break | Damage 1.2× / 1.0× / 0.75×; Break tetap 1.5× / 1.0× / 0.5×; Perfect mengembalikan 1 MP (Bab 12 §2.5) |
 | Gold reward run (placeholder 10–18 / 30–42 / treasure 20–35 / boss 100) | Battle 30–55, Elite 90–125, Treasure 60–105, Boss 350, relic fallback 90. Target (November 2026): clear Dungeon 1 cukup untuk sekitar satu Temple Recovery penuh untuk party (4 × 300), sehingga setelah tiap dungeon pemain memilih antara memulihkan seluruh party atau membeli gear. Diukur pada 200 map (`ExpPacingReport`): rata-rata sekitar 1.270 gold per jalur Dungeon 1 dengan elite aktif (dulu 385), sekitar 600 di Dungeon 2. Hanya fight dan treasure yang dihitung; memilih opsi gold di reward normal menambah lebih banyak |
-| Pilihan reward lemah: fight normal Draught atau Ether plus 3 modifier tiap fight; boss hanya 1 opsi (relic boss atau 30 gold); Dungeon 1 tanpa node Elite | Fight normal: pilih 1 dari consumable (Draught/Ether), equipment (Common–Uncommon; sampai Rare mulai Dungeon 3), atau gold tambahan (30–55). Modifier hanya ditawarkan dari Elite, stage boss, treasure, dan event, bukan setiap fight; modifier yang sudah mencapai cap tidak ditawarkan. Boss: pilih 1 dari relic boss (atau relic lain jika sudah dimiliki), relic kedua, dan equipment Rare/Epic; jika slot relic penuh, opsi relic diganti equipment. Dungeon 1: node Elite opsional di stage 2 dan 3; karena Dungeon 1 belum punya elite khusus, stage boss sebelumnya muncul kembali sebagai elite (stage 2: Reaper's Passage; stage 3: keduanya), dan boss stage yang sama atau berikutnya tidak pernah muncul lebih awal. Pacing tetap: median level 13–14 setelah Dungeon 1 |
+| Pilihan reward lemah: fight normal Draught atau Ether plus 3 modifier tiap fight; boss hanya 1 opsi (relic boss atau 30 gold); Dungeon 1 tanpa node Elite | Fight normal: pilih 1 dari consumable (Draught/Ether), equipment (Common–Uncommon; sampai Rare mulai Dungeon 3), atau gold tambahan (30–55). Modifier hanya ditawarkan dari Elite, stage boss, treasure, dan event, bukan setiap fight; modifier yang sudah mencapai cap tidak ditawarkan. Boss: pilih 1 dari relic boss (atau relic lain jika sudah dimiliki), relic kedua, dan equipment Rare/Epic; jika slot relic penuh, opsi relic diganti equipment. **Dungeon 1 (terimplementasi):** memiliki 5 encounter Elite acak khusus (`d1_e8`–`d1_e12`: Reliquary Confessor, Graveglass Arcanist, Crownless Duelist, Tombstone Colossus, Mourning Bell Wraith) di node Elite Stage 2–3, ditambah miniboss Stage 1 (`d1_e6` Soul Reaper) dan Stage 2 (`d1_e7` Royal Ossuary Knight). Pacing tetap: median level 13–14 setelah Dungeon 1 |
+| Turn order, AI, dan pacing Dungeon 1 belum diimplementasikan penuh | **Terimplementasi (22 Nov 2026):** Tutorial Prologue 3 node (`Prologue.cs`), D1 Difficulty Pass (Elite `×1.25`, Boss HP `×1.30`, Zoroa ATK `×0.80`, Break Power per tier/move), Charge Pacing (`ChargeGapTurns = 1`, `Soulbind` instant), Zoroa double turn (`turnsPerRound = 2`) & `Harvest Call`, Enemy AI v1.1 Stages 0–3 (`PriorityBrain` + `UtilityScorer` + `EncounterBlackboard` + `PlayerModel`), serta Enhanced Common Variants & On-Defeat Transformation v1.1 (3 pilot keluarga di `10%` roll; Bab 10 §16–18). |
 | Consumable tanpa batas di Hub Shop dan inventory | Batas bawaan per item (`maxStack`): Draught dan Ether maksimal 10, juga item lain sesuai `maxStack` katalognya. Stok Hub Shop: Draught 10, Ether 10, dan Elixir 5 (Elixir memulihkan sekitar dua kali lipat Draught), diisi ulang setiap kali dungeon clear. Hadiah item saat bawaan penuh tidak ditambahkan (layar reward menampilkan batasnya); pembelian yang melewati batas ditolak tanpa memotong gold |
 | EXP per encounter dan kurva TBD (placeholder 35 / 80 / 175) | EXP: Normal 150, Elite 350, Boss 750; kurva tetap 100 + 25 × (level − 1), cap 15. Target (November 2026): level 13 saat Dungeon 1 selesai, level 15 di Dungeon 2. Diukur pada 200 map (`BalanceSimulation.ExpPacingReport`): median level setelah Dungeon 1 adalah 13 (jalur menghindari fight) sampai 14 (jalur mencari fight); median level 15 setelah Dungeon 2. Konsekuensi: Dungeon 3–8 tidak memberi level; progresi di sana datang dari equipment, skill rank, dan relic |
 | Defensive Perfect = 100% reduksi | Reduksi mengikuti Block Power: Perfect = Block (maks 75%), Good = Block × 0,5; full parry (100%) hanya saat Guard; shield hanya menambah Block Power (Bab 12 §3.5, revisi 21 November 2026) |
@@ -8999,8 +9038,14 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | GDD Shop System | v1.0 | Bab 16 | Lengkap |
 | Game Visual Style Guide | v1.0 | Bab 18 | Lengkap, tanpa document control dan daftar isi sumber |
 | Game UI Design Document (design.md) | Draft | Bab 19 | Lengkap |
+| Tutorial Prologue Design (`Tutorial_Prologue_Design.md`) | Accepted (21 Nov 2026) | Bab 2 §2.1 | 3-node Tutorial Prologue ("The Threshold") |
+| D1 Difficulty, Charge Pacing, Zoroa Double Turn & Summon Handoffs | Shipped (Nov 2026) | Bab 10 §5.3, §13, §16 | Difficulty multipliers, `ChargeGapTurns`, `Soulbind` instant, `turnsPerRound = 2`, `Harvest Call` |
+| Enemy AI System Spec, Architecture & Handoff | v1.1 (Stages 0–3 shipped) | Bab 10 §17 | Hybrid Utility AI, `EncounterBlackboard`, `PlayerModel`, `AiTrace` & replay |
+| Enhanced Common Variant, Transformation Spec & Handoff | v1.1 (Shipped) | Bab 10 §18, Bab 12 §6.2 | `AiTier.Enhanced`, Accelerando `≥ 310 ms`, 3 pilot keluarga & `10%` On-Defeat Transformation |
 
 ## Lampiran B — Riwayat Sinkronisasi November 2026
+
+- **GDD Terpadu v1.6 (22 November 2026):** disinkronkan dengan kondisi kode terkini: Tutorial Prologue 3 node (`Prologue.cs`), roster Elite D1 (`d1_e8`–`d1_e12`), D1 Difficulty Pass, Charge Pacing (`ChargeGapTurns = 1`, `Soulbind` instant), Zoroa double turn + `Harvest Call`, Enemy AI v1.1 (Stages 0–3: `UtilityScorer`, `EncounterBlackboard`, `PlayerModel`, `AiTrace`), serta Enhanced Common Variants & On-Defeat Transformation v1.1 (3 pilot keluarga, `10%` roll).
 
 - Spesifikasi QTE lengkap disusun (Fase 2) dan diverifikasi konsistensinya (Fase 3), termasuk item tambahan 8.5 (Racial Feat dan QTE) dan 9.10 (ikon intent, Break gauge, penghitung combo).
 - Grade QTE "Miss" diganti "Poor" di semua dokumen.

@@ -56,11 +56,12 @@ namespace Obscure
                 switch (q)
                 {
                     case TimingQte t:
-                        infoLbl.text = $"PRESS [{Key}] IN THE GOLD ZONE";
-                        BuildTrack(new[] { t.target / t.Sweep }, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
+                        string curveHint = t.passes > 1 ? " (DOUBLE PASS)" : t.curve == SweepCurve.EaseIn ? " (EASE-IN)" : t.curve == SweepCurve.EaseOut ? " (EASE-OUT)" : "";
+                        infoLbl.text = $"PRESS [{Key}] IN THE GOLD ZONE{curveHint}";
+                        BuildTrack(new[] { t.ZoneFraction }, t.EffectiveGood / t.Sweep, t.EffectivePerfect / t.Sweep, 1);
                         break;
                     case ChargeQte ch:
-                        infoLbl.text = $"HOLD [{Key}] - RELEASE IN THE GOLD ZONE";
+                        infoLbl.text = ch.isThrust ? $"THRUST: SHORT HOLD [{Key}] - RELEASE IN GOLD" : $"HOLD [{Key}] - RELEASE IN THE GOLD ZONE";
                         var chTrack = BuildTrack(new[] { ch.ZoneFraction }, ch.EffectiveGood / ch.profile.sweep, ch.EffectivePerfect / ch.profile.sweep, 1);
                         chargeFill = new VisualElement { style = { position = Position.Absolute, left = 0, top = 0, bottom = 0, width = 0, backgroundColor = new Color(Palette.WarmIvory.r, Palette.WarmIvory.g, Palette.WarmIvory.b, 0.3f) } };
                         chTrack.Insert(0, chargeFill); // zones draw over the fill
@@ -81,24 +82,35 @@ namespace Obscure
                         float goodScaled = QteConfig.ScaleGood(d.profile, d.TimingBonusFraction);
                         float perfScaled = QteConfig.ScalePerfect(d.profile, d.TimingBonusFraction);
                         BuildTrack(new[] { Impact }, goodScaled * speed, perfScaled * speed, d.Hits);
+                        if (d.isRemix) headingLbl.text = string.IsNullOrEmpty(heading) ? "REMIX!" : $"REMIX · {heading}";
                         // Name the dodge direction from the first frame (the cue is known before the telegraph ends).
                         int arrowCount = System.Array.FindAll(d.cues, c => c != DodgeDir.None).Length;
                         var dodge = System.Array.Find(d.cues, c => c != DodgeDir.None);
-                        if (arrowCount > 1) headingLbl.text = "DODGE EACH ARROW!";
-                        else if (dodge != DodgeDir.None) headingLbl.text = $"DODGE {DirName(dodge)}!";
+                        if (arrowCount > 1 && !d.isRemix) headingLbl.text = "DODGE EACH ARROW!";
+                        else if (dodge != DodgeDir.None && !d.isRemix) headingLbl.text = $"DODGE {DirName(dodge)}!";
                         for (int i = 0; i < d.Hits && i < markers.Count; i++)
                         {
-                            // rides just below the track, clear of the instruction text above it
-                            if (d.cues[i] != DodgeDir.None)
-                                markers[i].Add(new UiLabel(Arrow(d.cues[i]))
+                            var v = d.VariantAt(i);
+                            string label = v switch
+                            {
+                                QteVariant.GuardCue => "GUARD",
+                                QteVariant.Slip => "SLIP",
+                                QteVariant.Flurry => "x2",
+                                QteVariant.Roll => $"ROLL {Arrow(d.cues[i])}",
+                                _ => d.cues[i] != DodgeDir.None ? Arrow(d.cues[i]) : d.heavy[i] ? "HOLD" : null,
+                            };
+                            if (label != null)
+                            {
+                                bool useGuardStyle = v != QteVariant.None;
+                                Color col = d.Distortion == QteDistortion.Confusion ? Palette.WarmIvory
+                                    : useGuardStyle ? Palette.Hex(0x6EB5FF)
+                                    : d.heavy[i] ? Palette.CrimsonBright
+                                    : Palette.Gold1;
+                                markers[i].Add(new UiLabel(label)
                                 {
-                                    style = { position = Position.Absolute, left = -11, top = TrackH + 14, width = 28, fontSize = 22, color = Palette.Gold1, unityTextAlign = TextAnchor.MiddleCenter }
+                                    style = { position = Position.Absolute, left = -22, top = TrackH + 14, width = 50, fontSize = useGuardStyle || d.heavy[i] ? 13 : 22, color = col, unityTextAlign = TextAnchor.MiddleCenter }
                                 });
-                            else if (d.heavy[i])
-                                markers[i].Add(new UiLabel("HOLD")
-                                {
-                                    style = { position = Position.Absolute, left = -22, top = TrackH + 16, width = 50, fontSize = 14, color = Palette.CrimsonBright, unityTextAlign = TextAnchor.MiddleCenter }
-                                });
+                            }
                         }
                         break;
                     case StruggleQte st:
@@ -151,6 +163,11 @@ namespace Obscure
                 qte.Tick(Time.unscaledDeltaTime);
                 if (Controls.QtePress) qte.Press();
                 if (Controls.QteReleased) qte.Release();
+                if (qte is DefenseQte dq)
+                {
+                    if (Controls.GuardPress) dq.PressGuard();
+                    if (Controls.GuardReleased) dq.ReleaseGuard();
+                }
                 if (Controls.Up) qte.PressDirection(DodgeDir.Up);
                 else if (Controls.Down) qte.PressDirection(DodgeDir.Down);
                 else if (Controls.Left) qte.PressDirection(DodgeDir.Left);
@@ -258,6 +275,7 @@ namespace Obscure
         void Render()
         {
             if (host == null) return;
+            ApplyDistortionChrome();
             switch (qte)
             {
                 case TimingQte t: RenderTiming(t); break;
@@ -270,17 +288,45 @@ namespace Obscure
             }
         }
 
+        void ApplyDistortionChrome()
+        {
+            if (host == null || qte == null) return;
+            bool inClear = false;
+            if (qte is DefenseQte dq)
+            {
+                for (int i = 0; i < dq.Hits; i++)
+                    if (dq.HitResult(i) == null && QteConfig.IsInClearZone(dq.impacts[i] - dq.T)) { inClear = true; break; }
+            }
+            else if (qte is TimingQte tq)
+                inClear = QteConfig.IsInClearZone(tq.IdealTime() - tq.T);
+
+            if (qte.Distortion == QteDistortion.Shock && !inClear)
+                host.style.opacity = Mathf.Repeat(Time.unscaledTime, 0.35f) < 0.06f ? 0.55f : 1f;
+            else if (qte.Distortion == QteDistortion.Despair)
+                host.style.opacity = 0.78f;
+            else
+                host.style.opacity = 1f;
+        }
+
         void SetMarker(int i, float fraction, Color c)
         {
             if (i < 0 || i >= markers.Count) return;
             markers[i].style.display = DisplayStyle.Flex;
             markers[i].style.backgroundColor = c;
-            markers[i].style.left = Mathf.Clamp(fraction * TrackW, 0f, TrackW - 6f) - 3f;
+            float px = Mathf.Clamp(fraction * TrackW, 0f, TrackW - 6f) - 3f;
+            float shakeOffset = 0f;
+            if (qte != null && qte.Distortion == QteDistortion.Fear)
+            {
+                bool inClear = qte is DefenseQte dq && i < dq.impacts.Length && QteConfig.IsInClearZone(dq.impacts[i] - dq.T);
+                if (!inClear)
+                    shakeOffset = Mathf.Sin(Time.unscaledTime * 55f + i) * QteConfig.ShakePx;
+            }
+            markers[i].style.left = px + shakeOffset;
         }
 
         void RenderTiming(TimingQte t)
         {
-            SetMarker(0, t.T / t.Sweep, Palette.WarmIvory);
+            SetMarker(0, t.MarkFraction, Palette.WarmIvory);
             if (t.Done && !t.Cancelled) ShowResult(t.Result, "PERFECT!", "GOOD", "POOR");
         }
 
@@ -395,11 +441,20 @@ namespace Obscure
             }
             if (!d.InTelegraph)
             {
-                // Name the input for the cue that comes next: arrow, brace, or the plain key.
+                // Name the input for the cue that comes next: Guard variants, arrow, brace, or the plain key.
                 int cur = next >= 0 ? next : 0;
-                infoLbl.text = d.cues[cur] != DodgeDir.None ? $"PRESS {DirName(d.cues[cur])} AS IT LANDS"
-                    : d.heavy[cur] ? $"HOLD [{key}] UNTIL THE RED HIT LANDS"
-                    : (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (anyHeavy ? " - RED = HOLD" : "");
+                string guardName = Controls.GuardKey.ToString().ToUpperInvariant();
+                var curVar = d.VariantAt(cur);
+                infoLbl.text = curVar switch
+                {
+                    QteVariant.GuardCue => $"GUARD [{guardName}] AS IT LANDS",
+                    QteVariant.Slip => $"HOLD GUARD [{guardName}] - RELEASE AT IMPACT",
+                    QteVariant.Flurry => $"FLURRY [{guardName}] x2 AT IMPACT",
+                    QteVariant.Roll => $"ROLL: {DirName(d.cues[cur])} + GUARD [{guardName}]",
+                    _ => d.cues[cur] != DodgeDir.None ? $"PRESS {DirName(d.cues[cur])} AS IT LANDS"
+                        : d.heavy[cur] ? $"HOLD [{key}] UNTIL THE RED HIT LANDS"
+                        : (d.Hits > 1 ? $"PRESS [{key}] ON EACH HIT" : $"PRESS [{key}] AS IT LANDS") + (anyHeavy ? " - RED = HOLD" : ""),
+                };
             }
 
             for (int i = d.Hits - 1; i >= 0; i--)

@@ -109,6 +109,28 @@ namespace Obscure
 
         IEnumerator CoachDefense(BattleAction act, Qte qte)
         {
+            if (qte is DefenseQte dq && Battle?.run != null && !Battle.run.IsPrologue)
+            {
+                string guardName = Controls.GuardKey.ToString().ToUpperInvariant();
+                for (int i = 0; i < dq.Hits; i++)
+                {
+                    var v = dq.VariantAt(i);
+                    if (v == QteVariant.None) continue;
+                    string vText = v switch
+                    {
+                        QteVariant.GuardCue => $"GUARD CUE (blue shield): press {guardName} as it lands.",
+                        QteVariant.Slip => $"SLIP (notched shield): hold {guardName} when it appears, then RELEASE at impact.",
+                        QteVariant.Flurry => $"FLURRY (two pips): press {guardName} twice — at impact and again right after.",
+                        QteVariant.Roll => $"ROLL: press the shown arrow AND {guardName} together at impact.",
+                        _ => null,
+                    };
+                    if (vText != null)
+                    {
+                        yield return Coach("var_" + v, vText);
+                        break;
+                    }
+                }
+            }
             if (!Coaching) yield break;
             bool feint = qte is DefenseQte d && Enumerable.Range(0, d.Hits).Any(d.IsFeint);
             string kind = feint ? "feint" : PrologueScript.DefenseKind(act.attack, act.attack?.hits ?? 1);

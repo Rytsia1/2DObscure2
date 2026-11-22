@@ -326,6 +326,64 @@ namespace Obscure
             SetAi("zoroa_p1", AiRole.AdaptiveController, AiTier.Boss);
             SetAi("zoroa_p2", AiRole.AdaptiveController, AiTier.Boss);
 
+            // Authored QTE motifs (QTE Variation Spec Part D, Handoff §Example motifs)
+            SetMotif("hollow_squire", "Rusty Cleave", new QteMotif
+            {
+                hits = new[] { new HitCue(QteVariant.None, DodgeDir.Right) },
+            });
+            SetMotif("gravebound_archer", "Grave Arrow", new QteMotif
+            {
+                hits = new[] { new HitCue(QteVariant.None, DodgeDir.Up) },
+            });
+            SetMotif("soulbound_hound", "Rending Bite", new QteMotif
+            {
+                hits = new[] { new HitCue(QteVariant.None, DodgeDir.Left) },
+            });
+            SetMotif("possessed_royal_guard", "Royal Halberd", new QteMotif
+            {
+                hits = new[] { new HitCue(QteVariant.Slip) },
+            });
+            SetMotif("soul_reaper", "Accelerating Rend", new QteMotif
+            {
+                hits = new[]
+                {
+                    new HitCue(QteVariant.None, DodgeDir.Right),
+                    new HitCue(QteVariant.None, DodgeDir.Left),
+                    new HitCue(QteVariant.Roll, DodgeDir.Up),
+                    new HitCue(QteVariant.None, DodgeDir.Down),
+                },
+                feintHit = 1,
+                remixes = new[] { RemixKind.Mirror },
+            });
+            SetMotif("royal_ossuary_knight", "Graveward Charge", new QteMotif
+            {
+                hits = new[] { new HitCue(QteVariant.None) },
+            });
+            SetMotif("crownless_duelist", "Triple Feint", new QteMotif
+            {
+                hits = new[]
+                {
+                    new HitCue(QteVariant.None),
+                    new HitCue(QteVariant.Flurry),
+                    new HitCue(QteVariant.Roll, DodgeDir.Right),
+                },
+                feintHit = 0,
+            });
+            foreach (var zid in new[] { "zoroa_p1", "zoroa_p2" })
+            {
+                SetMotif(zid, "Final Reaping", new QteMotif
+                {
+                    hits = new[]
+                    {
+                        new HitCue(QteVariant.None, DodgeDir.Up),
+                        new HitCue(QteVariant.None, DodgeDir.Down),
+                        new HitCue(QteVariant.Roll, DodgeDir.Left),
+                        new HitCue(QteVariant.None), // Heavy hit 4 = Brace
+                    },
+                    remixes = new[] { RemixKind.Mirror, RemixKind.Upgrade },
+                });
+            }
+
             // Build and link the 3 Dungeon 1 Enhanced Common Variant pilot families (Variant Spec §12.3, §15.1; Transformation Spec §3.1).
             EnhancedVariants = new[]
             {
@@ -338,6 +396,11 @@ namespace Obscure
                     alternativeHitDamage = new[] { 12, 12 }, // Repeated Assault: 2 x 12, Steady (posture-B starting value, untested)
                     alternativeCooldown = 1,
                     alternativePriority = 2,
+                    alternativeMotif = new QteMotif
+                    {
+                        hits = new[] { new HitCue(QteVariant.None), new HitCue(QteVariant.Flurry) },
+                        remixes = new[] { RemixKind.Upgrade },
+                    },
                 }),
                 Enhanced("soulbound_hound", new VariantProfile
                 {
@@ -349,6 +412,11 @@ namespace Obscure
                     alternativeIntervals = HoundEnhancedAccelerando,
                     alternativeCooldown = 1,
                     alternativePriority = 2,
+                    alternativeMotif = new QteMotif
+                    {
+                        hits = new[] { new HitCue(QteVariant.None), new HitCue(QteVariant.GuardCue), new HitCue(QteVariant.None) },
+                        remixes = new[] { RemixKind.Tempo },
+                    },
                 }),
                 Enhanced("cinder_wisp", new VariantProfile
                 {
@@ -365,6 +433,13 @@ namespace Obscure
             };
         }
 
+        static void SetMotif(string enemyId, string moveName, QteMotif motif)
+        {
+            var e = Enemies.First(x => x.id == enemyId);
+            var m = e.attacks.First(a => a.name == moveName);
+            m.motif = motif;
+        }
+
         public sealed class VariantProfile
         {
             public VariantStatMult statMult;
@@ -377,6 +452,7 @@ namespace Obscure
             public int alternativeCooldown = 1;
             public int alternativePriority = 2;
             public StatusApply[] alternativeApply;
+            public QteMotif alternativeMotif;
         }
 
         public static readonly EnemyDef[] EnhancedVariants;
@@ -401,6 +477,7 @@ namespace Obscure
                         alt.apply = p.alternativeApply.Select(CloneStatusApply).ToArray();
                     alt.cooldown = p.alternativeCooldown;
                     alt.aiPriority = p.alternativePriority;
+                    if (p.alternativeMotif != null) alt.motif = p.alternativeMotif;
                     DeriveHitPower(alt, baseDef.stats);
                     attacks.Add(alt);
                 }
