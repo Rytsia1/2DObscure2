@@ -323,6 +323,8 @@ namespace Obscure
                 name = u.name,
                 role = u.role,
                 raceId = u.race?.id ?? "human",
+                lineageId = u.lineageId,
+                racialBonusChoice = u.racialBonusChoice != null ? u.racialBonusChoice.ToArray() : Array.Empty<Ability>(),
                 classId = u.classDef?.id ?? "fighter",
                 backgroundId = u.background?.id ?? "guard",
                 baseScores = u.BaseScores,

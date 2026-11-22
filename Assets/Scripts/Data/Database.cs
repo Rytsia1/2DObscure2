@@ -299,7 +299,17 @@ namespace Obscure
             {
                 id = "human", name = "Human", isPlayable = true,
                 description = "Adaptable survivors of the surface kingdoms.",
-                abilityModifiers = new AbilityScores(1, 0, 1, 0, 0, 0), // Adaptive Potential: +1 STR, +1 VIT (sum = 2)
+                abilityModifiers = new AbilityScores(1, 0, 1, 0, 0, 0), // Adaptive Potential default: +1 STR, +1 VIT (sum = 2)
+                bonusPickCount = 2,
+                bonusOptions = new[]
+                {
+                    new RacialBonusOption(Ability.STR, 1),
+                    new RacialBonusOption(Ability.DEX, 1),
+                    new RacialBonusOption(Ability.VIT, 1),
+                    new RacialBonusOption(Ability.INT, 1),
+                    new RacialBonusOption(Ability.WIS, 1),
+                    new RacialBonusOption(Ability.CHA, 1),
+                },
                 racialFeat = new RacialFeatDef { id = "determination", name = "Determination", description = "Shield 20% Max HP + All Damage Bonus +15% for 2 turns when dropped to <= 30% HP (1/battle)." },
                 racialUtility = new RacialUtilityDef { id = "adaptability", name = "Adaptability", description = "Adaptable across varied expedition challenges.", utilityTag = "adaptable" }
             },
@@ -307,7 +317,13 @@ namespace Obscure
             {
                 id = "elf", name = "Elf", isPlayable = true,
                 description = "Swift hunters attuned to the twilight beneath the world.",
-                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 0), // Elven Grace: +2 DEX (sum = 2)
+                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 0), // Elven Grace default: +2 DEX (choice: DEX or INT)
+                bonusPickCount = 1,
+                bonusOptions = new[]
+                {
+                    new RacialBonusOption(Ability.DEX, 2),
+                    new RacialBonusOption(Ability.INT, 2),
+                },
                 racialFeat = new RacialFeatDef { id = "fey_step", name = "Fey Step", description = "Elf becomes Phased until next turn; first attack next turn gains +20% damage (CD 4)." },
                 racialUtility = new RacialUtilityDef { id = "keen_senses", name = "Keen Senses", description = "Heightened perception in dark corridors.", utilityTag = "perception" }
             },
@@ -315,7 +331,7 @@ namespace Obscure
             {
                 id = "dwarf", name = "Dwarf", isPlayable = true,
                 description = "Stout delve-folk forged for endurance in the deep.",
-                abilityModifiers = new AbilityScores(0, 0, 2, 0, 0, 0), // Dwarven Constitution: +2 VIT (sum = 2)
+                abilityModifiers = new AbilityScores(0, 0, 2, 0, 0, 0), // Dwarven Constitution: +2 VIT (fixed)
                 racialFeat = new RacialFeatDef { id = "iron_resolve", name = "Iron Resolve", description = "All Damage Taken -30% and Break Power received -50% until next turn (CD 3)." },
                 racialUtility = new RacialUtilityDef { id = "stonecraft", name = "Stonecraft", description = "Instinctive knowledge of subterranean structures.", utilityTag = "mineral" }
             },
@@ -323,7 +339,7 @@ namespace Obscure
             {
                 id = "halfling", name = "Halfling", isPlayable = true,
                 description = "Nimble and fortunate wanderers who slip past peril.",
-                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 0), // Halfling Agility: +2 DEX (sum = 2)
+                abilityModifiers = new AbilityScores(0, 2, 0, 0, 0, 0), // Halfling Agility: +2 DEX (fixed)
                 racialFeat = new RacialFeatDef
                 {
                     id = "second_chance", name = "Second Chance",
@@ -334,9 +350,9 @@ namespace Obscure
             },
             new RaceDef
             {
-                id = "dragonborn", name = "Dragonborn", isPlayable = true, lineageId = "crimson",
+                id = "dragonborn", name = "Dragonborn", isPlayable = true, lineageId = "crimson", usesLineage = true,
                 description = "Proud warriors carrying the burning blood of ancient dragons.",
-                abilityModifiers = new AbilityScores(2, 0, 0, 0, 0, 0), // Draconic Heritage (Crimson): +2 STR (sum = 2)
+                abilityModifiers = new AbilityScores(2, 0, 0, 0, 0, 0), // Draconic Heritage default (Crimson): +2 STR
                 racialFeat = new RacialFeatDef
                 {
                     id = "draconic_overdrive", name = "Draconic Overdrive",
@@ -349,7 +365,13 @@ namespace Obscure
             {
                 id = "liichtian", name = "Liichtian", isPlayable = true,
                 description = "Mortals of celestial heritage who carry astral light into the abyss.",
-                abilityModifiers = new AbilityScores(0, 0, 0, 0, 2, 0), // Celestial Wisdom: +2 WIS (sum = 2)
+                abilityModifiers = new AbilityScores(0, 0, 0, 0, 2, 0), // Celestial Wisdom default: +2 WIS (choice: WIS or CHA)
+                bonusPickCount = 1,
+                bonusOptions = new[]
+                {
+                    new RacialBonusOption(Ability.WIS, 2),
+                    new RacialBonusOption(Ability.CHA, 2),
+                },
                 racialFeat = new RacialFeatDef { id = "lightbound", name = "Lightbound", description = "Heal 10% Max HP all active allies, Damage Taken -10%, Status Resist +20% for 2 turns (1/battle)." },
                 racialUtility = new RacialUtilityDef { id = "luminescent_insight", name = "Luminescent Insight", description = "Attuned to astral signs and sacred wards.", utilityTag = "sacred" }
             },
@@ -357,7 +379,13 @@ namespace Obscure
             {
                 id = "merfolk", name = "Merfolk", isPlayable = true,
                 description = "Denizens of the sunken depths who command protective tides.",
-                abilityModifiers = new AbilityScores(0, 0, 0, 0, 2, 0), // Aquatic Affinity: +2 WIS (sum = 2)
+                abilityModifiers = new AbilityScores(0, 0, 0, 0, 2, 0), // Aquatic Affinity default: +2 WIS (choice: WIS or DEX)
+                bonusPickCount = 1,
+                bonusOptions = new[]
+                {
+                    new RacialBonusOption(Ability.WIS, 2),
+                    new RacialBonusOption(Ability.DEX, 2),
+                },
                 racialFeat = new RacialFeatDef
                 {
                     id = "oceans_embrace", name = "Ocean's Embrace",
@@ -1519,7 +1547,7 @@ namespace Obscure
 
                 classMechanics = new[] { "Spell Specialization" },
 
-                affinities = new Affinities { weak = new[] { Element.Dark }, resist = new[] { Element.Arcane } },
+                affinities = new Affinities { weak = new[] { Element.Dark }, resist = new[] { Element.Water } },
 
                 sprite = Art.Mage,
 
@@ -1933,7 +1961,7 @@ namespace Obscure
 
                 classMechanics = new[] { "Elemental Mastery", "Runic Incantations" },
 
-                affinities = new Affinities { weak = new[] { Element.Dark }, resist = new[] { Element.Arcane } },
+                affinities = new Affinities { weak = new[] { Element.Dark }, resist = new[] { Element.Water } },
 
                 sprite = Art.Mage,
 
@@ -4621,7 +4649,7 @@ namespace Obscure
 
 
 
-            new SkillDef { id = "arcane_missile", name = "Arcane Missile", kind = SkillKind.Magic, element = Element.Arcane, target = TargetType.Enemy, mpCost = 5, power = 1.2f,
+            new SkillDef { id = "arcane_missile", name = "Arcane Missile", kind = SkillKind.Magic, element = Element.Lightning, target = TargetType.Enemy, mpCost = 5, power = 1.2f,
 
                 scalingAbility = Ability.INT, tier = 2, tags = new[] { "Arcane" },
 
@@ -4839,13 +4867,13 @@ namespace Obscure
 
             new SkillDef { id = "frost_nova", name = "Frost Nova", classId = "wizard", branchIndex = 1, tier = 1, kind = SkillKind.Magic, element = Element.Ice, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 7, power = 0.90f, breakMultiplier = 1.25f, maxRank = 3, cooldown = 1, word = "GLACIES", difficulty = SkillDifficulty.Easy, apply = new[] { Status(StatusId.Slow, 2, 0.35f) }, tags = new[] { "Arcane" }, description = "Freezing wave chilling all enemies and inflicting Slow." },
 
-            new SkillDef { id = "arcane_bolt", name = "Arcane Bolt", classId = "wizard", branchIndex = 2, tier = 1, kind = SkillKind.Magic, element = Element.Arcane, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 4, power = 1.25f, breakMultiplier = 1.20f, maxRank = 3, critChanceBonus = 0.05f, word = "ARCANA", difficulty = SkillDifficulty.Easy, tags = new[] { "Arcane" }, description = "Unerring bolt of raw mystic energy." },
+            new SkillDef { id = "arcane_bolt", name = "Arcane Bolt", classId = "wizard", branchIndex = 2, tier = 1, kind = SkillKind.Magic, element = Element.Lightning, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 4, power = 1.25f, breakMultiplier = 1.20f, maxRank = 3, critChanceBonus = 0.05f, word = "ARCANA", difficulty = SkillDifficulty.Easy, tags = new[] { "Arcane" }, description = "Unerring bolt of raw mystic energy." },
 
             new SkillDef { id = "lightning_strike", name = "Lightning Strike", classId = "wizard", branchIndex = 0, tier = 2, kind = SkillKind.Magic, element = Element.Lightning, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 6, power = 1.65f, breakMultiplier = 1.35f, maxRank = 3, critChanceBonus = 0.10f, word = "FULGUR", prerequisites = new[] { "firebolt" }, tags = new[] { "Arcane" }, description = "Call down a sudden lightning bolt with high shock damage." },
 
             new SkillDef { id = "frost_shard", name = "Frost Shard", classId = "wizard", branchIndex = 1, tier = 2, kind = SkillKind.Magic, element = Element.Ice, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 6, power = 1.35f, breakMultiplier = 1.30f, maxRank = 3, critChanceBonus = 0.05f, word = "FROST", apply = new[] { Status(StatusId.Slow, 2, 0.40f, chance: 0.60f) }, prerequisites = new[] { "frost_nova" }, tags = new[] { "Arcane" }, description = "Sharp piercing ice shard with guaranteed Slow on perfect timing." },
 
-            new SkillDef { id = "arcane_burst", name = "Arcane Burst", classId = "wizard", branchIndex = 2, tier = 2, kind = SkillKind.Magic, element = Element.Arcane, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 14, power = 1.30f, breakMultiplier = 1.40f, bonusVsBroken = 0.25f, maxRank = 3, cooldown = 2, word = "AETHERIS", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "arcane_bolt" }, tags = new[] { "Arcane" }, description = "Detonate raw arcane energy across all foes." },
+            new SkillDef { id = "arcane_burst", name = "Arcane Burst", classId = "wizard", branchIndex = 2, tier = 2, kind = SkillKind.Magic, element = Element.Lightning, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 14, power = 1.30f, breakMultiplier = 1.40f, bonusVsBroken = 0.25f, maxRank = 3, cooldown = 2, word = "AETHERIS", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "arcane_bolt" }, tags = new[] { "Arcane" }, description = "Detonate raw arcane energy across all foes." },
 
             new SkillDef { id = "meteor", name = "Meteor", classId = "wizard", branchIndex = 0, tier = 3, kind = SkillKind.Magic, element = Element.Fire, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 11, power = 1.55f, breakMultiplier = 1.60f, maxRank = 3, critChanceBonus = 0.10f, cooldown = 2, word = "METEOR", prerequisites = new[] { "lightning_strike" }, tags = new[] { "Arcane" }, description = "Summon a blazing meteor crashing into enemy ranks." },
 
@@ -4857,13 +4885,13 @@ namespace Obscure
 
             new SkillDef { id = "absolute_zero", name = "Absolute Zero", classId = "wizard", branchIndex = 1, tier = 4, kind = SkillKind.Magic, element = Element.Ice, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 10, power = 2.15f, breakMultiplier = 2.20f, maxRank = 3, critChanceBonus = 0.10f, cooldown = 2, word = "FRIGUS", difficulty = SkillDifficulty.Hard, apply = new[] { Status(StatusId.Stun, 1, 1f, chance: 0.50f) }, prerequisites = new[] { "blizzard" }, tags = new[] { "Arcane" }, description = "Flash-freeze a foe to absolute zero, inflicting Stun." },
 
-            new SkillDef { id = "arcane_overload", name = "Arcane Overload", classId = "wizard", branchIndex = 2, tier = 4, kind = SkillKind.Magic, element = Element.Arcane, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 11, power = 2.50f, breakMultiplier = 2.05f, maxRank = 3, critChanceBonus = 0.15f, cooldown = 2, word = "MAXIMA", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "arcane_burst" }, tags = new[] { "Arcane" }, description = "Supercharge arcane power to obliterate a single target." },
+            new SkillDef { id = "arcane_overload", name = "Arcane Overload", classId = "wizard", branchIndex = 2, tier = 4, kind = SkillKind.Magic, element = Element.Lightning, target = TargetType.Enemy, scalingAbility = Ability.INT, mpCost = 11, power = 2.50f, breakMultiplier = 2.05f, maxRank = 3, critChanceBonus = 0.15f, cooldown = 2, word = "MAXIMA", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "arcane_burst" }, tags = new[] { "Arcane" }, description = "Supercharge arcane power to obliterate a single target." },
 
             new SkillDef { id = "cataclysm_spell", name = "Elemental Cataclysm", classId = "wizard", branchIndex = 0, tier = 5, kind = SkillKind.Magic, element = Element.Fire, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 15, power = 2.25f, breakMultiplier = 2.20f, maxRank = 3, critChanceBonus = 0.15f, cooldown = 3, word = "VULCAN", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "inferno" }, tags = new[] { "Arcane" }, description = "Apocalyptic elemental storm ravaging all enemies with cataclysmic heat." },
 
             new SkillDef { id = "apocalypse_spell", name = "Glacial Apocalypse", classId = "wizard", branchIndex = 1, tier = 5, kind = SkillKind.Magic, element = Element.Ice, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 15, power = 2.05f, breakMultiplier = 2.40f, maxRank = 3, critChanceBonus = 0.10f, cooldown = 3, word = "BOREAS", difficulty = SkillDifficulty.Hard, apply = new[] { Status(StatusId.Stun, 1, 1f, chance: 0.40f) }, prerequisites = new[] { "absolute_zero" }, tags = new[] { "Arcane" }, description = "Entomb the battlefield in eternal permafrost." },
 
-            new SkillDef { id = "grand_arcanum", name = "Grand Arcanum", classId = "wizard", branchIndex = 2, tier = 5, kind = SkillKind.Magic, element = Element.Arcane, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 16, power = 2.35f, breakMultiplier = 2.50f, maxRank = 3, critChanceBonus = 0.20f, cooldown = 3, word = "ARCANUM", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "arcane_overload" }, tags = new[] { "Arcane" }, description = "The zenith of arcane spellcraft tearing through the fabric of reality." },
+            new SkillDef { id = "grand_arcanum", name = "Grand Arcanum", classId = "wizard", branchIndex = 2, tier = 5, kind = SkillKind.Magic, element = Element.Lightning, target = TargetType.AllEnemies, scalingAbility = Ability.INT, mpCost = 16, power = 2.35f, breakMultiplier = 2.50f, maxRank = 3, critChanceBonus = 0.20f, cooldown = 3, word = "ARCANUM", difficulty = SkillDifficulty.Hard, prerequisites = new[] { "arcane_overload" }, tags = new[] { "Arcane" }, description = "The zenith of arcane spellcraft tearing through the fabric of reality." },
 
 
 
@@ -5012,7 +5040,7 @@ namespace Obscure
 
                 skills = new[] { "firebolt", "frost_shard", "arcane_burst" }, sprite = Art.Mage,
 
-                affinities = new Affinities { weak = new[] { Element.Dark }, resist = new[] { Element.Arcane } },
+                affinities = new Affinities { weak = new[] { Element.Dark }, resist = new[] { Element.Water } },
 
                 description = "Fragile, but every foe has an element it fears."
 
@@ -5492,7 +5520,7 @@ namespace Obscure
 
                 gold = 100, sprite = Art.Warden,
 
-                affinities = new Affinities { weak = new[] { Element.Arcane }, resist = new[] { Element.Fire, Element.Ice }, immune = new[] { Element.Dark } },
+                affinities = new Affinities { weak = new[] { Element.Lightning }, resist = new[] { Element.Fire, Element.Ice }, immune = new[] { Element.Dark } },
 
                 attacks = new[]
 

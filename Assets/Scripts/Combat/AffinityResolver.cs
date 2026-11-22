@@ -18,14 +18,13 @@ namespace Obscure
         // If it fails: tune down to 0.50f (cap at 50% of NORMAL damage).
         public const float DrainHealPct = 1.0f;
 
-        // Canonical 10 display/combat elements (Spec §0). Shadow aliases Dark.
+        // Canonical 9 display/combat elements (Stage 3a: Arcane removed). Shadow aliases Dark.
         public static readonly Element[] AllElements =
         {
             Element.Physical,
             Element.Fire,
             Element.Ice,
             Element.Lightning,
-            Element.Arcane,
             Element.Holy,
             Element.Dark,
             Element.Earth,
@@ -67,8 +66,6 @@ namespace Obscure
             {
                 if (element == Element.Physical)
                     fromProfile = target.AffinityProfile.GetRawPhysicalAffinity();
-                else if (element == Element.Arcane)
-                    fromProfile = target.AffinityProfile.GetRawArcaneAffinity();
                 else
                 {
                     var mapped = ElementTypes.FromLegacyElement(element);

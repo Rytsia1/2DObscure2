@@ -94,13 +94,13 @@ namespace Obscure.Tests
                 tier = Tier.Elite,
                 stats = new Stats(200, 50, 10, 5, 5, 5),
                 maxBreakGauge = 60,
-                affinities = new Affinities { reflect = new[] { Element.Arcane } },
+                affinities = new Affinities { reflect = new[] { Element.Lightning } },
                 attacks = new[] { new EnemyAttack { name = "Tap", hits = 1, hitDamage = new[] { 5 } } },
             };
             var b = new Battle(new[] { hero }, new[] { enemyDef }, new List<string>(), new Random(1));
             var h = b.Party[0];
-            // Give hero Reflect on Arcane too to prove reflection NEVER loops!
-            h.AffinityProfile.SetArcaneAffinity(AffinityType.Reflect);
+            // Give hero Reflect on Lightning too to prove reflection NEVER loops!
+            h.AffinityProfile.SetElementalAffinity(ElementType.Lightning, AffinityType.Reflect);
             var e = b.Enemies[0];
 
             int heroMaxHp = h.Stats.maxHp;
@@ -109,13 +109,13 @@ namespace Obscure.Tests
             int enemyHpBefore = e.unit.hp;
             int enemyBreakBefore = e.CurrentBreakGauge;
 
-            // Massive Arcane nuke so reflection hits the 35% cap
-            var arcaneNuke = MakeMagicSkill("test_arcane_nuke", Element.Arcane, 20f,
+            // Massive Lightning nuke so reflection hits the 35% cap
+            var lightningNuke = MakeMagicSkill("test_lightning_nuke", Element.Lightning, 20f,
                 apply: new[] { new StatusApply { id = StatusId.Silence, chance = 1f, turns = 2, magnitude = 1f } });
-            h.unit.skillLoadout.activeSlots[0] = arcaneNuke.id;
+            h.unit.skillLoadout.activeSlots[0] = lightningNuke.id;
 
             AdvanceTo(b, h);
-            var hits = b.Perform(BattleAction.Skill(h, arcaneNuke, e));
+            var hits = b.Perform(BattleAction.Skill(h, lightningNuke, e));
 
             Assert.AreEqual(enemyHpBefore, e.unit.hp, "Reflecting target takes 0 damage");
             Assert.AreEqual(enemyBreakBefore, e.CurrentBreakGauge, "Reflect deals 0 Break damage to target");
@@ -131,15 +131,48 @@ namespace Obscure.Tests
             var immuneHero = new Unit(Database.Characters[Database.Party[0]]);
             var b2 = new Battle(new[] { immuneHero }, new[] { enemyDef }, new List<string>(), new Random(1));
             var h2 = b2.Party[0];
-            h2.unit.skillLoadout.activeSlots[0] = arcaneNuke.id;
-            h2.AffinityProfile.SetArcaneAffinity(AffinityType.Nullification);
+            h2.unit.skillLoadout.activeSlots[0] = lightningNuke.id;
+            h2.AffinityProfile.SetElementalAffinity(ElementType.Lightning, AffinityType.Nullification);
             int h2Hp = h2.unit.hp;
             AdvanceTo(b2, h2);
-            b2.Perform(BattleAction.Skill(h2, arcaneNuke, b2.Enemies[0]));
+            b2.Perform(BattleAction.Skill(h2, lightningNuke, b2.Enemies[0]));
             Assert.AreEqual(h2Hp, h2.unit.hp, "Attacker immune to reflected element takes 0 damage");
 
             // No Defensive QTE on reflected damage: QteFactory.Defense returns null for hero's own Skill action
-            Assert.IsNull(QteFactory.Defense(BattleAction.Skill(h, arcaneNuke, e), QteAssist.Standard, null, new Random(1)));
+            Assert.IsNull(QteFactory.Defense(BattleAction.Skill(h, lightningNuke, e), QteAssist.Standard, null, new Random(1)));
+        }
+
+        [Test]
+        public void Stage3a_RemovedArcaneElementInt4ResolvesToPhysicalAndPre3aSaveLoads()
+        {
+            // Explicit enum pinning prevents save corruption when Arcane (4) is removed
+            Assert.AreEqual(0, (int)Element.Physical);
+            Assert.AreEqual(1, (int)Element.Fire);
+            Assert.AreEqual(2, (int)Element.Ice);
+            Assert.AreEqual(3, (int)Element.Lightning);
+            Assert.IsFalse(Enum.IsDefined(typeof(Element), 4), "Old Element.Arcane (4) must be removed");
+            Assert.AreEqual(5, (int)Element.Holy);
+            Assert.AreEqual(6, (int)Element.Dark);
+            Assert.AreEqual(7, (int)Element.Earth);
+            Assert.AreEqual(8, (int)Element.Wind);
+            Assert.AreEqual(9, (int)Element.Water);
+            Assert.AreEqual(Element.Dark, Element.Shadow);
+            Assert.AreEqual(Element.Physical, ElementConfig.FromInt(4), "Stored element int 4 must resolve to Physical");
+            Assert.AreEqual(Element.Holy, ElementConfig.FromInt(5));
+
+            // Simulate a pre-3a CodexSaveData JSON containing element 4 (old Arcane) alongside Holy (5) and Dark (6)
+            string pre3aJson = "{\"entries\":[{\"enemyId\":\"graveglass_arcanist\",\"elements\":[{\"element\":4,\"effectiveness\":5},{\"element\":5,\"effectiveness\":1},{\"element\":6,\"effectiveness\":2}],\"statuses\":[],\"concealedTriggers\":[{\"element\":4,\"triggers\":1}]}]}";
+            var parsed = UnityEngine.JsonUtility.FromJson<CodexSaveData>(pre3aJson);
+            var codex = EnemyCodex.FromSaveData(parsed);
+
+            Assert.AreEqual(Effectiveness.Reflect, codex.GetKnownElement("graveglass_arcanist", Element.Physical),
+                "Stored element int 4 in pre-3a save must resolve cleanly to Physical");
+            Assert.AreEqual(Effectiveness.Weak, codex.GetKnownElement("graveglass_arcanist", Element.Holy),
+                "Pinned value 5 (Holy) must remain intact");
+            Assert.AreEqual(Effectiveness.Resist, codex.GetKnownElement("graveglass_arcanist", Element.Dark),
+                "Pinned value 6 (Dark) must remain intact");
+            Assert.AreEqual(1, codex.GetConcealedTriggerCount("graveglass_arcanist", Element.Physical),
+                "Concealed trigger stored as element 4 must resolve cleanly to Physical");
         }
 
         [Test]
@@ -515,9 +548,9 @@ namespace Obscure.Tests
             var squire = b.Enemies[0];
             squire.AddStatus(StatusId.Burn, 2, 0.1f, hero);
 
-            // Enemy view before discovery: all 10 elements and all status resistances must be ???
+            // Enemy view before discovery: all 9 elements and all status resistances must be ???
             var enemyViewBefore = AnalysisInspector.BuildEnemyView(b, squire);
-            Assert.AreEqual(10, enemyViewBefore.elements.Count);
+            Assert.AreEqual(9, enemyViewBefore.elements.Count);
             Assert.IsTrue(enemyViewBefore.elements.All(r => r.label == "???"), "Undiscovered enemy elements must show ???");
             Assert.IsTrue(enemyViewBefore.statusResistances.All(r => r.label == "???"), "Undiscovered enemy status resistances must show ???");
             Assert.IsTrue(enemyViewBefore.activeEffects.Any(a => a.label == "BURN" && a.remainingTurns == 2), "Active statuses always visible even with empty Codex");
@@ -541,7 +574,7 @@ namespace Obscure.Tests
             // Ally view: always 100% visible, exact stats, exact status %, defensive effects
             hero.guarding = true;
             var allyView = AnalysisInspector.BuildAllyView(hero);
-            Assert.AreEqual(10, allyView.elements.Count);
+            Assert.AreEqual(9, allyView.elements.Count);
             Assert.IsFalse(allyView.elements.Any(r => r.label == "???"), "Allies never show ???");
             Assert.IsFalse(allyView.statusResistances.Any(r => r.label == "???"), "Allies never show ??? for statuses");
             Assert.IsTrue(allyView.statusResistances.All(r => r.label.Contains("%") || r.label == "IMMUNE"), "Allies show exact % or IMMUNE");

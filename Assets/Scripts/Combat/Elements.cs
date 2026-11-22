@@ -3,7 +3,20 @@ using System.Collections.Generic;
 
 namespace Obscure
 {
-    public enum Element { Physical, Fire, Ice, Lightning, Arcane, Holy, Dark, Earth, Wind, Water, Shadow = Dark }
+    // Explicit values are pinned for save compatibility (Stage 3a: Arcane = 4 removed).
+    public enum Element
+    {
+        Physical = 0,
+        Fire = 1,
+        Ice = 2,
+        Lightning = 3,
+        Holy = 5,
+        Dark = 6,
+        Earth = 7,
+        Wind = 8,
+        Water = 9,
+        Shadow = Dark,
+    }
 
     public enum Effectiveness { Neutral, Weak, Resist, Immune, Drain, Reflect }
 
@@ -12,10 +25,13 @@ namespace Obscure
     {
         public const float Weak = 1.5f, Resist = 0.5f, Immune = 0f;
 
+        public static Element FromInt(int value) =>
+            Enum.IsDefined(typeof(Element), value) ? (Element)value : Element.Physical;
+
         public static string Short(Element e) => e switch
         {
             Element.Physical => "PHY", Element.Fire => "FIR", Element.Ice => "ICE", Element.Lightning => "LIG",
-            Element.Arcane => "ARC", Element.Holy => "HOL", Element.Earth => "ERT", Element.Wind => "WND",
+            Element.Holy => "HOL", Element.Earth => "ERT", Element.Wind => "WND",
             Element.Water => "WTR", _ => "DRK",
         };
     }

@@ -1767,7 +1767,6 @@ namespace Obscure
                         Element.Fire => ("fire", Sound.Fire),
                         Element.Ice => ("ice", Sound.Ice),
                         Element.Lightning => ("lightning", Sound.Lightning),
-                        Element.Arcane => ("arcane", Sound.Arcane),
                         Element.Holy => ("holy", Sound.Holy),
                         Element.Dark => ("dark", Sound.Dark),
                         Element.Earth => ("earth", Sound.Earth),

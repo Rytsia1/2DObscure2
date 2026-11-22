@@ -43,6 +43,8 @@ namespace Obscure
         Stats permanentLegacyBonuses;
         public DerivedStats Derived { get; private set; }
         public Stats stats;
+        public string lineageId;
+        public Ability[] racialBonusChoice = Array.Empty<Ability>();
         public int hp, mp, shield;
         public bool Alive => hp > 0;
 
@@ -61,7 +63,11 @@ namespace Obscure
             background = d.backgroundId != null && Database.Backgrounds.TryGetValue(d.backgroundId, out var bg) ? bg : (Database.Backgrounds.TryGetValue("guard", out var g) ? g : Database.Backgrounds.Values.First());
 
             abilities.baseScores = d.baseScores.Equals(default) ? AbilityScores.DefaultBase : d.baseScores;
-            abilities.racialModifiers = race.abilityModifiers;
+            lineageId = !string.IsNullOrEmpty(d.lineageId) ? d.lineageId : (race.usesLineage ? (race.lineageId ?? "crimson") : null);
+            racialBonusChoice = (d.racialBonusChoice != null && d.racialBonusChoice.Length > 0)
+                ? d.racialBonusChoice.ToArray()
+                : race.DefaultBonusChoice();
+            abilities.racialModifiers = race.ResolveRacialModifiers(racialBonusChoice, lineageId);
 
             skillLoadout.InitializeForClass(classDef, level);
             if (d.unlockedSkills != null)
@@ -306,7 +312,7 @@ namespace Obscure
             foreach (var p in passives)
                 if (p != null) eqAbil = eqAbil.Plus(p.abilityBonuses);
             abilities.equipmentBonuses = eqAbil;
-            abilities.racialModifiers = race != null ? race.abilityModifiers : AbilityScores.Zero;
+            abilities.racialModifiers = race != null ? race.ResolveRacialModifiers(racialBonusChoice, lineageId) : AbilityScores.Zero;
 
             int oldMaxHp = Derived.maxHp;
             int oldMaxMp = Derived.maxMp;
@@ -613,12 +619,23 @@ namespace Obscure
             return true;
         }
 
-        // Respecs Point Buy base scores while preserving Race, Class, Background, equipment, and permanent rewards.
-        public void Respec(AbilityScores newBaseScores, PointBuyConfig config = null)
+        // Respecs Point Buy base scores (and optionally racial bonus choice / Dragonborn lineage per GDD)
+        // while preserving Race, Class, Background, equipment, and permanent rewards.
+        public void Respec(AbilityScores newBaseScores, PointBuyConfig config = null, Ability[] newRacialBonusChoice = null, string newLineageId = null)
         {
             var cfg = config ?? PointBuyConfig.Standard;
             var err = cfg.Validate(newBaseScores);
             if (err != null) throw new InvalidOperationException(err);
+            if (race != null && (newRacialBonusChoice != null || newLineageId != null))
+            {
+                var nextChoice = newRacialBonusChoice ?? racialBonusChoice;
+                var nextLineage = newLineageId ?? lineageId;
+                string raceErr = race.ValidateRacialChoice(nextChoice, nextLineage);
+                if (raceErr != null) throw new InvalidOperationException(raceErr);
+                racialBonusChoice = nextChoice != null ? nextChoice.ToArray() : Array.Empty<Ability>();
+                lineageId = race.usesLineage ? nextLineage : null;
+                abilities.racialModifiers = race.ResolveRacialModifiers(racialBonusChoice, lineageId);
+            }
             abilities.baseScores = newBaseScores;
             RecalculateStats();
         }

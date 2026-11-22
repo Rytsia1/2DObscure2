@@ -80,7 +80,11 @@ namespace Obscure
             return e;
         }
 
-        static Element CanonicalElement(Element e) => e == Element.Shadow ? Element.Dark : e;
+        static Element CanonicalElement(Element e)
+        {
+            if (!Enum.IsDefined(typeof(Element), e)) return Element.Physical;
+            return e == Element.Shadow ? Element.Dark : e;
+        }
 
         public Effectiveness? GetKnownElement(string enemyId, Element element)
         {

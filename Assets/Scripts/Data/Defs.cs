@@ -152,6 +152,8 @@ namespace Obscure
         public string name;
         public string description;
         public string raceId = "human";
+        public string lineageId;
+        public Ability[] racialBonusChoice = Array.Empty<Ability>();
         public string classId = "fighter";
         public string backgroundId = "oathsworn";
         public AbilityScores baseScores = AbilityScores.DefaultBase;
@@ -169,6 +171,7 @@ namespace Obscure
         public string templateId;
         public string raceId = "human", classId = "knight", backgroundId = "oathsworn";
         public string lineageId;
+        public Ability[] racialBonusChoice = Array.Empty<Ability>();
         public AbilityScores baseScores = AbilityScores.DefaultBase;
         public string starterPassiveId;
         public string[] activeSkillLoadout = Array.Empty<string>();

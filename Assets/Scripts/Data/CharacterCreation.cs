@@ -26,6 +26,19 @@ namespace Obscure
         public string utilityTag;
     }
 
+    [Serializable]
+    public struct RacialBonusOption
+    {
+        public Ability ability;
+        public int bonus;
+
+        public RacialBonusOption(Ability ability, int bonus)
+        {
+            this.ability = ability;
+            this.bonus = bonus;
+        }
+    }
+
     // Race definition: Race ID, Name, Description, Racial Ability Bonuses, Racial Feat, Racial Utility, and Restrictions.
     // Each race has three conceptual components: Racial Ability Bonus, Racial Feat, and Racial Utility.
     [Serializable]
@@ -34,7 +47,10 @@ namespace Obscure
         public string id, name, description;
         public bool isPlayable = true;
         public string lineageId;
+        public bool usesLineage; // Dragonborn: lineage chosen per character at creation
         public AbilityScores abilityModifiers;
+        public RacialBonusOption[] bonusOptions = Array.Empty<RacialBonusOption>();
+        public int bonusPickCount; // 0 = fixed or lineage; 1 = pick 1 (Elf/Liichtian/Merfolk); 2 = pick 2 distinct (Human)
         public RacialFeatDef racialFeat;
         public RacialUtilityDef racialUtility;
         public EquipmentRestriction restrictions;
@@ -43,6 +59,119 @@ namespace Obscure
         public StatModifier[] passiveBonuses = Array.Empty<StatModifier>();
         public string[] traits = Array.Empty<string>();
         public string[] racialAbilities = Array.Empty<string>();
+
+        public Ability[] DefaultBonusChoice()
+        {
+            if (bonusPickCount <= 0 || bonusOptions == null || bonusOptions.Length == 0)
+                return Array.Empty<Ability>();
+            var defaults = new List<Ability>(bonusPickCount);
+            foreach (var ab in AbilityScores.AllAbilities)
+            {
+                if (abilityModifiers[ab] > 0 && bonusOptions.Any(o => o.ability == ab))
+                {
+                    defaults.Add(ab);
+                    if (defaults.Count >= bonusPickCount) break;
+                }
+            }
+            for (int i = 0; i < bonusOptions.Length && defaults.Count < bonusPickCount; i++)
+                if (!defaults.Contains(bonusOptions[i].ability))
+                    defaults.Add(bonusOptions[i].ability);
+            return defaults.ToArray();
+        }
+
+        public string DefaultLineageId() =>
+            usesLineage ? (!string.IsNullOrEmpty(lineageId) ? lineageId : "crimson") : null;
+
+        public string ValidateRacialChoice(Ability[] chosenAbilities, string chosenLineageId)
+        {
+            if (usesLineage)
+            {
+                if (string.IsNullOrEmpty(chosenLineageId) || !Database.DragonbornLineages.ContainsKey(chosenLineageId))
+                    return $"Choose a valid Dragonborn lineage.";
+                return null;
+            }
+            if (bonusPickCount <= 0) return null;
+            if (chosenAbilities == null || chosenAbilities.Length != bonusPickCount)
+                return bonusPickCount == 2
+                    ? $"Choose {bonusPickCount} different abilities for {name}'s racial bonus."
+                    : $"Choose a racial ability bonus for {name}.";
+            var seen = new HashSet<Ability>();
+            for (int i = 0; i < chosenAbilities.Length; i++)
+            {
+                var ab = chosenAbilities[i];
+                if (!seen.Add(ab))
+                    return "Cannot choose the same ability twice.";
+                if (bonusOptions == null || !bonusOptions.Any(o => o.ability == ab))
+                    return $"{ab} is not a valid racial bonus option for {name}.";
+            }
+            return null;
+        }
+
+        public AbilityScores ResolveRacialModifiers(Ability[] chosenAbilities, string chosenLineageId)
+        {
+            if (usesLineage)
+            {
+                string lid = !string.IsNullOrEmpty(chosenLineageId) ? chosenLineageId : DefaultLineageId();
+                if (!string.IsNullOrEmpty(lid) && Database.DragonbornLineages.TryGetValue(lid, out var lin))
+                    return lin.abilityModifiers;
+                return abilityModifiers;
+            }
+            if (bonusPickCount > 0 && bonusOptions != null && bonusOptions.Length > 0)
+            {
+                if (chosenAbilities == null || chosenAbilities.Length == 0)
+                    return abilityModifiers; // backward-compatible fallback for old saves / templates
+                var total = AbilityScores.Zero;
+                var seen = new HashSet<Ability>();
+                for (int i = 0; i < chosenAbilities.Length && seen.Count < bonusPickCount; i++)
+                {
+                    var ab = chosenAbilities[i];
+                    if (!seen.Add(ab)) continue;
+                    for (int j = 0; j < bonusOptions.Length; j++)
+                    {
+                        if (bonusOptions[j].ability == ab)
+                        {
+                            total = total.Add(ab, bonusOptions[j].bonus);
+                            break;
+                        }
+                    }
+                }
+                return total;
+            }
+            return abilityModifiers;
+        }
+
+        public Ability[] PickBestBonusForGuide(ClassStatGuide guide)
+        {
+            if (bonusPickCount <= 0 || bonusOptions == null || bonusOptions.Length == 0)
+                return Array.Empty<Ability>();
+            if (guide == null) return DefaultBonusChoice();
+            return bonusOptions
+                .OrderByDescending(o => guide.GetPriority(o.ability) == AbilityPriority.Primary ? 2 : guide.GetPriority(o.ability) == AbilityPriority.Secondary ? 1 : 0)
+                .ThenBy(o => (int)o.ability)
+                .Select(o => o.ability)
+                .Distinct()
+                .Take(bonusPickCount)
+                .ToArray();
+        }
+
+        public string PickBestLineageForGuide(ClassStatGuide guide)
+        {
+            if (!usesLineage) return null;
+            if (guide == null) return DefaultLineageId();
+            string bestId = DefaultLineageId();
+            int bestScore = -1;
+            foreach (var kv in Database.DragonbornLineages)
+            {
+                int sc = 0;
+                foreach (var ab in AbilityScores.AllAbilities)
+                {
+                    if (kv.Value.abilityModifiers[ab] <= 0) continue;
+                    sc += guide.GetPriority(ab) == AbilityPriority.Primary ? 3 : guide.GetPriority(ab) == AbilityPriority.Secondary ? 2 : 1;
+                }
+                if (sc > bestScore) { bestScore = sc; bestId = kv.Key; }
+            }
+            return bestId;
+        }
     }
 
     // Hybrid skill unlock progression entry: character level unlocks tiers; Skill Points unlock individual skills.
@@ -428,17 +557,21 @@ namespace Obscure
     }
 
 
-    // Step-by-step navigation states for Character Creation (Section 2).
-    // Players can advance or return to previous steps at any point before confirming the character.
+    // Step-by-step navigation states for Character Creation (5-step flow: Race -> Class -> Abilities -> Background -> CharacterSheet).
+    // Legacy values are kept stable for serialization; ReviewStarterPassive and ConfigureEquipment are obsolete (F3, F4, F7).
     public enum CreationStep
     {
         SelectRace = 1,
         SelectClass = 2,
         AllocateAbilityScores = 3,
         ReviewStats = 4,
+        [Obsolete("Passive page removed (F4): passives are displayed inside Race, Class, and Background cards.")]
         ReviewStarterPassive = 5,
+        [Obsolete("Gear page removed (F4): starting gear is auto-applied from class defaults and inspected on CharacterSheet.")]
         ConfigureEquipment = 6,
-        ConfirmCharacter = 7
+        ConfirmCharacter = 7,
+        SelectBackground = 8,
+        CharacterSheet = 9
     }
 
     // Interactive session implementing the full Character Creation flow (Sections 2-8):
@@ -452,6 +585,10 @@ namespace Obscure
         public string ActiveTemplateId { get; private set; }
         public CreationStep CurrentStep { get; private set; } = CreationStep.SelectRace;
         public RaceDef Race { get; private set; }
+        public Ability[] SelectedRacialBonuses { get; private set; } = Array.Empty<Ability>();
+        public string SelectedLineageId { get; private set; }
+        public AbilityScores LastFinalScoresBeforeRaceChange { get; private set; }
+        public bool HasRecentRaceDelta { get; private set; }
         public ClassDef Class { get; private set; }
         public BackgroundDef Background { get; private set; }
         public PointBuyAllocation PointBuy { get; }
@@ -478,6 +615,9 @@ namespace Obscure
             CurrentStep = CreationStep.SelectRace;
             PointBuy.Reset();
             Race = Database.Races.TryGetValue("human", out var human) ? human : Database.Races.Values.First();
+            SelectedRacialBonuses = Race.DefaultBonusChoice();
+            SelectedLineageId = Race.DefaultLineageId();
+            HasRecentRaceDelta = false;
             var defaultClass = Database.Classes.TryGetValue("fighter", out var fighter) ? fighter : Database.Classes.Values.First();
             Background = Database.Backgrounds.Values.First();
             CharacterName = defaultClass.name;
@@ -503,6 +643,11 @@ namespace Obscure
             if (string.IsNullOrWhiteSpace(template.name)) return $"Template '{template.id}' is missing a name.";
             if (string.IsNullOrEmpty(template.raceId) || !Database.Races.TryGetValue(template.raceId, out var race) || !race.isPlayable)
                 return $"Template '{template.name}' specifies invalid or non-playable race '{template.raceId}'.";
+            var tplBonus = (template.racialBonusChoice != null && template.racialBonusChoice.Length > 0) ? template.racialBonusChoice : race.DefaultBonusChoice();
+            var tplLineage = !string.IsNullOrEmpty(template.lineageId) ? template.lineageId : race.DefaultLineageId();
+            string raceChoiceErr = race.ValidateRacialChoice(tplBonus, tplLineage);
+            if (raceChoiceErr != null)
+                return $"Template '{template.name}' has invalid racial choice: {raceChoiceErr}";
             if (string.IsNullOrEmpty(template.classId) || !Database.Classes.TryGetValue(template.classId, out var classDef) || !classDef.isPlayable)
                 return $"Template '{template.name}' specifies invalid or non-playable class '{template.classId}'.";
 
@@ -549,7 +694,7 @@ namespace Obscure
                         return $"Template '{template.name}' references unknown equipment '{entry.equipmentId}'.";
                     eqAbilBonus = eqAbilBonus.Plus(item.abilityBonuses);
                 }
-                var finalScores = template.baseScores.Plus(race.abilityModifiers).Plus(eqAbilBonus);
+                var finalScores = template.baseScores.Plus(race.ResolveRacialModifiers(tplBonus, tplLineage)).Plus(eqAbilBonus);
                 foreach (var entry in template.startingEquipment)
                 {
                     if (string.IsNullOrEmpty(entry.equipmentId)) continue;
@@ -589,6 +734,11 @@ namespace Obscure
             Method = CreationMethod.Template;
             ActiveTemplateId = template.id;
             Race = Database.Races[template.raceId];
+            SelectedRacialBonuses = (template.racialBonusChoice != null && template.racialBonusChoice.Length > 0)
+                ? template.racialBonusChoice.ToArray()
+                : Race.DefaultBonusChoice();
+            SelectedLineageId = !string.IsNullOrEmpty(template.lineageId) ? template.lineageId : Race.DefaultLineageId();
+            HasRecentRaceDelta = false;
             Class = Database.Classes[template.classId];
             Background = !string.IsNullOrEmpty(template.backgroundId) && Database.Backgrounds.TryGetValue(template.backgroundId, out var bg)
                 ? bg
@@ -689,7 +839,8 @@ namespace Obscure
                 if (!Database.Races.TryGetValue(raceId, out var race) || !Database.Classes.TryGetValue(classId, out var classDef))
                     continue;
 
-                var randomScores = GenerateRandomPointBuy(PointBuy.Config, r, ClassStatGuidance.ForClass(classDef));
+                var guide = ClassStatGuidance.ForClass(classDef);
+                var randomScores = GenerateRandomPointBuy(PointBuy.Config, r, guide);
                 if (PointBuy.Config.Validate(randomScores) != null)
                     continue;
 
@@ -697,6 +848,9 @@ namespace Obscure
                 Method = CreationMethod.Random;
                 ActiveTemplateId = null;
                 Race = race;
+                SelectedRacialBonuses = race.PickBestBonusForGuide(guide);
+                SelectedLineageId = race.PickBestLineageForGuide(guide);
+                HasRecentRaceDelta = false;
                 Class = classDef;
                 Background = Database.Backgrounds.Values.ElementAt(r.Next(Database.Backgrounds.Count));
                 CharacterName = Class.name;
@@ -752,6 +906,11 @@ namespace Obscure
             Method = def.creationMethod;
             ActiveTemplateId = def.templateId;
             Race = !string.IsNullOrEmpty(def.raceId) && Database.Races.TryGetValue(def.raceId, out var r) ? r : Database.Races["human"];
+            SelectedRacialBonuses = (def.racialBonusChoice != null && def.racialBonusChoice.Length > 0)
+                ? def.racialBonusChoice.ToArray()
+                : Race.DefaultBonusChoice();
+            SelectedLineageId = !string.IsNullOrEmpty(def.lineageId) ? def.lineageId : Race.DefaultLineageId();
+            HasRecentRaceDelta = false;
             Class = !string.IsNullOrEmpty(def.classId) && Database.Classes.TryGetValue(def.classId, out var c) ? c : Database.Classes["fighter"];
             Background = !string.IsNullOrEmpty(def.backgroundId) && Database.Backgrounds.TryGetValue(def.backgroundId, out var bg)
                 ? bg
@@ -814,10 +973,28 @@ namespace Obscure
                    $"EQUIPMENT: {eqSummary}";
         }
 
+        static readonly CreationStep[] ActiveStepOrder =
+        {
+            CreationStep.SelectRace,
+            CreationStep.SelectClass,
+            CreationStep.AllocateAbilityScores,
+            CreationStep.SelectBackground,
+            CreationStep.CharacterSheet,
+            CreationStep.ConfirmCharacter,
+        };
+
         public bool NextStep()
         {
-            if (CurrentStep >= CreationStep.ConfirmCharacter) return false;
-            CurrentStep = (CreationStep)((int)CurrentStep + 1);
+            int idx = Array.IndexOf(ActiveStepOrder, CurrentStep);
+            if (idx < 0)
+            {
+                if (CurrentStep >= CreationStep.ConfirmCharacter) return false;
+                CurrentStep = CreationStep.SelectBackground;
+                Changed?.Invoke();
+                return true;
+            }
+            if (idx >= ActiveStepOrder.Length - 1) return false;
+            CurrentStep = ActiveStepOrder[idx + 1];
             Changed?.Invoke();
             return true;
         }
@@ -829,8 +1006,9 @@ namespace Obscure
                 LastFeedbackMessage = "CHARACTER ALREADY CONFIRMED.";
                 return false;
             }
-            if (CurrentStep <= CreationStep.SelectRace) return false;
-            CurrentStep = (CreationStep)((int)CurrentStep - 1);
+            int idx = Array.IndexOf(ActiveStepOrder, CurrentStep);
+            if (idx <= 0) return false;
+            CurrentStep = ActiveStepOrder[idx - 1];
             Changed?.Invoke();
             return true;
         }
@@ -856,11 +1034,89 @@ namespace Obscure
 
         public void SelectRace(RaceDef race)
         {
-            Race = race ?? throw new ArgumentNullException(nameof(race));
+            if (race == null) throw new ArgumentNullException(nameof(race));
+            LastFinalScoresBeforeRaceChange = FinalScores;
+            Race = race;
+            SelectedRacialBonuses = Race.DefaultBonusChoice();
+            SelectedLineageId = Race.DefaultLineageId();
+            HasRecentRaceDelta = true;
             RemoveInvalidEquippedItems();
             LastFeedbackMessage = $"SELECTED RACE: {Race.name.ToUpperInvariant()}.";
             Changed?.Invoke();
         }
+
+        public bool IsRacialChoiceComplete =>
+            Race != null && Race.ValidateRacialChoice(SelectedRacialBonuses, SelectedLineageId) == null;
+
+        public string RacialChoiceError =>
+            Race == null ? "Race must be selected." : Race.ValidateRacialChoice(SelectedRacialBonuses, SelectedLineageId);
+
+        public bool SelectRacialBonus(params Ability[] abilities)
+        {
+            if (Race == null || Race.bonusPickCount <= 0) return false;
+            var arr = abilities ?? Array.Empty<Ability>();
+            // Allow partial Human selection in UI (0 or 1 picks) while blocking duplicate or invalid options
+            var seen = new HashSet<Ability>();
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (!seen.Add(arr[i]))
+                {
+                    LastFeedbackMessage = "CANNOT PICK THE SAME ABILITY TWICE.";
+                    return false;
+                }
+                if (Race.bonusOptions == null || !Race.bonusOptions.Any(o => o.ability == arr[i]))
+                {
+                    LastFeedbackMessage = $"{arr[i]} IS NOT A VALID OPTION FOR {Race.name.ToUpperInvariant()}.";
+                    return false;
+                }
+            }
+            if (arr.Length > Race.bonusPickCount) return false;
+            LastFinalScoresBeforeRaceChange = FinalScores;
+            SelectedRacialBonuses = arr.ToArray();
+            HasRecentRaceDelta = true;
+            RemoveInvalidEquippedItems();
+            LastFeedbackMessage = SelectedRacialBonuses.Length == Race.bonusPickCount
+                ? $"RACIAL BONUS: {string.Join(" + ", SelectedRacialBonuses)}."
+                : $"PICK {Race.bonusPickCount - SelectedRacialBonuses.Length} MORE ABILITY.";
+            Changed?.Invoke();
+            return true;
+        }
+
+        public bool ToggleRacialBonus(Ability ability)
+        {
+            if (Race == null || Race.bonusPickCount <= 0) return false;
+            if (Race.bonusPickCount == 1)
+                return SelectRacialBonus(ability);
+            var list = SelectedRacialBonuses != null ? SelectedRacialBonuses.ToList() : new List<Ability>();
+            if (list.Contains(ability))
+            {
+                list.Remove(ability);
+                return SelectRacialBonus(list.ToArray());
+            }
+            if (list.Count >= Race.bonusPickCount)
+                list.RemoveAt(0);
+            list.Add(ability);
+            return SelectRacialBonus(list.ToArray());
+        }
+
+        public bool SelectLineage(string lineageId)
+        {
+            if (Race == null || !Race.usesLineage) return false;
+            if (string.IsNullOrEmpty(lineageId) || !Database.DragonbornLineages.TryGetValue(lineageId, out var lin))
+            {
+                LastFeedbackMessage = $"UNKNOWN LINEAGE '{lineageId}'.";
+                return false;
+            }
+            LastFinalScoresBeforeRaceChange = FinalScores;
+            SelectedLineageId = lin.id;
+            HasRecentRaceDelta = true;
+            RemoveInvalidEquippedItems();
+            LastFeedbackMessage = $"SELECTED LINEAGE: {lin.name.ToUpperInvariant()} ({lin.element.ToString().ToUpperInvariant()}).";
+            Changed?.Invoke();
+            return true;
+        }
+
+        public void ClearRecentRaceDelta() => HasRecentRaceDelta = false;
 
         // Selecting a Class initializes its Starter Passive, Skill Loadout, and Starting Equipment,
         // while NEVER overwriting Point Buy Ability Score allocations.
@@ -1035,7 +1291,7 @@ namespace Obscure
                 EquipmentValidator.Validate(item, slot, Class, Race, 1, FinalScores) == null);
 
         public AbilityScores BaseScores => PointBuy.Scores;
-        public AbilityScores RacialModifiers => Race?.abilityModifiers ?? AbilityScores.Zero;
+        public AbilityScores RacialModifiers => Race != null ? Race.ResolveRacialModifiers(SelectedRacialBonuses, SelectedLineageId) : AbilityScores.Zero;
         public AbilityScores EquipmentAbilityBonuses
         {
             get
@@ -1092,6 +1348,8 @@ namespace Obscure
         public string Validate()
         {
             if (Race == null) return "Race must be selected.";
+            string raceChoiceErr = Race.ValidateRacialChoice(SelectedRacialBonuses, SelectedLineageId);
+            if (raceChoiceErr != null) return raceChoiceErr;
             if (Class == null) return "Class must be selected.";
             if (Background == null) return "Background must be selected.";
             if (string.IsNullOrWhiteSpace(CharacterName)) return "Character name is required.";
@@ -1150,7 +1408,8 @@ namespace Obscure
                 templateId = ActiveTemplateId,
                 description = $"{Race.name} {Class.name} ({Class.gameplayIdentity ?? Background.name}). {Class.description}",
                 raceId = Race.id,
-                lineageId = Race.lineageId,
+                lineageId = Race.usesLineage ? SelectedLineageId : null,
+                racialBonusChoice = SelectedRacialBonuses != null ? SelectedRacialBonuses.ToArray() : Array.Empty<Ability>(),
                 classId = Class.id,
                 backgroundId = Background.id,
                 baseScores = BaseScores,
@@ -1199,7 +1458,7 @@ namespace Obscure
                         return $"Unknown equipment '{assign.equipmentId}'.";
                     eqAbilBonus = eqAbilBonus.Plus(eq.abilityBonuses);
                 }
-                var finalScores = def.baseScores.Plus(race.abilityModifiers).Plus(eqAbilBonus);
+                var finalScores = def.baseScores.Plus(race.ResolveRacialModifiers(def.racialBonusChoice, def.lineageId)).Plus(eqAbilBonus);
                 foreach (var assign in def.equipmentLoadout)
                 {
                     if (string.IsNullOrEmpty(assign.equipmentId)) continue;
@@ -1489,6 +1748,7 @@ namespace Obscure
                 PendingParty.Add(def);
             }
 
+            RecomputeDuplicateNames();
             confirmedHero = def;
             IsPartyConfirmed = false;
 
@@ -1538,11 +1798,92 @@ namespace Obscure
                 return false;
             }
             PendingParty.Add(def);
+            RecomputeDuplicateNames();
             IsPartyConfirmed = false;
             if (PendingParty.Count == CharacterRoster.PartySize)
                 FlowState = NewGameFlowState.PendingPartyReview;
             Changed?.Invoke();
             return true;
+        }
+
+        // F2 (Character Creation Audit): nameless heroes use their class name; duplicate classes get Roman numerals
+        // ("Fighter", "Fighter II", "Fighter III", "Fighter IV"). Recomputed on every confirm, edit, or removal.
+        static string RomanNumeral(int n) => n switch { 2 => "II", 3 => "III", 4 => "IV", _ => n.ToString() };
+
+        static bool IsDefaultClassName(string currentName, string className)
+        {
+            if (string.IsNullOrWhiteSpace(currentName) || string.IsNullOrWhiteSpace(className)) return true;
+            if (string.Equals(currentName, className, StringComparison.OrdinalIgnoreCase)) return true;
+            if (!currentName.StartsWith(className + " ", StringComparison.OrdinalIgnoreCase)) return false;
+            string suffix = currentName.Substring(className.Length + 1).Trim();
+            return suffix == "II" || suffix == "III" || suffix == "IV" || int.TryParse(suffix, out _);
+        }
+
+        public void RecomputeDuplicateNames()
+        {
+            var counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < PendingParty.Count; i++)
+            {
+                var c = PendingParty[i];
+                if (c == null) continue;
+                string className = (!string.IsNullOrEmpty(c.classId) && Database.Classes.TryGetValue(c.classId, out var cls))
+                    ? cls.name
+                    : null;
+                if (className == null || !IsDefaultClassName(c.name, className))
+                    continue;
+                int seen = (counts.TryGetValue(className, out var prev) ? prev : 0) + 1;
+                counts[className] = seen;
+                c.name = seen == 1 ? className : $"{className} {RomanNumeral(seen)}";
+            }
+        }
+
+        public bool RemovePendingMember(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= PendingParty.Count) return false;
+            PendingParty.RemoveAt(slotIndex);
+            RecomputeDuplicateNames();
+            EditingExistingMember = false;
+            IsPartyConfirmed = false;
+            CurrentMemberIndex = Math.Min(PendingParty.Count, CharacterRoster.PartySize - 1);
+            SelectedReviewIndex = Math.Clamp(SelectedReviewIndex, 0, Math.Max(0, PendingParty.Count - 1));
+            if (PendingParty.Count < CharacterRoster.PartySize)
+            {
+                FlowState = NewGameFlowState.PendingCharacterCreation;
+                CurrentSession.CreateNewCharacter();
+            }
+            LastFeedback = $"REMOVED HERO {slotIndex + 1}.";
+            Changed?.Invoke();
+            return true;
+        }
+
+        // F8: Selecting a preset hero validates it, adds it straight to the party, and opens the party menu.
+        public bool TryAddPresetHero(string templateId, out CharacterDef confirmedHero, out string error)
+        {
+            confirmedHero = null;
+            if (!CurrentSession.TryApplyTemplate(templateId, out error))
+            {
+                LastFeedback = (error ?? "INVALID PRESET.").ToUpperInvariant();
+                return false;
+            }
+            if (!TryConfirmCurrentCharacter(out confirmedHero, out error))
+                return false;
+            FlowState = NewGameFlowState.PendingPartyReview;
+            SelectedReviewIndex = PendingParty.IndexOf(confirmedHero);
+            if (SelectedReviewIndex < 0) SelectedReviewIndex = Math.Max(0, PendingParty.Count - 1);
+            LastFeedback = $"ADDED PRESET {confirmedHero.name.ToUpperInvariant()} ({PendingParty.Count}/{CharacterRoster.PartySize}).";
+            Changed?.Invoke();
+            return true;
+        }
+
+        public void StartNextHeroFromPartyMenu()
+        {
+            if (PendingParty.Count >= CharacterRoster.PartySize) return;
+            EditingExistingMember = false;
+            CurrentMemberIndex = PendingParty.Count;
+            FlowState = NewGameFlowState.PendingCharacterCreation;
+            CurrentSession.CreateNewCharacter();
+            LastFeedback = $"CREATE HERO {PendingParty.Count + 1}/{CharacterRoster.PartySize}.";
+            Changed?.Invoke();
         }
 
         // Section 5.1 — Randomize All:
@@ -1571,6 +1912,7 @@ namespace Obscure
 
             PendingParty.Clear();
             PendingParty.AddRange(generated);
+            RecomputeDuplicateNames();
             CurrentMemberIndex = CharacterRoster.PartySize - 1;
             SelectedReviewIndex = 0;
             EditingExistingMember = false;
@@ -1617,6 +1959,7 @@ namespace Obscure
             replacement.creationMethod = CreationMethod.Random;
 
             PendingParty[slotIndex] = replacement;
+            RecomputeDuplicateNames();
             SelectedReviewIndex = slotIndex;
             IsPartyConfirmed = false;
 
@@ -1773,6 +2116,8 @@ namespace Obscure
         public CreationMethod creationMethod;
         public string templateId;
         public string raceId;
+        public string lineageId;
+        public Ability[] racialBonusChoice = Array.Empty<Ability>();
         public string classId;
         public string backgroundId;
         public AbilityScores baseScores;
@@ -1805,6 +2150,10 @@ namespace Obscure
                 creationMethod = d.creationMethod,
                 templateId = d.templateId,
                 raceId = d.raceId,
+                lineageId = runtimeUnit != null ? runtimeUnit.lineageId : d.lineageId,
+                racialBonusChoice = runtimeUnit != null
+                    ? (runtimeUnit.racialBonusChoice != null ? runtimeUnit.racialBonusChoice.ToArray() : Array.Empty<Ability>())
+                    : (d.racialBonusChoice != null ? d.racialBonusChoice.ToArray() : Array.Empty<Ability>()),
                 classId = d.classId,
                 backgroundId = d.backgroundId,
                 baseScores = runtimeUnit != null ? runtimeUnit.BaseScores : d.baseScores,
@@ -1849,6 +2198,10 @@ namespace Obscure
                 templateId = templateId,
                 description = $"{race.name} {classDef.name} ({classDef.gameplayIdentity ?? bg.name}). {classDef.description}",
                 raceId = race.id,
+                lineageId = !string.IsNullOrEmpty(lineageId) ? lineageId : race.DefaultLineageId(),
+                racialBonusChoice = (racialBonusChoice != null && racialBonusChoice.Length > 0)
+                    ? racialBonusChoice.ToArray()
+                    : race.DefaultBonusChoice(),
                 classId = classDef.id,
                 backgroundId = bg.id,
                 baseScores = baseScores.Equals(default) ? AbilityScores.DefaultBase : baseScores,
@@ -1989,6 +2342,8 @@ namespace Obscure
                 name = u.name,
                 role = u.role,
                 raceId = u.race?.id ?? "human",
+                lineageId = u.lineageId,
+                racialBonusChoice = u.racialBonusChoice != null ? u.racialBonusChoice.ToArray() : Array.Empty<Ability>(),
                 classId = u.classDef?.id ?? "fighter",
                 backgroundId = u.background?.id ?? "oathsworn",
                 baseScores = u.BaseScores,

@@ -641,7 +641,8 @@ namespace Obscure
         // Afterward Exhausted (-20% damage, -30% break) for 2 turns.
         public Element GetDragonbornLineageElement()
         {
-            if (unit?.race?.lineageId != null && Database.DragonbornLineages.TryGetValue(unit.race.lineageId, out var lin))
+            string lid = !string.IsNullOrEmpty(unit?.lineageId) ? unit.lineageId : unit?.race?.lineageId;
+            if (!string.IsNullOrEmpty(lid) && Database.DragonbornLineages.TryGetValue(lid, out var lin))
                 return lin.element;
             return Element.Fire;
         }

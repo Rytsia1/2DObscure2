@@ -35,10 +35,19 @@ namespace Obscure
 
         public EquipmentSlot SelectedEquipmentSlot { get; private set; } = EquipmentSlot.MainHand;
 
-        public enum Page { Race, Class, Abilities, Background, Passive, Gear, Review }
-        static readonly string[] PageNames = { "RACE", "CLASS", "ABILITIES", "BACKGROUND", "PASSIVE", "GEAR", "REVIEW" };
+        public enum Page { Race, Class, Abilities, Background, CharacterSheet }
+        static readonly string[] PageNames = { "RACE", "CLASS", "ABILITIES", "BACKGROUND", "SHEET" };
+        public const int StepCount = 5;
         public Page CurrentPage { get; private set; } = Page.Race;
-        int selectedTraitIndex;
+
+        public static CreationStep StepForPage(Page p) => p switch
+        {
+            Page.Race => CreationStep.SelectRace,
+            Page.Class => CreationStep.SelectClass,
+            Page.Abilities => CreationStep.AllocateAbilityScores,
+            Page.Background => CreationStep.SelectBackground,
+            _ => CreationStep.CharacterSheet,
+        };
 
         static readonly string[] RaceIds = Database.PlayableRaceIds;
         static readonly string[] ClassIds = Database.PlayableClassIds;
@@ -99,7 +108,7 @@ namespace Obscure
             StripMiddleAndRightBakedContent();
             CacheShellElements();
 
-            if (InReview) CurrentPage = Page.Review;
+            if (InReview) CurrentPage = Page.CharacterSheet;
             Builder.Changed += Refresh;
             Refresh();
         }
@@ -205,13 +214,27 @@ namespace Obscure
                 stepChips[i] = FigmaUi.FindInstanceWithText(screenContainer, "text-0", defaultStepTexts[i]);
                 if (stepChips[i] != null)
                 {
+                    if (i >= StepCount)
+                    {
+                        stepChips[i].style.display = DisplayStyle.None;
+                        continue;
+                    }
                     int pageIdx = i;
                     stepChips[i].AddToClassList("uitk-step-chip");
                     stepChips[i].style.marginRight = 6;
                     stepChips[i].pickingMode = PickingMode.Position;
                     stepChips[i].RegisterCallback<ClickEvent>(_ =>
                     {
-                        if (!InReview) GoToPage((Page)pageIdx);
+                        if (!InReview)
+                        {
+                            if (CurrentPage == Page.Race && pageIdx > (int)Page.Race && !Session.IsRacialChoiceComplete)
+                            {
+                                Sfx.Play(Sound.Deny);
+                                SetHint(Session.RacialChoiceError ?? "COMPLETE RACIAL BONUS CHOICE FIRST.");
+                                return;
+                            }
+                            GoToPage((Page)pageIdx);
+                        }
                     });
                 }
             }
@@ -304,9 +327,7 @@ namespace Obscure
                 case Page.Class: BuildClassPage(); break;
                 case Page.Abilities: BuildAbilitiesPage(); break;
                 case Page.Background: BuildBackgroundPage(); break;
-                case Page.Passive: BuildPassivePage(); break;
-                case Page.Gear: BuildGearPage(); break;
-                default: BuildReviewPage(); break;
+                default: BuildCharacterSheetPage(); break;
             }
 
             UpdateFooter();
@@ -321,10 +342,11 @@ namespace Obscure
 
         void UpdateStepChips()
         {
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < StepCount; i++)
             {
                 var chip = stepChips[i];
                 if (chip == null) continue;
+                chip.style.display = DisplayStyle.Flex;
                 // Passed AND complete: Abilities isn't done while points are unspent, even if you jumped past it.
                 bool done = i < (int)CurrentPage && (i != (int)Page.Abilities || Session.PointBuy.RemainingPoints == 0);
                 bool now = i == (int)CurrentPage;
@@ -362,17 +384,20 @@ namespace Obscure
 
             var fin = Session.FinalScores;
             var race = Session.RacialModifiers;
+            var prevFin = Session.LastFinalScoresBeforeRaceChange;
+            bool showDelta = Session.HasRecentRaceDelta;
             for (int i = 0; i < AbilityScores.AllAbilities.Length && i < abilityPreviewTags.Length; i++)
             {
                 var a = AbilityScores.AllAbilities[i];
                 var chip = abilityPreviewTags[i];
                 if (chip == null) continue;
+                int delta = showDelta ? fin[a] - prevFin[a] : 0;
                 bool bonus = race[a] > 0 && CurrentPage == Page.Race;
                 var lbl = chip.Q<UiLabel>("text-0");
                 if (lbl != null)
                 {
-                    lbl.text = $"{a} {fin[a]}";
-                    lbl.style.color = bonus ? Palette.Gold1 : Palette.Mist1;
+                    lbl.text = delta != 0 ? $"{a} {fin[a]} ({(delta > 0 ? "+" : "")}{delta})" : $"{a} {fin[a]}";
+                    lbl.style.color = delta > 0 ? Palette.Gold1 : (delta < 0 ? Palette.Mist2 : (bonus ? Palette.Gold1 : Palette.Mist1));
                 }
                 var inner = chip; // FindInstanceWithText returns the box itself; chip[0] is its label
                 // STR/VIT come from the gold Tag-Keep template (the Human mock-up), so set the fill too or they never un-highlight.
@@ -393,17 +418,16 @@ namespace Obscure
             // so those pages name both keys instead of crediting UP/DN with the change.
             var (k0, t0, k1, t1) = CurrentPage switch
             {
-                Page.Race => ("UP DN", "BROWSE", "ENTER", PresetMode ? "LOCK PRESET" : "LOCK RACE"),
+                Page.Race => ("UP DN", "BROWSE", "ENTER", PresetMode ? "ADD PRESET" : "LOCK RACE"),
                 Page.Class => ("UP DN", "BROWSE", "ENTER", "LOCK CLASS"),
                 Page.Abilities => ("UP DN", "STAT", "L R", "ADJUST SCORE"),
-                Page.Gear => ("UP DN", "SLOT", "L R", "CHANGE ITEM"),
-                Page.Review => ("UP DN", "BROWSE", "ENTER", "SELECT HERO"),
+                Page.CharacterSheet => ("UP DN", "BROWSE", "ENTER", InReview ? "SELECT HERO" : "CONFIRM"),
                 _ => ("UP DN", "BROWSE", "ENTER", "LOCK CHOICE"),
             };
             if (keyHintUp != null) { FigmaUi.SetInstanceText(keyHintUp, "text-0", k0); FigmaUi.SetInstanceText(keyHintUp, "text-1", t0); }
             if (keyHintDn != null) { FigmaUi.SetInstanceText(keyHintDn, "text-0", k1); FigmaUi.SetInstanceText(keyHintDn, "text-1", t1); }
 
-            if (CurrentPage == Page.Review)
+            if (CurrentPage == Page.CharacterSheet)
             {
                 if (nextBtn is Button nb)
                 {
@@ -415,22 +439,24 @@ namespace Obscure
                 return;
             }
 
-            // Presets: Next becomes "Add Hero" so a preset goes straight into the party, one hero at a time.
             if (CurrentPage == Page.Race && PresetMode && nextBtn is Button addBtn)
             {
-                bool canAdd = IsActivePreset(Session.ActiveTemplateId) && Session.CanConfirm;
-                addBtn.text = "Add Hero";
-                addBtn.SetEnabled(canAdd);
-                footerNextItem = menu.Add(addBtn, "Add Hero", ConfirmAndAddToParty, interactable: canAdd, tooltip: "ADD THIS PRESET HERO TO THE PARTY");
+                addBtn.text = "Pick Preset";
+                addBtn.SetEnabled(false);
+                footerNextItem = menu.Add(addBtn, "Pick Preset", () => { }, interactable: false, tooltip: "CLICK A PRESET HERO TO ADD IT STRAIGHT TO THE PARTY");
                 return;
             }
 
             if (nextBtn is Button nxt)
             {
-                string nextText = "Next: " + (CurrentPage == Page.Background ? "Starter Passive" : ((Page)((int)CurrentPage + 1)).ToString());
+                bool blockedByRace = CurrentPage == Page.Race && !Session.IsRacialChoiceComplete;
+                string nextLabel = CurrentPage == Page.Background ? "Character Sheet" : ((Page)((int)CurrentPage + 1)).ToString();
+                string nextText = blockedByRace ? "Choose Racial Bonus" : ("Next: " + nextLabel);
                 nxt.text = nextText;
-                nxt.SetEnabled(true);
-                footerNextItem = menu.Add(nxt, nextText, () => GoToPage((Page)((int)CurrentPage + 1)), tooltip: "CONTINUE TO THE NEXT STEP");
+                nxt.SetEnabled(!blockedByRace);
+                footerNextItem = menu.Add(nxt, nextText, () => GoToPage((Page)((int)CurrentPage + 1)),
+                    interactable: !blockedByRace,
+                    tooltip: blockedByRace ? (Session.RacialChoiceError ?? "COMPLETE RACIAL BONUS CHOICE").ToUpperInvariant() : "CONTINUE TO THE NEXT STEP");
             }
         }
 
@@ -708,12 +734,21 @@ namespace Obscure
             Refresh();
         }
 
-        public void ApplyPreset(string templateId)
+        // F8: Selecting a preset validates it, adds it straight to the party, and opens the party menu.
+        public bool ApplyPreset(string templateId)
         {
-            if (IsActivePreset(templateId)) return;
-            if (!Session.TryApplyTemplate(templateId, out _)) Sfx.Play(Sound.Deny);
-            SetHint(Session.LastFeedbackMessage);
-            Refresh();
+            if (!Builder.TryAddPresetHero(templateId, out _, out var err))
+            {
+                Sfx.Play(Sound.Deny);
+                SetHint(err ?? Session.LastFeedbackMessage);
+                Refresh();
+                return false;
+            }
+            Sfx.Play(Sound.Success);
+            PresetMode = false;
+            SetHint(Builder.LastFeedback);
+            GoToPage(Page.CharacterSheet);
+            return true;
         }
 
         static ScrollView CreateColumnScroll(VisualElement col)
@@ -814,17 +849,65 @@ namespace Obscure
             bonusRow.style.flexWrap = Wrap.Wrap;
             bonusRow.style.alignItems = UnityEngine.UIElements.Align.Center;
             bonusRow.style.marginBottom = 14;
-            foreach (var a in AbilityScores.AllAbilities.Where(a => race.abilityModifiers[a] != 0))
+
+            if (race.usesLineage)
             {
-                var tag = new UiLabel($"+{race.abilityModifiers[a]} {a}");
-                tag.AddToClassList("uitk-badge-gold");
-                tag.style.marginRight = 6;
-                bonusRow.Add(tag);
+                // Dragonborn lineage picker (F1): Crimson, Stone, Azure, Frost — each shows element, Overdrive bonus, and ability bonus.
+                foreach (var kv in Database.DragonbornLineages)
+                {
+                    var lin = kv.Value;
+                    bool picked = string.Equals(Session.SelectedLineageId, lin.id, StringComparison.OrdinalIgnoreCase);
+                    var bonusAb = AbilityScores.AllAbilities.FirstOrDefault(a => lin.abilityModifiers[a] > 0);
+                    int baseVal = Session.BaseScores[bonusAb];
+                    int finalVal = baseVal + lin.abilityModifiers[bonusAb];
+                    string linLabel = $"{lin.name.ToUpperInvariant()} ({lin.element.ToString().ToUpperInvariant()}) · {bonusAb} {baseVal} → {finalVal}";
+                    var linBtn = FigmaUi.CreateButton(linLabel, picked ? "button-primary" : "button-slab", null);
+                    linBtn.style.marginRight = 6;
+                    linBtn.style.marginBottom = 6;
+                    linBtn.style.height = 34;
+                    string capturedId = lin.id;
+                    linBtn.RegisterCallback<ClickEvent>(_ => { Session.SelectLineage(capturedId); Refresh(); });
+                    bonusRow.Add(linBtn);
+                }
             }
-            var afterLbl = new UiLabel("APPLIED AFTER POINT BUY");
-            afterLbl.style.fontSize = 13;
-            afterLbl.style.color = Palette.Mist3;
-            bonusRow.Add(afterLbl);
+            else if (race.bonusPickCount > 0 && race.bonusOptions != null && race.bonusOptions.Length > 0)
+            {
+                string prompt = race.bonusPickCount == 2
+                    ? $"PICK 2 DIFFERENT ABILITIES (+1 EACH) · {Session.SelectedRacialBonuses.Length}/2 CHOSEN"
+                    : "PICK 1 ABILITY (+2)";
+                var promptLbl = new UiLabel(prompt)
+                {
+                    style = { fontSize = 12, color = Session.IsRacialChoiceComplete ? Palette.Mist2 : Palette.Ember1, marginBottom = 6, width = Length.Percent(100) }
+                };
+                bonusRow.Add(promptLbl);
+
+                foreach (var opt in race.bonusOptions)
+                {
+                    var ab = opt.ability;
+                    bool picked = Session.SelectedRacialBonuses != null && Session.SelectedRacialBonuses.Contains(ab);
+                    int baseVal = Session.BaseScores[ab];
+                    int previewVal = baseVal + opt.bonus;
+                    string chipText = $"{ab} +{opt.bonus} ({baseVal} → {previewVal})";
+                    var chipBtn = FigmaUi.CreateButton(chipText, picked ? "button-primary" : "button-slab", null);
+                    chipBtn.style.marginRight = 6;
+                    chipBtn.style.marginBottom = 6;
+                    chipBtn.style.height = 32;
+                    chipBtn.RegisterCallback<ClickEvent>(_ => { Session.ToggleRacialBonus(ab); Refresh(); });
+                    bonusRow.Add(chipBtn);
+                }
+            }
+            else
+            {
+                // Fixed bonus (Dwarf / Halfling) shown as locked chip with final score preview.
+                foreach (var a in AbilityScores.AllAbilities.Where(a => race.abilityModifiers[a] != 0))
+                {
+                    int bVal = Session.BaseScores[a];
+                    var tag = new UiLabel($"+{race.abilityModifiers[a]} {a} ({bVal} → {bVal + race.abilityModifiers[a]}) [FIXED]");
+                    tag.AddToClassList("uitk-badge-gold");
+                    tag.style.marginRight = 6;
+                    bonusRow.Add(tag);
+                }
+            }
             rightScroll.Add(bonusRow);
 
             var feat = race.racialFeat;
@@ -914,7 +997,20 @@ namespace Obscure
             foreach (var st in new[] { DerivedStatId.MaxHP, DerivedStatId.MaxMP, DerivedStatId.PhysicalPower, DerivedStatId.MagicPower, DerivedStatId.PhysicalDefense })
                 AddStatRow(rightScroll, Database.DerivedStatDefs[st].shortName, preview.FormatValue(st));
 
-            var skillHead = new UiLabel("STARTER LOADOUT · PASSIVE IN STEP 5");
+            // F4: Show starter passive directly inside the Class details panel (Passive page removed).
+            var sp = Session.StarterPassive;
+            if (sp != null)
+            {
+                var spHead = new UiLabel($"STARTER PASSIVE · {sp.name.ToUpperInvariant()}");
+                spHead.style.fontSize = 14;
+                spHead.style.color = Palette.Gold1;
+                spHead.style.marginTop = 10;
+                spHead.style.marginBottom = 4;
+                rightScroll.Add(spHead);
+                AddParagraph(rightScroll, sp.description ?? "");
+            }
+
+            var skillHead = new UiLabel("STARTING ACTIVE SKILLS");
             skillHead.style.fontSize = 14;
             skillHead.style.color = Palette.Gold2;
             skillHead.style.marginTop = 10;
@@ -1548,97 +1644,6 @@ namespace Obscure
             }
         }
 
-        void SelectTrait(int index)
-        {
-            if (selectedTraitIndex != index) { selectedTraitIndex = index; Refresh(); }
-        }
-
-        void BuildPassivePage()
-        {
-            selectedTraitIndex = Math.Clamp(selectedTraitIndex, 0, 2);
-            AddColumnHeader(middleBody, "Level 1 Traits", "AUTO-GRANTED");
-            var midScroll = CreateColumnScroll(middleBody);
-            var sp = Session.StarterPassive;
-            AddCard(midScroll, sp?.name ?? "None", "CLASS", (sp?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 0, () => SelectTrait(0));
-
-            var also = new UiLabel("ALSO ACTIVE AT LEVEL 1");
-            also.style.fontSize = 13;
-            also.style.color = Palette.Mist3;
-            also.style.marginTop = 8;
-            also.style.marginBottom = 6;
-            midScroll.Add(also);
-
-            var feat = Session.Race?.racialFeat;
-            AddCard(midScroll, feat?.name ?? "None", "RACE", (feat?.description ?? "").ToUpperInvariant(), selectedTraitIndex == 1, () => SelectTrait(1));
-
-            var bgRank = Session.Background?.GetRank(1);
-            string perkName = bgRank?.perkName ?? Session.Background?.perkName ?? "None";
-            string perkDesc = bgRank?.perkDescription ?? "";
-            AddCard(midScroll, perkName, "RANK I", perkDesc.ToUpperInvariant(), selectedTraitIndex == 2, () => SelectTrait(2));
-
-            if (selectedTraitIndex == 1)
-            {
-                AddColumnHeader(rightBody, feat?.name ?? "Racial Feat", $"{Session.Race?.name?.ToUpperInvariant() ?? "RACE"} FEAT");
-                var rightScroll = CreateColumnScroll(rightBody);
-                AddParagraph(rightScroll, feat?.description ?? "No racial feat.");
-                AddParagraph(rightScroll, "AUTOMATICALLY ACTIVE AT LEVEL 1 FOR THIS RACE.", Palette.Mist3);
-            }
-            else if (selectedTraitIndex == 2)
-            {
-                AddColumnHeader(rightBody, perkName, "BACKGROUND · RANK I");
-                var rightScroll = CreateColumnScroll(rightBody);
-                AddParagraph(rightScroll, string.IsNullOrEmpty(perkDesc) ? "No background perk." : perkDesc);
-                AddParagraph(rightScroll, $"STARTING PERK FROM {Session.Background?.name?.ToUpperInvariant() ?? "BACKGROUND"}. HIGHER RANKS UNLOCK AT LEVELS 4, 7, 10, AND 13.", Palette.Mist3);
-            }
-            else
-            {
-                AddColumnHeader(rightBody, sp?.name ?? "Starter Passive", $"{Session.Class?.name?.ToUpperInvariant() ?? "CLASS"} PASSIVE");
-                var rightScroll = CreateColumnScroll(rightBody);
-                AddParagraph(rightScroll, sp?.description ?? "No starter passive.");
-                AddParagraph(rightScroll, "FIXED AT LEVEL 1 BY YOUR CLASS. ADDITIONAL PASSIVE NODES UNLOCK VIA THE SKILL TREE.", Palette.Mist3);
-            }
-        }
-
-        void BuildGearPage()
-        {
-            AddColumnHeader(middleBody, "Starting Gear", "8 SLOTS");
-            var midScroll = CreateColumnScroll(middleBody);
-            foreach (var slot in EquipmentSlots.All)
-            {
-                var s = slot;
-                var eq = Session.GetEquipped(s);
-                AddCard(midScroll, EquipmentSlots.DisplayName(s), null, eq != null ? eq.name.ToUpperInvariant() : "EMPTY",
-                    s == SelectedEquipmentSlot, () => SelectSlot(s), d => { SelectedEquipmentSlot = s; CycleEquipmentItem(d); });
-            }
-
-            var sel = Session.GetEquipped(SelectedEquipmentSlot);
-            AddColumnHeader(rightBody, EquipmentSlots.DisplayName(SelectedEquipmentSlot));
-            var rightScroll = CreateColumnScroll(rightBody);
-            var itemTitle = new UiLabel(sel != null ? sel.name : "Empty");
-            itemTitle.style.fontSize = 22;
-            itemTitle.style.color = sel != null ? Palette.Gold1 : Palette.Mist3;
-            itemTitle.style.marginBottom = 8;
-            rightScroll.Add(itemTitle);
-
-            AddParagraph(rightScroll, sel?.description ?? "NOTHING EQUIPPED IN THIS SLOT.");
-            int count = Session.GetCompatibleEquipmentForSlot(SelectedEquipmentSlot).Count();
-
-            // Mouse path for what L R does on the slot list.
-            var cycleRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 6, marginBottom = 6 } };
-            var prevBtn = FigmaUi.CreateButton("‹ Prev Item", "button-slab", 140f);
-            var nextItemBtn = FigmaUi.CreateButton("Next Item ›", "button-slab", 140f);
-            prevBtn.style.marginRight = 8;
-            prevBtn.SetEnabled(count > 1);
-            nextItemBtn.SetEnabled(count > 1);
-            cycleRow.Add(prevBtn);
-            cycleRow.Add(nextItemBtn);
-            rightScroll.Add(cycleRow);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(prevBtn, "Prev Item", () => CycleEquipmentItem(-1), interactable: count > 1), prevBtn);
-            FigmaUi.ApplyDefaultFocusVisual(menu.Add(nextItemBtn, "Next Item", () => CycleEquipmentItem(1), interactable: count > 1), nextItemBtn);
-
-            AddParagraph(rightScroll, $"{count} COMPATIBLE ITEMS · L R ON A SLOT OR PREV / NEXT TO CHANGE. TWO-HANDED WEAPONS USE MAIN HAND ONLY.", Palette.Mist3);
-        }
-
         static void AddReadOnlyPartyCard(VisualElement parent, string title, string subText, bool selected)
         {
             var card = new VisualElement();
@@ -1664,7 +1669,7 @@ namespace Obscure
             parent.Add(card);
         }
 
-        void BuildReviewPage()
+        void BuildCharacterSheetPage()
         {
             bool inReview = InReview;
             AddColumnHeader(middleBody, "Party", $"{Builder.PendingParty.Count} / {CharacterRoster.PartySize}");
@@ -1696,43 +1701,133 @@ namespace Obscure
                 }
             }
 
+            // F5: Party Overview — soft gap warnings only (never mentions elements or enemies, never blocks).
+            if (inReview)
+            {
+                var gaps = PartyOverviewEvaluator.Evaluate(Builder.PendingParty);
+                var overviewBox = new VisualElement
+                {
+                    name = "PartyOverviewPanel",
+                    style =
+                    {
+                        marginTop = 8, paddingTop = 6, paddingBottom = 6, paddingLeft = 8, paddingRight = 8,
+                        backgroundColor = Palette.Ink2,
+                        borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                        borderTopColor = gaps.Count == 0 ? Palette.Hp : Palette.Gold3,
+                        borderBottomColor = gaps.Count == 0 ? Palette.Hp : Palette.Gold3,
+                        borderLeftColor = gaps.Count == 0 ? Palette.Hp : Palette.Gold3,
+                        borderRightColor = gaps.Count == 0 ? Palette.Hp : Palette.Gold3,
+                    }
+                };
+                overviewBox.Add(new UiLabel("PARTY OVERVIEW") { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 2 } });
+                overviewBox.Add(new UiLabel(PartyOverviewEvaluator.FormatDisplay(Builder.PendingParty))
+                {
+                    style = { fontSize = 12, color = gaps.Count == 0 ? Palette.Hp : Palette.Mist1, whiteSpace = WhiteSpace.Normal }
+                });
+                midScroll.Add(overviewBox);
+            }
+
             var btnRow = new VisualElement();
             btnRow.style.flexDirection = FlexDirection.Row;
+            btnRow.style.flexWrap = Wrap.Wrap;
             btnRow.style.justifyContent = Justify.SpaceBetween;
             btnRow.style.marginTop = 8;
             btnRow.style.flexShrink = 0;
-            var editBtn = FigmaUi.CreateButton(inReview ? "Edit" : "Reset", "button-slab", 84f);
-            var randBtn = FigmaUi.CreateButton(inReview ? "Reroll" : "Random", "button-slab", 88f);
-            var randAllBtn = FigmaUi.CreateButton("Rand All", "button-slab", 92f);
+            var editBtn = FigmaUi.CreateButton(inReview ? "Edit" : "Reset", "button-slab", 76f);
+            var randBtn = FigmaUi.CreateButton(inReview ? "Reroll" : "Random", "button-slab", 78f);
+            var randAllBtn = FigmaUi.CreateButton("Rand All", "button-slab", 82f);
             btnRow.Add(editBtn);
             btnRow.Add(randBtn);
             btnRow.Add(randAllBtn);
-            middleBody.Add(btnRow);
             menu.Add(editBtn, inReview ? "Edit" : "Reset", OnResetOrEditClicked);
             menu.Add(randBtn, inReview ? "Reroll" : "Random", () => OnRandomOrRerollSelected());
             menu.Add(randAllBtn, "Rand All", () => RandomizeAll());
-
-            AddColumnHeader(rightBody, HeroName);
-            var rightScroll = CreateColumnScroll(rightBody);
-            foreach (var (k, v) in new[]
+            if (inReview && Builder.PendingParty.Count > 0)
             {
-                ("RACE", Session.Race.name),
-                ("CLASS", Session.Class.name),
-                ("BACKGROUND", Session.Background.name),
-                ("FEAT", Session.Race.racialFeat?.name ?? "-"),
-                ("PASSIVE", Session.StarterPassive?.name ?? "-"),
-                ("POINTS LEFT", Session.PointBuy.RemainingPoints.ToString()),
-            })
-                AddStatRow(rightScroll, k, v.ToUpperInvariant());
+                var remBtn = FigmaUi.CreateButton("Remove", "button-slab", 76f);
+                remBtn.style.marginTop = 4;
+                btnRow.Add(remBtn);
+                menu.Add(remBtn, "Remove", () =>
+                {
+                    Builder.RemovePendingMember(Builder.SelectedReviewIndex);
+                    SetHint(Builder.LastFeedback);
+                    GoToPage(Builder.PendingParty.Count < CharacterRoster.PartySize ? Page.Race : Page.CharacterSheet);
+                });
+            }
+            if (inReview && Builder.PendingParty.Count < CharacterRoster.PartySize)
+            {
+                var addMoreBtn = FigmaUi.CreateButton("Add Hero", "button-primary", 92f);
+                addMoreBtn.style.marginTop = 4;
+                btnRow.Add(addMoreBtn);
+                menu.Add(addMoreBtn, "Add Hero", () =>
+                {
+                    Builder.StartNextHeroFromPartyMenu();
+                    GoToPage(Page.Race);
+                });
+            }
+            middleBody.Add(btnRow);
+
+            // F7: Full read-only Character Sheet built from Session.FinalScores & Session.PreviewDerivedStats
+            var sheet = CharacterSheetBuilder.Build(Session);
+            AddColumnHeader(rightBody, "CHARACTER SHEET", sheet.heroName.ToUpperInvariant());
+            var rightScroll = CreateColumnScroll(rightBody);
+
+            void SheetHeader(string title)
+            {
+                rightScroll.Add(new UiLabel(title) { style = { fontSize = 13, color = Palette.Gold2, marginTop = 8, marginBottom = 3 } });
+            }
+
+            SheetHeader("IDENTITY");
+            AddStatRow(rightScroll, "RACE", $"{sheet.raceName.ToUpperInvariant()} ({sheet.racialBonusSummary.ToUpperInvariant()})");
+            if (!string.IsNullOrEmpty(sheet.lineageSummary))
+                AddStatRow(rightScroll, "LINEAGE", sheet.lineageSummary.ToUpperInvariant());
+            AddStatRow(rightScroll, "CLASS", $"{sheet.className.ToUpperInvariant()} · {sheet.classRole.ToUpperInvariant()}");
+            AddStatRow(rightScroll, "BACKGROUND", sheet.backgroundName.ToUpperInvariant());
+
+            SheetHeader("ABILITY SCORES (BASE + RACIAL + GEAR = FINAL)");
+            foreach (var ab in AbilityScores.AllAbilities)
+            {
+                string breakdown = $"{sheet.baseScores[ab]} + {sheet.racialModifiers[ab]} + {sheet.equipmentBonuses[ab]} = {sheet.finalScores[ab]} ({AbilityScores.FormatMod(sheet.abilityModifiers[ab])})";
+                AddStatRow(rightScroll, ab.ToString(), breakdown);
+            }
+
+            SheetHeader("DERIVED STATS");
+            var d = sheet.derived;
+            AddStatRow(rightScroll, "HP / MP", $"{d.maxHp} / {d.maxMp}");
+            AddStatRow(rightScroll, "ATK / MATK", $"{d.physicalPower} / {d.magicPower}");
+            AddStatRow(rightScroll, "DEF / MDEF / SPD", $"{d.physicalDefense} / {d.magicDefense} / {d.initiative}");
+            AddStatRow(rightScroll, "CRIT", $"{d.criticalChance}% (x{d.criticalDamage / 100f:0.00})");
+            AddStatRow(rightScroll, "BLOCK / STAGGER RES", $"{d.blockPower} / {d.staggerResistance}");
+            AddStatRow(rightScroll, "STATUS RES / QTE BONUS", $"{d.statusResistance}% / +{d.QteTimingBonusFraction * 100f:0.#}%");
+            AddStatRow(rightScroll, "BREAK (PHY / MAG)", $"{d.physicalBreakPower} / {d.magicBreakPower}");
+
+            SheetHeader("ELEMENTAL AFFINITIES");
+            AddStatRow(rightScroll, "PROFILE", string.IsNullOrEmpty(sheet.affinities.Describe()) ? "NEUTRAL" : sheet.affinities.Describe());
+
+            SheetHeader("EQUIPPED GEAR");
+            foreach (var g in sheet.gear)
+                AddStatRow(rightScroll, g.slotName.ToUpperInvariant(), $"{g.itemName.ToUpperInvariant()} ({g.summary})");
+
+            SheetHeader("ACTIVE SKILLS");
+            foreach (var sk in sheet.activeSkills)
+                AddStatRow(rightScroll, sk.name.ToUpperInvariant(), $"RANK {sk.rank}");
+
+            SheetHeader("PASSIVES & FEATURES");
+            AddStatRow(rightScroll, "STARTER PASSIVE", sheet.starterPassiveName.ToUpperInvariant());
+            AddStatRow(rightScroll, "RACIAL FEAT", sheet.racialFeatName.ToUpperInvariant());
+            AddStatRow(rightScroll, "RACIAL UTILITY", sheet.racialUtilityName.ToUpperInvariant());
+            AddStatRow(rightScroll, "BACKGROUND PERK", sheet.backgroundPerkName.ToUpperInvariant());
 
             string err = inReview ? null : Session.Validate();
             var statusLbl = new UiLabel(err != null
                 ? err.ToUpperInvariant()
-                : (inReview ? "CONFIRM THE PARTY TO RECEIVE 600 GOLD AND ENTER GEISTWALD CITY." : "READY. ADD THIS HERO TO THE PARTY."));
-            statusLbl.style.fontSize = 15;
+                : (inReview
+                    ? (Builder.CanConfirmParty ? "CONFIRM THE PARTY TO RECEIVE 600 GOLD AND ENTER GEISTWALD CITY." : $"ADD {CharacterRoster.PartySize - Builder.PendingParty.Count} MORE HERO(ES) TO COMPLETE THE PARTY.")
+                    : "READY. CONFIRM TO ADD THIS HERO TO THE PARTY."));
+            statusLbl.style.fontSize = 14;
             statusLbl.style.color = err != null ? Palette.HpLow : Palette.Hp;
             statusLbl.style.whiteSpace = WhiteSpace.Normal;
-            statusLbl.style.marginTop = 12;
+            statusLbl.style.marginTop = 10;
             rightScroll.Add(statusLbl);
         }
 
@@ -1744,7 +1839,7 @@ namespace Obscure
         {
             int rem = Session.PointBuy.RemainingPoints;
             RemainingPointsLabel.Set($"POINTS {rem}/{Session.PointBuy.Config.budget}");
-            StepLabel.Set(InReview ? $"REVIEW ({Builder.SelectedReviewIndex + 1}/4)" : $"H{Builder.CurrentMemberIndex + 1}/4 STEP {(int)Session.CurrentStep}/7");
+            StepLabel.Set(InReview ? $"REVIEW ({Builder.SelectedReviewIndex + 1}/{CharacterRoster.PartySize})" : $"H{Builder.CurrentMemberIndex + 1}/{CharacterRoster.PartySize} STEP {(int)CurrentPage + 1}/{StepCount}");
             RaceLabel.Set(Selector("RACE", Session.Race.name));
             ClassLabel.Set(Selector("CLASS", Session.Class.name));
             BackgroundLabel.Set(Selector("BG", Session.Background.name));
@@ -1782,10 +1877,9 @@ namespace Obscure
         public void GoToPage(Page p)
         {
             if (p < Page.Race) p = Page.Race;
-            if (p > Page.Review) p = Page.Review;
+            if (p > Page.CharacterSheet) p = Page.CharacterSheet;
             CurrentPage = p;
             if (p != Page.Race) PresetMode = false; // leaving Race = customizing; never re-apply a preset over edits
-            if (p == Page.Passive) selectedTraitIndex = 0;
             focusIndex = p switch
             {
                 // No active preset -> focus the Presets tab, so focus never auto-applies a preset over the hero.
@@ -1794,19 +1888,10 @@ namespace Obscure
                     : RaceTabCount + Math.Max(0, Array.IndexOf(RaceIds, Session.Race.id)),
                 Page.Class => Math.Max(0, Array.IndexOf(ClassIds, Session.Class.id)),
                 Page.Background => Math.Max(0, Array.IndexOf(BackgroundIds, Session.Background.id)),
-                Page.Review => InReview ? Math.Clamp(Builder.SelectedReviewIndex, 0, Math.Max(0, Builder.PendingParty.Count - 1)) : 0,
+                Page.CharacterSheet => InReview ? Math.Clamp(Builder.SelectedReviewIndex, 0, Math.Max(0, Builder.PendingParty.Count - 1)) : 0,
                 _ => 0,
             };
-            var step = p switch
-            {
-                Page.Race => CreationStep.SelectRace,
-                Page.Class => CreationStep.SelectClass,
-                Page.Abilities => CreationStep.AllocateAbilityScores,
-                Page.Background => CreationStep.ReviewStats,
-                Page.Passive => CreationStep.ReviewStarterPassive,
-                Page.Gear => CreationStep.ConfigureEquipment,
-                _ => CreationStep.ConfirmCharacter,
-            };
+            var step = StepForPage(p);
             if (Session.CurrentStep != step) Session.GoToStep(step);
             Refresh();
         }
@@ -1971,7 +2056,6 @@ namespace Obscure
         public void CycleEquipmentSlot(int dir)
         {
             EnsureEditingMode();
-            Session.GoToStep(CreationStep.ConfigureEquipment);
             int idx = Array.IndexOf(EquipmentSlots.All, SelectedEquipmentSlot);
             if (idx < 0) idx = 0;
             SelectedEquipmentSlot = EquipmentSlots.All[(idx + dir + EquipmentSlots.All.Length) % EquipmentSlots.All.Length];
@@ -1981,7 +2065,6 @@ namespace Obscure
         public void CycleEquipmentItem(int dir)
         {
             EnsureEditingMode();
-            Session.GoToStep(CreationStep.ConfigureEquipment);
             var compatible = Session.GetCompatibleEquipmentForSlot(SelectedEquipmentSlot).ToList();
             if (compatible.Count == 0)
             {
@@ -2011,7 +2094,8 @@ namespace Obscure
             {
                 Builder.ReturnToEditCharacter(Builder.SelectedReviewIndex);
                 SetHint(Builder.LastFeedback);
-                GoToPage(Page.Race);
+                // F8: Editing a member from the party menu opens the normal flow at the Character Sheet.
+                GoToPage(Page.CharacterSheet);
                 return;
             }
             Session.ResetPointBuy();
@@ -2038,7 +2122,7 @@ namespace Obscure
         {
             bool ok = Builder.TryRandomizeAll(rng, out _);
             SetHint(Builder.LastFeedback);
-            if (InReview) CurrentPage = Page.Review;
+            if (InReview) CurrentPage = Page.CharacterSheet;
             Refresh();
             return ok;
         }
@@ -2085,7 +2169,7 @@ namespace Obscure
 
             Sfx.Play(Sound.Success);
             SetHint(Builder.LastFeedback);
-            CurrentPage = InReview ? Page.Review : Page.Race;
+            CurrentPage = InReview ? Page.CharacterSheet : Page.Race;
             focusIndex = PresetMode && !InReview ? 1 : 0; // stay on the Presets tab for the next pick
             Refresh();
         }

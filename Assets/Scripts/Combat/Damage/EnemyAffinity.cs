@@ -51,16 +51,11 @@ namespace Obscure
     public class EnemyAffinityProfile
     {
         public AffinityType physicalAffinity = AffinityType.Normal;
-        public AffinityType arcaneAffinity = AffinityType.Normal;
         [SerializeField] private List<EnemyAffinityEntry> elementalAffinities = new List<EnemyAffinityEntry>();
 
         public AffinityType GetRawPhysicalAffinity() => physicalAffinity;
 
         public void SetPhysicalAffinity(AffinityType affinity) => physicalAffinity = affinity;
-
-        public AffinityType GetRawArcaneAffinity() => arcaneAffinity;
-
-        public void SetArcaneAffinity(AffinityType affinity) => arcaneAffinity = affinity;
 
         public AffinityType GetRawElementalAffinity(ElementType element)
         {
@@ -125,8 +120,7 @@ namespace Obscure
         {
             var copy = new EnemyAffinityProfile
             {
-                physicalAffinity = physicalAffinity,
-                arcaneAffinity = arcaneAffinity
+                physicalAffinity = physicalAffinity
             };
             copy.elementalAffinities.AddRange(elementalAffinities);
             return copy;
@@ -147,10 +141,6 @@ namespace Obscure
                     if (el == Element.Physical)
                     {
                         profile.SetPhysicalAffinity(affinity);
-                    }
-                    else if (el == Element.Arcane)
-                    {
-                        profile.SetArcaneAffinity(affinity);
                     }
                     else
                     {

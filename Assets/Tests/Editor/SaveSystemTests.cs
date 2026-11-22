@@ -583,7 +583,6 @@ namespace Obscure.Tests
             Assert.AreEqual("HO", Palette.ElementCode(Element.Holy));
             Assert.AreEqual("SH", Palette.ElementCode(Element.Shadow));
             Assert.AreEqual("PH", Palette.ElementCode(Element.Physical));
-            Assert.AreEqual("AL", Palette.ElementCode(Element.Arcane));
 
             Assert.AreEqual(Palette.ElementFire, Palette.ForElement(Element.Fire));
             Assert.AreEqual(Palette.ElementFire, Palette.ForElement("FI"));
@@ -866,11 +865,11 @@ namespace Obscure.Tests
             var host = new GameObject("UiAuditHost");
             try
             {
-                // 1. CharacterCreationScreen starts at Page.Race (7 steps, NAME step removed)
+                // 1. CharacterCreationScreen starts at Page.Race (5 steps: Race, Class, Abilities, Background, CharacterSheet)
                 var creation = new CharacterCreationScreen();
                 creation.Open(host.transform);
                 Assert.AreEqual(CharacterCreationScreen.Page.Race, creation.CurrentPage);
-                Assert.AreEqual(7, Enum.GetValues(typeof(CharacterCreationScreen.Page)).Length);
+                Assert.AreEqual(5, Enum.GetValues(typeof(CharacterCreationScreen.Page)).Length);
                 Assert.IsNull(FigmaUi.FindInstanceWithText(creation.UiRoot, "text-0", "+ NAME"), "NAME step chip must be removed from UXML.");
                 creation.Close();
 

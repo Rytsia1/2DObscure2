@@ -465,7 +465,7 @@ namespace Obscure
 
             SetAnalysisProfile("graveglass_arcanist",
                 weak: new[] { Element.Physical, Element.Dark },
-                reflect: new[] { Element.Arcane },
+                reflect: new[] { Element.Lightning },
                 statusResist: new Dictionary<StatusId, float> { [StatusId.Silence] = -0.20f });
 
             SetAnalysisProfile("crownless_duelist",
@@ -492,8 +492,8 @@ namespace Obscure
             SetAnalysisProfile("zoroa_p2",
                 weak: new[] { Element.Fire, Element.Physical },
                 resist: new[] { Element.Dark },
-                reflect: new[] { Element.Arcane },
-                concealed: new[] { Element.Arcane });
+                reflect: new[] { Element.Lightning },
+                concealed: new[] { Element.Lightning });
 
             // Build and link the 3 Dungeon 1 Enhanced Common Variant pilot families (Variant Spec §12.3, §15.1; Transformation Spec §3.1).
             EnhancedVariants = new[]

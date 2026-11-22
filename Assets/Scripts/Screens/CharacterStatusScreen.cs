@@ -442,7 +442,7 @@ namespace Obscure
             var resCol = ColumnBox(298, 0);
             resCol.Add(SectionTitle("Resistances"));
             var resGrid = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap } };
-            var entries = new List<(Element el, float v, string note)> { (Element.Physical, 0f, ""), (Element.Arcane, 0f, "FIXED") };
+            var entries = new List<(Element el, float v, string note)> { (Element.Physical, 0f, "") };
             foreach (ElementType et in Enum.GetValues(typeof(ElementType)))
             {
                 if (et == ElementType.None) continue;

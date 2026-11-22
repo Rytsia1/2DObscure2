@@ -132,7 +132,6 @@ namespace Obscure
             Element.Water => ElementWater,
             Element.Holy => ElementHoly,
             Element.Dark or Element.Shadow => ElementShadow,
-            Element.Arcane => ElementAll,
             _ => ElementPhysical,
         };
 
@@ -160,7 +159,6 @@ namespace Obscure
             Element.Water => "WA",
             Element.Holy => "HO",
             Element.Dark or Element.Shadow => "SH",
-            Element.Arcane => "AL",
             _ => "PH",
         };
 
@@ -174,7 +172,6 @@ namespace Obscure
             Element.Water => "Water",
             Element.Holy => "Holy",
             Element.Shadow => "Shadow",
-            Element.Arcane => "Arcane",
             _ => "Physical",
         };
 

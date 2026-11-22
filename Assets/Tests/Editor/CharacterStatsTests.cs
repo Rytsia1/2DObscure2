@@ -402,32 +402,20 @@ namespace Obscure.Tests
         [Test]
         public void CreationGearStepHintsMatchControlsAndMouseCanChangeItems()
         {
+            // F4: Gear page was removed in the 5-step creation flow; starting gear is auto-equipped
+            // to the class default and displayed read-only on the Character Sheet.
             var root = new GameObject("TestUiRoot").transform;
             try
             {
                 var creation = new CharacterCreationScreen();
                 creation.Open(root);
-                creation.GoToPage(CharacterCreationScreen.Page.Gear);
+                creation.GoToPage(CharacterCreationScreen.Page.CharacterSheet);
 
                 var texts = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.Label>(creation.UiRoot).ToList().Select(l => l.text).ToList();
-                CollectionAssert.Contains(texts, "L R", "L/R changes the item, so the footer must say so");
-                CollectionAssert.Contains(texts, "CHANGE ITEM");
-                CollectionAssert.Contains(texts, "UP DN");
-                CollectionAssert.Contains(texts, "SLOT");
-
-                // Find a slot with a choice, then change it with the mouse buttons.
-                for (int i = 0; i < EquipmentSlots.All.Length && creation.Session.GetCompatibleEquipmentForSlot(creation.SelectedEquipmentSlot).Count() < 2; i++)
-                    creation.CycleEquipmentSlot(1);
-                var slot = creation.SelectedEquipmentSlot;
-                Assert.GreaterOrEqual(creation.Session.GetCompatibleEquipmentForSlot(slot).Count(), 2, "need a slot with two items");
-                var before = creation.Session.GetEquipped(slot)?.id;
-
-                var menu = root.GetComponentInChildren<UitkMenu>();
-                menu.items.First(i => i.text == "Next Item").onClick();
-                Assert.AreNotEqual(before, creation.Session.GetEquipped(slot)?.id, "Next Item changes the equipped item");
-                menu = root.GetComponentInChildren<UitkMenu>();
-                menu.items.First(i => i.text == "Prev Item").onClick();
-                Assert.AreEqual(before, creation.Session.GetEquipped(slot)?.id, "Prev Item steps back");
+                var mainHand = creation.Session.GetEquipped(EquipmentSlot.MainHand);
+                Assert.IsNotNull(mainHand, "Class default main-hand weapon must be auto-equipped.");
+                Assert.IsTrue(texts.Any(t => t != null && t.IndexOf(mainHand.name, StringComparison.OrdinalIgnoreCase) >= 0),
+                    "Character Sheet must display the auto-equipped starting weapon.");
                 creation.Close();
             }
             finally { UnityEngine.Object.DestroyImmediate(root.gameObject); }
@@ -651,8 +639,8 @@ namespace Obscure.Tests
             Assert.AreEqual(CreationStep.AllocateAbilityScores, session.CurrentStep);
             Assert.IsTrue(session.PreviousStep(), "Can return to previous steps before confirming");
             Assert.AreEqual(CreationStep.SelectClass, session.CurrentStep);
-            Assert.IsTrue(session.GoToStep(CreationStep.ReviewStarterPassive));
-            Assert.AreEqual(CreationStep.ReviewStarterPassive, session.CurrentStep);
+            Assert.IsTrue(session.GoToStep(CreationStep.SelectBackground));
+            Assert.AreEqual(CreationStep.SelectBackground, session.CurrentStep);
 
             // 1. Fighter — Weapon Proficiency increases Physical Power when a weapon is equipped
             session.SelectClass("fighter");
@@ -1171,8 +1159,9 @@ namespace Obscure.Tests
         [Test]
         public void PresetsTabAddsChosenPresetHeroesOneByOneAndCustomizeLeavesPresetMode()
         {
+            // F8: Picking a preset validates it, adds it straight to the party, and opens Party Review;
+            // editing a preset hero from Party Review opens at the Character Sheet.
             var root = new GameObject("TestUiRoot").transform;
-            var root2 = new GameObject("TestUiRoot2").transform;
             try
             {
                 NewGamePartyBuilder FreshBuilder() { var b = new NewGamePartyBuilder(); b.StartNewGame(); return b; }
@@ -1180,17 +1169,17 @@ namespace Obscure.Tests
                 creation.Open(root);
                 UitkMenu.Item Item(string text) => root.GetComponentInChildren<UitkMenu>().items.First(i => i.text == text);
 
-                Item("Presets").onClick();
-                Assert.IsTrue(creation.PresetMode);
-                Assert.IsFalse(Item("Add Hero").interactable, "Add Hero needs a preset picked first");
-
                 // Player's own picks, in their order; picking the same preset twice is allowed.
                 string[] picks = { "pact_warlock", "agile_rogue", "pact_warlock", "nature_druid" };
-                foreach (var id in picks)
+                for (int i = 0; i < picks.Length; i++)
                 {
-                    Item(Database.Templates[id].name).onClick();
-                    Assert.IsTrue(Item("Add Hero").interactable, $"{id} should be addable");
-                    Item("Add Hero").onClick();
+                    if (i > 0) Item("Add Hero").onClick();
+                    Item("Presets").onClick();
+                    Assert.IsTrue(creation.PresetMode);
+                    Item(Database.Templates[picks[i]].name).onClick();
+                    Assert.AreEqual(NewGameFlowState.PendingPartyReview, creation.Builder.FlowState,
+                        "Picking a preset must immediately add the hero and open party review.");
+                    Assert.AreEqual(CharacterCreationScreen.Page.CharacterSheet, creation.CurrentPage);
                 }
 
                 var party = creation.Builder.PendingParty;
@@ -1200,25 +1189,19 @@ namespace Obscure.Tests
                 CollectionAssert.AreEqual(picks.Select(id => Database.Templates[id].classId).ToArray(), party.Select(c => c.classId).ToArray());
                 Assert.IsTrue(party.All(c => c.creationMethod == CreationMethod.Template));
                 Assert.AreEqual(4, party.Select(c => c.id).Distinct().Count());
-                creation.Close();
 
-                // Customize: a preset prefills the full editor and leaves Presets mode.
-                var custom = new CharacterCreationScreen(builder: FreshBuilder());
-                custom.Open(root2);
-                UitkMenu.Item Item2(string text) => root2.GetComponentInChildren<UitkMenu>().items.First(i => i.text == text);
-                var cleric = Database.Templates["support_cleric"];
-                Item2("Presets").onClick();
-                Item2(cleric.name).onClick();
-                Item2("Customize").onClick();
-                Assert.IsFalse(custom.PresetMode);
-                Assert.AreEqual(cleric.classId, custom.Session.Class.id, "Customize keeps the preset's values to edit");
-                Assert.AreEqual(0, custom.Builder.PendingParty.Count, "Customize must not add the hero yet");
-                custom.Close();
+                // Editing a preset hero from Party Review opens at Character Sheet with its values intact.
+                creation.Builder.SelectReviewMember(0);
+                creation.Refresh();
+                Item("Edit").onClick();
+                Assert.IsFalse(creation.PresetMode);
+                Assert.AreEqual(CharacterCreationScreen.Page.CharacterSheet, creation.CurrentPage);
+                Assert.AreEqual(Database.Templates[picks[0]].classId, creation.Session.Class.id);
+                creation.Close();
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root.gameObject);
-                UnityEngine.Object.DestroyImmediate(root2.gameObject);
             }
         }
 
