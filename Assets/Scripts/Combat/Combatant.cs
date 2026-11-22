@@ -100,6 +100,7 @@ namespace Obscure
         public int DraconicExhaustedTurns;
         public bool UsedLightbound;
         public int LightboundTurns;
+        public float LightboundResistBonus;
         public int OceansEmbraceCooldown;
         public int OceansEmbraceTurns;
         public bool OceansEmbraceShieldActive;
@@ -154,7 +155,7 @@ namespace Obscure
         }
 
         // Modular Damage System per-battle state (Prompt Sections 5, 7, 8, 9)
-        public readonly EnemyAffinityProfile AffinityProfile;
+        public EnemyAffinityProfile AffinityProfile { get; private set; }
         public readonly NullBreakController NullBreak = new NullBreakController();
         public readonly ElementalResistanceProfile ElementalResistances;
         public readonly DamageModifierSet DamageModifiers;
@@ -186,6 +187,7 @@ namespace Obscure
                 StatusController.ResistanceProfile.statsResistance = Math.Clamp(unit.Derived.statusResistance / 100f, 0f, 0.75f);
             if (enemy != null && enemy.tier == Tier.Boss)
                 StatusController.ResistanceProfile.baseResistance = 0.50f; // High base resistance for Bosses (GDD Section 13)
+            ApplyEnemyStatusResistances(enemy);
 
             if (unit != null && unit.HasTalent("durable"))
                 DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 1f - TalentSystem.DurableDamageReduction, sourceId: "durable");
@@ -212,6 +214,24 @@ namespace Obscure
             }
         }
 
+        void ApplyEnemyStatusResistances(EnemyDef def)
+        {
+            StatusController.isBoss = def != null && def.tier == Tier.Boss;
+            StatusController.ResistanceProfile.perStatus.Clear();
+            StatusController.ResistanceProfile.immunities.Clear();
+            if (def == null) return;
+            if (def.statusResist != null)
+            {
+                foreach (var kv in def.statusResist)
+                    StatusController.ResistanceProfile.SetPerStatusResistance(kv.Key, kv.Value);
+            }
+            if (def.statusImmune != null)
+            {
+                foreach (var st in def.statusImmune)
+                    StatusController.ResistanceProfile.SetImmune(st, true);
+            }
+        }
+
         void ResetMoveCooldowns()
         {
             foreach (var key in cooldowns.Keys.Where(k => k.StartsWith("move:")).ToList()) cooldowns.Remove(key);
@@ -226,6 +246,10 @@ namespace Obscure
             bool wasBroken = IsBroken;
             enemy = next;
             unit = new Unit(next, dungeonNumber);
+            AffinityProfile = next?.affinityProfile != null
+                ? next.affinityProfile.Clone()
+                : EnemyAffinityProfile.FromLegacyAffinities(unit?.affinities);
+            ApplyEnemyStatusResistances(next);
             phase++;
             Intent = Charge = null;
             JustReleasedCharge = false;
@@ -343,8 +367,26 @@ namespace Obscure
         public int MagicPen => unit.Derived.magicPenetration;
         public int CritChance => unit.Derived.criticalChance;
         public int CritDamage => unit.Derived.criticalDamage;
-        public int PhysicalBreak => Scale(Math.Max(1, unit.Derived.physicalBreakPower), 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
-        public int MagicBreak => Scale(Math.Max(1, unit.Derived.magicBreakPower), 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+        public int PhysicalBreak
+        {
+            get
+            {
+                float mult = 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown);
+                if (DraconicOverdriveTurns > 0) mult *= 1.50f;
+                else if (DraconicExhaustedTurns > 0) mult *= 0.70f;
+                return Scale(Math.Max(1, unit.Derived.physicalBreakPower), mult);
+            }
+        }
+        public int MagicBreak
+        {
+            get
+            {
+                float mult = 1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown);
+                if (DraconicOverdriveTurns > 0) mult *= 1.50f;
+                else if (DraconicExhaustedTurns > 0) mult *= 0.70f;
+                return Scale(Math.Max(1, unit.Derived.magicBreakPower), mult);
+            }
+        }
         public int StaggerRes => unit.Derived.staggerResistance;
         public int StatusRes => unit.Derived.statusResistance;
 
@@ -488,22 +530,99 @@ namespace Obscure
             return false;
         }
 
-        // Elf Racial Feat — Fey Step: Phased (cannot be targeted by single-target attacks); +20% damage next attack (CD 4)
+        public enum RacialFeatAvailability { None, Ready, OnCooldown, Used }
+
+        public readonly struct RacialFeatInfo
+        {
+            public readonly string id;
+            public readonly string name;
+            public readonly string description;
+            public readonly RacialFeatAvailability availability;
+            public readonly int cooldownRemaining;
+
+            public RacialFeatInfo(string id, string name, string description, RacialFeatAvailability availability, int cooldownRemaining)
+            {
+                this.id = id;
+                this.name = name;
+                this.description = description;
+                this.availability = availability;
+                this.cooldownRemaining = cooldownRemaining;
+            }
+        }
+
+        public bool HasActiveRacialFeat
+        {
+            get
+            {
+                var id = unit?.race?.id;
+                return id == "elf" || id == "dwarf" || id == "dragonborn" || id == "liichtian" || id == "merfolk";
+            }
+        }
+
+        public RacialFeatInfo RacialFeatState
+        {
+            get
+            {
+                var raceId = unit?.race?.id;
+                var feat = unit?.race?.racialFeat;
+                if (feat == null || !HasActiveRacialFeat)
+                    return new RacialFeatInfo(feat?.id ?? "", feat?.name ?? "", feat?.description ?? "", RacialFeatAvailability.None, 0);
+
+                return raceId switch
+                {
+                    "elf" => new RacialFeatInfo(feat.id, feat.name, feat.description,
+                        FeyStepCooldown > 0 ? RacialFeatAvailability.OnCooldown : RacialFeatAvailability.Ready, FeyStepCooldown),
+                    "dwarf" => new RacialFeatInfo(feat.id, feat.name, feat.description,
+                        IronResolveCooldown > 0 ? RacialFeatAvailability.OnCooldown : RacialFeatAvailability.Ready, IronResolveCooldown),
+                    "dragonborn" => new RacialFeatInfo(feat.id, feat.name, feat.description,
+                        UsedDraconicOverdrive ? RacialFeatAvailability.Used : RacialFeatAvailability.Ready, 0),
+                    "liichtian" => new RacialFeatInfo(feat.id, feat.name, feat.description,
+                        UsedLightbound ? RacialFeatAvailability.Used : RacialFeatAvailability.Ready, 0),
+                    "merfolk" => new RacialFeatInfo(feat.id, feat.name, feat.description,
+                        OceansEmbraceCooldown > 0 ? RacialFeatAvailability.OnCooldown : RacialFeatAvailability.Ready, OceansEmbraceCooldown),
+                    _ => new RacialFeatInfo(feat.id, feat.name, feat.description, RacialFeatAvailability.None, 0),
+                };
+            }
+        }
+
+        public bool CanUseRacialFeat(out string reason)
+        {
+            reason = null;
+            if (!Alive) { reason = "Actor is down."; return false; }
+            if (!HasActiveRacialFeat) { reason = "No active racial feat."; return false; }
+            var st = RacialFeatState;
+            switch (st.availability)
+            {
+                case RacialFeatAvailability.Ready:
+                    return true;
+                case RacialFeatAvailability.OnCooldown:
+                    reason = $"On cooldown ({st.cooldownRemaining}t).";
+                    return false;
+                case RacialFeatAvailability.Used:
+                    reason = "Already used this battle (1/battle).";
+                    return false;
+                default:
+                    reason = "Unavailable.";
+                    return false;
+            }
+        }
+
+        // Elf Racial Feat — Fey Step: Phased (cannot be targeted by single-target attacks); +20% damage next attack (CD 4 -> 4 blocked owner turns)
         public bool ActivateFeyStep()
         {
             if (!Alive || FeyStepCooldown > 0) return false;
             IsPhased = true;
-            FeyStepCooldown = 4;
+            FeyStepCooldown = 5; // N+1 because Battle.StartTurn decrements at start of owner's next turn
             FeyStepBonusPending = true;
             return true;
         }
 
-        // Dwarf Racial Feat — Iron Resolve: All Damage Taken -30%, Break Power received -50% until next turn (CD 3)
+        // Dwarf Racial Feat — Iron Resolve: All Damage Taken -30%, Break Power received -50% until next turn (CD 3 -> 3 blocked owner turns)
         public bool ActivateIronResolve()
         {
             if (!Alive || IronResolveCooldown > 0) return false;
             IronResolveActive = true;
-            IronResolveCooldown = 3;
+            IronResolveCooldown = 4; // N+1 because Battle.StartTurn decrements at start of owner's next turn
             DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 0.70f, sourceId: "iron_resolve");
             return true;
         }
@@ -547,7 +666,6 @@ namespace Obscure
             else
                 DamageModifiers.AddMultiplier(DamageModifierScope.PhysicalDamageBonus, 1.25f, sourceId: "draconic_lineage");
 
-            AddStatus(StatusId.AttackUp, 3, 0.35f, this);
             return true;
         }
 
@@ -555,6 +673,7 @@ namespace Obscure
         {
             if (!OverdriveExhaustPending) return;
             OverdriveExhaustPending = false;
+            DraconicOverdriveTurns = 0;
             DamageModifiers.RemoveBySource("draconic_overdrive");
             DamageModifiers.RemoveBySource("draconic_lineage");
             DraconicExhaustedTurns = 2;
@@ -575,25 +694,28 @@ namespace Obscure
                     a.unit.hp = Math.Min(a.Stats.maxHp, a.unit.hp + healAmt);
                     a.LightboundTurns = 2;
                     a.DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 0.90f, sourceId: "lightbound");
-                    a.StatusController.ResistanceProfile.buffResistance = Math.Min(0.75f, a.StatusController.ResistanceProfile.buffResistance + 0.20f);
+                    if (a.LightboundResistBonus <= 0f)
+                    {
+                        a.LightboundResistBonus = 0.20f;
+                        a.StatusController.ResistanceProfile.buffResistance += 0.20f;
+                    }
                 }
             }
             return true;
         }
 
-        // Merfolk Racial Feat — Ocean's Embrace: Shield 25% Max HP on target ally, +10% defensive QTE window for 3 turns; heals 10% on end/break (CD 4)
+        // Merfolk Racial Feat — Ocean's Embrace: Shield 25% Max HP on target ally, +10% defensive QTE window for 3 turns; heals 10% on end/break (CD 4 -> 4 blocked owner turns)
         public bool ActivateOceansEmbrace(Combatant ally)
         {
             if (!Alive || ally == null || !ally.Alive || ally.side != side || OceansEmbraceCooldown > 0)
                 return false;
             UsedOceansEmbrace = true;
-            OceansEmbraceCooldown = 4;
+            OceansEmbraceCooldown = 5; // N+1 because Battle.StartTurn decrements at start of owner's next turn
             OceansEmbraceTarget = ally;
             OceansEmbraceTurns = 3;
             int shieldAmt = Math.Max(1, (int)Math.Round(ally.Stats.maxHp * 0.25f));
             ally.unit.shield += shieldAmt;
             ally.OceansEmbraceShieldActive = true;
-            ally.AddStatus(StatusId.DefenseUp, 3, 0.20f, this);
             return true;
         }
 
@@ -602,6 +724,11 @@ namespace Obscure
             if (target != null && target.OceansEmbraceShieldActive)
             {
                 target.OceansEmbraceShieldActive = false;
+                if (OceansEmbraceTarget == target)
+                {
+                    OceansEmbraceTurns = 0;
+                    OceansEmbraceTarget = null;
+                }
                 int healAmt = Math.Max(1, (int)Math.Round(target.Stats.maxHp * 0.10f));
                 target.unit.hp = Math.Min(target.Stats.maxHp, target.unit.hp + healAmt);
             }

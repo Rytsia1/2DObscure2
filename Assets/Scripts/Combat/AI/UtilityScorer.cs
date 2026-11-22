@@ -69,7 +69,7 @@ namespace Obscure
         public static float EstimateExpectedDamage(Combatant attacker, EnemyAttack move, Combatant target, Effectiveness? knownEffectiveness = null)
         {
             if (attacker == null || move == null || target == null || !target.Alive || move.hits <= 0) return 0f;
-            float effMult = knownEffectiveness.HasValue ? Affinities.Multiplier(knownEffectiveness.Value) : 1f;
+            float effMult = knownEffectiveness.HasValue ? AffinityResolver.DamageMultiplier(knownEffectiveness.Value) : 1f;
             if (effMult <= 0f) return 0f;
             float total = 0f;
             for (int i = 0; i < move.hits; i++)
@@ -90,6 +90,12 @@ namespace Obscure
         public static List<Combatant> CandidateTargets(Battle b, Combatant self, EnemyAttack move, AiPlanContext ctx)
         {
             var pool = ctx.foes;
+            // Fey Step (Elf): untelegraphed single-target attacks skip Phased heroes when non-phased targets exist.
+            if (!move.allTargets && !move.Heals && !move.self)
+            {
+                var nonPhased = pool.Where(f => !f.IsPhased).ToList();
+                if (nonPhased.Count > 0) pool = nonPhased;
+            }
             if (move.apply != null && move.apply.Length > 0)
             {
                 var fresh = pool.Where(f => !move.apply.Any(ap => f.Has(ap.id))).ToList();
@@ -218,6 +224,25 @@ namespace Obscure
         {
             var mem = b?.Blackboard?.Memory;
             float baseScore = m.aiPriority * 10f;
+            // Stage 6 (Analysis System): enemies avoid an element a hero has been SHOWN (in encounter memory) to Drain or Reflect.
+            if (mem != null && m.hits > 0 && !m.self && !m.Heals && !m.Summons)
+            {
+                if (m.allTargets)
+                {
+                    for (int i = 0; i < ctx.foes.Count; i++)
+                    {
+                        var seen = mem.GetSeenEffectiveness(ctx.foes[i], m.element);
+                        if (seen == Effectiveness.Reflect) baseScore -= 35f;
+                        else if (seen == Effectiveness.Drain) baseScore -= 30f;
+                    }
+                }
+                else if (target != null)
+                {
+                    var seen = mem.GetSeenEffectiveness(target, m.element);
+                    if (seen == Effectiveness.Reflect) baseScore -= 50f;
+                    else if (seen == Effectiveness.Drain) baseScore -= 45f;
+                }
+            }
             float expectedDmg = 0f;
             float immediate = EvaluateImmediate(b, self, m, target, ctx, out expectedDmg);
             float future = 0f;
@@ -435,6 +460,8 @@ namespace Obscure
                 {
                     var f = ctx.foes[i];
                     var knownEff = mem?.GetSeenEffectiveness(f, m.element);
+                    if (knownEff == Effectiveness.Reflect) { val -= 12f; continue; }
+                    if (knownEff == Effectiveness.Drain) { val -= 10f; continue; }
                     float d = EstimateExpectedDamage(self, m, f, knownEff);
                     expectedDmg += d;
                     val += Math.Min(ImmediateDamageCap * 0.5f, (d / Math.Max(1, f.Stats.maxHp)) * ImmediateDamageScale * 0.5f);
@@ -450,6 +477,8 @@ namespace Obscure
                 if (m.hits > 0)
                 {
                     var knownEff = mem?.GetSeenEffectiveness(target, m.element);
+                    if (knownEff == Effectiveness.Reflect) return -20f;
+                    if (knownEff == Effectiveness.Drain) return -16f;
                     expectedDmg = EstimateExpectedDamage(self, m, target, knownEff);
                     float hpFracDmg = expectedDmg / Math.Max(1, target.Stats.maxHp);
                     val += Math.Min(ImmediateDamageCap, hpFracDmg * ImmediateDamageScale);

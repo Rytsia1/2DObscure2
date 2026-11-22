@@ -147,6 +147,13 @@ namespace Obscure
                 damageDealt = true;
 
                 log?.Invoke($"{owner.name} suffers {dmg} {dot.Definition.name} damage.");
+                if (battle != null && owner.IsEnemy)
+                {
+                    Element dotElem = dot.dotElementType.IsValidElement()
+                        ? dot.dotElementType.ToLegacyElement()
+                        : Element.Physical;
+                    battle.RecordCodexElement(owner, dotElem);
+                }
                 OnStatusTicked?.Invoke(dot, dmg);
 
                 if (!owner.Alive)
@@ -369,7 +376,7 @@ namespace Obscure
 
         public int CleanseDebuffs(int maxCount = -1)
         {
-            var debuffs = activeInstances.Where(i => StatusInfo.IsDebuff(i.statusId)).ToList();
+            var debuffs = activeInstances.Where(i => StatusInfo.IsDebuff(i.statusId) && i.statusId != StatusId.Exhausted).ToList();
             int toRemove = maxCount > 0 ? Math.Min(maxCount, debuffs.Count) : debuffs.Count;
             for (int i = 0; i < toRemove; i++)
             {

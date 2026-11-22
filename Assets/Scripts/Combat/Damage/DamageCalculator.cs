@@ -86,6 +86,8 @@ namespace Obscure
             }
 
             float unroundedSum = 0f;
+            float drainedSum = 0f;
+            float reflectedSum = 0f;
             bool allNullified = true;
 
             for (int i = 0; i < components.Count; i++)
@@ -105,6 +107,17 @@ namespace Obscure
                 if (!compResult.wasNullified)
                     allNullified = false;
 
+                if (compResult.wasDrained)
+                {
+                    hitResult.anyComponentDrained = true;
+                    drainedSum += compResult.normalEquivalentDamage;
+                }
+                if (compResult.wasReflected)
+                {
+                    hitResult.anyComponentReflected = true;
+                    reflectedSum += compResult.normalEquivalentDamage;
+                }
+
                 unroundedSum += compResult.unroundedDamage;
                 hitResult.componentResults.Add(compResult);
             }
@@ -113,6 +126,10 @@ namespace Obscure
             hitResult.unroundedTotalDamage = Mathf.Max(0f, unroundedSum);
             // Prompt Section 10.2 & 11.1: Preserve decimal values across components and round once per hit.
             hitResult.finalHitDamage = RoundDamage(hitResult.unroundedTotalDamage, context.roundingMode);
+            hitResult.unroundedDrainedDamage = Mathf.Max(0f, drainedSum);
+            hitResult.finalDrainedAmount = RoundDamage(hitResult.unroundedDrainedDamage * AffinityResolver.DrainHealPct, context.roundingMode);
+            hitResult.unroundedReflectedDamage = Mathf.Max(0f, reflectedSum);
+            hitResult.finalReflectedAmount = RoundDamage(hitResult.unroundedReflectedDamage, context.roundingMode);
             return hitResult;
         }
 
@@ -160,9 +177,10 @@ namespace Obscure
             float allTaken = targetMods.GetAllDamageTaken();
             float afterDamageTaken = afterDefense * physTaken * allTaken;
 
-            // 8 & 9. Physical Enemy Affinity & Null Break / Nullification
-            AffinityType rawAffinity = affinityProfile.GetRawPhysicalAffinity();
-            AffinityType effectiveAffinity = affinityProfile.GetEffectiveAffinity(
+            // 8 & 9. Physical Enemy Affinity & Null Break / Nullification (via AffinityResolver)
+            AffinityType rawAffinity = AffinityResolver.GetRaw(affinityProfile, DamageType.Physical, ElementType.None);
+            AffinityType effectiveAffinity = AffinityResolver.Get(
+                affinityProfile,
                 DamageType.Physical,
                 ElementType.None,
                 context.targetNullBreak);
@@ -170,8 +188,10 @@ namespace Obscure
             bool nullBreakApplied = rawAffinity == AffinityType.Nullification &&
                                     effectiveAffinity == AffinityType.Normal;
             bool wasNullified = effectiveAffinity == AffinityType.Nullification;
+            bool wasDrained = effectiveAffinity == AffinityType.Drain;
+            bool wasReflected = effectiveAffinity == AffinityType.Reflect;
 
-            float unrounded = wasNullified
+            float unrounded = (wasNullified || wasDrained || wasReflected)
                 ? 0f
                 : afterDamageTaken * effectiveAffinity.GetMultiplier();
 
@@ -190,7 +210,10 @@ namespace Obscure
                 effectiveAffinity = effectiveAffinity,
                 nullBreakApplied = nullBreakApplied,
                 wasNullified = wasNullified,
+                wasDrained = wasDrained,
+                wasReflected = wasReflected,
                 finalElementalResistance = 0f,
+                normalEquivalentDamage = Mathf.Max(0f, afterDamageTaken),
                 unroundedDamage = Mathf.Max(0f, unrounded)
             };
         }
@@ -235,9 +258,10 @@ namespace Obscure
             float allTaken = targetMods.GetAllDamageTaken();
             float afterDamageTaken = afterQte * elemTaken * specificTaken * allTaken;
 
-            // 8, 9, 10. Enemy Elemental Affinity, Target Elemental Resistance, and Nullification
-            AffinityType rawAffinity = affinityProfile.GetRawElementalAffinity(element);
-            AffinityType effectiveAffinity = affinityProfile.GetEffectiveAffinity(
+            // 8, 9, 10. Enemy Elemental Affinity, Target Elemental Resistance, and Nullification (via AffinityResolver)
+            AffinityType rawAffinity = AffinityResolver.GetRaw(affinityProfile, DamageType.Elemental, element);
+            AffinityType effectiveAffinity = AffinityResolver.Get(
+                affinityProfile,
                 DamageType.Elemental,
                 element,
                 context.targetNullBreak);
@@ -245,12 +269,15 @@ namespace Obscure
             bool nullBreakApplied = rawAffinity == AffinityType.Nullification &&
                                     effectiveAffinity == AffinityType.Normal;
             bool wasNullified = effectiveAffinity == AffinityType.Nullification;
+            bool wasDrained = effectiveAffinity == AffinityType.Drain;
+            bool wasReflected = effectiveAffinity == AffinityType.Reflect;
 
             float finalResistance = resistanceProfile.GetFinalResistance(element);
+            float normalEq = afterDamageTaken * (1f - finalResistance);
 
-            float unrounded = wasNullified
+            float unrounded = (wasNullified || wasDrained || wasReflected)
                 ? 0f
-                : afterDamageTaken * effectiveAffinity.GetMultiplier() * (1f - finalResistance);
+                : normalEq * effectiveAffinity.GetMultiplier();
 
             return new ComponentDamageResult
             {
@@ -267,7 +294,10 @@ namespace Obscure
                 effectiveAffinity = effectiveAffinity,
                 nullBreakApplied = nullBreakApplied,
                 wasNullified = wasNullified,
+                wasDrained = wasDrained,
+                wasReflected = wasReflected,
                 finalElementalResistance = finalResistance,
+                normalEquivalentDamage = Mathf.Max(0f, normalEq),
                 unroundedDamage = Mathf.Max(0f, unrounded)
             };
         }

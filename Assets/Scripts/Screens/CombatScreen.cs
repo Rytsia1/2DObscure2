@@ -323,6 +323,23 @@ namespace Obscure
             battle.Logged += AddLog;
             InitCoach(battle); // Tutorial Prologue prompts (PrologueCoach.cs); no-op outside the Prologue
             battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
+            battle.BossAffinitiesShifted += boss =>
+            {
+                ShowCodexToast($"{boss.name.ToUpperInvariant()}: AFFINITIES SHIFTED!");
+                if (huds.TryGetValue(boss, out var bh))
+                    SpawnPopup("AFFINITIES SHIFTED!", bh.pos.x + bh.size.x / 2f, bh.pos.y - 48f, Palette.Ember1, 14);
+            };
+            battle.CodexRevealed += (target, ev) =>
+            {
+                if (ev.newlyRevealed)
+                {
+                    Sfx.Play(Sound.Buff);
+                    string detail = ev.isElement
+                        ? $"{EnemyCodex.FormatEffectivenessTag(ev.effectiveness)} to {ev.element}"
+                        : $"{EnemyCodex.FormatStatusTier(ev.statusTier)} to {StatusInfo.Name(ev.status)}";
+                    ShowCodexToast($"NEW: {ev.enemyName} — {detail}");
+                }
+            };
             // On-Defeat Transformation presentation (Transformation Spec §7.1 v1.1): sting, sprite flash/phase FX, and persistent ENHANCED nameplate tag.
             battle.EnemyTransformed += enemy =>
             {
@@ -741,32 +758,81 @@ namespace Obscure
             return IconArt.StatusBadge(id, turns, stacks, 1, 3f);
         }
 
+        static List<(string tag, int turns)> CollectRacialBadges(Combatant c)
+        {
+            var list = new List<(string tag, int turns)>();
+            if (c == null || !c.Alive) return list;
+            if (c.IsPhased) list.Add(("PHASED", 1));
+            if (c.IronResolveActive) list.Add(("RESOLVE", 1));
+            if (c.DraconicOverdriveTurns > 0) list.Add(("OVERDRIVE", c.DraconicOverdriveTurns));
+            if (c.LightboundTurns > 0) list.Add(("LIGHTBOUND", c.LightboundTurns));
+            if (c.OceansEmbraceShieldActive)
+            {
+                int t = c.OceansEmbraceTurns > 0 ? c.OceansEmbraceTurns : 1;
+                list.Add(("EMBRACE", t));
+            }
+            return list;
+        }
+
+        static VisualElement BuildRacialBadge(string tag, int turns)
+        {
+            var tpl = FigmaUi.InstantiateTemplate("Status-Icon-Buff");
+            if (tpl != null)
+            {
+                FigmaUi.SetInstanceText(tpl, "text-0", tag);
+                FigmaUi.SetInstanceText(tpl, "text-1", turns.ToString());
+                tpl.style.marginRight = 3;
+                tpl.style.flexShrink = 0;
+                return tpl;
+            }
+            return new UiLabel($"{tag} {turns}") { style = { fontSize = 10, color = Palette.Gold1, marginRight = 4 } };
+        }
+
         // Rebuilds the status badge strip only when the set of statuses or remaining turns changes (Refresh runs often).
         static void SyncStatusIcons(Hud h, Combatant c)
         {
             if (h.statusRow == null && h.stageStatusRow == null) return;
             var active = CollectActiveStatuses(c);
-            string key = string.Join(",", active.Select(s => $"{(int)s.id}:{s.turns}:{s.stacks}"));
+            var racial = CollectRacialBadges(c);
+            string key = string.Join(",", active.Select(s => $"{(int)s.id}:{s.turns}:{s.stacks}"))
+                + "|" + string.Join(",", racial.Select(r => $"{r.tag}:{r.turns}"));
             if (key == h.statusKey) return;
             h.statusKey = key;
 
             if (h.statusRow != null)
             {
                 while (h.statusRow.childCount > 1) h.statusRow.RemoveAt(1); // child 0 is statusLbl
-                foreach (var s in active.Take(c.IsEnemy ? 5 : 3))
+                int cap = c.IsEnemy ? 5 : 4;
+                int shown = 0;
+                foreach (var r in racial)
                 {
+                    if (shown >= cap) break;
+                    var el = BuildRacialBadge(r.tag, r.turns);
+                    if (el != null) { h.statusRow.Add(el); shown++; }
+                }
+                foreach (var s in active)
+                {
+                    if (shown >= cap) break;
                     var el = BuildStatusIconBadge(s.id, s.turns, s.stacks);
-                    if (el != null) h.statusRow.Add(el);
+                    if (el != null) { h.statusRow.Add(el); shown++; }
                 }
             }
 
             if (h.stageStatusRow != null)
             {
                 h.stageStatusRow.Clear();
-                foreach (var s in active.Take(3))
+                int shown = 0;
+                foreach (var r in racial)
                 {
+                    if (shown >= 3) break;
+                    var el = BuildRacialBadge(r.tag, r.turns);
+                    if (el != null) { h.stageStatusRow.Add(el); shown++; }
+                }
+                foreach (var s in active)
+                {
+                    if (shown >= 3) break;
                     var el = BuildStatusIconBadge(s.id, s.turns, s.stacks);
-                    if (el != null) h.stageStatusRow.Add(el);
+                    if (el != null) { h.stageStatusRow.Add(el); shown++; }
                 }
             }
         }
@@ -977,6 +1043,15 @@ namespace Obscure
 
         void Update()
         {
+            if (analysisOverlay != null)
+            {
+                if (Controls.Left) { analysisUnitIdx--; RenderAnalysisOverlay(); }
+                else if (Controls.Right) { analysisUnitIdx++; RenderAnalysisOverlay(); }
+                else if (Controls.Up && analysisScroll != null)
+                    analysisScroll.scrollOffset = new Vector2(0, Mathf.Max(0f, analysisScroll.scrollOffset.y - 48f));
+                else if (Controls.Down && analysisScroll != null)
+                    analysisScroll.scrollOffset = new Vector2(0, analysisScroll.scrollOffset.y + 48f);
+            }
             if (Controls.Details) ModifierHudHelper.ToggleDetails(modifierStrip);
             var a = Battle?.Active;
             if (a != null && activeMarker != null && activeMarker.style.display == DisplayStyle.Flex && huds.TryGetValue(a, out var ah))
@@ -1115,11 +1190,9 @@ namespace Obscure
             });
             topCol.Add(hdrRow);
 
-            // Row 2: Weaknesses (enemies) or Role (allies)
+            // Row 2: Codex-filtered known affinities (enemies — never leak unrevealed weaknesses) or Role (allies)
             string subText = cand.IsEnemy
-                ? (cand.Affinities?.weak != null && cand.Affinities.weak.Length > 0
-                    ? "WEAK: " + string.Join(" · ", cand.Affinities.weak.Select(ElementConfig.Short))
-                    : cand.Affinities.Describe())
+                ? AnalysisInspector.DescribeKnownEnemyAffinities(Battle, cand)
                 : (cand.unit.role ?? "ALLY").ToUpperInvariant();
             if (!string.IsNullOrEmpty(subText))
             {
@@ -1317,6 +1390,11 @@ namespace Obscure
             HideDossier();
             var actor = action.actor;
             if (action.kind == ActionKind.Guard) { Sfx.Play(Sound.Guard); PlayFxOn(actor, "guard", flip: actor != null && actor.IsEnemy); }
+            if (action.kind == ActionKind.RacialFeat)
+            {
+                Sfx.Play(actor?.unit?.race?.id == "liichtian" ? Sound.Heal : Sound.Buff);
+                PlayFxOn(actor, "cast", flip: false);
+            }
             // Spellcasters gather power while they wind up (gone on the strike); an enemy charging a big move glows red.
             bool attacking = action.kind == ActionKind.Attack || action.kind == ActionKind.Skill;
             bool magic = action.skill != null ? action.skill.kind != SkillKind.Physical
@@ -1521,16 +1599,39 @@ namespace Obscure
             // Hits of one action spawn in the same frame: each further number on this target sits one row lower (they rise together).
             // 18 px row = number font 20 minus a little overlap; starting value, raise it if 3 hits still touch at 1280x720.
             int stack = activePopups.Count(p => p.numberOn == hit.target && p.age < 0.3f) % 4;
-            bool crit = hit.critical && !hit.blocked && !immune && !hit.heal && hit.amount > 0;
-            SpawnPopup(hit.blocked ? "PARRY" : immune ? "IMMUNE" : crit ? hit.amount + "!" : hit.amount.ToString(), cx, h.pos.y - 10f + stack * 18f,
-                hit.blocked ? Palette.FrostBright : immune ? Palette.MutedGray : hit.heal ? Palette.Emerald : crit ? Palette.Gold1 : Palette.CrimsonBright,
-                crit ? 26 : 20); // crit: bigger, gold, "!" (size step is a starting value)
+            bool crit = hit.critical && !hit.blocked && !immune && !hit.heal && !hit.drained && !hit.reflected && hit.amount > 0;
+            string primaryText = hit.blocked ? "PARRY"
+                : hit.drained ? (hit.amount > 0 ? $"+{hit.amount}" : "0")
+                : hit.reflected ? "0"
+                : immune ? "NULL"
+                : crit ? hit.amount + "!"
+                : hit.amount.ToString();
+            Color primaryCol = hit.blocked ? Palette.FrostBright
+                : hit.drained || hit.heal ? Palette.Emerald
+                : hit.reflected ? Palette.Gold1
+                : immune ? Palette.MutedGray
+                : crit ? Palette.Gold1
+                : Palette.CrimsonBright;
+            SpawnPopup(primaryText, cx, h.pos.y - 10f + stack * 18f, primaryCol, crit ? 26 : 20);
             activePopups[activePopups.Count - 1].numberOn = hit.target;
             if (hit.brokeTarget)
                 SpawnPopup("@ BREAK! @", cx, h.pos.y - 36f, Palette.Gold1, 18);
-            if (hit.effect == Effectiveness.Weak || hit.effect == Effectiveness.Resist)
-                SpawnPopup(hit.effect == Effectiveness.Weak ? "* WEAK! *" : "RESIST", cx, h.pos.y - 24f,
-                    hit.effect == Effectiveness.Weak ? Palette.Gold1 : Palette.Mist3, 14);
+            if (hit.concealedPing)
+                SpawnPopup("?!", cx, h.pos.y - 24f, Palette.Gold1, 16);
+            else if (hit.effect == Effectiveness.Weak || hit.effect == Effectiveness.Resist || hit.effect == Effectiveness.Drain || hit.effect == Effectiveness.Reflect)
+            {
+                string word = EnemyCodex.FormatFloatingWord(hit.effect);
+                Color wCol = hit.effect == Effectiveness.Weak ? Palette.Gold1
+                    : hit.effect == Effectiveness.Drain ? Palette.Emerald
+                    : hit.effect == Effectiveness.Reflect ? Palette.Ember1
+                    : Palette.Mist3;
+                SpawnPopup(word, cx, h.pos.y - 24f, wCol, 14);
+            }
+            if (hit.reflected && hit.reflectedTarget != null && hit.reflectedAmount > 0 && huds.TryGetValue(hit.reflectedTarget, out var rh))
+            {
+                SpawnPopup(hit.reflectedAmount.ToString(), rh.pos.x + rh.size.x / 2f, rh.pos.y - 10f, Palette.CrimsonBright, 20);
+                StartCoroutine(Flash(rh, hit.reflectedTarget));
+            }
             if (!hit.heal && hit.amount > 0) StartCoroutine(Flash(h, hit.target));
             // A hero who takes damage and stays up flinches (a fall is handled by the KO in Update).
             if (!hit.heal && hit.amount > 0 && !hit.target.IsEnemy && hit.target.Alive && !h.busy
@@ -1798,7 +1899,7 @@ namespace Obscure
         {
             turnText = $"{c.name.ToUpperInvariant()}'S TURN — {c.unit.role.ToUpperInvariant()}";
             var m = NewMenu();
-            Option(m, "ATTACK", () => ChooseTarget(Battle.Opponents(c).Where(e => e.Alive), t => BattleAction.Attack(c, t), () => ShowActions(c)),
+            Option(m, "ATTACK", () => ChooseTarget(Battle.Opponents(c).Where(e => e.Alive), t => BattleAction.Attack(c, t), () => ShowActions(c), Element.Physical),
                 tooltip: "STRIKE ONE ENEMY WITH YOUR WEAPON. TIMED QTE RAISES DAMAGE.",
                 costType: "COST: —   TYPE: PHYSICAL", target: "TARGET: ENEMY", rawTitle: "ATTACK");
             Option(m, "SKILL", () => ShowSkills(c),
@@ -1811,12 +1912,45 @@ namespace Obscure
                 tooltip: "HALVE INCOMING DAMAGE UNTIL NEXT TURN",
                 costType: "COST: —   DEFENSE UP", target: "TARGET: SELF", rawTitle: "GUARD",
                 statusChips: new[] { (StatusId.DefenseUp, "DEFENSE UP · 1T") });
+            Option(m, "ANALYSIS", () => OpenAnalysis(() => ShowActions(c)),
+                enabled: true,
+                tooltip: "INSPECT ENEMIES (CODEX) AND ALLIES. FREE — NO TURN, MP OR ITEM COST.",
+                costType: "COST: FREE (NO TURN)", target: "ENEMIES & ALLIES", rawTitle: "ANALYSIS");
         }
 
         void ShowSkills(Combatant c)
         {
             var skills = c.unit.GetCombatActiveSkillIds().Select(id => Database.Skills[id]).ToList();
+            bool silenced = c.StatusController != null && c.StatusController.HasStatus(StatusId.Silence);
             var m = NewMenu();
+            if (c.HasActiveRacialFeat)
+            {
+                var st = c.RacialFeatState;
+                bool canUse = c.CanUseRacialFeat(out var reason);
+                string statusTag = st.availability switch
+                {
+                    Combatant.RacialFeatAvailability.Ready => "READY",
+                    Combatant.RacialFeatAvailability.OnCooldown => $"CD {st.cooldownRemaining}",
+                    Combatant.RacialFeatAvailability.Used => "USED (1/BATTLE)",
+                    _ => ""
+                };
+                string raceId = c.unit?.race?.id;
+                string targetLabel = raceId == "merfolk" ? "TARGET: ALLY"
+                    : raceId == "liichtian" ? "TARGET: ALL ALLIES"
+                    : "TARGET: SELF";
+                string tip = canUse
+                    ? (st.description ?? "").ToUpperInvariant()
+                    : $"{reason.ToUpperInvariant()} — {(st.description ?? "").ToUpperInvariant()}";
+                Option(m, $"RACIAL FEAT · {st.name.ToUpperInvariant()}  {statusTag}",
+                    () =>
+                    {
+                        if (raceId == "merfolk")
+                            ChooseTarget(Battle.Allies(c), t => BattleAction.RacialFeat(c, t), () => ShowSkills(c));
+                        else
+                            Choose(BattleAction.RacialFeat(c));
+                    },
+                    canUse, tip, "COST: TURN · NO MP", targetLabel, "RACIAL FEAT");
+            }
             foreach (var s in skills)
             {
                 var sk = s;
@@ -1832,7 +1966,8 @@ namespace Obscure
                     ? sk.apply.Select(ap => (ap.id, StatusInfo.ChipText(ap)))
                     : null;
                 Option(m, $"{sk.name.ToUpperInvariant()} {costText}", () => UseSkill(c, sk),
-                    cd == 0 && c.unit.mp >= effCost && hasShield && hasWeapon, sk.description.ToUpperInvariant(),
+                    !silenced && cd == 0 && c.unit.mp >= effCost && hasShield && hasWeapon,
+                    silenced ? $"SILENCED — {sk.description.ToUpperInvariant()}" : sk.description.ToUpperInvariant(),
                     $"COST: {costText}   TYPE: {typeText}", targetText, sk.name.ToUpperInvariant(), IconArt.Skill(sk.id), skChips);
             }
             Option(m, "BACK", () => ShowActions(c), rawTitle: "BACK");
@@ -1841,9 +1976,11 @@ namespace Obscure
 
         void UseSkill(Combatant c, SkillDef s)
         {
+            Element? elem = (s.kind == SkillKind.Physical || (s.kind == SkillKind.Magic && s.power > 0f) || s.HasDamageSystemComponents)
+                ? s.element : (Element?)null;
             switch (s.target)
             {
-                case TargetType.Enemy: ChooseTarget(Battle.Opponents(c).Where(e => e.Alive), t => BattleAction.Skill(c, s, t), () => ShowSkills(c)); break;
+                case TargetType.Enemy: ChooseTarget(Battle.Opponents(c).Where(e => e.Alive), t => BattleAction.Skill(c, s, t), () => ShowSkills(c), elem); break;
                 case TargetType.Ally: ChooseTarget(Battle.Allies(c), t => BattleAction.Skill(c, s, t), () => ShowSkills(c)); break;
                 default: Choose(BattleAction.Skill(c, s, s.target == TargetType.Self ? c : null)); break;
             }
@@ -1868,7 +2005,7 @@ namespace Obscure
             m.onBack = () => ShowActions(c);
         }
 
-        void ChooseTarget(IEnumerable<Combatant> candidates, Func<Combatant, BattleAction> make, Action back)
+        void ChooseTarget(IEnumerable<Combatant> candidates, Func<Combatant, BattleAction> make, Action back, Element? moveElement = null)
         {
             var list = candidates.ToList();
             if (list.Count == 0) { back(); Hint("NO VALID TARGETS"); return; } // back() refocuses and would overwrite the hint
@@ -1880,13 +2017,15 @@ namespace Obscure
                 var h = huds[cand];
                 bool valid = Battle.Validate(make(cand)) == null;
                 string brk = cand.IsEnemy && cand.HasBreakGauge ? $" SHIELD:{cand.CurrentBreakGauge}/{cand.MaxBreakGauge}" : "";
+                string effTag = cand.IsEnemy && moveElement.HasValue ? AnalysisInspector.TargetPickerTag(Battle, cand, moveElement.Value) : "";
                 string tip = cand.Alive
-                    ? $"{cand.name.ToUpperInvariant()} {cand.unit.hp}/{cand.Stats.maxHp}{brk} " + (cand.IsEnemy ? cand.Affinities.Describe() : cand.StatusTags)
+                    ? $"{cand.name.ToUpperInvariant()} {cand.unit.hp}/{cand.Stats.maxHp}{brk} " + (cand.IsEnemy ? AnalysisInspector.DescribeKnownEnemyAffinities(Battle, cand) : cand.StatusTags)
                     : $"{cand.name.ToUpperInvariant()} - FALLEN (DEAD)";
 
-                // Add target row in command menu
+                // Add target row in command menu (with Codex-known effectiveness tag when targeting enemies with a damaging move)
                 var activeStatuses = CollectActiveStatuses(cand);
-                var btn = FigmaUi.CreateButton(cand.name.ToUpperInvariant(), "button-slab", null);
+                string btnLabel = string.IsNullOrEmpty(effTag) ? cand.name.ToUpperInvariant() : $"{cand.name.ToUpperInvariant()}  [{effTag}]";
+                var btn = FigmaUi.CreateButton(btnLabel, "button-slab", null);
                 btn.style.width = Length.Percent(100);
                 btn.style.height = 46;
                 btn.style.marginBottom = 6;
@@ -1935,7 +2074,193 @@ namespace Obscure
                 item.visual(false);
             }
             int start = DefaultTargetIndex(list, i => Battle.Validate(make(list[i])) == null);
+            Option(m, "ANALYSIS", () => OpenAnalysis(() => ChooseTarget(list, make, back, moveElement)),
+                enabled: true, tooltip: "INSPECT ENEMIES & ALLIES WITHOUT SPENDING YOUR TURN.", costType: "COST: FREE", target: "ALL UNITS", rawTitle: "ANALYSIS");
             if (start >= 0) m.Focus(start, false, true);
+        }
+
+        // ---- ANALYSIS Overlay & Codex Reveal Toast (Felna_Analysis_System_Spec_v1.md Parts A-D) ----
+        VisualElement analysisOverlay;
+        ScrollView analysisScroll;
+        VisualElement codexToastEl;
+        Coroutine codexToastRoutine;
+        bool analysisOnAllies;
+        int analysisUnitIdx;
+        Action analysisOnClose;
+
+        void ShowCodexToast(string message)
+        {
+            if (screenRoot == null || string.IsNullOrEmpty(message)) return;
+            if (codexToastEl != null) { codexToastEl.RemoveFromHierarchy(); codexToastEl = null; }
+            if (codexToastRoutine != null) { StopCoroutine(codexToastRoutine); codexToastRoutine = null; }
+            codexToastEl = new VisualElement
+            {
+                name = "CodexToast",
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    position = Position.Absolute,
+                    top = 56, left = Length.Percent(25), width = Length.Percent(50),
+                    paddingTop = 6, paddingBottom = 6, paddingLeft = 14, paddingRight = 14,
+                    backgroundColor = Palette.Ink1,
+                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                    borderTopColor = Palette.Gold2, borderBottomColor = Palette.Gold2,
+                    borderLeftColor = Palette.Gold2, borderRightColor = Palette.Gold2,
+                    alignItems = UnityEngine.UIElements.Align.Center,
+                }
+            };
+            codexToastEl.Add(new UiLabel(message.ToUpperInvariant())
+            {
+                style = { fontSize = 13, color = Palette.Gold1, unityTextAlign = TextAnchor.MiddleCenter }
+            });
+            screenRoot.Add(codexToastEl);
+            codexToastRoutine = StartCoroutine(HideCodexToastAfter(2.6f));
+        }
+
+        IEnumerator HideCodexToastAfter(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            if (codexToastEl != null) { codexToastEl.RemoveFromHierarchy(); codexToastEl = null; }
+            codexToastRoutine = null;
+        }
+
+        void OpenAnalysis(Action onClose)
+        {
+            if (Battle == null || screenRoot == null) return;
+            analysisOnClose = onClose;
+            analysisOnAllies = false;
+            analysisUnitIdx = 0;
+            ClearPhase();
+            RenderAnalysisOverlay();
+        }
+
+        void CloseAnalysis()
+        {
+            if (analysisOverlay != null) { analysisOverlay.RemoveFromHierarchy(); analysisOverlay = null; }
+            var resume = analysisOnClose;
+            analysisOnClose = null;
+            resume?.Invoke();
+        }
+
+        void RenderAnalysisOverlay()
+        {
+            if (analysisOverlay != null) analysisOverlay.RemoveFromHierarchy();
+            analysisOverlay = new VisualElement { name = "AnalysisOverlay" };
+            analysisOverlay.AddToClassList("uitk-modal-backdrop");
+
+            var panel = new VisualElement();
+            panel.AddToClassList("uitk-modal-panel");
+            panel.style.width = 760;
+            panel.style.maxHeight = 600;
+            panel.style.paddingTop = 14; panel.style.paddingBottom = 14;
+            panel.style.paddingLeft = 18; panel.style.paddingRight = 18;
+
+            // Header: title + ENEMIES / ALLIES tabs + CLOSE
+            var header = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8 } };
+            header.Add(new UiLabel("ANALYSIS — FREE INSPECTION") { style = { fontSize = 20, color = Palette.Gold1 } });
+            var tabRow = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+            var enemiesBtn = FigmaUi.CreateButton("ENEMIES", analysisOnAllies ? "button-slab" : "button-primary", 110f);
+            enemiesBtn.style.height = 30; enemiesBtn.style.marginRight = 6;
+            enemiesBtn.RegisterCallback<ClickEvent>(_ => { analysisOnAllies = false; analysisUnitIdx = 0; RenderAnalysisOverlay(); });
+            var alliesBtn = FigmaUi.CreateButton("ALLIES", analysisOnAllies ? "button-primary" : "button-slab", 110f);
+            alliesBtn.style.height = 30; alliesBtn.style.marginRight = 6;
+            alliesBtn.RegisterCallback<ClickEvent>(_ => { analysisOnAllies = true; analysisUnitIdx = 0; RenderAnalysisOverlay(); });
+            var closeBtn = FigmaUi.CreateButton("CLOSE", "button-slab", 90f);
+            closeBtn.style.height = 30;
+            closeBtn.RegisterCallback<ClickEvent>(_ => CloseAnalysis());
+            tabRow.Add(enemiesBtn); tabRow.Add(alliesBtn); tabRow.Add(closeBtn);
+            header.Add(tabRow);
+            panel.Add(header);
+
+            var units = (analysisOnAllies ? Battle.Party : Battle.Enemies).Where(u => u != null && u.Alive).ToList();
+            if (units.Count == 0) units = (analysisOnAllies ? Battle.Party : Battle.Enemies).Where(u => u != null).ToList();
+            if (units.Count > 0) analysisUnitIdx = ((analysisUnitIdx % units.Count) + units.Count) % units.Count;
+
+            // Unit cycle bar
+            var cycleBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8 } };
+            var prevBtn = FigmaUi.CreateButton("< PREV", "button-slab", 88f);
+            prevBtn.style.height = 28;
+            prevBtn.RegisterCallback<ClickEvent>(_ => { if (units.Count > 1) { analysisUnitIdx = (analysisUnitIdx - 1 + units.Count) % units.Count; RenderAnalysisOverlay(); } });
+            var nextBtn = FigmaUi.CreateButton("NEXT >", "button-slab", 88f);
+            nextBtn.style.height = 28;
+            nextBtn.RegisterCallback<ClickEvent>(_ => { if (units.Count > 1) { analysisUnitIdx = (analysisUnitIdx + 1) % units.Count; RenderAnalysisOverlay(); } });
+            string unitTitle = units.Count > 0 ? $"{units[analysisUnitIdx].name.ToUpperInvariant()} ({analysisUnitIdx + 1}/{units.Count})" : "NONE";
+            cycleBar.Add(prevBtn);
+            cycleBar.Add(new UiLabel(unitTitle) { style = { fontSize = 16, color = Palette.Gold1 } });
+            cycleBar.Add(nextBtn);
+            panel.Add(cycleBar);
+
+            var scroll = FigmaUi.CreateVerticalScrollView();
+            analysisScroll = scroll;
+            scroll.style.flexGrow = 1;
+            scroll.style.maxHeight = 460;
+
+            void Section(string heading, IEnumerable<string> lines, Color? headingColor = null)
+            {
+                scroll.Add(new UiLabel(heading) { style = { fontSize = 13, color = headingColor ?? Palette.Gold2, marginTop = 8, marginBottom = 2 } });
+                foreach (var line in lines)
+                    scroll.Add(new UiLabel(line) { style = { fontSize = 12, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 1 } });
+            }
+
+            if (units.Count > 0)
+            {
+                var unit = units[analysisUnitIdx];
+                if (!analysisOnAllies)
+                {
+                    var ev = AnalysisInspector.BuildEnemyView(Battle, unit);
+                    if (ev.affinitiesShifted)
+                        Section("STATUS ALERT", new[] { "AFFINITIES SHIFTED — CHECK KNOWN ELEMENTS" }, Palette.Ember1);
+                    Section("IDENTITY", new[]
+                    {
+                        $"{ev.name.ToUpperInvariant()}  [{ev.tierBadge}]" + (string.IsNullOrEmpty(ev.phaseLabel) ? "" : $"  ·  {ev.phaseLabel}"),
+                        $"TYPE: {ev.family.ToUpperInvariant()}   ·   ROLE: {ev.role.ToUpperInvariant()}   ·   {ev.dungeonName.ToUpperInvariant()}",
+                    });
+                    var combatLines = new List<string> { $"HP: {ev.hp}/{ev.maxHp}   ·   BREAK SHIELD: {ev.breakCurrent}/{ev.breakMax}" };
+                    if (!string.IsNullOrEmpty(ev.telegraphedIntent)) combatLines.Add($"INTENT: {ev.telegraphedIntent}");
+                    Section("COMBAT READOUT", combatLines);
+                    Section("ELEMENTAL AFFINITIES (CODEX)", ev.elements.Select(r => $"{r.elementShort} ({r.element.ToString().ToUpperInvariant()}):  {r.label}"));
+                    Section("STATUS RESISTANCE (CODEX TIER)", ev.statusResistances.Select(r => $"{r.statusName.ToUpperInvariant()}:  {r.label}"));
+                    Section("ACTIVE EFFECTS", ev.activeEffects.Count > 0
+                        ? ev.activeEffects.Select(a => a.remainingTurns > 0 ? $"{a.label} ({a.remainingTurns}T)" : a.label)
+                        : new[] { "NONE" });
+                }
+                else
+                {
+                    var av = AnalysisInspector.BuildAllyView(unit);
+                    Section("RESOURCES", new[]
+                    {
+                        $"HP: {av.hp}/{av.maxHp}   ·   MP: {av.mp}/{av.maxMp}   ·   POISE: {av.poiseCurrent}/{av.poiseMax}",
+                        av.shield > 0 ? $"SHIELD: {av.shield} ({string.Join(", ", av.shieldSources)})" : "SHIELD: 0",
+                    });
+                    Section("ATTRIBUTES", new[]
+                    {
+                        $"STR {av.str}  ·  DEX (AGI) {av.dex}  ·  VIT {av.vit}  ·  INT {av.intel}  ·  WIS {av.wis}  ·  CHA {av.cha}",
+                    });
+                    Section("DERIVED STATS", new[]
+                    {
+                        $"ATK {av.atk}  ·  MATK {av.matk}  ·  DEF {av.def}  ·  MDEF {av.mdef}  ·  SPD {av.spd}",
+                        $"CRIT {av.critChancePct:0.#}% (x{av.critDamagePct / 100f:0.00})  ·  BLOCK {av.blockPower}  ·  STAGGER RES {av.staggerResistance}  ·  QTE BONUS +{av.qteTimingBonusPct:0.#}%",
+                    });
+                    Section("ELEMENTAL AFFINITIES", av.elements.Select(r => $"{r.elementShort} ({r.element.ToString().ToUpperInvariant()}):  {r.label}"));
+                    Section($"STATUS RESISTANCE (UNIVERSAL {av.universalStatusResistPct:0}%)", av.statusResistances.Select(r => $"{r.statusName.ToUpperInvariant()}:  {r.label}"));
+                    Section("ACTIVE STATUSES / BUFFS / DEBUFFS", av.activeStatuses.Count > 0
+                        ? av.activeStatuses.Select(a => $"{a.label} ({a.remainingTurns}T)")
+                        : new[] { "NONE" });
+                    Section("DEFENSIVE EFFECTS", av.defensiveEffects.Count > 0
+                        ? av.defensiveEffects.Select(a => a.remainingTurns > 0 ? $"{a.label} ({a.remainingTurns}T)" : a.label)
+                        : new[] { "NONE" });
+                }
+            }
+
+            panel.Add(scroll);
+            analysisOverlay.Add(panel);
+            screenRoot.Add(analysisOverlay);
+
+            var m = phaseGo.AddComponent<UitkMenu>();
+            m.AttachRoot(analysisOverlay);
+            m.onBack = CloseAnalysis;
+            m.Add(closeBtn, "CLOSE", CloseAnalysis);
+            Hint("ANALYSIS · LEFT/RIGHT CYCLE UNIT · CLICK ENEMIES/ALLIES TABS · ESC TO RETURN");
         }
 
         // Enemies/fallen: first valid in order. Living allies: the most injured (lowest HP %), so heals and potions

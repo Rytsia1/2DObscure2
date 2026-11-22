@@ -313,8 +313,8 @@ namespace Obscure
                     for (int i = 0; i < hits.Count; i++)
                     {
                         var h = hits[i];
-                        if (h.heal || h.target == null || !h.target.IsEnemy) continue;
-                        dmg += Math.Max(0, h.amount);
+                        if ((h.heal && !h.drained) || h.target == null || !h.target.IsEnemy) continue;
+                        if (!h.drained) dmg += Math.Max(0, h.amount);
                         if (h.target.Stats.maxHp > maxTargetHp) maxTargetHp = h.target.Stats.maxHp;
                         if (primaryEnemyHit == null) primaryEnemyHit = h.target;
                         if (h.critical) anyCrit = true;
@@ -372,11 +372,11 @@ namespace Obscure
                 for (int i = 0; i < hits.Count; i++)
                 {
                     var h = hits[i];
-                    if (h.heal || h.target == null || !h.target.IsPlayer) continue;
-                    totalDmg += Math.Max(0, h.amount);
+                    if ((h.heal && !h.drained) || h.target == null || !h.target.IsPlayer) continue;
+                    if (!h.drained) totalDmg += Math.Max(0, h.amount);
                     totalBreak += Math.Max(0, h.breakAmount);
                     seenEffectiveness[(h.target, mv.element)] = h.effect;
-                    if (h.effect == Effectiveness.Resist || h.effect == Effectiveness.Immune)
+                    if (h.effect == Effectiveness.Resist || h.effect == Effectiveness.Immune || h.effect == Effectiveness.Drain || h.effect == Effectiveness.Reflect)
                         sawIneffectiveAffinity = true;
                 }
             }

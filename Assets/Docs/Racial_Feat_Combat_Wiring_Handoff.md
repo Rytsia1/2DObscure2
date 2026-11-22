@@ -75,10 +75,10 @@
    - **Code:** `FeyStepCooldown = 4`, decremented at the *start of the next* turn. So the feat is usable again on turn T+4, after only 3 blocked turns. Iron Resolve (3) and Ocean's Embrace (4) have the same problem.
    - **Fix:** set N+1 on activation, or decrement at the end of the turn instead.
    - **Test:** activate on turn T. The feat is unavailable on T+1 through T+N and available on T+N+1.
-2. **Lightbound raises the wrong resistance.**
-   - **Code:** it adds to `ResistanceProfile.buffResistance`, which is an *elemental* resistance component (`Combat/Damage/ElementalResistance.cs`).
-   - **GDD:** +20% **Status Effect Resistance**, additive, still under the 75% cap, for 2 Liichtian turns.
-   - **Fix:** apply it to status resistance, and remove it when the effect expires (check the `LightboundTurns` expiry block in `Battle.StartTurn`).
+2. **Lightbound's resistance bonus may never be removed.** *(Corrected 2026-11-22: an earlier version of this item wrongly said Lightbound wrote to an elemental resistance.)*
+   - **Code:** it adds +0.20 to `StatusController.ResistanceProfile.buffResistance`. That **is** the status resistance profile (`Combat/Status/StatusResistanceProfile.cs`), so it targets the right resistance.
+   - **GDD:** +20% Status Effect Resistance, additive, under the 75% cap, for 2 Liichtian turns.
+   - **Verify and fix:** the +0.20 is removed when `LightboundTurns` expires (check the expiry block in `Battle.StartTurn`); the cap holds; and recasting in a later battle doesn't stack a leftover bonus.
 3. **Ocean's Embrace applies the wrong effect.**
    - **Code:** it gives the target `DefenseUp 20%`.
    - **GDD:** the target's **Defensive QTE window +10%** while the Shield is active, counted inside the +25% window cap. It ends when the Shield breaks or after 3 Merfolk turns, then heals 10% Max HP once.

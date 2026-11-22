@@ -21,7 +21,10 @@ namespace Obscure
         public AffinityType effectiveAffinity;
         public bool nullBreakApplied;
         public bool wasNullified;
+        public bool wasDrained;
+        public bool wasReflected;
         public float finalElementalResistance;
+        public float normalEquivalentDamage;
         public float unroundedDamage;
     }
 
@@ -36,6 +39,12 @@ namespace Obscure
         public float unroundedTotalDamage;
         public int finalHitDamage;
         public bool allComponentsNullified;
+        public bool anyComponentDrained;
+        public bool anyComponentReflected;
+        public float unroundedDrainedDamage;
+        public int finalDrainedAmount;
+        public float unroundedReflectedDamage;
+        public int finalReflectedAmount;
     }
 
     // Complete result of executing a single-hit or multi-hit damage calculation (Prompt Section 11 & 14).

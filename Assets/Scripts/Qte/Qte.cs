@@ -874,6 +874,8 @@ namespace Obscure
         public static Qte Defense(BattleAction a, QteAssist assist, RunState run = null, Random rng = null)
         {
             rng ??= new Random();
+            if (a.kind == ActionKind.RacialFeat) return null;
+            if (a.kind == ActionKind.Skill && a.actor != null && a.actor.IsPlayer) return null;
             var move = a.attack;
             // Stances, charge turns, summons and status-only actions have no direct damage, so no Defensive QTE (Bab 11 §2.3).
             if (a.charging || (move != null && (move.self || move.StatusOnly || move.Heals || move.Summons))) return null;
@@ -886,10 +888,11 @@ namespace Obscure
 
             var r = run ?? a.target?.run;
             float statTimingBonus = a.target != null ? a.target.unit.Derived.QteTimingBonusFraction : 0f;
+            float embraceBonus = (a.target != null && a.target.OceansEmbraceShieldActive) ? 0.10f : 0f;
             float modDelta = (a.target != null && a.target.IsPlayer && r?.ModifierManager != null)
                 ? r.ModifierManager.GetDefensiveQteWindowDelta()
                 : 0f;
-            float totalTimingBonus = Math.Clamp(statTimingBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
+            float totalTimingBonus = Math.Clamp(statTimingBonus + embraceBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             var tier = a.actor.enemy?.tier ?? Tier.Normal;
             bool isEnhanced = a.actor.enemy != null && a.actor.enemy.isEnhanced;
             bool reduceDistortions = Game.I?.Settings?.reduceQteDistortions ?? false;

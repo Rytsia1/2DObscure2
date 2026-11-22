@@ -2,7 +2,7 @@ using System;
 
 namespace Obscure
 {
-    public enum ActionKind { Attack, Skill, Item, Guard }
+    public enum ActionKind { Attack, Skill, Item, Guard, RacialFeat }
 
     public class BattleAction
     {
@@ -19,6 +19,7 @@ namespace Obscure
         public static BattleAction Guard(Combatant actor) => new BattleAction { actor = actor, kind = ActionKind.Guard };
         public static BattleAction Skill(Combatant actor, SkillDef skill, Combatant target = null) => new BattleAction { actor = actor, kind = ActionKind.Skill, skill = skill, target = target };
         public static BattleAction Item(Combatant actor, ItemDef item, Combatant target) => new BattleAction { actor = actor, kind = ActionKind.Item, item = item, target = target };
+        public static BattleAction RacialFeat(Combatant actor, Combatant target = null) => new BattleAction { actor = actor, kind = ActionKind.RacialFeat, target = target };
     }
 
     // One effect landing on one combatant; the UI turns these into numbers and flashes.
@@ -28,6 +29,10 @@ namespace Obscure
         public int amount;
         public int breakAmount;
         public bool heal, killed, blocked, brokeTarget, critical, transformed;
+        public bool drained, reflected, concealedPing;
+        public int reflectedAmount;
+        public Combatant reflectedTarget;
+        public Element element;
         public Effectiveness effect;
     }
 
@@ -101,7 +106,7 @@ namespace Obscure
         // GDD Bab 12: Offensive QTE multiplier (Perfect 1.5x, Good 1.0x, Poor 0.5x) also scales Break Power!
         public static int BreakDamage(Combatant a, SkillDef skill = null, Effectiveness effect = Effectiveness.Neutral, QteResult qteResult = QteResult.Good)
         {
-            if (effect == Effectiveness.Immune) return 0;
+            if (effect == Effectiveness.Immune || effect == Effectiveness.Drain || effect == Effectiveness.Reflect) return 0;
             bool isMagic = skill != null && skill.kind == SkillKind.Magic;
             int baseBreak = isMagic ? a.MagicBreak : a.PhysicalBreak;
             int rank = (skill != null && a?.unit != null) ? Math.Max(1, a.unit.skillLoadout.GetRank(skill.id)) : 1;

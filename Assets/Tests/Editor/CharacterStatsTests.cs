@@ -752,13 +752,12 @@ namespace Obscure.Tests
             session.SelectClass("fighter");
             session.PointBuy.SetAllOrThrow(new AbilityScores(15, 12, 15, 8, 10, 11));
             var dragonborn = new Combatant(new Unit(session.Confirm(null, "dragon_fighter")), Side.Party, 0, "Dragonborn", "DRG");
-            int baseAtk = dragonborn.Atk;
+            int baseBreak = dragonborn.PhysicalBreak;
             Assert.IsTrue(dragonborn.ActivateDraconicOverdrive());
-            Assert.Greater(dragonborn.Atk, baseAtk, "Draconic Overdrive boosts power");
-            dragonborn.statuses.RemoveAll(s => s.id == StatusId.AttackUp);
+            Assert.Greater(dragonborn.PhysicalBreak, baseBreak, "Draconic Overdrive boosts Break Power");
             dragonborn.TriggerDraconicExhaustion();
             Assert.IsTrue(dragonborn.Has(StatusId.Exhausted), "Applies Exhausted afterward");
-            Assert.Less(dragonborn.Atk, baseAtk, "Exhausted reduces power");
+            Assert.Less(dragonborn.PhysicalBreak, baseBreak, "Exhausted reduces Break Power");
 
             // 3. Merfolk — Ocean's Embrace: grants shield and protection to an ally
             session.CreateNewCharacter();
@@ -769,7 +768,8 @@ namespace Obscure.Tests
             int shieldBefore = dragonborn.unit.shield;
             Assert.IsTrue(merfolk.ActivateOceansEmbrace(dragonborn));
             Assert.Greater(dragonborn.unit.shield, shieldBefore);
-            Assert.IsTrue(dragonborn.Has(StatusId.DefenseUp));
+            Assert.IsTrue(dragonborn.OceansEmbraceShieldActive);
+            Assert.IsFalse(dragonborn.Has(StatusId.DefenseUp));
         }
 
         // =====================================================================
@@ -1427,7 +1427,7 @@ namespace Obscure.Tests
 
             Assert.IsTrue(elf.ActivateFeyStep());
             Assert.IsTrue(elf.IsPhased);
-            Assert.AreEqual(4, elf.FeyStepCooldown);
+            Assert.AreEqual(5, elf.FeyStepCooldown);
             Assert.IsFalse(elf.ActivateFeyStep(), "Cannot activate during cooldown");
 
             var dwarfDef = new CharacterDef { id = "dw", name = "Dwarf", role = "Fighter", raceId = "dwarf", classId = "fighter" };
@@ -1436,7 +1436,7 @@ namespace Obscure.Tests
 
             Assert.IsTrue(dwarf.ActivateIronResolve());
             Assert.IsTrue(dwarf.IronResolveActive);
-            Assert.AreEqual(3, dwarf.IronResolveCooldown);
+            Assert.AreEqual(4, dwarf.IronResolveCooldown);
             Assert.IsFalse(dwarf.ActivateIronResolve(), "Cannot activate during cooldown");
         }
 
@@ -1465,7 +1465,7 @@ namespace Obscure.Tests
             Assert.IsTrue(merfolk.ActivateOceansEmbrace(ally));
             Assert.Greater(ally.unit.shield, shieldBefore, "Ocean's Embrace grants 25% Max HP shield");
             Assert.IsTrue(ally.OceansEmbraceShieldActive);
-            Assert.AreEqual(4, merfolk.OceansEmbraceCooldown);
+            Assert.AreEqual(5, merfolk.OceansEmbraceCooldown);
         }
 
         [Test]

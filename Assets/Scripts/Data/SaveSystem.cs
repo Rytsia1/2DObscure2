@@ -100,6 +100,9 @@ namespace Obscure
         // Hub State
         public ShopItemSaveData[] hubArmoryStock = Array.Empty<ShopItemSaveData>();
         public ConsumableStackSaveData[] hubShopStock = Array.Empty<ConsumableStackSaveData>(); // limited Hub Shop items left
+
+        // Permanent Per-Save-Slot Enemy Analysis Codex (Felna_Analysis_System_Spec_v1.md Part D)
+        public CodexSaveData codex = new CodexSaveData();
     }
 
     [Serializable]
@@ -362,7 +365,8 @@ namespace Obscure
                 hubArmoryStock = run.CurrentShop != null && run.CurrentShop.items != null
                     ? run.CurrentShop.items.Select(i => i.ToSaveData()).ToArray()
                     : Array.Empty<ShopItemSaveData>(),
-                hubShopStock = run.HubShopStock.Select(kv => new ConsumableStackSaveData { itemId = kv.Key, count = kv.Value }).ToArray()
+                hubShopStock = run.HubShopStock.Select(kv => new ConsumableStackSaveData { itemId = kv.Key, count = kv.Value }).ToArray(),
+                codex = run.Codex != null ? run.Codex.ToSaveData() : new CodexSaveData()
             };
         }
 
@@ -388,7 +392,8 @@ namespace Obscure
                 inventoryKeyItems = Array.Empty<string>(),
                 relics = Array.Empty<string>(),
                 relicInstances = Array.Empty<RelicInstanceSaveData>(),
-                hubArmoryStock = Array.Empty<ShopItemSaveData>()
+                hubArmoryStock = Array.Empty<ShopItemSaveData>(),
+                codex = new CodexSaveData()
             };
         }
 
@@ -409,10 +414,26 @@ namespace Obscure
             activeCommittedSnapshot.nextDungeonAct = Math.Min(8, run.Act + 1);
         }
 
+        // Persists only the Codex into the active committed snapshot (called at the end of every battle,
+        // victory or defeat, so knowledge from a lost run is preserved in the save slot; Spec Part D).
+        public static void CommitCodexOnly(RunState run)
+        {
+            if (run == null || run.Codex == null) return;
+            if (activeCommittedSnapshot != null)
+            {
+                var merged = EnemyCodex.FromSaveData(activeCommittedSnapshot.codex);
+                merged.MergeFrom(run.Codex);
+                activeCommittedSnapshot.codex = merged.ToSaveData();
+                run.Codex.MergeFrom(merged);
+            }
+        }
+
         // Section 3.2 & 5.4 / 5.5: Discards uncommitted current-dungeon progress and restores committed baseline
         public static void RollbackUncommitted(RunState run)
         {
             if (run == null) return;
+            // Codex knowledge persists across runs and defeats within the save slot (Spec Part D).
+            CommitCodexOnly(run);
             if (activeCommittedSnapshot == null)
             {
                 run.Gold = 0;

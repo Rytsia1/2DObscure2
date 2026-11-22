@@ -352,7 +352,6 @@ namespace Obscure
                     new HitCue(QteVariant.Roll, DodgeDir.Up),
                     new HitCue(QteVariant.None, DodgeDir.Down),
                 },
-                feintHit = 1,
                 remixes = new[] { RemixKind.Mirror },
             });
             SetMotif("royal_ossuary_knight", "Graveward Charge", new QteMotif
@@ -383,6 +382,118 @@ namespace Obscure
                     remixes = new[] { RemixKind.Mirror, RemixKind.Upgrade },
                 });
             }
+
+            // Authored Dungeon 1 affinities, concealed boss affinities, and per-status resistances
+            // (Felna_Analysis_System_Spec_v1.md Part F; adjusted per Stage 3 coverage audit against Database.Skills
+            // so every weakness is dealable by >= 2 playable classes: Physical, Fire, Dark).
+            void SetAnalysisProfile(
+                string enemyId,
+                Element[] weak = null,
+                Element[] resist = null,
+                Element[] immune = null,
+                Element[] drain = null,
+                Element[] reflect = null,
+                Element[] concealed = null,
+                Dictionary<StatusId, float> statusResist = null,
+                StatusId[] statusImmune = null)
+            {
+                var def = Array.Find(Enemies, e => e.id == enemyId);
+                if (def == null) return;
+                def.affinities = new Affinities
+                {
+                    weak = weak ?? Array.Empty<Element>(),
+                    resist = resist ?? Array.Empty<Element>(),
+                    immune = immune ?? Array.Empty<Element>(),
+                    drain = drain ?? Array.Empty<Element>(),
+                    reflect = reflect ?? Array.Empty<Element>(),
+                };
+                def.affinityProfile = EnemyAffinityProfile.FromLegacyAffinities(def.affinities);
+                def.concealedAffinities = concealed ?? Array.Empty<Element>();
+                def.statusResist = statusResist;
+                def.statusImmune = statusImmune ?? Array.Empty<StatusId>();
+            }
+
+            SetAnalysisProfile("hollow_squire",
+                weak: new[] { Element.Fire },
+                resist: new[] { Element.Dark },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Fear] = 0.25f, [StatusId.Bleed] = -0.20f });
+
+            SetAnalysisProfile("gravebound_archer",
+                weak: new[] { Element.Fire, Element.Physical },
+                resist: new[] { Element.Dark },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Poison] = 0.25f });
+
+            SetAnalysisProfile("cinder_wisp",
+                weak: new[] { Element.Physical, Element.Dark },
+                resist: new[] { Element.Fire },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Freeze] = -0.20f },
+                statusImmune: new[] { StatusId.Burn });
+
+            SetAnalysisProfile("soulbound_hound",
+                weak: new[] { Element.Fire },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Fear] = 0.25f });
+
+            SetAnalysisProfile("possessed_royal_guard",
+                weak: new[] { Element.Fire },
+                resist: new[] { Element.Physical },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Stun] = 0.25f });
+
+            SetAnalysisProfile("crypt_leech",
+                weak: new[] { Element.Fire },
+                resist: new[] { Element.Water },
+                statusImmune: new[] { StatusId.Poison });
+
+            SetAnalysisProfile("forgotten_militia",
+                weak: new[] { Element.Fire, Element.Physical },
+                resist: new[] { Element.Dark },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Bleed] = -0.20f });
+
+            SetAnalysisProfile("soul_reaper",
+                weak: new[] { Element.Fire },
+                drain: new[] { Element.Dark },
+                statusImmune: new[] { StatusId.Fear });
+
+            SetAnalysisProfile("royal_ossuary_knight",
+                weak: new[] { Element.Fire, Element.Dark },
+                resist: new[] { Element.Physical },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Stun] = 0.25f });
+
+            SetAnalysisProfile("reliquary_confessor",
+                weak: new[] { Element.Dark },
+                drain: new[] { Element.Holy },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Silence] = 0.25f });
+
+            SetAnalysisProfile("graveglass_arcanist",
+                weak: new[] { Element.Physical, Element.Dark },
+                reflect: new[] { Element.Arcane },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Silence] = -0.20f });
+
+            SetAnalysisProfile("crownless_duelist",
+                weak: new[] { Element.Fire, Element.Dark },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Bleed] = 0.25f });
+
+            SetAnalysisProfile("tombstone_colossus",
+                weak: new[] { Element.Fire, Element.Dark },
+                resist: new[] { Element.Physical, Element.Earth },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Stun] = 0.25f },
+                statusImmune: new[] { StatusId.Fear });
+
+            SetAnalysisProfile("mourning_bell_wraith",
+                weak: new[] { Element.Physical, Element.Fire },
+                resist: new[] { Element.Dark },
+                statusImmune: new[] { StatusId.Fear });
+
+            SetAnalysisProfile("zoroa_p1",
+                weak: new[] { Element.Fire },
+                resist: new[] { Element.Physical },
+                drain: new[] { Element.Dark },
+                concealed: new[] { Element.Dark });
+
+            SetAnalysisProfile("zoroa_p2",
+                weak: new[] { Element.Fire, Element.Physical },
+                resist: new[] { Element.Dark },
+                reflect: new[] { Element.Arcane },
+                concealed: new[] { Element.Arcane });
 
             // Build and link the 3 Dungeon 1 Enhanced Common Variant pilot families (Variant Spec §12.3, §15.1; Transformation Spec §3.1).
             EnhancedVariants = new[]
@@ -505,6 +616,9 @@ namespace Obscure
                 role = baseDef.role,
                 affinities = baseDef.affinities,
                 affinityProfile = baseDef.affinityProfile != null ? baseDef.affinityProfile.Clone() : null,
+                statusResist = baseDef.statusResist != null ? new Dictionary<StatusId, float>(baseDef.statusResist) : null,
+                statusImmune = baseDef.statusImmune != null ? (StatusId[])baseDef.statusImmune.Clone() : Array.Empty<StatusId>(),
+                concealedAffinities = baseDef.concealedAffinities != null ? (Element[])baseDef.concealedAffinities.Clone() : Array.Empty<Element>(),
                 abilityScores = baseDef.abilityScores,
                 stats = baseDef.stats,
                 magicDef = baseDef.magicDef,

@@ -4,13 +4,15 @@ using UnityEngine;
 
 namespace Obscure
 {
-    // Enemy Affinity states (Prompt Section 8.1 & GDD Section 3.1).
+    // Enemy Affinity states (Prompt Section 8.1, GDD Section 3.1, Analysis System Spec Part E).
     public enum AffinityType
     {
         Normal = 0,        // 1.0x (0%)
         Weakness = 1,      // 1.5x (+50%)
         Resistant = 2,     // 0.5x (-50%)
-        Nullification = 3  // 0.0x (0 damage)
+        Nullification = 3, // 0.0x (0 damage)
+        Drain = 4,         // 0 damage; heals target by NORMAL-equivalent damage capped at missing HP
+        Reflect = 5        // 0 damage to target; reflects NORMAL-equivalent damage to attacker (capped at ReflectCapPct)
     }
 
     public static class AffinityTypes
@@ -25,6 +27,8 @@ namespace Obscure
             AffinityType.Weakness => WeaknessMultiplier,
             AffinityType.Resistant => ResistantMultiplier,
             AffinityType.Nullification => NullificationMultiplier,
+            AffinityType.Drain => 0f,
+            AffinityType.Reflect => 0f,
             _ => NormalMultiplier
         };
     }
@@ -47,11 +51,16 @@ namespace Obscure
     public class EnemyAffinityProfile
     {
         public AffinityType physicalAffinity = AffinityType.Normal;
+        public AffinityType arcaneAffinity = AffinityType.Normal;
         [SerializeField] private List<EnemyAffinityEntry> elementalAffinities = new List<EnemyAffinityEntry>();
 
         public AffinityType GetRawPhysicalAffinity() => physicalAffinity;
 
         public void SetPhysicalAffinity(AffinityType affinity) => physicalAffinity = affinity;
+
+        public AffinityType GetRawArcaneAffinity() => arcaneAffinity;
+
+        public void SetArcaneAffinity(AffinityType affinity) => arcaneAffinity = affinity;
 
         public AffinityType GetRawElementalAffinity(ElementType element)
         {
@@ -116,7 +125,8 @@ namespace Obscure
         {
             var copy = new EnemyAffinityProfile
             {
-                physicalAffinity = physicalAffinity
+                physicalAffinity = physicalAffinity,
+                arcaneAffinity = arcaneAffinity
             };
             copy.elementalAffinities.AddRange(elementalAffinities);
             return copy;
@@ -138,6 +148,10 @@ namespace Obscure
                     {
                         profile.SetPhysicalAffinity(affinity);
                     }
+                    else if (el == Element.Arcane)
+                    {
+                        profile.SetArcaneAffinity(affinity);
+                    }
                     else
                     {
                         var mapped = ElementTypes.FromLegacyElement(el);
@@ -150,6 +164,8 @@ namespace Obscure
             ApplyList(legacy.resist, AffinityType.Resistant);
             ApplyList(legacy.weak, AffinityType.Weakness);
             ApplyList(legacy.immune, AffinityType.Nullification);
+            ApplyList(legacy.drain, AffinityType.Drain);
+            ApplyList(legacy.reflect, AffinityType.Reflect);
             return profile;
         }
     }

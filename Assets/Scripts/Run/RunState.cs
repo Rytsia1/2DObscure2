@@ -737,6 +737,16 @@ namespace Obscure
         public int DragonbornShopDiscountUsesRemaining { get; private set; } = 1;
         public int ElfWeaknessRevealUsesRemaining { get; private set; } = 1;
 
+        // Per-save-slot progressive enemy discovery Codex (Felna_Analysis_System_Spec_v1.md Part D)
+        public EnemyCodex Codex { get; private set; } = new EnemyCodex();
+
+        public bool TryConsumeElfWeaknessReveal()
+        {
+            if (!HasRace("elf") || ElfWeaknessRevealUsesRemaining <= 0) return false;
+            ElfWeaknessRevealUsesRemaining--;
+            return true;
+        }
+
         public void ResetDungeonUtilityCharges()
         {
             HumanAdaptabilityUsesRemaining = 1;
@@ -923,6 +933,7 @@ namespace Obscure
             var enc = CurrentEncounter;
             if (enc == null || !Current.IsCombat || Cleared.Contains(Current.id) || PendingReward != null || Status != RunStatus.Active)
                 throw new InvalidOperationException("No combat to win");
+            PersistenceCommitHandler.CommitCodexOnly(this);
             if (IsPrologue) { WinPrologueCombat(); return; }
             bool isFinalBoss = IsAtFinalDungeonBoss;
             bool isStageBoss = IsAtStageBoss;
@@ -1006,6 +1017,7 @@ namespace Obscure
         public void LoseCombat()
         {
             if (Status != RunStatus.Active) return;
+            PersistenceCommitHandler.CommitCodexOnly(this);
             if (IsPrologue) { RetryPrologueNode(); return; }
             SpendRetry();
             Status = RunStatus.Defeat;
@@ -1858,6 +1870,7 @@ namespace Obscure
         public void RestoreFromCampaignSave(CampaignSaveData data)
         {
             if (data == null) return;
+            Codex = EnemyCodex.FromSaveData(data.codex);
             HubGold = data.hubGold;
             Gold = 0; // the committed baseline is a Hub state: no Run Gold
             RetriesLeft = data.retriesLeft;

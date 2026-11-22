@@ -17,9 +17,15 @@ namespace Obscure
         public readonly EncounterBlackboard Blackboard = new EncounterBlackboard();
         public event Action<string> Logged;
         public event Action<Combatant> BossPhaseTransitioning;
+        public event Action<Combatant> BossAffinitiesShifted;
         public event Action<Combatant> EnemyTransformed;
         public event Action<Combatant, StatusId, bool> StatusApplied;
         public event Action<Combatant, StatusId, bool> StatusResisted; // bool: immune (true) or resisted by roll (false)
+        public event Action<Combatant, CodexRevealEvent> CodexRevealed;
+
+        readonly EnemyCodex localCodex = new EnemyCodex();
+        public EnemyCodex Codex => run?.Codex ?? localCodex;
+        public bool BossJustShiftedAffinities { get; private set; }
 
         public int Round { get; private set; }
         public readonly int Dungeon; // drives enemy stat scaling (Bab 10 §7)
@@ -68,6 +74,57 @@ namespace Obscure
                     }
                 }
             }
+
+            // Elf Keen Senses (Spec Part D): once per dungeon, reveal one unknown enemy weakness at battle start.
+            if (run != null && !run.IsPrologue && run.HasRace("elf") && run.ElfWeaknessRevealUsesRemaining > 0)
+            {
+                for (int i = 0; i < Enemies.Count; i++)
+                {
+                    var en = Enemies[i];
+                    if (en?.enemy == null) continue;
+                    if (Codex.TryRevealWeaknessWithKeenSenses(en.enemy, out var ev))
+                    {
+                        run.TryConsumeElfWeaknessReveal();
+                        Say($"Keen Senses: {en.enemy.name} is WEAK to {ev.element}!");
+                        CodexRevealed?.Invoke(en, ev);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Records an elemental hit in the Codex (hero attack, skill, counter, or elemental DoT; Spec Part D).
+        public CodexRevealEvent RecordCodexElement(Combatant target, Element element)
+        {
+            if (target == null || !target.IsEnemy || target.enemy == null) return default;
+            var raw = AffinityResolver.GetRaw(target, element);
+            var ev = Codex.RecordElementHit(target.enemy, element, raw);
+            if (ev.concealedPing)
+            {
+                Say($"{target.name} reacts strangely to {element}! (?!)");
+                CodexRevealed?.Invoke(target, ev);
+            }
+            else if (ev.newlyRevealed)
+            {
+                Say($"NEW: {target.enemy.name} — {EnemyCodex.FormatEffectivenessTag(ev.effectiveness)} to {element}");
+                CodexRevealed?.Invoke(target, ev);
+            }
+            return ev;
+        }
+
+        // Records a status application attempt in the Codex (succeeded, resisted, or immune; Spec Part D).
+        public CodexRevealEvent RecordCodexStatus(Combatant target, StatusId status)
+        {
+            if (target == null || !target.IsEnemy || target.enemy == null) return default;
+            bool isBoss = target.enemy.tier == Tier.Boss;
+            var tier = target.StatusController.ResistanceProfile.GetTier(status, isBoss);
+            var ev = Codex.RecordStatusAttempt(target.enemy, status, tier);
+            if (ev.newlyRevealed)
+            {
+                Say($"NEW: {target.enemy.name} — {EnemyCodex.FormatStatusTier(ev.statusTier)} to {StatusInfo.Name(status)}");
+                CodexRevealed?.Invoke(target, ev);
+            }
+            return ev;
         }
 
         // Turn-bar tag: first 3 letters, else first 2 + a later letter (CLERIC -> CLR), else first 2 + digit. Adds the result to `used`.
@@ -242,13 +299,18 @@ namespace Obscure
             {
                 c.TriggerDraconicExhaustion();
             }
-            if (c.DraconicExhaustedTurns > 0 && --c.DraconicExhaustedTurns == 0)
+            else if (c.DraconicExhaustedTurns > 0 && --c.DraconicExhaustedTurns == 0)
             {
                 c.DamageModifiers.RemoveBySource("draconic_exhausted");
             }
             if (c.LightboundTurns > 0 && --c.LightboundTurns == 0)
             {
                 c.DamageModifiers.RemoveBySource("lightbound");
+                if (c.LightboundResistBonus > 0f)
+                {
+                    c.StatusController.ResistanceProfile.buffResistance = Math.Max(0f, c.StatusController.ResistanceProfile.buffResistance - c.LightboundResistBonus);
+                    c.LightboundResistBonus = 0f;
+                }
             }
             if (c.DeterminationTurns > 0 && --c.DeterminationTurns == 0)
             {
@@ -310,6 +372,11 @@ namespace Obscure
                     if (a.item.isRevive)
                         return (a.target != null && a.target.side == a.actor.side && !a.target.Alive) ? null : "Target is not a fallen ally.";
                     return IsAlly(a.actor, a.target) ? null : "Invalid target.";
+                case ActionKind.RacialFeat:
+                    if (!a.actor.CanUseRacialFeat(out var featReason)) return featReason;
+                    if (string.Equals(a.actor.unit?.race?.id, "merfolk", StringComparison.OrdinalIgnoreCase))
+                        return IsAlly(a.actor, a.target) ? null : "Invalid target.";
+                    return null;
             }
             return "Unknown action.";
         }
@@ -423,6 +490,7 @@ namespace Obscure
                         : $"{actor.name} uses {move.name} on {a.target.name}.");
                     var element = move?.element ?? Element.Physical;
                     var transformedInAttack = new HashSet<Combatant>();
+                    var blockedRidersInAttack = new HashSet<Combatant>();
                     for (int i = 0; i < (move?.hits ?? 1); i++)
                     {
                         var reaction = defense != null && i < defense.Count ? defense[i] : (QteResult?)null;
@@ -435,7 +503,8 @@ namespace Obscure
                             int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng, physPen);
                             var hit = Deal(actor, t, raw, element, reaction, null, heavy, attackQte);
                             if (hit.transformed) transformedInAttack.Add(t);
-                            if (!hit.transformed && i == (move?.hits ?? 1) - 1 && move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
+                            if (hit.drained || hit.reflected) blockedRidersInAttack.Add(t);
+                            if (!hit.transformed && !hit.drained && !hit.reflected && i == (move?.hits ?? 1) - 1 && move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
                             {
                                 int hitBreak = hit.breakAmount;
                                 int extraBreak = move.breakPower;
@@ -445,7 +514,7 @@ namespace Obscure
                                 hit.breakAmount += hitBreak;
                             }
                             hits.Add(hit);
-                            if (move != null && move.drain > 0f && actor.Alive)
+                            if (move != null && move.drain > 0f && actor.Alive && !hit.drained && !hit.reflected)
                             {
                                 int drained = (int)Math.Floor(hit.amount * move.drain); // from final damage actually dealt
                                 if (drained > 0) hits.Add(Heal(actor, drained));
@@ -453,7 +522,8 @@ namespace Obscure
                         }
                     }
                     // Statuses roll once per target per attack and are not blocked by a Perfect parry (Bab 11 §2.3, Bab 12 §4.3).
-                    foreach (var t in targets.Where(c => c != null && c.Alive && !transformedInAttack.Contains(c)))
+                    // Spec Part E: Drain and Reflect suppress status riders on the draining/reflecting target.
+                    foreach (var t in targets.Where(c => c != null && c.Alive && !transformedInAttack.Contains(c) && !blockedRidersInAttack.Contains(c)))
                         foreach (var ap in move?.apply ?? Array.Empty<StatusApply>()) Apply(t, ap, actor, 1f);
                     TriggerCounters(actor, targets, hits);
                     break;
@@ -501,6 +571,7 @@ namespace Obscure
                     }
 
                     var transformedInSkill = new HashSet<Combatant>();
+                    var blockedRidersInSkill = new HashSet<Combatant>();
                     foreach (var t in Targets(actor, s.target, a.target))
                     {
                         if (s.appliesNullBreak && s.nullBreakTarget.IsValid)
@@ -515,6 +586,31 @@ namespace Obscure
                             foreach (var hitRes in dmgResult.hits)
                             {
                                 if ((!t.Alive || transformedInSkill.Contains(t)) && hitRes.hitIndex > 0) break;
+
+                                var primaryComp = hitRes.componentResults.Count > 0 ? hitRes.componentResults[0] : default;
+                                Element compElem = primaryComp.damageType == DamageType.Physical
+                                    ? Element.Physical
+                                    : (primaryComp.elementType.IsValidElement() ? primaryComp.elementType.ToLegacyElement() : s.element);
+                                Effectiveness eff = AffinityResolver.ToEffectiveness(primaryComp.effectiveAffinity);
+                                var compReveal = RecordCodexElement(t, compElem);
+
+                                if (hitRes.anyComponentDrained && hitRes.finalHitDamage == 0)
+                                {
+                                    var dHit = ResolveDrain(t, hitRes.finalDrainedAmount, compElem);
+                                    dHit.concealedPing = compReveal.concealedPing;
+                                    blockedRidersInSkill.Add(t);
+                                    hits.Add(dHit);
+                                    continue;
+                                }
+                                if (hitRes.anyComponentReflected && hitRes.finalHitDamage == 0)
+                                {
+                                    var rHit = ResolveReflect(actor, t, hitRes.finalReflectedAmount, compElem);
+                                    rHit.concealedPing = compReveal.concealedPing;
+                                    blockedRidersInSkill.Add(t);
+                                    hits.Add(rHit);
+                                    continue;
+                                }
+
                                 string note = hitRes.allComponentsNullified
                                     ? " (nullified)"
                                     : (hitRes.anyComponentCriticalHit ? " (CRITICAL!)" : "");
@@ -534,16 +630,14 @@ namespace Obscure
 
                                 var hit = Damage(t, skillDmg, note);
                                 hit.critical = hitRes.anyComponentCriticalHit;
-
-                                var primaryComp = hitRes.componentResults.Count > 0 ? hitRes.componentResults[0] : default;
-                                Effectiveness eff = primaryComp.effectiveAffinity switch
-                                {
-                                    AffinityType.Weakness => Effectiveness.Weak,
-                                    AffinityType.Resistant => Effectiveness.Resist,
-                                    AffinityType.Nullification => Effectiveness.Immune,
-                                    _ => Effectiveness.Neutral
-                                };
                                 hit.effect = eff;
+                                hit.element = compElem;
+                                hit.concealedPing = compReveal.concealedPing;
+
+                                if (hitRes.anyComponentDrained && hitRes.finalDrainedAmount > 0 && t.Alive)
+                                    hits.Add(ResolveDrain(t, hitRes.finalDrainedAmount, compElem));
+                                if (hitRes.anyComponentReflected && hitRes.finalReflectedAmount > 0)
+                                    hits.Add(ResolveReflect(actor, t, hitRes.finalReflectedAmount, compElem));
 
                                 if (hit.transformed)
                                 {
@@ -585,12 +679,15 @@ namespace Obscure
                                 }
                                 if (hit.transformed)
                                     transformedInSkill.Add(t);
+                                if (hit.drained || hit.reflected)
+                                    blockedRidersInSkill.Add(t);
                             }
                         }
                         // Self-applied statuses link to the target (Interpose remembers whom it guards).
+                        // Spec Part E: Drain and Reflect suppress status riders on the draining/reflecting target.
                         foreach (var ap in s.apply ?? Array.Empty<StatusApply>())
                         {
-                            if (!ap.onSelf && transformedInSkill.Contains(t)) continue;
+                            if (!ap.onSelf && (transformedInSkill.Contains(t) || blockedRidersInSkill.Contains(t))) continue;
                             Apply(ap.onSelf ? actor : t, s.kind == SkillKind.Support ? SupportScaled(ap, actor) : ap, ap.onSelf ? t : actor, power);
                         }
                     }
@@ -645,6 +742,33 @@ namespace Obscure
                             a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + item.mana);
                             Say($"{a.target.name} recovers {a.target.unit.mp - before} MP.");
                         }
+                    }
+                    break;
+
+                case ActionKind.RacialFeat:
+                    switch (actor.unit?.race?.id)
+                    {
+                        case "elf":
+                            actor.ActivateFeyStep();
+                            Say($"{actor.name} invokes Fey Step!");
+                            break;
+                        case "dwarf":
+                            actor.ActivateIronResolve();
+                            Say($"{actor.name} invokes Iron Resolve!");
+                            break;
+                        case "dragonborn":
+                            actor.ActivateDraconicOverdrive();
+                            Say($"{actor.name} unleashes Draconic Overdrive!");
+                            break;
+                        case "liichtian":
+                            actor.ActivateLightbound(Allies(actor));
+                            Say($"{actor.name} invokes Lightbound!");
+                            break;
+                        case "merfolk":
+                            var ally = a.target ?? actor;
+                            actor.ActivateOceansEmbrace(ally);
+                            Say($"{actor.name} invokes Ocean's Embrace on {ally.name}!");
+                            break;
                     }
                     break;
             }
@@ -758,12 +882,13 @@ namespace Obscure
         {
             if (!t.Alive) return;
 
-            // Check Mental Effect immunity if boss (GDD Section 13)
+            // Check immunity (GDD Section 13 & Spec Part F)
             bool isBoss = t.enemy != null && t.enemy.tier == Tier.Boss;
             if (t.StatusController.ResistanceProfile.IsImmune(ap.id, isBoss))
             {
                 Say($"{t.name} is immune to {StatusInfo.Name(ap.id)}!");
                 StatusResisted?.Invoke(t, ap.id, true);
+                if (!StatusInfo.IsBuff(ap.id)) RecordCodexStatus(t, ap.id);
                 return;
             }
 
@@ -793,6 +918,7 @@ namespace Obscure
 
             var roll = run?.Tutorial != null && run.Tutorial.ForcesStatus(source, ap) ? new SureRandom() : Rng; // Prologue: first Dread Pulse lands
             bool applied = t.StatusController.TryApplyStatus(applyClone, source, t, out var inst, roll, 1);
+            if (!StatusInfo.IsBuff(ap.id)) RecordCodexStatus(t, ap.id);
             if (applied)
             {
                 t.AddStatus(ap.id, inst.remainingTurns, inst.magnitude, source);
@@ -801,7 +927,7 @@ namespace Obscure
             }
             else
             {
-                if (t.StatusController.ResistanceProfile.GetEffectiveResistance() > 0f)
+                if (t.StatusController.ResistanceProfile.GetEffectiveResistance(ap.id) > 0f)
                 {
                     Say($"{t.name} resists {StatusInfo.Name(ap.id)}!");
                     StatusResisted?.Invoke(t, ap.id, false);
@@ -853,13 +979,18 @@ namespace Obscure
                 Say($"{t.name} perfectly parries!");
                 return new Hit { target = t, amount = 0, blocked = true };
             }
-            var effect = t.Affinities.Against(element);
+            var effect = AffinityResolver.Get(t, element);
+            var codexEv = RecordCodexElement(t, element);
             if (effect == Effectiveness.Immune)
             {
                 Say($"{t.name} is immune to {element}!");
-                return new Hit { target = t, amount = 0, effect = effect };
+                return new Hit { target = t, amount = 0, effect = effect, element = element, concealedPing = codexEv.concealedPing };
             }
-            amount = Math.Max(1, (int)Math.Round(amount * Affinities.Multiplier(effect)));
+            bool isDrainOrReflect = effect == Effectiveness.Drain || effect == Effectiveness.Reflect;
+            if (!isDrainOrReflect)
+                amount = Math.Max(1, (int)Math.Round(amount * AffinityResolver.DamageMultiplier(effect)));
+            else
+                amount = Math.Max(1, amount);
             string note = effect == Effectiveness.Weak ? " - weakness!" : effect == Effectiveness.Resist ? " - resisted" : "";
 
             // Elf Fey Step: first attack next turn gets +20% damage (Bab 6)
@@ -963,6 +1094,20 @@ namespace Obscure
                 }
             }
 
+            // Spec Part E: Drain and Reflect resolve on NORMAL-equivalent damage with no Break, no status rider, and no QTE on reflection.
+            if (effect == Effectiveness.Drain)
+            {
+                var dHit = ResolveDrain(t, amount, element);
+                dHit.concealedPing = codexEv.concealedPing;
+                return dHit;
+            }
+            if (effect == Effectiveness.Reflect)
+            {
+                var rHit = ResolveReflect(attacker, t, amount, element);
+                rHit.concealedPing = codexEv.concealedPing;
+                return rHit;
+            }
+
             // Defensive QTE mitigation applied after damage modifiers (Bab 12 §5.1), scaled by the target's Block Power (§3.5).
             if (reaction == QteResult.Perfect || reaction == QteResult.Good)
             {
@@ -974,6 +1119,8 @@ namespace Obscure
 
             var hit = Damage(t, amount, note);
             hit.effect = effect;
+            hit.element = element;
+            hit.concealedPing = codexEv.concealedPing;
             if (hit.transformed) return hit; // Overkill and killing-blow Break are discarded on transformation (Transformation Spec §6.1)
 
             // Background Perk: Soldier (record retaliation when damaged by enemy attack)
@@ -1031,6 +1178,59 @@ namespace Obscure
             return hit;
         }
 
+        // Spec Part E — Drain: target takes 0 damage and heals by NORMAL-equivalent damage capped at missing HP. Never revives.
+        Hit ResolveDrain(Combatant target, int normalDamage, Element element)
+        {
+            if (target == null || !target.Alive)
+                return new Hit { target = target, amount = 0, effect = Effectiveness.Drain, element = element, drained = true };
+            int scaled = Math.Max(0, (int)Math.Round(normalDamage * AffinityResolver.DrainHealPct));
+            int missing = Math.Max(0, target.Stats.maxHp - target.unit.hp);
+            int healAmt = Math.Min(missing, scaled);
+            target.unit.hp += healAmt;
+            Say($"{target.name} drains {element} and heals {healAmt} HP! (DRAINED!)");
+            return new Hit { target = target, amount = healAmt, heal = true, effect = Effectiveness.Drain, element = element, drained = true };
+        }
+
+        // Spec Part E — Reflect: target takes 0 damage; attacker takes NORMAL-equivalent damage with attacker's own affinity,
+        // capped at ReflectCapPct of attacker Max HP, with no Defensive QTE, no Break/Poise, no status rider, and no re-reflection.
+        Hit ResolveReflect(Combatant attacker, Combatant reflector, int normalDamage, Element element)
+        {
+            Say($"{reflector.name} reflects {element} back at {attacker?.name ?? "attacker"}! (REFLECTED!)");
+            if (attacker == null || !attacker.Alive)
+                return new Hit { target = reflector, amount = 0, effect = Effectiveness.Reflect, element = element, reflected = true };
+
+            var selfEff = AffinityResolver.Get(attacker, element);
+            if (selfEff == Effectiveness.Immune)
+            {
+                Say($"{attacker.name} is immune to the reflected {element}!");
+                return new Hit { target = reflector, amount = 0, effect = Effectiveness.Reflect, element = element, reflected = true, reflectedTarget = attacker, reflectedAmount = 0 };
+            }
+            if (selfEff == Effectiveness.Drain)
+            {
+                int missing = Math.Max(0, attacker.Stats.maxHp - attacker.unit.hp);
+                int healAmt = Math.Min(missing, Math.Max(0, (int)Math.Round(normalDamage * AffinityResolver.DrainHealPct)));
+                attacker.unit.hp += healAmt;
+                Say($"{attacker.name} drains the reflected {element} for {healAmt} HP!");
+                return new Hit { target = reflector, amount = 0, effect = Effectiveness.Reflect, element = element, reflected = true, reflectedTarget = attacker, reflectedAmount = 0 };
+            }
+            float selfMult = selfEff == Effectiveness.Reflect ? 1f : AffinityResolver.DamageMultiplier(selfEff);
+            int scaled = Math.Max(1, (int)Math.Round(normalDamage * selfMult));
+            int cap = Math.Max(1, (int)Math.Floor(attacker.Stats.maxHp * AffinityResolver.ReflectCapPct));
+            int reflectedDmg = Math.Min(cap, scaled);
+            var refHit = Damage(attacker, reflectedDmg, " (REFLECTED!)");
+            return new Hit
+            {
+                target = reflector,
+                amount = 0,
+                effect = Effectiveness.Reflect,
+                element = element,
+                reflected = true,
+                reflectedTarget = attacker,
+                reflectedAmount = reflectedDmg,
+                killed = refHit.killed || !attacker.Alive,
+            };
+        }
+
         // Break Gauge reduction; becoming Broken interrupts a charge in progress (Bab 12 §6.5).
         void BreakHit(Combatant t, int rawBreak, Combatant attacker, ref Hit hit)
         {
@@ -1065,10 +1265,15 @@ namespace Obscure
             if (t == null || t.Alive) return false;
             if (!forced && t.enemy?.nextPhase != null && Database.Enemies.TryGetValue(t.enemy.nextPhase, out var next))
             {
+                var oldPhaseDef = t.enemy;
                 string text = t.enemy.phase2Text;
                 BossPhaseTransitioning?.Invoke(t);
                 t.AdvanceToPhase(next, Dungeon);
+                Codex.CarryOverPhaseKnowledge(oldPhaseDef, next);
+                BossJustShiftedAffinities = true;
                 Say(text ?? $"{t.name} enters phase {t.phase}!");
+                Say($"{t.name}: AFFINITIES SHIFTED!");
+                BossAffinitiesShifted?.Invoke(t);
                 return true;
             }
             if (!forced && t.IsEnemy && t.enemy != null && !string.IsNullOrEmpty(t.enemy.enhancedVariant)
