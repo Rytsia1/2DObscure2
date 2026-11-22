@@ -198,6 +198,27 @@ namespace Obscure
         public int GetIneffectiveStreak(Combatant enemy, string moveName, int targetSlot) =>
             enemy != null && !string.IsNullOrEmpty(moveName) && ineffectiveStreaks.TryGetValue((enemy, moveName, targetSlot), out int c) ? c : 0;
 
+        // Observable-only threat score for TargetRule.HighestThreat (Variant Spec §8 v1.1):
+        // derived strictly from observed impact in shared encounter memory; before any player turn, falls back to HUD offensive stats.
+        public float GetObservedThreatScore(Combatant hero, int currentRound, float decay = AiProfile.StandardDecayPerRound)
+        {
+            if (hero == null || !hero.Alive) return 0f;
+            bool anyHeroObserved = Profiles.Values.Any(p => p.observations.Count > 0 || p.totalDamageDealt > 0);
+            if (!anyHeroObserved)
+                return Math.Max(hero.Atk, hero.Magic);
+            if (!Profiles.TryGetValue(hero, out var prof))
+                return 0f;
+            float score = prof.totalDamageDealt
+                + prof.offensiveTurns * 5f
+                + prof.exploitedWeaknessEnemies.Count * 15f
+                + prof.GetConfidence(BehaviorCategory.BurstDamage, currentRound, decay) * 25f
+                + prof.GetConfidence(BehaviorCategory.ElementalSpecialist, currentRound, decay) * 20f
+                + prof.GetConfidence(BehaviorCategory.SupportDependent, currentRound, decay) * 20f
+                + prof.GetConfidence(BehaviorCategory.BreakSpecialist, currentRound, decay) * 20f
+                + prof.GetConfidence(BehaviorCategory.Aggressive, currentRound, decay) * 15f;
+            return score;
+        }
+
         // Logs an adaptation read at most once per encounter (Spec §5.7, Arch §11.5).
         public bool TryLogRead(Battle b, string readKey, string readText)
         {

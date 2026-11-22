@@ -42,6 +42,7 @@ namespace Obscure
         public bool usesStrategicObjectives;
         public bool usesSynergySetup;
         public bool usesConditionList;
+        public bool usesNextTurnResourceAwareness; // Variant Spec §7.5: Enhanced has 1-turn resource/cooldown awareness
 
         // Fixed planning order group (Spec §4.5, Architecture §13.2): 0 = Support, 1 = Controller, 2 = all other roles.
         public static int PlanningGroup(AiRole role) => role switch
@@ -64,6 +65,7 @@ namespace Obscure
             bool isBoss = tier == AiTier.Boss;
             bool elitePlus = tier == AiTier.Elite || tier == AiTier.Miniboss || tier == AiTier.Boss;
             bool minibossPlus = tier == AiTier.Miniboss || tier == AiTier.Boss;
+            bool enhancedPlus = tier != AiTier.Normal;
             return new AiProfile
             {
                 role = role,
@@ -74,6 +76,7 @@ namespace Obscure
                 usesStrategicObjectives = elitePlus,
                 usesSynergySetup = elitePlus,
                 usesConditionList = minibossPlus,
+                usesNextTurnResourceAwareness = enhancedPlus,
             };
         }
 

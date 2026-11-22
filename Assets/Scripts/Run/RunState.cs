@@ -170,6 +170,19 @@ namespace Obscure
 
             abilities.baseScores = d.abilityScores.Equals(default) ? AbilityScores.Uniform(10) : d.abilityScores;
             stats = ScaleEnemyStats(d.stats, d.tier, dungeonNumber, d.magicDef, out int mDef);
+            if (d.isEnhanced)
+            {
+                // Variant Spec §4.3: EnhancedStat = floor(NormalScaledStat * VariantModifier), applied once after Normal scaling.
+                var vm = d.statMult;
+                stats = new Stats(
+                    ScaleVariantStat(stats.maxHp, vm.Hp),
+                    ScaleVariantStat(stats.maxMp, vm.Mp),
+                    ScaleVariantStat(stats.atk, vm.Atk),
+                    ScaleVariantStat(stats.def, vm.Def),
+                    ScaleVariantStat(stats.spd, vm.Spd),
+                    ScaleVariantStat(stats.mag, vm.Matk));
+                mDef = ScaleVariantStat(mDef, vm.Mdef);
+            }
             var mods = abilities.AbilityModifiers;
             Derived = new DerivedStats
             {
@@ -223,6 +236,11 @@ namespace Obscure
 
         public static int ScaleStat(int baseValue, Tier tier, ScaledStat stat, int dungeonNumber) =>
             (int)Math.Floor(baseValue * (1m + GrowthRate(tier, stat) * Math.Max(0, dungeonNumber - 1)));
+
+        public static int ScaleVariantStat(int normalScaledValue, float variantMultiplier) =>
+            variantMultiplier <= 0f || Math.Abs(variantMultiplier - 1f) < 1e-6f
+                ? normalScaledValue
+                : (int)Math.Floor(normalScaledValue * (decimal)variantMultiplier);
 
         public static Stats ScaleEnemyStats(Stats baseStats, Tier tier, int dungeonNumber, int baseMagicDef, out int scaledMagicDef)
         {

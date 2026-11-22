@@ -38,10 +38,18 @@ namespace Obscure
             "riftling", "shard_wisp", "veil_stalker", "aetherion", "aetherion_p2",
         };
 
+        static string BaseArtId(string enemyId) =>
+            enemyId != null && enemyId.EndsWith("_enhanced", StringComparison.Ordinal)
+                ? enemyId.Substring(0, enemyId.Length - "_enhanced".Length)
+                : enemyId;
+
         // Art id for an enemy in its current boss phase. Zoroa swaps to a separate zoroa_p2 def; a boss that changes phase
         // in place (phase2At, e.g. Aetherion) shows "<id>_p2" art from phase 2 on when that art exists.
-        public static string EnemyArtId(string enemyId, int phase) =>
-            enemyId != null && phase > 1 && enemies.Contains(enemyId + "_p2") ? enemyId + "_p2" : enemyId;
+        public static string EnemyArtId(string enemyId, int phase)
+        {
+            string baseId = BaseArtId(enemyId);
+            return baseId != null && phase > 1 && enemies.Contains(baseId + "_p2") ? baseId + "_p2" : baseId;
+        }
 
         // Legacy enemies (Skeleton Warrior, Cursed Knight, Abyssal Warden) reuse the closest Dungeon 1 art.
         static readonly Dictionary<string[], string> legacyEnemies = new Dictionary<string[], string>
@@ -60,7 +68,8 @@ namespace Obscure
         // Enemy idle frames by enemy id (falling back to legacy rows), or null to keep the row art.
         public static Texture2D[] Enemy(string enemyId, string[] rows)
         {
-            if (enemyId != null && enemies.Contains(enemyId)) return Load("Enemies/" + enemyId);
+            string baseId = BaseArtId(enemyId);
+            if (baseId != null && enemies.Contains(baseId)) return Load("Enemies/" + baseId);
             return rows != null && legacyEnemies.TryGetValue(rows, out var id) ? Load("Enemies/" + id) : null;
         }
 
@@ -88,7 +97,8 @@ namespace Obscure
         // Frames are Resources/Enemies/<id>_atk_<i>.png, timings Resources/Enemies/clips.json (`node anims.js --export-enemies`).
         public static Clip EnemyClip(string enemyId, string[] rows)
         {
-            if (enemyId != null && enemies.Contains(enemyId)) return LoadClip("Enemies", enemyId, "atk");
+            string baseId = BaseArtId(enemyId);
+            if (baseId != null && enemies.Contains(baseId)) return LoadClip("Enemies", baseId, "atk");
             return rows != null && legacyEnemies.TryGetValue(rows, out var id) ? LoadClip("Enemies", id, "atk") : null;
         }
 

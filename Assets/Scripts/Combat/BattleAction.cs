@@ -27,7 +27,7 @@ namespace Obscure
         public Combatant target;
         public int amount;
         public int breakAmount;
-        public bool heal, killed, blocked, brokeTarget, critical;
+        public bool heal, killed, blocked, brokeTarget, critical, transformed;
         public Effectiveness effect;
     }
 

@@ -323,6 +323,17 @@ namespace Obscure
             battle.Logged += AddLog;
             InitCoach(battle); // Tutorial Prologue prompts (PrologueCoach.cs); no-op outside the Prologue
             battle.BossPhaseTransitioning += boss => pendingPhaseTransitionBoss = boss;
+            // On-Defeat Transformation presentation (Transformation Spec §7.1 v1.1): sting, sprite flash/phase FX, and persistent ENHANCED nameplate tag.
+            battle.EnemyTransformed += enemy =>
+            {
+                Sfx.Play(Sound.QteTelegraph);
+                if (huds.TryGetValue(enemy, out var h))
+                {
+                    StartCoroutine(Flash(h, enemy));
+                    PlayFxOn(enemy, "phase");
+                    SpawnPopup("ENHANCED!", h.pos.x + h.size.x / 2f, h.pos.y - 36f, Palette.Ember1, 16);
+                }
+            };
             battle.StatusApplied += (target, id, isBuff) =>
             {
                 Sfx.Play(isBuff ? Sound.Buff : Sound.Debuff);
@@ -787,7 +798,12 @@ namespace Obscure
                 if (c.IsEnemy)
                 {
                     if (h.nameLbl != null && !h.isPrimaryBoss)
-                        h.nameLbl.text = (c.IsSummon ? $"[SUMMON] {c.name}" : c.name).ToUpperInvariant();
+                    {
+                        bool isEnh = c.enemy != null && c.enemy.isEnhanced;
+                        string prefix = c.IsSummon ? "[SUMMON] " : isEnh ? "[ENHANCED] " : "";
+                        h.nameLbl.text = $"{prefix}{c.name}".ToUpperInvariant();
+                        if (isEnh) h.nameLbl.style.color = Palette.Ember1;
+                    }
                     if (h.enemyCard != null) h.enemyCard.style.display = c.Alive ? DisplayStyle.Flex : DisplayStyle.None;
                     if (!c.Alive)
                     {

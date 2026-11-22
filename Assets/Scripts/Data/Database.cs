@@ -5516,7 +5516,7 @@ namespace Obscure
 
             },
 
-        }.Concat(Dungeon1Roster.Enemies).Concat(PrologueRoster.Enemies).ToArray(), e => e.id);
+        }.Concat(Dungeon1Roster.Enemies).Concat(Dungeon1Roster.EnhancedVariants).Concat(PrologueRoster.Enemies).ToArray(), e => e.id);
 
 
 

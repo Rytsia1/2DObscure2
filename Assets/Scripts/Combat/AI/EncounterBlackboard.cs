@@ -213,7 +213,7 @@ namespace Obscure
             {
                 if (pub.expectedDamage > 0f)
                     AddCommittedDamage(pub.target, pub.expectedDamage);
-                if (pub.enemy.enemy != null && pub.enemy.enemy.aiTier == AiTier.Normal && m.hits > 0 && !m.self && !m.Heals && !m.Summons)
+                if (pub.enemy.enemy != null && pub.enemy.enemy.aiTier.IsNormalTier() && m.hits > 0 && !m.self && !m.Heals && !m.Summons)
                     NormalSingleTargetCountByHero[pub.target] = NormalSingleTargetCount(pub.target) + 1;
                 if (pub.hasHeavy) HeavyReservedTargets.Add(pub.target);
                 if (pub.appliesStun) StunReservedTargets.Add(pub.target);

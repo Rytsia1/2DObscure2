@@ -17,6 +17,7 @@ namespace Obscure
         public readonly EncounterBlackboard Blackboard = new EncounterBlackboard();
         public event Action<string> Logged;
         public event Action<Combatant> BossPhaseTransitioning;
+        public event Action<Combatant> EnemyTransformed;
         public event Action<Combatant, StatusId, bool> StatusApplied;
         public event Action<Combatant, StatusId, bool> StatusResisted; // bool: immune (true) or resisted by roll (false)
 
@@ -34,6 +35,7 @@ namespace Obscure
 
         readonly List<Combatant> queue = new List<Combatant>();
         readonly HashSet<Combatant> acted = new HashSet<Combatant>();
+        Combatant startingTurn;
 
         public Battle(IEnumerable<Unit> party, IEnumerable<EnemyDef> enemies, List<string> items, Random rng, RunState run = null)
         {
@@ -116,7 +118,12 @@ namespace Obscure
                 c.turnsTakenThisRound++;
                 acted.Add(c);
                 c.guarding = false;
-                if (isFirstTurn) StartTurn(c);
+                if (isFirstTurn)
+                {
+                    startingTurn = c;
+                    try { StartTurn(c); }
+                    finally { startingTurn = null; }
+                }
                 if (!c.Alive) continue; // DoT finished it
                 if (c.stunTurns > 0 || c.StatusController.HasStatus(StatusId.Stun))
                 {
@@ -177,8 +184,13 @@ namespace Obscure
             if (c.CounterTurns > 0 && --c.CounterTurns == 0) Say($"{c.name}'s counter stance ends.");
 
             // Process DoTs and status lifecycle via StatusController (GDD Section 8, 10, 11, 12)
+            bool wasEnhancedBeforeDoT = c.enemy != null && c.enemy.isEnhanced;
+            int phaseBeforeDoT = c.phase;
             c.StatusController.ProcessTurnStart(this, c, Say);
-            if (!c.Alive) TryAdvancePhase(c); // a DoT can also deplete a boss HP bar
+            if (!c.Alive) TryContinueAfterLethal(c); // fallback if ProcessTurnStart did not already handle it
+            // If the combatant just transformed or changed phase from a turn-start DoT, its fresh state is already initialized.
+            if ((c.enemy != null && c.enemy.isEnhanced && !wasEnhancedBeforeDoT) || c.phase != phaseBeforeDoT)
+                return;
 
             // Synchronize legacy statuses list with StatusController active instances
             for (int i = c.statuses.Count - 1; i >= 0; i--)
@@ -410,18 +422,20 @@ namespace Obscure
                         : move.allTargets ? $"{actor.name} unleashes {move.name}!"
                         : $"{actor.name} uses {move.name} on {a.target.name}.");
                     var element = move?.element ?? Element.Physical;
+                    var transformedInAttack = new HashSet<Combatant>();
                     for (int i = 0; i < (move?.hits ?? 1); i++)
                     {
                         var reaction = defense != null && i < defense.Count ? defense[i] : (QteResult?)null;
                         float hitPower = (move?.PowerAt(i) ?? 1f) * power;
                         bool heavy = move != null && move.HeavyAt(i);
-                        foreach (var t in targets.Where(c => c.Alive))
+                        foreach (var t in targets.Where(c => c.Alive && !transformedInAttack.Contains(c)))
                         {
                             // Elemental moves scale from MATK vs MDEF, physical from ATK vs DEF (Bab 10 §7.7).
                             float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
                             int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng, physPen);
                             var hit = Deal(actor, t, raw, element, reaction, null, heavy, attackQte);
-                            if (i == (move?.hits ?? 1) - 1 && move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
+                            if (hit.transformed) transformedInAttack.Add(t);
+                            if (!hit.transformed && i == (move?.hits ?? 1) - 1 && move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
                             {
                                 int hitBreak = hit.breakAmount;
                                 int extraBreak = move.breakPower;
@@ -439,7 +453,7 @@ namespace Obscure
                         }
                     }
                     // Statuses roll once per target per attack and are not blocked by a Perfect parry (Bab 11 §2.3, Bab 12 §4.3).
-                    foreach (var t in targets.Where(c => c != null && c.Alive))
+                    foreach (var t in targets.Where(c => c != null && c.Alive && !transformedInAttack.Contains(c)))
                         foreach (var ap in move?.apply ?? Array.Empty<StatusApply>()) Apply(t, ap, actor, 1f);
                     TriggerCounters(actor, targets, hits);
                     break;
@@ -486,6 +500,7 @@ namespace Obscure
                         }
                     }
 
+                    var transformedInSkill = new HashSet<Combatant>();
                     foreach (var t in Targets(actor, s.target, a.target))
                     {
                         if (s.appliesNullBreak && s.nullBreakTarget.IsValid)
@@ -499,7 +514,7 @@ namespace Obscure
                             var dmgResult = Rules.CalculateSkillDamage(actor, t, s, mappedQte, Rng, s.skillLevel, run);
                             foreach (var hitRes in dmgResult.hits)
                             {
-                                if (!t.Alive && hitRes.hitIndex > 0) break;
+                                if ((!t.Alive || transformedInSkill.Contains(t)) && hitRes.hitIndex > 0) break;
                                 string note = hitRes.allComponentsNullified
                                     ? " (nullified)"
                                     : (hitRes.anyComponentCriticalHit ? " (CRITICAL!)" : "");
@@ -530,6 +545,13 @@ namespace Obscure
                                 };
                                 hit.effect = eff;
 
+                                if (hit.transformed)
+                                {
+                                    transformedInSkill.Add(t);
+                                    hits.Add(hit);
+                                    break; // Transformation Spec §6.1: remaining hits of the killing action stop on the transformed enemy
+                                }
+
                                 if (t.Alive && t.HasBreakGauge && actor != null && actor.side != t.side)
                                     BreakHit(t, Rules.BreakDamage(actor, s, eff, mappedQte), actor, ref hit);
 
@@ -540,28 +562,37 @@ namespace Obscure
                         {
                             int rank = actor.unit != null ? Math.Max(1, actor.unit.skillLoadout.GetRank(s.id)) : 1;
                             float scaledPower = s.GetPower(rank);
-                            for (int i = 0; i < s.hits && t.Alive; i++)
+                            for (int i = 0; i < s.hits && t.Alive && !transformedInSkill.Contains(t); i++)
                             {
                                 float skillPwr = scaledPower * power;
+                                Hit hit = default;
                                 switch (s.kind)
                                 {
                                     case SkillKind.Physical:
                                         float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
                                         int pDmg = s.isRanged ? Rules.Ranged(actor, t, skillPwr, Rng, physPen) : Rules.Physical(actor, t, skillPwr, Rng, physPen);
-                                        hits.Add(Deal(actor, t, pDmg, s.element, null, s, offenseQte: mappedQte));
+                                        hit = Deal(actor, t, pDmg, s.element, null, s, offenseQte: mappedQte);
+                                        hits.Add(hit);
                                         break;
                                     case SkillKind.Magic:
-                                        hits.Add(Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s, offenseQte: mappedQte));
+                                        hit = Deal(actor, t, Rules.Magic(actor, t, skillPwr, Rng), s.element, null, s, offenseQte: mappedQte);
+                                        hits.Add(hit);
                                         break;
                                     case SkillKind.Heal:
-                                        hits.Add(Heal(t, Rules.Healing(actor, skillPwr, Rng), actor));
+                                        hit = Heal(t, Rules.Healing(actor, skillPwr, Rng), actor);
+                                        hits.Add(hit);
                                         break;
                                 }
+                                if (hit.transformed)
+                                    transformedInSkill.Add(t);
                             }
                         }
                         // Self-applied statuses link to the target (Interpose remembers whom it guards).
                         foreach (var ap in s.apply ?? Array.Empty<StatusApply>())
+                        {
+                            if (!ap.onSelf && transformedInSkill.Contains(t)) continue;
                             Apply(ap.onSelf ? actor : t, s.kind == SkillKind.Support ? SupportScaled(ap, actor) : ap, ap.onSelf ? t : actor, power);
+                        }
                     }
                     if (s.counterMultiplier > 0f)
                     {
@@ -943,6 +974,7 @@ namespace Obscure
 
             var hit = Damage(t, amount, note);
             hit.effect = effect;
+            if (hit.transformed) return hit; // Overkill and killing-blow Break are discarded on transformation (Transformation Spec §6.1)
 
             // Background Perk: Soldier (record retaliation when damaged by enemy attack)
             if (t != null && t.Alive && attacker != null && attacker.side != t.side && amount > 0)
@@ -1012,15 +1044,53 @@ namespace Obscure
             Blackboard.Memory.ObserveBreak(attacker, t, charging, Round);
         }
 
-        // A boss whose HP bar is depleted continues as its next phase with a fresh bar (same encounter, same combatant).
-        bool TryAdvancePhase(Combatant t)
+        // Exclusions for On-Defeat Transformation (Transformation Spec §3.1 v1.1):
+        // Never eligible: summoned enemies (Harvest Call), Tutorial Prologue enemies, or any enemy in a Boss-node encounter.
+        public bool IsExcludedFromTransform(Combatant t)
         {
-            if (t.Alive || t.enemy?.nextPhase == null || !Database.Enemies.TryGetValue(t.enemy.nextPhase, out var next)) return false;
-            string text = t.enemy.phase2Text;
-            BossPhaseTransitioning?.Invoke(t);
-            t.AdvanceToPhase(next, Dungeon);
-            Say(text ?? $"{t.name} enters phase {t.phase}!");
-            return true;
+            if (t == null || !t.IsEnemy || t.enemy == null) return true;
+            if (t.IsSummon) return true;
+            if (run != null && run.IsPrologue) return true;
+            if (PrologueRoster.Enemies.Any(pe => pe.id == t.enemy.id)) return true;
+            if (Tier == Tier.Boss) return true;
+            if (run?.Current != null && run.Current.type == NodeType.Boss) return true;
+            return false;
+        }
+
+        // A boss whose HP bar is depleted continues as its next phase with a fresh bar; an eligible common enemy gets one
+        // independent roll to transform into its Enhanced Common Variant at full HP (Transformation Spec §4, §6, §7, §8).
+        // forced = true (e.g. summon collapse on boss final defeat) never rolls transformation.
+        public bool TryContinueAfterLethal(Combatant t, bool forced = false)
+        {
+            if (t == null || t.Alive) return false;
+            if (!forced && t.enemy?.nextPhase != null && Database.Enemies.TryGetValue(t.enemy.nextPhase, out var next))
+            {
+                string text = t.enemy.phase2Text;
+                BossPhaseTransitioning?.Invoke(t);
+                t.AdvanceToPhase(next, Dungeon);
+                Say(text ?? $"{t.name} enters phase {t.phase}!");
+                return true;
+            }
+            if (!forced && t.IsEnemy && t.enemy != null && !string.IsNullOrEmpty(t.enemy.enhancedVariant)
+                && !t.transformRolled && !IsExcludedFromTransform(t)
+                && Database.Enemies.TryGetValue(t.enemy.enhancedVariant, out var variant))
+            {
+                t.transformRolled = true;
+                if (Rng.NextDouble() < t.enemy.transformChance)
+                {
+                    string baseName = t.enemy.name;
+                    t.AdvanceToPhase(variant, Dungeon);
+                    t.ResetForTransform();
+                    Blackboard.ClearEnemy(this, t);
+                    Say($"The {baseName} refuses to fall. It rises, Enhanced!");
+                    EnemyTransformed?.Invoke(t);
+                    // Transformation Spec §8.1: if turn is still pending this round, re-plan immediately with Enhanced kit and publish intent.
+                    if (queue.Contains(t) || startingTurn == t)
+                        EnemyAI.Plan(this, t);
+                    return true;
+                }
+            }
+            return false;
         }
 
         public Hit Damage(Combatant t, int amount, string note = "")
@@ -1088,7 +1158,7 @@ namespace Obscure
             }
 
             Say($"{t.name} takes {amount} damage{(t.guarding ? " (guarded)" : "")}{note}.");
-            if (!t.Alive && TryAdvancePhase(t)) return new Hit { target = t, amount = amount };
+            if (!t.Alive && TryContinueAfterLethal(t)) return new Hit { target = t, amount = amount, transformed = true };
             if (!t.Alive)
             {
                 acted.Add(t); // a unit defeated this round never acts again in it, even if revived (Bab 10 §8.6)

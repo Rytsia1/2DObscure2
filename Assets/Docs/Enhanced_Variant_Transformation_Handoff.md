@@ -132,4 +132,4 @@ This is a pure-risk event, by the user's decision. If playtest 1 reports unfairn
 ## Results (fill in)
 | Date | Sample | Transforms per run | Extra rounds per transform | Party deaths (vs. baseline) | Unfairness reports |
 |---|---|---|---|---|---|
-| | | | | | |
+| 2026-11-22 | 200 D1 maps (Random path) + 200 seeds × 6 pilot encounters × 2 QTE (`D1WeaponArmor`) | **1.62** / run (`15.28` eligible enemies across `11.62` combats/run at `p = 0.10`; target 1–3) | Normal encounters (`d1_e1`,`e3`,`e4`,`e5` All Good): **+1.70** rnds/transform (`+1.00` to `+2.00`, target ≤ +2.0); all 6 incl. minibosses (`d1_e6`,`e7`): **+2.01** | All Good: Normal `0.00 → 0.00` (100% win), `d1_e6` `0.50 → 0.52`, `d1_e7` `0.00 → 0.00`. All Poor: `d1_e1` `0.00 → 0.02`, `d1_e3`/`e4` `0.00 → 0.00`, `d1_e5` `0.05 → 0.14` (99.5% win), `d1_e7` `0.27 → 0.29`. | Pending human playtest (§Playtest script 1–4) |

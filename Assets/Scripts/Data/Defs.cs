@@ -47,9 +47,9 @@ namespace Obscure
 
     // Priority: data-driven, deterministic policy (EnemyAttack.aiPriority / cooldown) planned at round start (Bab 10 §8.9).
     public enum AiKind { Basic, Tactical, Boss, Priority }
-    public enum TargetRule { Random, LowestHp, LowestDef }
+    public enum TargetRule { Random, LowestHp, LowestDef, LowestMdef, HighestThreat }
 
-    // Enemy tactical role (Spec §6.2) and intelligence tier (Architecture §12 v1.1).
+    // Enemy tactical role (Spec §6.2) and intelligence tier (Architecture §12 v1.1, Variant Spec §7.5 v1.1).
     public enum AiRole
     {
         Vanguard,
@@ -69,7 +69,33 @@ namespace Obscure
         AdaptiveController,
     }
 
-    public enum AiTier { Normal, Elite, Miniboss, Boss }
+    public enum AiTier { Normal, Enhanced, Elite, Miniboss, Boss }
+
+    public static class AiTierExt
+    {
+        // For every Normal-tier restriction (incl. FocusCapNormal), Enhanced counts as Normal (Variant Spec §7.5 v1.1).
+        public static bool IsNormalTier(this AiTier t) => t == AiTier.Normal || t == AiTier.Enhanced;
+    }
+
+    // Per-family stat multipliers applied once after Normal dungeon scaling: EnhancedStat = floor(NormalScaledStat * mult) (Variant Spec §4.3).
+    [Serializable]
+    public struct VariantStatMult
+    {
+        public float hp, mp, atk, matk, def, mdef, spd;
+
+        public VariantStatMult(float hp = 1f, float mp = 1f, float atk = 1f, float matk = 1f, float def = 1f, float mdef = 1f, float spd = 1f)
+        {
+            this.hp = hp; this.mp = mp; this.atk = atk; this.matk = matk; this.def = def; this.mdef = mdef; this.spd = spd;
+        }
+
+        public float Hp => hp > 0f ? hp : 1f;
+        public float Mp => mp > 0f ? mp : 1f;
+        public float Atk => atk > 0f ? atk : 1f;
+        public float Matk => matk > 0f ? matk : 1f;
+        public float Def => def > 0f ? def : 1f;
+        public float Mdef => mdef > 0f ? mdef : 1f;
+        public float Spd => spd > 0f ? spd : 1f;
+    }
 
     public enum CreationMethod
     {
@@ -159,6 +185,11 @@ namespace Obscure
         public TargetRule targetRule;  // Priority AI: who single-target moves aim at
         public AiRole aiRole = AiRole.Vanguard; // Spec §6.2 tactical personality
         public AiTier aiTier = AiTier.Normal;   // Architecture §12 v1.1 intelligence capability tier
+        public string baseEnemyId;     // Enhanced Common Variant: id of the base common enemy definition (Variant Spec §3.1)
+        public string enhancedVariant; // On-Defeat Transformation: id of the "<base>_enhanced" variant definition
+        public float transformChance;  // On-Defeat Transformation: independent roll chance [0, 1] when HP reaches 0
+        public bool isEnhanced;        // True for Enhanced Common Variants (Variant Spec §12.3)
+        public VariantStatMult statMult; // Variant Stat Profile applied once after Normal scaling (Variant Spec §4.3)
         // Number of full turns per round (posture-B starting value, untested: Zoroa P1 = 2, P2 = 2; everyone else 1).
         // If it fails: if P1 feels unfair, set P1 = 1 and keep the double turn as the Phase 2 escalation.
         public int turnsPerRound = 1;
@@ -169,6 +200,7 @@ namespace Obscure
     public class EnemyAttack
     {
         public string name;
+        public string patternId;      // Optional configuration id (e.g. "alt") when an Enhanced variant has 2 patterns of the same skill name
         public int hits = 1;          // 0 = status-only action: no damage, no Defensive QTE
         public float power = 1f;      // per hit, multiplies Atk (Physical) or Magic (Elemental)
         public Element element = Element.Physical;

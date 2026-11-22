@@ -198,7 +198,7 @@ namespace Obscure.Tests
         public sealed class Result
         {
             public bool won, timedOut;
-            public int rounds, playerTurns, skillTurns, guardTurns, damageDealt, damageTaken, partyDeaths, summonsSpawned;
+            public int rounds, playerTurns, skillTurns, guardTurns, damageDealt, damageTaken, partyDeaths, summonsSpawned, transformsTriggered;
             public float hpLeft;
 
             // Spec §14.6 & Architecture §16.5 AI telemetry
@@ -218,7 +218,7 @@ namespace Obscure.Tests
         }
 
         public static Result Fight(string encounterId, int level, Build build, Execution ex, int seed, Gear gear = Gear.Starter,
-            Policy policy = Policy.Tactical, BattleRecord recordOut = null, bool collectSignatures = false)
+            Policy policy = Policy.Tactical, BattleRecord recordOut = null, bool collectSignatures = false, bool allowTransforms = true)
         {
             var party = PartyPlan.Select(p => MakeHero(p, build, level, gear)).ToList();
             var enc = Database.Encounters[encounterId];
@@ -235,7 +235,12 @@ namespace Obscure.Tests
                 recordOut.steps.Clear();
             }
             var b = new Battle(party, enemyDefs, new List<string>(), new Random(battleSeed));
+            if (!allowTransforms)
+            {
+                foreach (var e in b.Enemies) e.transformRolled = true;
+            }
             var res = new Result();
+            b.EnemyTransformed += _ => res.transformsTriggered++;
             var lastMoveTargetByEnemy = new Dictionary<Combatant, (string move, int targetSlot)>();
             var heroHpAtRoundStart = new Dictionary<int, int>();
             var roundDmgToHero = new Dictionary<int, int>();

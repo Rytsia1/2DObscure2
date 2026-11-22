@@ -127,10 +127,34 @@ namespace Obscure
                 int minDef = activePool.Min(p => p.Def);
                 return activePool.Where(p => p.Def == minDef).OrderBy(p => p.slot).ToList();
             }
+            if (rule == TargetRule.LowestMdef)
+            {
+                var unreserved = lethalReserved != null && lethalReserved.Count > 0
+                    ? pool.Where(p => !lethalReserved.Contains(p)).ToList()
+                    : pool;
+                var activePool = unreserved.Count > 0 ? unreserved : pool;
+                int minMdef = activePool.Min(p => p.MagicDef);
+                return activePool.Where(p => p.MagicDef == minMdef).OrderBy(p => p.slot).ToList();
+            }
+            if (rule == TargetRule.HighestThreat)
+            {
+                var unreserved = lethalReserved != null && lethalReserved.Count > 0
+                    ? pool.Where(p => !lethalReserved.Contains(p)).ToList()
+                    : pool;
+                var activePool = unreserved.Count > 0 ? unreserved : pool;
+                var mem = b?.Blackboard?.Memory;
+                int round = b?.Round ?? 1;
+                float decay = AiProfile.For(self.enemy).memoryDecay;
+                float maxThreat = activePool.Max(p => mem != null ? mem.GetObservedThreatScore(p, round, decay) : Math.Max(p.Atk, p.Magic));
+                return activePool
+                    .Where(p => Math.Abs((mem != null ? mem.GetObservedThreatScore(p, round, decay) : Math.Max(p.Atk, p.Magic)) - maxThreat) <= 0.001f)
+                    .OrderBy(p => p.slot)
+                    .ToList();
+            }
 
-            // FocusCapNormal (Spec §4.3 v1.1): at most FocusCapNormal Normal-tier enemies plan single-target damage on the same hero per round.
-            // Elites, Minibosses, and Bosses are exempt.
-            if (bb != null && self.enemy != null && self.enemy.aiTier == AiTier.Normal && move.hits > 0 && !move.telegraph)
+            // FocusCapNormal (Spec §4.3 v1.1, Variant Spec §7.5 v1.1): at most FocusCapNormal Normal-tier (incl. Enhanced) enemies
+            // plan single-target damage on the same hero per round. Elites, Minibosses, and Bosses are exempt.
+            if (bb != null && self.enemy != null && self.enemy.aiTier.IsNormalTier() && move.hits > 0 && !move.telegraph)
             {
                 var underCap = pool.Where(p => bb.NormalSingleTargetCount(p) < EncounterBlackboard.FocusCapNormal).ToList();
                 if (underCap.Count > 0) pool = underCap;
@@ -506,7 +530,25 @@ namespace Obscure
         static float EvaluateResourceCost(Combatant self, EnemyAttack m)
         {
             if (m.mpCost <= 0 || self.Stats.maxMp <= 0) return 0f;
-            return ((float)m.mpCost / self.Stats.maxMp) * ResourceCostWeight;
+            float cost = ((float)m.mpCost / self.Stats.maxMp) * ResourceCostWeight;
+            var profile = AiProfile.For(self.enemy);
+            // Variant Spec §7.5: Enhanced+ has resource/cooldown awareness over its next turn opportunity.
+            // If spending MP on a lower-priority skill now would prevent affording a higher-priority skill coming off cooldown next turn (cd == 1), penalize it.
+            if (profile.usesNextTurnResourceAwareness && self.enemy?.attacks != null)
+            {
+                int mpLeft = self.unit.mp - m.mpCost;
+                foreach (var nextMove in self.enemy.attacks)
+                {
+                    if (nextMove == m || nextMove.mpCost <= 0 || nextMove.aiPriority <= m.aiPriority) continue;
+                    int cd = self.Cooldown(Combatant.MoveKey(nextMove));
+                    if (cd == 1 && mpLeft < nextMove.mpCost && self.unit.mp >= nextMove.mpCost)
+                    {
+                        cost += 4f;
+                        break;
+                    }
+                }
+            }
+            return cost;
         }
 
         // Observable-only threat proxy (HUD stats: ATK/MAG + current HP% — never reads hidden skills/inventory).

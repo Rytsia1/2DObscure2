@@ -38,6 +38,7 @@ namespace Obscure
         public bool JustReleasedCharge;
         public bool UsedHeavyThisRound;
         public bool IsSummon;
+        public bool transformRolled; // On-Defeat Transformation: evaluated at most once per enemy instance (Transformation Spec §4)
         // Double-turn support (Zoroa rework): SecondTurnSpeedFactor is a posture-B starting value (untested).
         // Pass test: at least 2 of 4 heroes act between Zoroa's A and B turns in a typical party.
         // If it fails: too few -> 0.4; turns feel disconnected -> 0.6.
@@ -46,7 +47,8 @@ namespace Obscure
         public int turnsTakenThisRound;
         public float TurnSpeed(int turnIndex) => turnIndex <= 0 ? Speed : Speed * SecondTurnSpeedFactor;
         public bool IsCharging => Charge != null || (Intent != null && Intent.charging);
-        public static string MoveKey(EnemyAttack m) => "move:" + m.name;
+        public static string MoveKey(EnemyAttack m) =>
+            string.IsNullOrEmpty(m.patternId) ? "move:" + m.name : $"move:{m.name}:{m.patternId}";
 
         // Break/Stagger System state (PRD Section 9)
         public int MaxBreakGauge;
@@ -236,6 +238,30 @@ namespace Obscure
             foreach (var m in next.attacks ?? Array.Empty<EnemyAttack>())
                 if (m.Summons && carriedCooldowns.TryGetValue(MoveKey(m), out var cd) && cd > 0)
                     cooldowns[MoveKey(m)] = cd; // Harvest Call cooldown carries over the phase change
+        }
+
+        // Resets state after an On-Defeat Transformation into an Enhanced Common Variant (Transformation Spec §7 v1.1).
+        // Full Enhanced HP & MP, Break refilled & Broken removed, all statuses/DoTs/stun/intent/charge cleared, cooldowns reset.
+        public void ResetForTransform()
+        {
+            phase = 1;
+            statuses.Clear();
+            StatusController.ClearAll();
+            stunTurns = 0;
+            Intent = null;
+            Charge = null;
+            JustReleasedCharge = false;
+            guarding = false;
+            RecoverBreakGauge();
+            if (unit != null)
+            {
+                unit.hp = unit.stats.maxHp;
+                unit.mp = unit.stats.maxMp;
+                unit.shield = 0;
+                StatusController.ResistanceProfile.statsResistance = Math.Clamp(unit.Derived.statusResistance / 100f, 0f, 0.75f);
+            }
+            cooldowns.Clear();
+            ResetMoveCooldowns();
         }
 
         public bool Alive => unit.Alive;

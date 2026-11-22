@@ -151,6 +151,8 @@ namespace Obscure
 
                 if (!owner.Alive)
                 {
+                    if (battle != null && battle.TryContinueAfterLethal(owner))
+                        return; // transformed or advanced phase: statuses cleared / fresh bar active
                     log?.Invoke(!owner.IsEnemy ? $"{owner.name} falls!" : owner.enemy?.nextPhase != null ? $"{owner.name}'s health bar shatters!" : $"{owner.name} is destroyed.");
                     break;
                 }

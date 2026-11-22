@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 // Dungeon 1 enemy roster, skills and encounters.
@@ -54,6 +56,24 @@ namespace Obscure
 
         static readonly float[] ReaperAccelerando = { 0.350f, 0.310f, 0.310f }; // Elite minimum 310 ms
         static readonly float[] ZoroaAccelerando = { 0.350f, 0.298f, 0.280f };  // Boss minimum 280 ms
+
+        // On-Defeat Transformation & Enhanced Common Variant pilot constants: posture-B starting values (untested).
+        // Pass test: 1-3 transformations per D1 run on average (200-map sim), and playtesters call it "a surprise", not "routine".
+        // If it fails: Routine -> 0.05f; Never noticed -> 0.15f.
+        public const float PilotTransformChance = 0.10f; // posture-B starting value (untested)
+
+        // Enhanced Common HP / stat multipliers: posture-B starting values (untested).
+        // Pass test: a transform adds <= 2 rounds to the encounter on average (level-matched sim party);
+        // an Enhanced turn deals <= 1.5x the base form's average turn.
+        // If it fails: lower the HP multiplier first, then lower the per-hit damage of the alternative pattern.
+        public static readonly VariantStatMult SquireEnhancedMult = new VariantStatMult(hp: 1.60f, def: 1.30f, atk: 1.15f); // posture-B starting value (untested)
+        public static readonly VariantStatMult HoundEnhancedMult  = new VariantStatMult(hp: 1.40f, spd: 1.25f, atk: 1.20f); // posture-B starting value (untested)
+        public static readonly VariantStatMult WispEnhancedMult   = new VariantStatMult(hp: 1.40f, matk: 1.25f, mp: 1.50f); // posture-B starting value (untested)
+
+        // Approved Accelerando exception for Soulbound Hound (Enhanced) alternative pattern (Variant Spec §6.6 v1.1):
+        // posture-B starting value (untested). Pass test: Good/Perfect rate within 10 pp of Soul Reaper's Accelerando among playtesters.
+        // If it fails: slow to { 0.350f, 0.330f }.
+        public static readonly float[] HoundEnhancedAccelerando = { 0.350f, 0.310f }; // posture-B starting value (untested, >= 310 ms Elite floor)
 
         internal static StatusApply Chance(StatusId id, float chance) => new StatusApply { id = id, chance = chance };
 
@@ -305,6 +325,286 @@ namespace Obscure
             SetAi("mourning_bell_wraith", AiRole.AreaController, AiTier.Elite);
             SetAi("zoroa_p1", AiRole.AdaptiveController, AiTier.Boss);
             SetAi("zoroa_p2", AiRole.AdaptiveController, AiTier.Boss);
+
+            // Build and link the 3 Dungeon 1 Enhanced Common Variant pilot families (Variant Spec §12.3, §15.1; Transformation Spec §3.1).
+            EnhancedVariants = new[]
+            {
+                Enhanced("hollow_squire", new VariantProfile
+                {
+                    statMult = SquireEnhancedMult,
+                    targetRule = TargetRule.LowestDef,
+                    transformChance = PilotTransformChance,
+                    alternativeSkillName = "Rusty Cleave",
+                    alternativeHitDamage = new[] { 12, 12 }, // Repeated Assault: 2 x 12, Steady (posture-B starting value, untested)
+                    alternativeCooldown = 1,
+                    alternativePriority = 2,
+                }),
+                Enhanced("soulbound_hound", new VariantProfile
+                {
+                    statMult = HoundEnhancedMult,
+                    targetRule = TargetRule.HighestThreat,
+                    transformChance = PilotTransformChance,
+                    alternativeSkillName = "Rending Bite",
+                    alternativeHitDamage = new[] { 8, 7, 7 }, // 3 hits 8/7/7, Accelerando 350/310 ms (posture-B starting value, untested)
+                    alternativeIntervals = HoundEnhancedAccelerando,
+                    alternativeCooldown = 1,
+                    alternativePriority = 2,
+                }),
+                Enhanced("cinder_wisp", new VariantProfile
+                {
+                    statMult = WispEnhancedMult,
+                    targetRule = TargetRule.LowestMdef,
+                    transformChance = PilotTransformChance,
+                    alternativeSkillName = "Ember Bolt",
+                    alternativeHitDamage = new[] { 13, 13 }, // 2 x 13, Steady, Burn 30% once per attack, MP 8 (posture-B starting value, untested)
+                    alternativeMpCost = 8,
+                    alternativeApply = new[] { Chance(StatusId.Burn, 0.30f) },
+                    alternativeCooldown = 1,
+                    alternativePriority = 2,
+                }),
+            };
+        }
+
+        public sealed class VariantProfile
+        {
+            public VariantStatMult statMult;
+            public TargetRule targetRule;
+            public float transformChance = PilotTransformChance;
+            public string alternativeSkillName;
+            public int[] alternativeHitDamage;
+            public float[] alternativeIntervals;
+            public int? alternativeMpCost;
+            public int alternativeCooldown = 1;
+            public int alternativePriority = 2;
+            public StatusApply[] alternativeApply;
+        }
+
+        public static readonly EnemyDef[] EnhancedVariants;
+
+        // Builds an Enhanced Common Variant EnemyDef from the base common enemy definition (Variant Spec §12.3, Handoff §Changes.2).
+        public static EnemyDef Enhanced(string baseId, VariantProfile p)
+        {
+            var baseDef = Enemies.First(e => e.id == baseId);
+            var attacks = new List<EnemyAttack>();
+
+            foreach (var src in baseDef.attacks)
+            {
+                if (src.name == p.alternativeSkillName)
+                {
+                    // Alternative pattern of the existing skill identity (selected when off cooldown / affordable).
+                    var alt = CloneAttack(src);
+                    alt.patternId = "alt";
+                    alt.hitDamage = (int[])p.alternativeHitDamage.Clone();
+                    alt.intervals = p.alternativeIntervals != null ? (float[])p.alternativeIntervals.Clone() : null;
+                    if (p.alternativeMpCost.HasValue) alt.mpCost = p.alternativeMpCost.Value;
+                    if (p.alternativeApply != null)
+                        alt.apply = p.alternativeApply.Select(CloneStatusApply).ToArray();
+                    alt.cooldown = p.alternativeCooldown;
+                    alt.aiPriority = p.alternativePriority;
+                    DeriveHitPower(alt, baseDef.stats);
+                    attacks.Add(alt);
+                }
+
+                var std = CloneAttack(src);
+                DeriveHitPower(std, baseDef.stats);
+                attacks.Add(std);
+            }
+
+            var variant = new EnemyDef
+            {
+                id = baseId + "_enhanced",
+                baseEnemyId = baseId,
+                name = baseDef.name + " (Enhanced)",
+                shortName = baseDef.shortName,
+                tag = baseDef.tag,
+                tier = Tier.Normal,
+                ai = AiKind.Priority,
+                aiRole = baseDef.aiRole,
+                aiTier = AiTier.Enhanced,
+                isEnhanced = true,
+                statMult = p.statMult,
+                targetRule = p.targetRule,
+                type = baseDef.type,
+                role = baseDef.role,
+                affinities = baseDef.affinities,
+                affinityProfile = baseDef.affinityProfile != null ? baseDef.affinityProfile.Clone() : null,
+                abilityScores = baseDef.abilityScores,
+                stats = baseDef.stats,
+                magicDef = baseDef.magicDef,
+                maxBreakGauge = baseDef.maxBreakGauge,
+                breakResistance = baseDef.breakResistance,
+                breakDuration = baseDef.breakDuration,
+                breakStunTurns = baseDef.breakStunTurns,
+                breakDamageMultiplier = baseDef.breakDamageMultiplier,
+                gold = baseDef.gold,
+                sprite = baseDef.sprite,
+                description = baseDef.description,
+                turnsPerRound = 1,
+                attacks = attacks.ToArray(),
+            };
+
+            baseDef.enhancedVariant = variant.id;
+            baseDef.transformChance = p.transformChance;
+            return variant;
+        }
+
+        static EnemyAttack CloneAttack(EnemyAttack a) => new EnemyAttack
+        {
+            name = a.name,
+            patternId = a.patternId,
+            hits = a.hits,
+            power = a.power,
+            element = a.element,
+            allTargets = a.allTargets,
+            self = a.self,
+            isHeavy = a.isHeavy,
+            delay = a.delay,
+            phase = a.phase,
+            apply = a.apply != null ? a.apply.Select(CloneStatusApply).ToArray() : null,
+            hitDamage = a.hitDamage != null ? (int[])a.hitDamage.Clone() : null,
+            hitPower = a.hitPower != null ? (float[])a.hitPower.Clone() : null,
+            intervals = a.intervals != null ? (float[])a.intervals.Clone() : null,
+            heavyHit = a.heavyHit,
+            mpCost = a.mpCost,
+            telegraph = a.telegraph,
+            drain = a.drain,
+            restoreMp = a.restoreMp,
+            healAlly = a.healAlly,
+            summonCount = a.summonCount,
+            breakPower = a.breakPower,
+            aiPriority = a.aiPriority,
+            cooldown = a.cooldown,
+            initialCooldown = a.initialCooldown,
+            minTargets = a.minTargets,
+            aiMpBelow = a.aiMpBelow,
+            aiAllyHpBelow = a.aiAllyHpBelow,
+            aiUnlessAllyHpBelow = a.aiUnlessAllyHpBelow,
+            aiBreakLeftBelow = a.aiBreakLeftBelow,
+            aiBreakGateRound = a.aiBreakGateRound,
+        };
+
+        static StatusApply CloneStatusApply(StatusApply s) => new StatusApply
+        {
+            id = s.id,
+            turns = s.turns,
+            magnitude = s.magnitude,
+            chance = s.chance,
+            onSelf = s.onSelf,
+            dotDamageType = s.dotDamageType,
+            dotElementType = s.dotElementType,
+            dotSkillPower = s.dotSkillPower,
+            dotScaling = s.dotScaling,
+            dotScalingStat = s.dotScalingStat,
+        };
+
+        static void DeriveHitPower(EnemyAttack a, Stats baseStats)
+        {
+            if (a.hitDamage == null) return;
+            float stat = a.UsesMagic ? baseStats.mag : baseStats.atk;
+            a.hits = a.hitDamage.Length;
+            a.hitPower = a.hitDamage.Select(dmg => dmg / stat).ToArray();
+            a.power = a.hitPower.Length > 0 ? a.hitPower[0] : 0f;
+        }
+
+        // Enforces every validation rule in Variant Spec §13 on an Enhanced Common Variant definition.
+        public static bool ValidateEnhancedVariant(EnemyDef variant, out List<string> errors)
+        {
+            errors = new List<string>();
+            if (variant == null) { errors.Add("variant is null"); return false; }
+            if (!variant.isEnhanced) errors.Add($"{variant.id}: isEnhanced must be true");
+            if (variant.tier != Tier.Normal) errors.Add($"{variant.id}: tier must remain Tier.Normal");
+            if (variant.aiTier != AiTier.Enhanced) errors.Add($"{variant.id}: aiTier must be AiTier.Enhanced");
+            if (!variant.aiTier.IsNormalTier()) errors.Add($"{variant.id}: AiTier.Enhanced must count as Normal tier");
+            if (variant.turnsPerRound != 1) errors.Add($"{variant.id}: turnsPerRound must be 1");
+            if (!string.IsNullOrEmpty(variant.enhancedVariant) || variant.transformChance > 0f)
+                errors.Add($"{variant.id}: an Enhanced variant cannot transform again");
+
+            var baseDef = Enemies.FirstOrDefault(e => e.id == variant.baseEnemyId);
+            if (baseDef == null)
+            {
+                errors.Add($"{variant.id}: baseEnemyId '{variant.baseEnemyId}' not found in base roster");
+                return false;
+            }
+            if (variant.id != baseDef.id + "_enhanced") errors.Add($"{variant.id}: id must be '{baseDef.id}_enhanced'");
+            if (variant.name != baseDef.name + " (Enhanced)") errors.Add($"{variant.id}: name must be '{baseDef.name} (Enhanced)'");
+            if (!ReferenceEquals(variant.sprite, baseDef.sprite)) errors.Add($"{variant.id}: must reuse base sprite");
+            if (variant.tag != baseDef.tag) errors.Add($"{variant.id}: must reuse base tag");
+            if (variant.aiRole != baseDef.aiRole) errors.Add($"{variant.id}: must preserve base aiRole");
+            if (baseDef.tier != Tier.Normal) errors.Add($"{variant.id}: base enemy must be Tier.Normal");
+
+            // Pattern count & skill identity validation (Variant Spec §5, §6, §13)
+            if (variant.attacks == null || variant.attacks.Length == 0)
+            {
+                errors.Add($"{variant.id}: has no attacks");
+                return false;
+            }
+            if (!variant.attacks.Any(a => a.IsBasicAttack))
+                errors.Add($"{variant.id}: must have a 0-MP Basic Attack fallback");
+
+            int altPatterns = variant.attacks.Count(a => !string.IsNullOrEmpty(a.patternId));
+            if (altPatterns > 1) errors.Add($"{variant.id}: at most 1 alternative pattern (<= 2 total patterns)");
+
+            foreach (var a in variant.attacks)
+            {
+                var baseMoves = baseDef.attacks.Where(bm => bm.name == a.name).ToList();
+                if (baseMoves.Count == 0)
+                {
+                    errors.Add($"{variant.id}: move '{a.name}' is not an existing skill identity on '{baseDef.id}'");
+                    continue;
+                }
+                var bm0 = baseMoves[0];
+                if (a.element != bm0.element) errors.Add($"{variant.id}.{a.name}: element must match base skill");
+                if (a.hits > 4) errors.Add($"{variant.id}.{a.name}: hits ({a.hits}) exceeds D1 limit of 4");
+                if (a.HasHeavy) errors.Add($"{variant.id}.{a.name}: Enhanced Common cannot have Heavy markers");
+                if (a.telegraph) errors.Add($"{variant.id}.{a.name}: Charge patterns are disallowed on Enhanced Commons");
+                if (a.apply != null && a.apply.Length > 0)
+                {
+                    if (a.hits > 3) errors.Add($"{variant.id}.{a.name}: status-applying move cannot exceed 3 hits");
+                    var baseStatuses = new HashSet<StatusId>((bm0.apply ?? Array.Empty<StatusApply>()).Select(s => s.id));
+                    foreach (var ap in a.apply)
+                        if (!baseStatuses.Contains(ap.id))
+                            errors.Add($"{variant.id}.{a.name}: introduces unapproved status '{ap.id}'");
+                }
+                if (string.IsNullOrEmpty(a.patternId))
+                {
+                    if (a.intervals != null)
+                        errors.Add($"{variant.id}.{a.name}: standard pattern must be Steady (intervals == null)");
+                }
+                else if (a.intervals != null)
+                {
+                    if (a.intervals.Length != Math.Max(0, a.hits - 1))
+                        errors.Add($"{variant.id}.{a.name}: Accelerando intervals length must equal hits - 1");
+                    if (a.intervals.Any(iv => iv < 0.310f - 1e-6f))
+                        errors.Add($"{variant.id}.{a.name}: Accelerando interval below 310 ms Elite floor");
+                    for (int i = 1; i < a.intervals.Length; i++)
+                        if (a.intervals[i] > a.intervals[i - 1] + 1e-6f)
+                            errors.Add($"{variant.id}.{a.name}: Syncopated patterns are disallowed (intervals must be non-increasing)");
+                }
+            }
+
+            // Stat scaling validation across dungeons 1..8: EnhancedStat = floor(NormalScaledStat * mult) applied once (§4.3).
+            for (int d = 1; d <= 8; d++)
+            {
+                var baseUnit = new Unit(baseDef, d);
+                var enhUnit = new Unit(variant, d);
+                var m = variant.statMult;
+                if (enhUnit.stats.maxHp != Unit.ScaleVariantStat(baseUnit.stats.maxHp, m.Hp))
+                    errors.Add($"{variant.id} D{d}: HP mismatch");
+                if (enhUnit.stats.maxMp != Unit.ScaleVariantStat(baseUnit.stats.maxMp, m.Mp))
+                    errors.Add($"{variant.id} D{d}: MP mismatch");
+                if (enhUnit.stats.atk != Unit.ScaleVariantStat(baseUnit.stats.atk, m.Atk))
+                    errors.Add($"{variant.id} D{d}: ATK mismatch");
+                if (enhUnit.stats.mag != Unit.ScaleVariantStat(baseUnit.stats.mag, m.Matk))
+                    errors.Add($"{variant.id} D{d}: MATK mismatch");
+                if (enhUnit.stats.def != Unit.ScaleVariantStat(baseUnit.stats.def, m.Def))
+                    errors.Add($"{variant.id} D{d}: DEF mismatch");
+                if (enhUnit.Derived.magicDefense != Unit.ScaleVariantStat(baseUnit.Derived.magicDefense, m.Mdef))
+                    errors.Add($"{variant.id} D{d}: MDEF mismatch");
+                if (enhUnit.stats.spd != Unit.ScaleVariantStat(baseUnit.stats.spd, m.Spd))
+                    errors.Add($"{variant.id} D{d}: SPD mismatch");
+            }
+
+            return errors.Count == 0;
         }
 
         static void SetAi(string id, AiRole role, AiTier tier)
