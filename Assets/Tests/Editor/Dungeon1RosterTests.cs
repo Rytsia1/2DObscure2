@@ -44,7 +44,9 @@ namespace Obscure.Tests
 
         // ---- enemy data ----
 
-        // id, tier, HP, MP, ATK, DEF, MATK, MDEF, SPD, Break
+        static int ZoroaHp => Dungeon1Roster.ScaleD1Stat(1840, Dungeon1Roster.BossHpMult);
+
+        // id, tier, workbook base HP, MP, ATK, DEF, MATK, MDEF, SPD, Break
         [TestCase("hollow_squire", Tier.Normal, 145, 35, 18, 8, 8, 6, 9, 100)]
         [TestCase("gravebound_archer", Tier.Normal, 112, 45, 20, 5, 10, 7, 13, 100)]
         [TestCase("cinder_wisp", Tier.Normal, 105, 70, 8, 4, 22, 8, 14, 100)]
@@ -63,15 +65,21 @@ namespace Obscure.Tests
         [TestCase("zoroa_p2", Tier.Boss, 1840, 850, 43, 18, 50, 24, 17, 200)]
         public void RosterBaseStatsMatchWorkbook(string id, Tier tier, int hp, int mp, int atk, int def, int matk, int mdef, int spd, int brk)
         {
+            float hpMult = tier == Tier.Boss ? Dungeon1Roster.BossHpMult : tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
+            float atkMult = tier == Tier.Boss ? Dungeon1Roster.BossAtkMult : tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
+            int scaledHp = Dungeon1Roster.ScaleD1Stat(hp, hpMult);
+            int scaledAtk = Dungeon1Roster.ScaleD1Stat(atk, atkMult);
+            int scaledMatk = Dungeon1Roster.ScaleD1Stat(matk, atkMult);
+
             var d = E(id);
             Assert.AreEqual(tier, d.tier);
             Assert.AreEqual(AiKind.Priority, d.ai);
-            Assert.AreEqual(new Stats(hp, mp, atk, def, spd, matk), d.stats);
+            Assert.AreEqual(new Stats(scaledHp, mp, scaledAtk, def, spd, scaledMatk), d.stats);
             Assert.AreEqual(mdef, d.magicDef);
             Assert.AreEqual(brk, d.maxBreakGauge);
 
             var c = new Combatant(new Unit(d), Side.Enemy, 0, d.shortName, d.tag, d);
-            Assert.AreEqual(hp, c.unit.hp);
+            Assert.AreEqual(scaledHp, c.unit.hp);
             Assert.AreEqual(mp, c.unit.mp, "starts with full MP");
             Assert.AreEqual(mdef, c.MagicDef);
             Assert.AreEqual(spd, c.Initiative);
@@ -151,9 +159,10 @@ namespace Obscure.Tests
             if (damage.Length == 0) Assert.IsTrue(m.StatusOnly || m.Heals);
             else CollectionAssert.AreEqual(damage, m.hitDamage);
 
-            // The coefficient maps the authored D1 damage onto the D1 ATK / MATK (no extra scaling layer).
+            // The coefficient maps the authored D1 damage onto the D1 ATK / MATK (scaled automatically by the tier stat multiplier).
             float stat = m.UsesMagic ? d.stats.mag : d.stats.atk;
-            for (int i = 0; i < damage.Length; i++) Assert.AreEqual(damage[i], stat * m.PowerAt(i), 1e-3, $"hit {i + 1}");
+            float atkMult = d.tier == Tier.Boss ? Dungeon1Roster.BossAtkMult : d.tier == Tier.Elite ? Dungeon1Roster.EliteStatMult : 1f;
+            for (int i = 0; i < damage.Length; i++) Assert.AreEqual(damage[i] * atkMult, stat * m.PowerAt(i), 0.75, $"hit {i + 1}");
 
             if (status == null) Assert.IsTrue(m.apply == null || m.apply.Length == 0, "no status");
             else
@@ -246,11 +255,18 @@ namespace Obscure.Tests
         [Test]
         public void ScalingNeverChainsAndMatchesWorkbookZoroaDungeon8()
         {
+            int p1Hp = Expected(ZoroaHp, Tier.Boss, 0, 8);
+            int p1Atk = Expected(Dungeon1Roster.ScaleD1Stat(38, Dungeon1Roster.BossAtkMult), Tier.Boss, 2, 8);
+            int p1Matk = Expected(Dungeon1Roster.ScaleD1Stat(42, Dungeon1Roster.BossAtkMult), Tier.Boss, 3, 8);
             var p1 = new Unit(E("zoroa_p1"), 8);
-            Assert.AreEqual(new Stats(3643, 1020, 64, 28, 17, 71), p1.stats);
+            Assert.AreEqual(new Stats(p1Hp, 1020, p1Atk, 28, 17, p1Matk), p1.stats);
             Assert.AreEqual(31, p1.Derived.magicDefense);
+
+            int p2Hp = Expected(ZoroaHp, Tier.Boss, 0, 8);
+            int p2Atk = Expected(Dungeon1Roster.ScaleD1Stat(43, Dungeon1Roster.BossAtkMult), Tier.Boss, 2, 8);
+            int p2Matk = Expected(Dungeon1Roster.ScaleD1Stat(50, Dungeon1Roster.BossAtkMult), Tier.Boss, 3, 8);
             var p2 = new Unit(E("zoroa_p2"), 8);
-            Assert.AreEqual(new Stats(3643, 1445, 73, 25, 21, 85), p2.stats);
+            Assert.AreEqual(new Stats(p2Hp, 1445, p2Atk, 25, 21, p2Matk), p2.stats);
             Assert.AreEqual(34, p2.Derived.magicDefense);
 
             // Exact-decimal floor: 125 x (1 + 0.12 x 5) is exactly 200 (float math gave 199).
@@ -573,7 +589,7 @@ namespace Obscure.Tests
         {
             var b = NewBattle(1, "zoroa_p1");
             var z = b.Enemies[0];
-            b.Damage(z, 1840);
+            b.Damage(z, ZoroaHp);
             Assert.AreEqual(2, z.phase);
             Assert.IsTrue(EnemyAI.Moves(z).Any(m => m.name == "Arcane Charge"));
             z.unit.mp = 100;
@@ -740,18 +756,18 @@ namespace Obscure.Tests
             var z = b.Enemies[0];
             Assert.AreEqual(1, z.phase);
             Assert.AreEqual("zoroa_p1", z.enemy.id);
-            Assert.AreEqual(1840, z.unit.hp);
+            Assert.AreEqual(ZoroaHp, z.unit.hp);
             var partyHp = b.Party.Select(p => p.unit.hp).ToList();
             b.Party[0].AddStatus(StatusId.DefenseUp, 3, 0.2f, b.Party[0]);
 
-            b.Damage(z, 1839);
+            b.Damage(z, ZoroaHp - 1);
             Assert.AreEqual(1, z.phase, "Phase 2 only once the first bar is empty");
             var hit = b.Damage(z, 500);
             Assert.IsFalse(hit.killed);
             Assert.IsTrue(z.Alive);
             Assert.AreEqual(2, z.phase);
             Assert.AreEqual("zoroa_p2", z.enemy.id);
-            Assert.AreEqual(1840, z.unit.hp, "fresh bar; overkill does not carry over");
+            Assert.AreEqual(ZoroaHp, z.unit.hp, "fresh bar; overkill does not carry over");
             Assert.AreEqual(850, z.unit.mp);
             Assert.AreEqual(200, z.MaxBreakGauge);
             Assert.AreEqual(17, z.Initiative);
@@ -762,9 +778,9 @@ namespace Obscure.Tests
             Assert.IsTrue(b.Party[0].Has(StatusId.DefenseUp));
             CollectionAssert.Contains(EnemyAI.Moves(z).Select(m => m.name).ToList(), "Soulstorm");
 
-            b.Damage(z, 1840);
+            b.Damage(z, ZoroaHp);
             Assert.IsFalse(z.Alive);
-            Assert.AreEqual(Outcome.Victory, b.Outcome, "3680 effective HP in total");
+            Assert.AreEqual(Outcome.Victory, b.Outcome, $"{2 * ZoroaHp} effective HP in total");
         }
 
         [Test]
@@ -780,7 +796,7 @@ namespace Obscure.Tests
                     b.Apply(z, new StatusApply { id = id, chance = 1f }, b.Party[0], 1f);
                     Assert.IsFalse(z.Has(id), $"phase {phase}: {id}");
                 }
-                if (phase == 1) b.Damage(z, 1840);
+                if (phase == 1) b.Damage(z, ZoroaHp);
             }
             Assert.AreEqual(2, z.phase);
         }
@@ -799,7 +815,7 @@ namespace Obscure.Tests
                 if (c == z)
                 {
                     turns[b.Round] = turns.TryGetValue(b.Round, out var n) ? n + 1 : 1;
-                    if (b.Round == 2) b.Damage(z, 1840); // phase change after it already acted this round
+                    if (b.Round == 2) b.Damage(z, ZoroaHp); // phase change after it already acted this round
                 }
                 b.Perform(BattleAction.Guard(c));
             }
@@ -1104,9 +1120,33 @@ namespace Obscure.Tests
             var z = b3.Enemies[0];
             z.ApplyBreakDamage(10000, b3.Party[0], out _);
             Assert.IsTrue(z.IsBroken);
-            b3.Damage(z, 1840);
+            b3.Damage(z, ZoroaHp);
             Assert.IsFalse(z.IsBroken);
             Assert.AreEqual(200, z.CurrentBreakGauge);
+        }
+
+        [Test]
+        public void ZoroaFinalReapingBreaksDefaultHeroOnAllMissAndDoesNotOnAllGood()
+        {
+            Combatant RunReaping(QteResult qte)
+            {
+                var b = NewBattle(1, "zoroa_p1");
+                var z = AdvanceTo(b, c => c.IsEnemy);
+                var hero = b.Party[0];
+                hero.unit.hp = 9999;
+                hero.guarding = false;
+                Assert.AreEqual(Combatant.PlayerPoiseGauge, hero.CurrentBreakGauge);
+                b.Perform(BattleAction.Strike(z, Move("zoroa_p1", "Final Reaping"), hero), 1f, Enumerable.Repeat(qte, 4).ToList());
+                return hero;
+            }
+
+            var missed = RunReaping(QteResult.Miss);
+            Assert.IsTrue(missed.IsBroken, "all-Miss Final Reaping must break a 60-Poise hero");
+            Assert.AreEqual(0, missed.CurrentBreakGauge);
+
+            var good = RunReaping(QteResult.Good);
+            Assert.IsFalse(good.IsBroken, "all-Good Final Reaping must not break a 60-Poise hero");
+            Assert.Greater(good.CurrentBreakGauge, 0);
         }
     }
 }

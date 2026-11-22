@@ -388,10 +388,13 @@ namespace Obscure
                             float physPen = (actor.IsPlayer && run?.ModifierManager != null) ? run.ModifierManager.GetPhysicalPenetrationBonus(actor) : 0f;
                             int raw = move != null && move.UsesMagic ? Rules.Magic(actor, t, hitPower, Rng) : Rules.Physical(actor, t, hitPower, Rng, physPen);
                             var hit = Deal(actor, t, raw, element, reaction, null, heavy, attackQte);
-                            if (move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
+                            if (i == (move?.hits ?? 1) - 1 && move != null && move.breakPower > 0 && t.Alive && t.HasBreakGauge && !t.IsBroken)
                             {
                                 int hitBreak = hit.breakAmount;
-                                BreakHit(t, move.breakPower, actor, ref hit);
+                                int extraBreak = move.breakPower;
+                                if (t.IsPlayer && (reaction == QteResult.Good || reaction == QteResult.Perfect || t.guarding))
+                                    extraBreak = Math.Max(1, (int)Math.Round(extraBreak * Combatant.PlayerPoiseMitigatedMult));
+                                BreakHit(t, extraBreak, actor, ref hit);
                                 hit.breakAmount += hitBreak;
                             }
                             hits.Add(hit);

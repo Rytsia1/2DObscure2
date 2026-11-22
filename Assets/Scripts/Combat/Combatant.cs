@@ -47,6 +47,18 @@ namespace Obscure
         public const float PlayerPoiseMitigatedMult = 0.5f;  // Good defensive QTE or Guarding
         public const float PlayerPoiseHeavyMult = 1.5f;
         public const int PlayerPoiseRecovery = 20;           // per turn, only if not hit since last turn
+        // Enemy base break power by tier (posture-B starting value, untested).
+        // Pass test: in a D1 playtest, a hero breaks 1-2 times per Elite/Zoroa fight when QTEs are missed, and about 0 times when they are hit.
+        // If it fails: too many breaks -> lower Elite/Boss by 4; still no breaks -> raise by 4.
+        public const int NormalEnemyBaseBreakPower = 12;     // posture-B starting value (untested)
+        public const int EliteEnemyBaseBreakPower = 20;      // posture-B starting value (untested)
+        public const int BossEnemyBaseBreakPower = 28;       // posture-B starting value (untested)
+        public static int EnemyBaseBreakPower(Tier tier) => tier switch
+        {
+            Tier.Boss => BossEnemyBaseBreakPower,
+            Tier.Elite => EliteEnemyBaseBreakPower,
+            _ => NormalEnemyBaseBreakPower,
+        };
         // GDD Bab 10 §8.11: the Break gauge drops 20 at the start of its owner's turn. Drawn as a shield that drains toward Broken,
         // so here it refills by the same amount.
         public const int EnemyShieldRecovery = 20;

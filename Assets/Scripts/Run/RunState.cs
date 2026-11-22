@@ -196,8 +196,8 @@ namespace Obscure
                 qteTimingBonus = 0,
                 qteStability = 0,
                 counterPower = 10,
-                physicalBreakPower = 10 + mods.str * 2,
-                magicBreakPower = 10 + mods.intel * 2,
+                physicalBreakPower = Combatant.EnemyBaseBreakPower(d.tier) + mods.str * 2,
+                magicBreakPower = Combatant.EnemyBaseBreakPower(d.tier) + mods.intel * 2,
             };
             hp = stats.maxHp;
             mp = stats.maxMp;
