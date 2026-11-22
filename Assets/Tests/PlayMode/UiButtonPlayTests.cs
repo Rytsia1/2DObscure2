@@ -667,5 +667,45 @@ namespace Obscure.Tests
                 "Label inside .button-slab must inherit FelnaGothicFont");
             slab.RemoveFromHierarchy();
         }
+
+        [UnityTest]
+        public IEnumerator BossCombat_HidesBakedWardenSpriteAndReparentsAura()
+        {
+            yield return Begin();
+            Game.I.StartRun();
+            yield return Settle();
+
+            var node = Run.Available.First(n => n.IsCombat);
+            node.encounter = "d1_boss";
+            var combatItem = UitkMenu.ActiveMenu.items.First(i => i.text == "Combat");
+            yield return ClickElement(combatItem.element);
+            yield return ClickElement(UitkMenu.ActiveMenu.items.First(i => i.text == "Travel").element);
+            Assert.AreEqual(GameState.Combat, State);
+
+            for (float t = 0; t < 10f && (UitkMenu.ActiveMenu == null || UitkMenu.ActiveMenu.items.Count == 0); t += Time.unscaledDeltaTime)
+                yield return null;
+            yield return null;
+
+            var doc = UnityEngine.Object.FindObjectsByType<UIDocument>(FindObjectsSortMode.None)
+                .FirstOrDefault(d => d.rootVisualElement != null && d.rootVisualElement.Q<VisualElement>(className: "_22c-boss-combat-hud-zoroa") != null);
+            Assert.IsNotNull(doc, "Boss Combat 22c UIDocument must be mounted.");
+
+            var bakedBoss = doc.rootVisualElement.Q<VisualElement>(className: "sprite-warden");
+            Assert.IsNotNull(bakedBoss, "Baked .sprite-warden should exist in 22c UXML.");
+            Assert.AreEqual(DisplayStyle.None, bakedBoss.resolvedStyle.display, "Baked .sprite-warden must be hidden so it does not overlap the runtime Boss sprite.");
+
+            var stageHost = doc.rootVisualElement.Q<VisualElement>("CombatStageHost");
+            Assert.IsNotNull(stageHost, "CombatStageHost must exist.");
+            Assert.GreaterOrEqual(stageHost.childCount, 2, "CombatStageHost must contain bossAura at index 0 plus activeMarker/combatants.");
+            Assert.IsFalse(stageHost[0] is UiLabel, "stageHost[0] should be the reparented bossAura behind the Boss sprite.");
+
+            var bossTitle = doc.rootVisualElement.Q<UiLabel>(className: "zoroa-harvester-of-souls-vars");
+            Assert.IsNotNull(bossTitle);
+            Assert.AreNotEqual(DisplayStyle.None, bossTitle.resolvedStyle.display, "Boss HUD title must remain visible.");
+
+            var bossIntent = doc.rootVisualElement.Q<UiLabel>(className: "intent-final-reaping-4-heavy-all-vars");
+            Assert.IsNotNull(bossIntent);
+            Assert.AreEqual(DisplayStyle.None, bossIntent.resolvedStyle.display, "Boss intent label must remain hidden.");
+        }
     }
 }

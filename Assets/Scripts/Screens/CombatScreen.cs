@@ -374,11 +374,13 @@ namespace Obscure
             var bossTitleEl = isBossHud ? UiRoot.Q<VisualElement>(className: "zoroa-harvester-of-souls-vars") : null;
             int bossHeaderStart = bossTitleEl != null ? screenRoot.IndexOf(bossTitleEl) : int.MaxValue;
             var bossAura = isBossHud ? BossNeighbour("sprite-warden", -1) : null;
+            var bakedBossSprite = isBossHud ? UiRoot.Q<VisualElement>(className: "sprite-warden") : null;
 
             if (rightPanel != null)
             {
                 int start = screenRoot.IndexOf(rightPanel) + 1;
                 var toRemove = new List<VisualElement>();
+                bool reparentBossAura = false;
                 for (int i = start; i < screenRoot.childCount; i++)
                 {
                     var child = screenRoot[i];
@@ -392,19 +394,23 @@ namespace Obscure
                         toRemove.Add(child);
                         continue;
                     }
-                    // On 22c, reparent the subtle ground aura inside stageHost behind the Boss sprite
+                    // On 22c, defer reparenting the subtle ground aura until after iterating screenRoot
                     if (child == bossAura)
                     {
-                        toRemove.Add(child);
-                        stageHost.Insert(0, bossAura);
-                        bossAura.style.top = 298;
+                        reparentBossAura = true;
                         continue;
                     }
 
                     child.style.display = DisplayStyle.None;
                 }
-                foreach (var el in toRemove) if (el != bossAura) el.RemoveFromHierarchy();
+                foreach (var el in toRemove) el.RemoveFromHierarchy();
+                if (reparentBossAura && bossAura != null)
+                {
+                    stageHost.Insert(0, bossAura);
+                    bossAura.style.top = 274;
+                }
             }
+            if (bakedBossSprite != null) bakedBossSprite.style.display = DisplayStyle.None;
         }
 
         void BindBossHeaderElements()
@@ -438,9 +444,8 @@ namespace Obscure
             bossIntentLbl = UiRoot.Q<UiLabel>(className: "intent-final-reaping-4-heavy-all-vars");
             if (bossIntentLbl != null)
             {
-                bossIntentLbl.style.left = 220;
-                bossIntentLbl.style.width = 700;
-                bossIntentLbl.style.unityTextAlign = TextAnchor.MiddleLeft;
+                bossIntentLbl.text = "";
+                bossIntentLbl.style.display = DisplayStyle.None;
             }
 
             // Boss status badge row (design 434,128): clear its baked icons so live statuses go there.
@@ -566,7 +571,15 @@ namespace Obscure
                 statusRow = statusRow,
                 stageStatusRow = stageStatusRow,
             };
-            if (hud.nameLbl != null) hud.nameLbl.text = c.name.ToUpperInvariant();
+            if (hud.nameLbl != null)
+            {
+                string heroName = c.name.ToUpperInvariant();
+                hud.nameLbl.text = heroName;
+                hud.nameLbl.style.maxWidth = 142;
+                hud.nameLbl.style.overflow = Overflow.Hidden;
+                hud.nameLbl.style.textOverflow = TextOverflow.Ellipsis;
+                if (heroName.Length > 10) hud.nameLbl.style.fontSize = 15;
+            }
             if (hud.roleLbl != null) hud.roleLbl.text = (c.unit.role ?? "HERO").ToUpperInvariant();
             huds[c] = hud;
         }
@@ -575,7 +588,7 @@ namespace Obscure
         {
             var spr = c.unit.sprite;
             float w = 192f, h = 224f;
-            var pos = new Vector2(854f, 162f); // matches 22c sprite-warden (left: 860, top: 244 - 82 = 162)
+            var pos = new Vector2(854f, 146f); // raised 16px so feet and aura clear the bottom HUD border
 
             var fig = new VisualElement
             {
@@ -631,11 +644,8 @@ namespace Obscure
 
             var card = new VisualElement
             {
-                style = { position = Position.Absolute, left = pos.x - 24f, top = pos.y - 26f, width = w + 48f, alignItems = UnityEngine.UIElements.Align.Center }
+                style = { position = Position.Absolute, left = pos.x - 24f, top = pos.y - 16f, width = w + 48f, alignItems = UnityEngine.UIElements.Align.Center }
             };
-
-            var intentLbl = new UiLabel("") { style = { fontSize = 12, color = Palette.Ember1, marginBottom = 2, unityTextAlign = TextAnchor.MiddleCenter } };
-            card.Add(intentLbl);
 
             var fig = new VisualElement { style = { width = w, height = h } };
             var idle = UnitArt.Enemy(c.enemy?.id, spr);
@@ -692,7 +702,6 @@ namespace Obscure
                 weakLbl = weakLbl,
                 statusLbl = statusLbl,
                 statusRow = statusRow,
-                intentLbl = intentLbl,
             };
         }
 
@@ -923,9 +932,8 @@ namespace Obscure
                         }
                         if (bossIntentLbl != null)
                         {
-                            var intent = EnemyAI.IntentText(c);
-                            bossIntentLbl.text = !string.IsNullOrEmpty(intent) ? $"INTENT: {intent}" : "";
-                            bossIntentLbl.style.color = c.IsCharging || (c.Intent?.move.HasHeavy ?? false) ? Palette.CrimsonBright : Palette.Ember1;
+                            bossIntentLbl.text = "";
+                            bossIntentLbl.style.display = DisplayStyle.None;
                         }
                     }
                     else
@@ -954,9 +962,8 @@ namespace Obscure
 
                         if (h.intentLbl != null)
                         {
-                            var intent = EnemyAI.IntentText(c);
-                            h.intentLbl.text = intent ?? "";
-                            h.intentLbl.style.color = c.IsCharging || (c.Intent?.move.HasHeavy ?? false) ? Palette.CrimsonBright : Palette.Ember;
+                            h.intentLbl.text = "";
+                            h.intentLbl.style.display = DisplayStyle.None;
                         }
                     }
 

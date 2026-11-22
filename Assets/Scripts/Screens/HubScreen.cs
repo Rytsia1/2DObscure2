@@ -163,8 +163,14 @@ namespace Obscure
             if (row == null) return;
 
             row.AddToClassList("uitk-flat-item");
-            row.style.left = 44;
-            row.style.width = 298;
+            if (row.parent != null)
+            {
+                row.parent.style.left = 42;
+                row.parent.style.width = 302;
+                row.parent.style.overflow = Overflow.Hidden;
+            }
+            row.style.left = 0;
+            row.style.width = 302;
             row.style.height = 38;
             row.style.paddingTop = 4;
             row.style.paddingBottom = 4;
