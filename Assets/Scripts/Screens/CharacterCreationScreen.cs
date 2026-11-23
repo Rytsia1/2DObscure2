@@ -1097,22 +1097,22 @@ namespace Obscure
 
         static string AbilitySubtitle(Ability a) => a switch
         {
-            Ability.STR => "PHYSICAL POWER · BREAK",
-            Ability.DEX => "INITIATIVE · EVASION · RANGED",
-            Ability.VIT => "MAX HP · PHYSICAL DEFENSE",
-            Ability.INT => "MAGIC POWER · MAX MP",
-            Ability.WIS => "MAGIC DEFENSE · HEALING",
-            _ => "SHOP PRICES · SUPPORT"
+            Ability.STR => "PHYSICAL DAMAGE SCALING (RAW)",
+            Ability.DEX => "RANGED ACC · EVASION · QTE WINDOW",
+            Ability.VIT => "MAX HP (+4% BASE HP / MOD)",
+            Ability.INT => "ELEMENTAL DAMAGE · MAX MP",
+            Ability.WIS => "HEALING POWER (+4% / MOD)",
+            _ => "BUFF EFFECTIVENESS · SOCIAL"
         };
 
         static DerivedStatId[] PreviewStatsFor(Ability a) => a switch
         {
-            Ability.STR => new[] { DerivedStatId.PhysicalPower, DerivedStatId.PhysicalBreakPower, DerivedStatId.MaxHP },
-            Ability.DEX => new[] { DerivedStatId.Initiative, DerivedStatId.Evasion, DerivedStatId.RangedPower },
-            Ability.VIT => new[] { DerivedStatId.MaxHP, DerivedStatId.PhysicalDefense, DerivedStatId.StatusResistance },
-            Ability.INT => new[] { DerivedStatId.MagicPower, DerivedStatId.MaxMP, DerivedStatId.MagicBreakPower },
-            Ability.WIS => new[] { DerivedStatId.MagicDefense, DerivedStatId.HealingPower, DerivedStatId.MaxMP },
-            _ => new[] { DerivedStatId.SupportPower, DerivedStatId.CriticalChance, DerivedStatId.StatusResistance }
+            Ability.STR => new[] { DerivedStatId.PhysicalPower },
+            Ability.DEX => new[] { DerivedStatId.Evasion, DerivedStatId.QteTimingBonus },
+            Ability.VIT => new[] { DerivedStatId.MaxHP },
+            Ability.INT => new[] { DerivedStatId.MagicPower, DerivedStatId.MaxMP },
+            Ability.WIS => new[] { DerivedStatId.HealingPower },
+            _ => new[] { DerivedStatId.SupportPower }
         };
 
         void BuildAbilitiesPage()

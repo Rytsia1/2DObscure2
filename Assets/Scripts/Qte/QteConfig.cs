@@ -240,13 +240,12 @@ namespace Obscure
             return Rules.Physical(defender, attacker, multiplier * (1f + counterBonus), rng);
         }
 
-        // Calculates CHA command/support reaction multiplier for support skills and buffs.
+        // Calculates CHA Buff Effectiveness multiplier: 1 + clamp(0.04 * CHA Modifier, -0.20, +0.40).
+        // Applies both positive and negative CHA modifiers on explicitly CHA-scalable positive buffs.
         public static float SupportPotencyMultiplier(Combatant actor)
         {
-            if (actor == null) return 1f;
-            var cfg = Database.QteStatInteractions[Ability.CHA];
-            int chaMod = Math.Max(0, actor.unit.Mod(Ability.CHA));
-            return 1f + Math.Clamp(chaMod * cfg.scalingPerModifier, 0f, cfg.maxBonus);
+            if (actor?.unit == null) return 1f;
+            return 1f + StatCalculator.CalculateBuffEffectivenessBonus(actor.unit.Mod(Ability.CHA));
         }
     }
 }

@@ -151,16 +151,16 @@ namespace Obscure.Tests
             var knight = P(b, "Knight");
             knight.unit.hp = 10;
 
-            // Baseline heal without talent
-            var hitNormal = b.Heal(knight, 100, healer);
-            Assert.AreEqual(100, hitNormal.amount);
+            // Baseline heal without talent (use 60 so heal does not cap at Knight's Max HP and 60 * 1.15 = 69 exact)
+            var hitNormal = b.Heal(knight, 60, healer);
+            Assert.AreEqual(60, hitNormal.amount);
 
             // Add healer talent
             healer.unit.selectedTalentIds.Add("healer");
             knight.unit.hp = 10;
 
-            var hitEmpowered = b.Heal(knight, 100, healer);
-            Assert.AreEqual(115, hitEmpowered.amount, "Healer talent must grant +15% healing dealt");
+            var hitEmpowered = b.Heal(knight, 60, healer);
+            Assert.AreEqual(69, hitEmpowered.amount, "Healer talent must grant +15% healing dealt");
         }
 
         // =====================================================================
@@ -178,8 +178,8 @@ namespace Obscure.Tests
             unit.selectedTalentIds.Add("durable");
             unit.RecalculateStats();
 
-            int expectedHp = (int)Math.Round(baseMaxHp * 1.10f);
-            Assert.AreEqual(expectedHp, unit.stats.maxHp, "Durable must grant +10% Max HP");
+            int expectedHp = StatCalculator.CalculateMaxHp(unit.classDef.baseHp, unit.Mod(Ability.VIT), extraBasePercentAdd: TalentSystem.DurableHpBonus);
+            Assert.AreEqual(expectedHp, unit.stats.maxHp, "Durable must grant non-compounding +10% Base Max HP");
 
             // Test in combatant damage reduction
             var b = NewBattle("skeleton");

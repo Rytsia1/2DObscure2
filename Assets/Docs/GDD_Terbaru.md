@@ -628,41 +628,55 @@ for RPG formulas and progression.
 There are six Ability Scores:
 
   -----------------------------------------------------------------------
-  Ability                             General Role
+  Ability                             Primary Role (FINAL)
   ----------------------------------- -----------------------------------
-  STR --- Strength                    Physical Power, melee damage, and
-                                      physical strength
+  STR --- Strength                    Physical Damage scaling (Raw STR,
+                                      explicit skill scaling only)
 
-  DEX --- Dexterity                   Accuracy, Evasion, agility, and
-                                      ranged combat
+  DEX --- Dexterity                   Ranged Accuracy (+2%/mod), Evasion
+                                      (+2%/mod), Timing QTE Window
+                                      (+3%/mod, shared +25% cap)
 
-  VIT --- Vitality                    HP, durability, and resistance
+  VIT --- Vitality                    Max HP (+4% Base HP per modifier)
 
-  INT --- Intelligence                Magic Power and magical knowledge
+  INT --- Intelligence                Elemental Damage scaling (Raw INT)
+                                      and Max MP (+4% Base MP per mod)
 
-  WIS --- Wisdom                      Healing, perception, and spiritual
-                                      abilities
+  WIS --- Wisdom                      Healing Power (+4% Base Healing per
+                                      modifier)
 
-  CHA --- Charisma                    Social abilities, certain magical
-                                      effects, and class mechanics
+  CHA --- Charisma                    Buff Effectiveness (+4%/mod on
+                                      explicitly scalable positive buffs),
+                                      Social Interaction, class support
   -----------------------------------------------------------------------
 
 One exception: DEX widens timing-based QTE windows by 3% per DEX
-modifier, inside the shared +25% window cap (Bab 12 §8.2). No other
-Ability Score affects QTE windows, and no Ability Score affects QTE
-grades or multipliers; QTE measures player execution, while Ability
-Scores measure character power.
+modifier, inside the shared +25% window cap and −15% attribute floor
+(Bab 12 §8.2). No other Ability Score affects QTE windows, and no Ability
+Score affects QTE grades, multipliers, or T_lead; QTE measures player
+execution, while Ability Scores measure character power. Block Power and
+Counter Power are fully decoupled from STR and DEX.
 
-#### Stat Allocation
+#### Stat Allocation & Attribute Progression (FINAL)
 
--   Players allocate Ability Scores using **Point Buy**.
--   Ability Scores contribute to derived stats.
--   Races provide Ability Score Bonuses.
--   Classes define gameplay identity and skill access.
-
-Racial bonuses and score limits (15 before racial bonus, 17 after, 20
-through progression) are defined in Bab 6 (Race System). The Point Buy
-budget and derived-stat formulas are not finalized.
+-   Players allocate Ability Scores at Level 1 using **Point Buy**:
+    **27 points**, base score **8**, range **8–15** before racial bonus
+    (cumulative cost: `8→0, 9→1, 10→2, 11→3, 12→4, 13→5, 14→7, 15→9`).
+-   Races provide Ability Score Bonuses after Point Buy (max **17** at
+    Level 1). Normal progression cap is **20**; temporary buffs may
+    exceed 20 only when explicitly allowed.
+-   **Attribute Points (AP):** +2 AP at every Skill Tier Unlock milestone
+    (Levels **4, 7, 10, 13, 16, 19, 22, 25, 28** = 18 AP up to Level 30;
+    under the active Level Cap 15 build, Levels **4, 7, 10, 13** grant
+    8 AP). Free Allocation (`1 AP = +1` score), stackable on one stat,
+    bankable, and never lost to Attribute Caps.
+-   **Modifier Formula:** `Modifier = floor((Ability Score - 10) / 2)`.
+    Negative modifiers apply fully. Raw Scores scale explicit skill
+    damage; Modifiers scale Derived Stats without double scaling.
+-   **Support Separation:** Healing Power (`WIS`), Buff Effectiveness
+    (`CHA`), Shield Power (separate), Damage Reduction (separate), and
+    Status Effect Resistance (shared combat system) remain strictly
+    separated. Full spec: `FELNA_Attribute_Progression_Derived_Stats_Spec_v1.0.md`.
 
 ### 5. Skill System
 
@@ -759,17 +773,14 @@ finalized list.
 Ranged Accuracy has been discussed as a stat used to determine the
 chance of ranged attacks hitting a target.
 
-#### Hit Chance Concept
+#### Hit Chance Formula (FINAL)
 
-Proposed basic formula:
+`Hit Chance = clamp(Base Hit Chance + Attacker Accuracy - Target Evasion, 5%, 95%)`
 
-`Hit Chance = Base Hit Chance + Attacker Accuracy - Target Evasion`
-
-Hit Chance should have minimum and maximum limits to prevent attacks
-from being guaranteed misses or guaranteed hits.
-
-Values such as an 85% Base Hit Chance, 5% minimum, and 95% maximum are
-examples only and remain subject to balancing.
+-   **Base Hit Chance:** `85%` (skills may override via data).
+-   **Clamping:** minimum `5%`, maximum `95%` (no guaranteed misses or guaranteed hits).
+-   **DEX Ranged Accuracy Bonus:** `+2% × DEX Modifier`, applied strictly to Ranged basic attacks and Ranged active skills.
+-   **Target Evasion:** `clamp(Base Evasion + 2% × DEX Modifier + Other Bonuses, 0%, 75%)`.
 
 #### QTE Interaction
 
@@ -836,24 +847,23 @@ additional skills.
 
 The following details still need to be designed or finalized:
 
--   Ability Score values, Point Buy budget, and derived-stat formulas
+-   ~~Ability Score values, Point Buy budget, and derived-stat formulas~~ *(Finalized in `FELNA_Attribute_Progression_Derived_Stats_Spec_v1.0.md` — 27-pt Point Buy, Hybrid Modifier, 6 Ability Scores, AP milestones)*
 -   Final weapon-type lists for each class and each hand
 -   Starting equipment for each class
 -   Equipment rarity and its mechanical impact
 -   Detailed equipment stat scaling
--   Accuracy formulas (QTE modifiers are specified in the QTE System
-    Specification)
+-   ~~Accuracy formulas~~ *(Finalized: Base 85%, clamp 5–95%, DEX Ranged Accuracy +2%/mod, Evasion +2%/mod cap 75%)*
 -   Skill values, Rank progression, and level-based tier unlocks
 
 ### 11. Resources dan Level (dari GDD v0.2 §3.1)
 
-|**Sistem**|**Aturan / draft**|
+|**Sistem**|**Aturan / status**|
 |---|---|
-|**HP**|Kelangsungan karakter; status HP 0 dan recovery rules perlu<br>finalisasi.|
-|**MP**|Dibayar untuk Active Skills.|
+|**HP**|Kelangsungan karakter; `Max HP = floor(Base HP × (1 + 0.04 × VIT Mod))`. Status HP 0 dan recovery rules mengikuti Bab 3 & 16.|
+|**MP**|Dibayar untuk Active Skills; `Max MP = floor(Base MP × (1 + 0.04 × INT Mod))`.|
 |**Resource class**|Tidak ada resource pool khusus class; hanya HP dan MP.|
-|**Level**|Maksimum 15.|
-|**Point Buy**|Stat allocation menggunakan Point Buy;nilai dan batas TBD.|
+|**Level**|Maksimum aktif **15** (rencana ekspansi ke **30**; jadwal AP 9 milestone Lv 4, 7, 10, 13, 16, 19, 22, 25, 28 sudah siap).|
+|**Point Buy**|FINAL: 27 points, base 8, rentang 8–15 pra-racial (maks 17 pasca-racial, normal cap 20).|
 
 ## Bab 6 — Race System
 
@@ -4438,9 +4448,9 @@ Semua angka bertanda *tuning* adalah nilai awal playtest. Angkanya konkret dan b
 
 **Keputusan: reduksi Defensive QTE dihitung dari stat Block Power target, bukan angka tetap. Full parry (0 damage) hanya dari Guard.** Revisi ini menggantikan aturan 20 November (Perfect 0.25× tetap; full parry lewat Guard atau shield).
 
-**1. Tujuan desain.** Playtest 19 November (Dheo): pemain yang terampil bisa "attack dan parry saja" tanpa skill, sehingga Guard dan healer terasa tidak berguna; reduksi QTE berada di luar damage calc dan menenggelamkan stat party. Dengan reduksi yang mengalikan Block Power (STR, shield, passive), stat pertahanan kembali menentukan hasil, dan nol damage menjadi keputusan taktis (Guard) yang memakan giliran. Shield tidak lagi memberi full parry karena tidak semua class bisa memakai shield; shield cukup menambah Block Power.
+**1. Tujuan desain.** Playtest 19 November (Dheo): pemain yang terampil bisa "attack dan parry saja" tanpa skill, sehingga Guard dan healer terasa tidak berguna; reduksi QTE berada di luar damage calc dan menenggelamkan stat party. Dengan reduksi yang mengalikan Block Power (class base, shield, passive — dipisah penuh dari STR agar 6 Ability Scores tetap murni), stat pertahanan kembali menentukan hasil, dan nol damage menjadi keputusan taktis (Guard) yang memakan giliran. Shield tidak lagi memberi full parry karena tidak semua class bisa memakai shield; shield cukup menambah Block Power.
 
-**2. Aturan/mekanik.** `block` = Block Power / 100 (base 50 + 3 × STR modifier, ditambah shield dan passive, cap 90).
+**2. Aturan/mekanik.** `block` = Block Power / 100 (base 50 dari class, ditambah shield, equipment, dan passive, cap 90; tidak lagi membaca STR modifier — revisi 23 November 2026).
 
 - Perfect (non-Heavy): damage × (1 − min(0,75; block)). Block 50 → 0,5×; Block 75 ke atas → 0,25× (batas bawah).
 - Good, atau Perfect pada Heavy: damage × (1 − block × 0,5). Block 50 → 0,75×; Block 80 → 0,6×.
@@ -4807,9 +4817,9 @@ Nilai dasar (dungeon 1–3, *tuning*):
 - Skill counter menyiapkan counter selama sejumlah giliran pengguna: Counterattack 2, Counterstrike 2, Perfect Counter 1. Durasi berkurang di awal giliran pengguna, sama seperti status.
 - Damage counter = damage fisik biasa pengguna (Physical Power, variance, dan mitigasi DEF musuh seperti serangan setara Good) dengan power = M × (1 + Counter Power / 100).
   - M = multiplier counter: Counterattack 1.0, Counterstrike 1.0, Perfect Counter 1.5; dikali 1.25 selama Draconic Overdrive.
-  - Counter Power = 10 + 2 × (modifier STR + modifier DEX), dibaca sebagai persen. Contoh: Fighter STR 16, DEX 12 punya Counter Power 18, sehingga counter-nya 1.18× serangan dasar Good.
+  - Counter Power = base class Counter Power (default 10) + bonus equipment/passive/skill, dibaca sebagai persen (dipisah penuh dari STR & DEX modifier — revisi 23 November 2026). Contoh: Fighter dengan Counter Power 10 + equipment/passive 8 memiliki Counter Power 18, sehingga counter-nya 1.18× serangan dasar Good.
   - Karena memakai Physical Power, counter ikut naik bersama weapon, level, dan Attack Up, sehingga tidak tertinggal di dungeon akhir.
-- Alasan angka: skill counter memakan satu giliran dan MP, dan baru membayar jika pengguna diserang lalu meraih Perfect. Satu counter minimal setara satu serangan dasar Good agar stance tidak pernah lebih buruk daripada menyerang biasa, dan Counter Power memberi alasan untuk build STR/DEX.
+- Alasan angka: skill counter memakan satu giliran dan MP, dan baru membayar jika pengguna diserang lalu meraih Perfect. Satu counter minimal setara satu serangan dasar Good agar stance tidak pernah lebih buruk daripada menyerang biasa, dan Counter Power memberi ruang build melalui class, gear, dan passive tanpa melanggar pemisahan 6 Ability Scores.
 - Status nilai: *tuning*, belum diukur. Uji: hitung porsi giliran Fighter dan Martial Artist yang dipakai untuk stance counter dalam playtest. Jika lebih dari 40%, stance terlalu kuat: turunkan M atau skala Counter Power. Jika kurang dari 5%, counter terlalu lemah: naikkan M. Ambang 40% dan 5% juga nilai awal.
 - Combo Martial Artist: Counterstrike +1 dan Perfect Counter +2 setiap kali counter terpicu, dibatasi Maximum Combo. Counter tidak dihitung sebagai "menyerang" untuk aturan reset combo (Bab 8 §5.1).
 - Counter tetap terpicu oleh Perfect pada serangan Heavy, walaupun reduksinya hanya 50%.
@@ -5105,13 +5115,13 @@ Class lain (kandidat, mengikuti dua jalur yang diizinkan):
 - Berlaku untuk QTE berbasis timing: timing bar, Charge, Moving Target, Combo, dan defensive tap/dodge. Tidak berlaku untuk QTE typing (incantation dan Ward).
 - Bonus DEX ditumpuk additive dengan modifier window dari equipment, talent, dan passive (3.4), di dalam cap bersama +25%. Batas bawah total −15% dari atribut; W\_P minimum 66 ms tetap berlaku.
 - Dengan batas atribut 20 (modifier +5), DEX paling banyak memberi +15%, sehingga masih ada ruang 10% untuk modifier lain sebelum cap.
-- Grade, multiplier, dan T\_lead tidak membaca atribut apa pun. DEX tetap juga memengaruhi Accuracy dan Evasion (Character Creation System).
-- STR dan DEX memengaruhi damage counter lewat Counter Power (6.5). Ini kekuatan karakter, bukan QTE: atribut menentukan seberapa keras counter memukul, bukan apakah counter terpicu.
+- Grade, multiplier, dan T\_lead tidak membaca atribut apa pun. DEX tetap juga memengaruhi Ranged Accuracy (+2%/mod) dan Evasion (+2%/mod) (Bab 5 §3 & §7).
+- Block Power dan Counter Power dipisahkan penuh dari STR dan DEX (revisi 23 November 2026); keduanya bersumber dari Class Base, Equipment/Shield, dan Passive.
 - Pengaturan accessibility (Bagian 10) bukan atribut dan tidak dihitung dalam cap.
 
 **3. Interaksi dengan sistem lain.** Character Creation dan Race (Bab 6 §6.3): racial bonus DEX ikut sedikit membantu timing. 3.4: jalur modifier window tetap satu cap +25%, sehingga balancing tetap terpusat. Hit Chance: QTE tetap terpisah dari Hit Chance.
 
-**4. Kurva kesulitan dan sumber tantangan.** Karakter dengan DEX tinggi mendapat window sedikit lebih lebar, tetapi tier musuh dan dungeon tetap menjadi sumber utama kesulitan. Kenaikan DEX lewat ASI (level 4, 8, 12, 14) memberi progresi timing kecil yang terlihat.
+**4. Kurva kesulitan dan sumber tantangan.** Karakter dengan DEX tinggi mendapat window sedikit lebih lebar, tetapi tier musuh dan dungeon tetap menjadi sumber utama kesulitan. Kenaikan DEX lewat Attribute Points pada Skill Tier Unlock milestones (Level 4, 7, 10, 13 pada cap aktif 15; hingga 16, 19, 22, 25, 28 pada ekspansi cap 30) memberi progresi timing kecil yang terlihat.
 
 **5. Risiko.**
 
@@ -6172,7 +6182,7 @@ Affix dapat memberikan bonus stat atau efek tertentu.
 
 | Category | Examples |
 |---|---|
-| Primary Stats | STR, INT, VIT, AGI |
+| Primary Stats | STR, DEX, VIT, INT, WIS, CHA *(tunduk pada Normal Progression Cap 20 kecuali item bertag `canExceedAttributeCap`)* |
 | Secondary Stats | Speed, Critical Chance, Critical Damage |
 | Physical | Physical Damage Bonus |
 | Elemental | Elemental Damage Bonus |
@@ -8972,7 +8982,8 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Tema dungeon TBD (Bab 17 §13.11, Bab 18 §20) | Identitas delapan layer dan boss-nya sudah ditetapkan di Bab 4 §6. Palet, arsitektur, dan prop per layer tetap perlu dirancang |
 | Jumlah equipment slot belum pasti | 8 slot: Main Hand, Second Hand, Head, Body, Leg, Foot, Accessory 1, Accessory 2. Weapon two-handed hanya menempati Main Hand (Bab 13) |
 | Nama grade QTE belum pasti | Perfect / Good / Poor (Bab 12) |
-| Tidak ada atribut yang memengaruhi QTE (Bab 12 §8.2 lama) | DEX melebarkan window QTE timing 3% per modifier, di dalam cap +25%; atribut lain tetap tidak memengaruhi QTE (Bab 12 §8.2, November 2026) |
+| Tidak ada atribut yang memengaruhi QTE (Bab 12 §8.2 lama) | DEX melebarkan window QTE timing 3% per modifier, di dalam cap +25% (floor −15%); atribut lain tetap tidak memengaruhi QTE (Bab 12 §8.2, November 2026) |
+| Point Buy, Derived Stats, AP milestones, Block/Counter coupling (Bab 5 §10, Bab 12 §3.5 & §6.5 lama) | **Final (23 November 2026):** Point Buy 27 pts (8–15 pra-racial, 17 pasca-racial, cap 20); +2 AP di Skill Tier Unlock milestones (Lv 4, 7, 10, 13 aktif pada Cap 15; siap hingga Lv 28 / 18 AP pada ekspansi Cap 30); Hybrid Modifier `floor((Score-10)/2)`; VIT +4% Base HP/mod; INT Raw Elemental +4% Base MP/mod; STR Raw Physical; DEX +2% Ranged Acc / +2% Evasion / +3% Timing QTE Window per mod; WIS +4% Base Healing/mod; CHA +4% opt-in Buff Effectiveness/mod & Social Checks; Shield/DR/StatusRes/Block/Counter dipisah penuh (`FELNA_Attribute_Progression_Derived_Stats_Spec_v1.0.md`) |
 | Offensive QTE 1.5× / 1.0× / 0.5× untuk damage dan Break | Damage 1.2× / 1.0× / 0.75×; Break tetap 1.5× / 1.0× / 0.5×; Perfect mengembalikan 1 MP (Bab 12 §2.5) |
 | Gold reward run (placeholder 10–18 / 30–42 / treasure 20–35 / boss 100) | Battle 30–55, Elite 90–125, Treasure 60–105, Boss 350, relic fallback 90. Target (November 2026): clear Dungeon 1 cukup untuk sekitar satu Temple Recovery penuh untuk party (4 × 300), sehingga setelah tiap dungeon pemain memilih antara memulihkan seluruh party atau membeli gear. Diukur pada 200 map (`ExpPacingReport`): rata-rata sekitar 1.270 gold per jalur Dungeon 1 dengan elite aktif (dulu 385), sekitar 600 di Dungeon 2. Hanya fight dan treasure yang dihitung; memilih opsi gold di reward normal menambah lebih banyak |
 | Pilihan reward lemah: fight normal Draught atau Ether plus 3 modifier tiap fight; boss hanya 1 opsi (relic boss atau 30 gold); Dungeon 1 tanpa node Elite | Fight normal: pilih 1 dari consumable (Draught/Ether), equipment (Common–Uncommon; sampai Rare mulai Dungeon 3), atau gold tambahan (30–55). Modifier hanya ditawarkan dari Elite, stage boss, treasure, dan event, bukan setiap fight; modifier yang sudah mencapai cap tidak ditawarkan. Boss: pilih 1 dari relic boss (atau relic lain jika sudah dimiliki), relic kedua, dan equipment Rare/Epic; jika slot relic penuh, opsi relic diganti equipment. **Dungeon 1 (terimplementasi):** memiliki 5 encounter Elite acak khusus (`d1_e8`–`d1_e12`: Reliquary Confessor, Graveglass Arcanist, Crownless Duelist, Tombstone Colossus, Mourning Bell Wraith) di node Elite Stage 2–3, ditambah miniboss Stage 1 (`d1_e6` Soul Reaper) dan Stage 2 (`d1_e7` Royal Ossuary Knight). Pacing tetap: median level 13–14 setelah Dungeon 1 |
@@ -9044,6 +9055,8 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Enhanced Common Variant, Transformation Spec & Handoff | v1.1 (Shipped) | Bab 10 §18, Bab 12 §6.2 | `AiTier.Enhanced`, Accelerando `≥ 310 ms`, 3 pilot keluarga & `10%` On-Defeat Transformation |
 
 ## Lampiran B — Riwayat Sinkronisasi November 2026
+
+- **Attribute Progression & Derived Stats Finalization (23 November 2026):** `FELNA_Attribute_Progression_Derived_Stats_Spec_v1.0.md` difinalisasi penuh (Point Buy 27 pts, +2 AP pada Skill Tier Unlock milestones Lv 4/7/10/13...[28], Hybrid Modifier, 6 Ability Scores murni, pemisahan penuh Shield Power, Damage Reduction, Status Resistance, Block Power, dan Counter Power, rounding `floor()`, serta penamaan `DEX` menggantikan `AGI` di Bab 13). Level Cap aktif dipertahankan di 15 untuk fase saat ini dengan jadwal AP siap untuk ekspansi Level 30.
 
 - **GDD Terpadu v1.6 (22 November 2026):** disinkronkan dengan kondisi kode terkini: Tutorial Prologue 3 node (`Prologue.cs`), roster Elite D1 (`d1_e8`–`d1_e12`), D1 Difficulty Pass, Charge Pacing (`ChargeGapTurns = 1`, `Soulbind` instant), Zoroa double turn + `Harvest Call`, Enemy AI v1.1 (Stages 0–3: `UtilityScorer`, `EncounterBlackboard`, `PlayerModel`, `AiTrace`), serta Enhanced Common Variants & On-Defeat Transformation v1.1 (3 pilot keluarga, `10%` roll).
 

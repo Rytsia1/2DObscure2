@@ -724,8 +724,9 @@ namespace Obscure.Tests
             var allDeltas = EquipmentManager.CalculateAllStatDeltas(hero, EquipmentSlot.MainHand, swordInst);
             Assert.AreEqual(deltaPower, allDeltas[DerivedStatId.PhysicalPower]);
 
+            // Knight starts at STR 16; +5 STR sword hits Normal Progression Cap 20 -> effective delta is +4.
             int deltaStr = EquipmentManager.CalculateAbilityScoreDelta(hero, EquipmentSlot.MainHand, swordInst, Ability.STR);
-            Assert.AreEqual(5, deltaStr);
+            Assert.AreEqual(4, deltaStr);
         }
 
         // =====================================================================
@@ -1630,12 +1631,15 @@ namespace Obscure.Tests
                 abilityBonuses = AbilityScores.Zero.Add(Ability.STR, 4) // STR +4 -> MOD +2
             };
             Database.Equipment["val_str_ring"] = ringDef;
+            int pwrBeforeRing = unit.Derived.physicalPower;
+            int penBeforeRing = unit.Derived.armorPenetration;
             var ring = new EquipmentInstance(ringDef, EquipmentRarity.Common, 1);
             unit.TryEquip(EquipmentSlot.Accessory1, ring, out _);
 
             Assert.AreEqual(15, unit.FinalScores.str, "Base 10 + Human Racial +1 + Ring +4 = 15 STR.");
             Assert.AreEqual(2, unit.AbilityModifiers.str);
-            Assert.AreEqual(4, unit.Derived.armorPenetration, "STR modifier +2 with 2.0x scaling grants +4 Armor Penetration.");
+            Assert.Greater(unit.Derived.physicalPower, pwrBeforeRing, "Raw STR increase raises PhysicalPower.");
+            Assert.AreEqual(penBeforeRing, unit.Derived.armorPenetration, "Armor Penetration is decoupled from STR per FELNA-SYS-ATTR-001.");
         }
 
         [Test]

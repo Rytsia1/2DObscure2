@@ -213,32 +213,48 @@ namespace Obscure.Tests
             var knight = new Unit(Database.Characters["knight"]);
             // Knight: Human (+1 STR, +1 VIT) + Base(15,10,15,8,12,11) = Final(16,10,16,8,12,11)
             // Modifiers: STR +3, DEX 0, VIT +3, INT -1, WIS +1, CHA 0
-            Assert.AreEqual(125, knight.Derived.maxHp);           // 95 + 3 * 10
-            Assert.AreEqual(20, knight.Derived.maxMp);            // 15 + 1 * 5
-            Assert.AreEqual(14, knight.Derived.physicalPower);    // 8 + 3 * 2
-            Assert.AreEqual(4, knight.Derived.magicPower);        // 6 + (-1) * 2
-            Assert.AreEqual(8, knight.Derived.healingPower);      // 6 + 1 * 2
-            Assert.AreEqual(8, knight.Derived.supportPower);      // 8 + 0 * 2
-            Assert.AreEqual(13, knight.Derived.physicalDefense);  // 7 + 3 * 2
-            Assert.AreEqual(7, knight.Derived.magicDefense);      // 5 + 1 * 2
-            Assert.AreEqual(6, knight.Derived.initiative);        // 6 + 0
+            // FELNA-SYS-ATTR-001 FINAL formulas (Base Value Reference + floor):
+            Assert.AreEqual(106, knight.Derived.maxHp);           // floor(95 * (1 + 0.04 * 3)) = floor(106.4) = 106
+            Assert.AreEqual(14, knight.Derived.maxMp);            // floor(15 * (1 + 0.04 * -1)) = floor(14.4) = 14 (INT governs Max MP)
+            Assert.AreEqual(16, knight.Derived.physicalPower);    // floor(8 + 16 * (2 * 0.25)) = 16 (Raw STR)
+            Assert.AreEqual(10, knight.Derived.magicPower);       // floor(6 + 8 * (2 * 0.25)) = 10 (Raw INT)
+            Assert.AreEqual(6, knight.Derived.healingPower);      // floor(6 * (1 + 0.04 * 1)) = floor(6.24) = 6
+            Assert.AreEqual(0, knight.Derived.supportPower);      // 4% * CHA Mod(0) = 0%
+            Assert.AreEqual(11, knight.Derived.physicalDefense);  // Base 11 (decoupled from VIT)
+            Assert.AreEqual(7, knight.Derived.magicDefense);      // Base 7 (decoupled from WIS)
+            Assert.AreEqual(6, knight.Derived.initiative);        // Base 6 (decoupled from DEX)
+            Assert.AreEqual(54, knight.Derived.blockPower);       // Base 50 + Oathsworn +4 (decoupled from STR)
+            Assert.AreEqual(10, knight.Derived.counterPower);     // Base 10 (decoupled from STR/DEX)
 
-            // Changing VIT updates MaxHP, PhysicalDefense, StatusResistance, StaggerResistance, QteStability
+            // Changing VIT updates ONLY MaxHP (does NOT change PhysicalDefense, Shield, StatusResistance, StaggerResistance, or QteStability)
+            int pDefBefore = knight.Derived.physicalDefense;
+            int statusResBefore = knight.Derived.statusResistance;
             knight.AddPermanentAbilityBonus(Ability.VIT, 2); // VIT 16 -> 18 (mod +3 -> +4)
-            Assert.AreEqual(135, knight.Derived.maxHp);
-            Assert.AreEqual(15, knight.Derived.physicalDefense);
+            Assert.AreEqual(110, knight.Derived.maxHp); // floor(95 * 1.16) = floor(110.2) = 110
+            Assert.AreEqual(pDefBefore, knight.Derived.physicalDefense);
+            Assert.AreEqual(statusResBefore, knight.Derived.statusResistance);
 
-            // Changing WIS updates MaxMP, MagicDefense, HealingPower
-            knight.AddPermanentAbilityBonus(Ability.WIS, 2); // WIS 12 -> 14 (mod +1 -> +2)
-            Assert.AreEqual(25, knight.Derived.maxMp);
-            Assert.AreEqual(9, knight.Derived.magicDefense);
-            Assert.AreEqual(10, knight.Derived.healingPower);
+            // Changing INT updates MaxMP and Elemental Power (WIS no longer affects MaxMP or MagicDefense)
+            int mpBeforeWis = knight.Derived.maxMp;
+            int mDefBeforeWis = knight.Derived.magicDefense;
+            knight.AddPermanentAbilityBonus(Ability.WIS, 4); // WIS 12 -> 16 (mod +1 -> +3)
+            Assert.AreEqual(mpBeforeWis, knight.Derived.maxMp, "WIS must not alter Max MP");
+            Assert.AreEqual(mDefBeforeWis, knight.Derived.magicDefense, "WIS must not alter Magic Defense");
+            Assert.AreEqual(1.12f, knight.Derived.healingWisMultiplier, 1e-4f);
 
-            // Changing DEX updates Initiative, RangedPower, CritChance, Evasion, QteTimingBonus
-            knight.AddPermanentAbilityBonus(Ability.DEX, 4); // DEX 10 -> 14 (mod 0 -> +2)
-            Assert.AreEqual(8, knight.Derived.initiative);
-            Assert.Greater(knight.Derived.qteTimingBonus, 0);
-            Assert.Greater(knight.Derived.rangedPower, 7);
+            knight.AddPermanentAbilityBonus(Ability.INT, 8); // INT 8 -> 16 (mod -1 -> +3)
+            Assert.AreEqual(16, knight.Derived.maxMp); // floor(15 * 1.12) = floor(16.8) = 16
+
+            // Changing DEX updates Ranged Accuracy, Evasion, and QTE Timing Window ONLY (NOT Initiative, RangedPower, CritChance, or CounterPower)
+            int initBefore = knight.Derived.initiative;
+            int rangedPwrBefore = knight.Derived.rangedPower;
+            int evaBefore = knight.Derived.evasion;
+            knight.AddPermanentAbilityBonus(Ability.DEX, 6); // DEX 10 -> 16 (mod 0 -> +3)
+            Assert.AreEqual(initBefore, knight.Derived.initiative, "DEX must not alter Speed/Initiative");
+            Assert.AreEqual(rangedPwrBefore, knight.Derived.rangedPower, "DEX must not alter RangedPower");
+            Assert.AreEqual(evaBefore + 6, knight.Derived.evasion, "DEX +3 mod adds +6% Evasion");
+            Assert.AreEqual(9, knight.Derived.qteTimingBonus, "DEX +3 mod adds +9% QTE Window");
+            Assert.AreEqual(6, knight.Derived.rangedAccuracyBonus, "DEX +3 mod adds +6% Ranged Accuracy");
         }
 
         [Test]
@@ -511,7 +527,7 @@ namespace Obscure.Tests
 
                 string defTooltip = status.GetStatTooltip(DerivedStatId.PhysicalDefense);
                 StringAssert.Contains("PHYSICAL DEFENSE", defTooltip);
-                StringAssert.Contains("SRC: VIT", defTooltip);
+                StringAssert.Contains("SRC: CLASS+GEAR", defTooltip);
                 StringAssert.Contains("FORMULA:", defTooltip);
                 StringAssert.Contains("EQP +4", defTooltip);
 
@@ -984,9 +1000,10 @@ namespace Obscure.Tests
             float magicAcc = AccuracySystem.CalculateAttackerAccuracy(ranger, AttackCategory.Magic);
 
             int expectedHuntersBonus = Database.Passives["hunters_instinct"].rangedAccuracyBonus;
+            float expectedDexRangedBonus = ranger.unit.Mod(Ability.DEX) * AccuracyConfig.Default.dexAccuracyScaling;
             Assert.Greater(expectedHuntersBonus, 0);
-            Assert.AreEqual(meleeAcc + expectedHuntersBonus, rangedBasicAcc, 0.001f, "Hunter's Instinct applies to Ranged attacks");
-            Assert.AreEqual(meleeAcc, magicAcc, 0.001f, "Hunter's Instinct does NOT apply to Melee or Magic attacks");
+            Assert.AreEqual(meleeAcc + expectedDexRangedBonus + expectedHuntersBonus, rangedBasicAcc, 0.001f, "DEX Ranged Accuracy and Hunter's Instinct apply strictly to Ranged attacks");
+            Assert.AreEqual(meleeAcc, magicAcc, 0.001f, "Ranged Accuracy bonuses do NOT apply to Melee or Magic attacks");
 
             // Check with explicit skills against an evasive target: Ranged Active Skill vs Melee Skill vs Magic Skill
             target.AddStatus(StatusId.Evasion, 2, 4.0f, target);

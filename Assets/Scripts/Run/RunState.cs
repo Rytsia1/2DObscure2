@@ -583,9 +583,16 @@ namespace Obscure
             RecalculateStats();
         }
 
+        public void AddCapBreakingTemporaryAbilityModifier(Ability a, int delta)
+        {
+            abilities.capBreakingTemporaryModifiers = abilities.capBreakingTemporaryModifiers.Add(a, delta);
+            RecalculateStats();
+        }
+
         public void ClearTemporaryModifiers()
         {
             abilities.temporaryModifiers = AbilityScores.Zero;
+            abilities.capBreakingTemporaryModifiers = AbilityScores.Zero;
             temporaryModifiers.Clear();
             RecalculateStats();
         }

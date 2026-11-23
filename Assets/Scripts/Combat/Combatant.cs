@@ -338,7 +338,10 @@ namespace Obscure
         public int Atk => Scale(unit.stats.atk + LowHpPhysicalPowerBonus, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
         public int RangedAtk => Scale(unit.Derived.rangedPower, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
         public int Magic => Scale(unit.stats.mag, (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown) - Mag(StatusId.Exhausted)) * StatusController.GetDamageDealtMultiplier());
-        public int HealPower
+        public int UnscaledHealBase =>
+            unit.Derived.unscaledHealingBase > 0 ? unit.Derived.unscaledHealingBase : (unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag);
+
+        public float EffectiveHealMultiplier
         {
             get
             {
@@ -348,11 +351,13 @@ namespace Obscure
                     var rank = unit.background.GetRank(unit.level);
                     if (rank != null) bgBonus = rank.healingDealtBonus;
                 }
-                return Scale(
-                    unit.Derived.healingPower > 0 ? unit.Derived.healingPower : unit.stats.mag,
-                    (1 + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown)) * (1f + bgBonus));
+                float wisPct = AttributeSystemConfig.Default.wisHealingPowerPerMod * unit.Mod(Ability.WIS);
+                float statusMult = Math.Max(0f, 1f + Mag(StatusId.AttackUp) - Mag(StatusId.AttackDown));
+                return Math.Max(0f, 1f + wisPct + bgBonus) * statusMult;
             }
         }
+
+        public int HealPower => Math.Max(0, StatCalculator.FloorInt(UnscaledHealBase * EffectiveHealMultiplier));
         public int SupportPower => unit.Derived.supportPower;
 
         // Physical Defense and Magic Defense are separate (PRD Section 8.8).

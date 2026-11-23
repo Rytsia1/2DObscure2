@@ -72,9 +72,14 @@ namespace Obscure
             return Mitigate(t, afterDef);
         }
 
-        // Healing uses HealingPower (BaseHealing + WISModifier * HealingScaling).
-        public static int Healing(Combatant a, float power, Random rng) =>
-            Math.Max(1, (int)Math.Round(a.HealPower * power * Variance(rng)));
+        // Healing uses Base Healing * (1 + 0.04 * WIS Modifier + Background Healing Bonus), floored once at the end.
+        public static int Healing(Combatant a, float power, Random rng)
+        {
+            if (a?.unit == null) return 0;
+            float baseHeal = a.UnscaledHealBase * power * Variance(rng);
+            float wisPlusBg = a.EffectiveHealMultiplier;
+            return Math.Max(0, StatCalculator.FloorInt(baseHeal * wisPlusBg));
+        }
 
         // Modular Damage System entry points (Prompt Sections 3-14).
         public static DamageResult CalculateDamage(DamageContext context) =>

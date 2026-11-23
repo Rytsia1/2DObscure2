@@ -726,7 +726,7 @@ namespace Obscure
                         foreach (var ap in s.apply ?? Array.Empty<StatusApply>())
                         {
                             if (!ap.onSelf && (transformedInSkill.Contains(t) || blockedRidersInSkill.Contains(t))) continue;
-                            Apply(ap.onSelf ? actor : t, s.kind == SkillKind.Support ? SupportScaled(ap, actor) : ap, ap.onSelf ? t : actor, power);
+                            Apply(ap.onSelf ? actor : t, s.kind == SkillKind.Support ? SupportScaled(ap, actor, s) : ap, ap.onSelf ? t : actor, power);
                         }
                     }
                     if (s.counterMultiplier > 0f)
@@ -892,14 +892,27 @@ namespace Obscure
             Say($"{(summoner != null ? summoner.name + " summons " : "")}{summoned.name}!");
         }
 
-        // CHA (Command Presence): a Support skill's stat buffs grow with the caster's CHA modifier
-        // (Database.QteStatInteractions[CHA]). Other statuses keep their data magnitude.
-        public static StatusApply SupportScaled(StatusApply ap, Combatant caster)
+        // CHA Buff Effectiveness (FELNA-SYS-ATTR-001): Final Buff Magnitude = Base Buff Magnitude * (1 + 0.04 * CHA Modifier).
+        // Applies only to positive buffs that explicitly support CHA scaling (supportsChaScaling or CHA-scaled Support skill).
+        // Negative CHA modifiers apply; duration, status chance, cooldown, target count, Healing, Shield, and DR are untouched.
+        public static StatusApply SupportScaled(StatusApply ap, Combatant caster, SkillDef skill = null)
         {
-            if (ap.id != StatusId.AttackUp && ap.id != StatusId.DefenseUp && ap.id != StatusId.MagicDefenseUp) return ap;
+            if (ap == null || caster?.unit == null) return ap;
+            bool isEligiblePositiveBuff = ap.id == StatusId.AttackUp || ap.id == StatusId.DefenseUp || ap.id == StatusId.MagicDefenseUp;
+            if (!isEligiblePositiveBuff) return ap;
+            bool explicitCha = ap.supportsChaScaling || (skill == null || skill.scalingAbility == Ability.CHA);
+            if (!explicitCha) return ap;
             float mult = QteConfig.SupportPotencyMultiplier(caster);
-            if (mult <= 1f) return ap;
-            return new StatusApply { id = ap.id, turns = ap.turns, magnitude = ap.magnitude * mult, chance = ap.chance, onSelf = ap.onSelf };
+            if (Math.Abs(mult - 1f) < 1e-5f) return ap;
+            return new StatusApply
+            {
+                id = ap.id,
+                turns = ap.turns,
+                magnitude = ap.magnitude * mult,
+                chance = ap.chance,
+                onSelf = ap.onSelf,
+                supportsChaScaling = ap.supportsChaScaling
+            };
         }
 
         // Draconic Overdrive raises the counter multiplier 1.0x -> 1.25x (GDD Bab 6 §5.5, Bab 12 §8.5).

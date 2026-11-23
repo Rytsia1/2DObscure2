@@ -523,9 +523,10 @@ namespace Obscure.Tests
             Assert.AreEqual(before[0].maxHp + 12, run.Party[0].stats.maxHp, "a relic only counts once");
 
             var knight = run.Party[0];
-            Assert.AreEqual($"MAX HP {knight.stats.maxHp}>{knight.stats.maxHp + 15}, DEF 13>15", knight.stats.Preview(Database.Upgrades["knight"].bonus));
+            int defBefore = knight.stats.def;
+            Assert.AreEqual($"MAX HP {knight.stats.maxHp}>{knight.stats.maxHp + 15}, DEF {defBefore}>{defBefore + 2}", knight.stats.Preview(Database.Upgrades["knight"].bonus));
             run.Grant(new RewardOption { kind = RewardKind.Upgrade, id = "knight" });
-            Assert.AreEqual(15, knight.stats.def);
+            Assert.AreEqual(defBefore + 2, knight.stats.def);
         }
 
         [Test]
@@ -565,13 +566,14 @@ namespace Obscure.Tests
             var run = LineRun(NodeType.Rest, NodeType.Boss);
             var knight = run.Party[0];
             var mage = run.Party[2];
-            knight.hp = 25;   // missing 100
-            mage.mp = 0;      // missing 60
+            knight.hp = knight.stats.maxHp - 100; // missing 100
+            mage.mp = 0;                          // missing full maxMp
+            int expectedMpRecover = (int)Math.Round(mage.stats.maxMp * RunConfig.RestRecover);
             run.Enter(run.Map.Get("n0"));
             Assert.AreEqual(50, RunState.RecoverAmount(knight));
             run.RestRecover();
-            Assert.AreEqual(75, knight.hp);
-            Assert.AreEqual(30, mage.mp);
+            Assert.AreEqual(knight.stats.maxHp - 50, knight.hp);
+            Assert.AreEqual(expectedMpRecover, mage.mp);
             Assert.AreEqual(run.Party[1].stats.maxHp, run.Party[1].hp, "never above max");
             Assert.Throws<InvalidOperationException>(() => run.RestRecover());
             Assert.Throws<InvalidOperationException>(() => run.RestImprove("mage"), "one choice per rest site");
@@ -612,7 +614,7 @@ namespace Obscure.Tests
             var pray = AtEvent("shrine");
             pray.Party[0].hp = 10;
             pray.ChooseEvent(2);
-            Assert.AreEqual(10 + 125 * 25 / 100, pray.Party[0].hp);
+            Assert.AreEqual(10 + pray.Party[0].stats.maxHp * 25 / 100, pray.Party[0].hp);
 
             var shop = AtEvent("merchant", gold: 20);
             int draughts = shop.Items.Count(i => i == "draught");
@@ -713,7 +715,7 @@ namespace Obscure.Tests
             run.Enter(run.Map.Get("n0"));
             run.WinCombat();
             Assert.AreEqual(1 + (int)Math.Round(run.Party[2].stats.maxHp * 0.08f), run.Party[2].hp);
-            Assert.AreEqual(50 + (int)Math.Round(125 * 0.08f), run.Party[0].hp);
+            Assert.AreEqual(50 + (int)Math.Round(run.Party[0].stats.maxHp * 0.08f), run.Party[0].hp);
         }
 
         [Test]

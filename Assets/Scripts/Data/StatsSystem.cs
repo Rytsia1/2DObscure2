@@ -394,7 +394,35 @@ namespace Obscure
         public override int GetHashCode() => HashCode.Combine(str, dex, vit, intel, wis, cha);
     }
 
+    // Data-driven configuration for FELNA Attribute Progression & Derived Stats System (FELNA-SYS-ATTR-001 FINAL).
+    [Serializable]
+    public class AttributeSystemConfig
+    {
+        public int normalProgressionCap = 20;
+        public int absoluteHardCap = 30;
+        public int absoluteMinScore = 1;
+
+        public float vitMaxHpPerMod = 0.04f;             // +4% Base HP per VIT modifier
+        public float intMaxMpPerMod = 0.04f;             // +4% Base MP per INT modifier
+        public float dexRangedAccuracyPerMod = 0.02f;    // +2% Ranged Accuracy per DEX modifier (Ranged only)
+        public float dexEvasionPerMod = 0.02f;           // +2% Evasion per DEX modifier
+        public float dexQteWindowPerMod = 0.03f;         // +3% Timing QTE Window per DEX modifier
+        public float wisHealingPowerPerMod = 0.04f;      // +4% Base Healing per WIS modifier
+        public float chaBuffEffectivenessPerMod = 0.04f; // +4% Buff Magnitude per CHA modifier (opt-in positive buffs)
+
+        public float qteWindowMinFromAttr = -0.15f;
+        public float qteWindowSharedMax = 0.25f;
+        public float maxEvasion = 0.75f;
+        public float maxStatusResistance = 0.75f;
+        public float chaBuffEffMin = -0.20f;
+        public float chaBuffEffMax = 0.40f;
+
+        public static readonly AttributeSystemConfig Default = new AttributeSystemConfig();
+    }
+
     // Separate Primary Stat sources so recalculation is always clean and non-destructive.
+    // Standard permanent progression, equipment, and regular temp buffs are capped at maxNormalScore (20).
+    // Temporary buffs or special equipment may exceed 20 (up to maxFinalScore = 30) only when explicitly placed in cap-breaking pools.
     [Serializable]
     public class AbilityScoreSheet
     {
@@ -403,18 +431,40 @@ namespace Obscure
         public AbilityScores permanentBonuses = AbilityScores.Zero;
         public AbilityScores equipmentBonuses = AbilityScores.Zero;
         public AbilityScores temporaryModifiers = AbilityScores.Zero;
+        public AbilityScores capBreakingEquipmentBonuses = AbilityScores.Zero;
+        public AbilityScores capBreakingTemporaryModifiers = AbilityScores.Zero;
         public int minFinalScore = 1;
+        public int maxNormalScore = 20;
         public int maxFinalScore = 30;
 
         public AbilityScores UnmodifiedWithRace => baseScores.Plus(racialModifiers);
 
-        public AbilityScores FinalScores =>
+        public AbilityScores PermanentTotal =>
             baseScores
                 .Plus(racialModifiers)
                 .Plus(permanentBonuses)
-                .Plus(equipmentBonuses)
-                .Plus(temporaryModifiers)
-                .Clamp(minFinalScore, maxFinalScore);
+                .Clamp(minFinalScore, maxNormalScore);
+
+        public AbilityScores FinalScores
+        {
+            get
+            {
+                var normalCapped = baseScores
+                    .Plus(racialModifiers)
+                    .Plus(permanentBonuses)
+                    .Plus(equipmentBonuses)
+                    .Clamp(minFinalScore, maxNormalScore);
+
+                var withStandardTemp = normalCapped
+                    .Plus(temporaryModifiers)
+                    .Clamp(minFinalScore, maxNormalScore);
+
+                return withStandardTemp
+                    .Plus(capBreakingEquipmentBonuses)
+                    .Plus(capBreakingTemporaryModifiers)
+                    .Clamp(minFinalScore, maxFinalScore);
+            }
+        }
 
         public AbilityScores AbilityModifiers => FinalScores.Modifiers;
 
@@ -611,7 +661,11 @@ namespace Obscure
         public int rangedPower;
         public int magicPower;
         public int healingPower;
-        public int supportPower;
+        public int supportPower;     // CHA Buff Effectiveness bonus in percentage points (e.g. 12 = +12%, -4 = -4%)
+        public int rangedAccuracyBonus; // DEX Ranged Accuracy bonus in percentage points (e.g. 6 = +6%)
+        public float healingWisMultiplier; // 1 + 0.04 * WISMod for single-floor final healing resolution
+        public int unscaledHealingBase;    // Base healing + flat bonuses before WIS % scaling
+        public float buffEffectivenessBonus; // clamp(0.04 * CHAMod, -0.20, +0.40)
         public int criticalChance;   // percentage (e.g. 5 = 5%)
         public int criticalDamage;   // percentage (e.g. 150 = 150%)
         public int armorPenetration;
@@ -642,7 +696,7 @@ namespace Obscure
         public float CritMultiplier => Math.Max(1f, criticalDamage / 100f);
         public float EvasionFraction => Mathf.Clamp(evasion / 100f, 0f, 0.75f);
         public float BlockFraction => Mathf.Clamp(blockPower / 100f, 0f, 0.90f);
-        public float StatusResistFraction => Mathf.Clamp(statusResistance / 100f, 0f, 0.90f);
+        public float StatusResistFraction => Mathf.Clamp(statusResistance / 100f, 0f, 0.75f);
         public float QteTimingBonusFraction => Mathf.Clamp(qteTimingBonus / 100f, -0.15f, 0.25f);
         public float QteStabilityFraction => Mathf.Clamp(qteStability / 100f, 0f, 0.35f);
 
@@ -709,6 +763,7 @@ namespace Obscure
         }
 
         public static bool IsPercentage(DerivedStatId id) =>
+            id == DerivedStatId.SupportPower ||
             id == DerivedStatId.CriticalChance ||
             id == DerivedStatId.CriticalDamage ||
             id == DerivedStatId.Evasion ||
@@ -720,7 +775,7 @@ namespace Obscure
         public string FormatValue(DerivedStatId id)
         {
             int val = Get(id);
-            if (id == DerivedStatId.QteTimingBonus)
+            if (id == DerivedStatId.QteTimingBonus || id == DerivedStatId.SupportPower)
                 return (val >= 0 ? "+" : "") + val + "%";
             return IsPercentage(id) ? val + "%" : val.ToString();
         }
@@ -792,11 +847,12 @@ namespace Obscure
         public ModifierOrder modifierOrder = ModifierOrder.FlatBeforePercent;
     }
 
-    // Configurable Ability Score Improvement progression rules.
+    // Configurable Attribute Progression (AP) rules — +2 AP at every Skill Tier Unlock milestone.
+    // Full 9-milestone schedule up to Level 30 (18 AP total); under active Level Cap 15, Levels 4, 7, 10, 13 grant 8 AP.
     [Serializable]
     public class AbilityScoreImprovementConfig
     {
-        public int[] availableAtLevels = { 4, 8, 12, 16, 19 };
+        public int[] availableAtLevels = { 4, 7, 10, 13, 16, 19, 22, 25, 28 };
         public int pointsGranted = 2;
         public int maxAbilityScore = 20;
 
@@ -1059,13 +1115,15 @@ namespace Obscure
             DetermineCategory(attacker?.unit, skill);
 
         // Calculates Attacker Accuracy for the given AttackCategory.
-        // Ranger's Hunter's Instinct applies ONLY to AttackCategory.Ranged (ranged basic attacks & ranged active skills),
-        // and never to AttackCategory.Melee or AttackCategory.Magic.
+        // DEX Ranged Accuracy Bonus (+2% per DEX Modifier) and Ranger's Hunter's Instinct apply strictly
+        // to AttackCategory.Ranged (ranged basic attacks & ranged active skills), never Melee or Elemental/Magic.
         public static float CalculateAttackerAccuracy(Unit attackerUnit, AttackCategory category, SkillDef skill = null, AccuracyConfig config = null)
         {
             if (attackerUnit == null) return 0f;
             var cfg = config ?? AccuracyConfig.Default;
-            float acc = attackerUnit.Mod(Ability.DEX) * cfg.dexAccuracyScaling;
+            float acc = category == AttackCategory.Ranged
+                ? attackerUnit.Mod(Ability.DEX) * cfg.dexAccuracyScaling
+                : 0f;
 
             foreach (var eq in attackerUnit.equipped.Values)
             {
@@ -1204,12 +1262,73 @@ namespace Obscure
         }
     }
 
-    // Reusable, safe calculation engine for Derived Stats and Combat Resolution.
+    // Reusable, safe calculation engine for Derived Stats and Combat Resolution (FELNA-SYS-ATTR-001 FINAL).
     public static class StatCalculator
     {
         public static ModifierOrder DefaultModifierOrder = ModifierOrder.FlatBeforePercent;
+        const float FloorEpsilon = 1e-4f;
 
-        // Evaluates a base value with flat, percentage, and multiplier modifiers in the configured order.
+        public static int FloorInt(float value) => (int)Math.Floor(value + FloorEpsilon);
+
+        // Pure finalized formula helpers (FELNA-SYS-ATTR-001 Section 4 & 5)
+        public static float CalculatePhysicalSkillBaseDamage(float skillPower, int rawStr, float scaling) =>
+            skillPower + (rawStr * scaling);
+
+        public static float CalculateElementalSkillBaseDamage(float skillPower, int rawInt, float scaling) =>
+            skillPower + (rawInt * scaling);
+
+        public static int CalculateMaxHp(float baseHp, int vitModifier, float extraBasePercentAdd = 0f, float flatBonus = 0f, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            float val = baseHp * Math.Max(0f, 1f + cfg.vitMaxHpPerMod * vitModifier + extraBasePercentAdd) + flatBonus;
+            return Math.Max(1, FloorInt(val));
+        }
+
+        public static int CalculateMaxMp(float baseMp, int intModifier, float extraBasePercentAdd = 0f, float flatBonus = 0f, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            float val = baseMp * Math.Max(0f, 1f + cfg.intMaxMpPerMod * intModifier + extraBasePercentAdd) + flatBonus;
+            return Math.Max(0, FloorInt(val));
+        }
+
+        public static float CalculateRangedAccuracyBonus(int dexModifier, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return cfg.dexRangedAccuracyPerMod * 100f * dexModifier;
+        }
+
+        public static float CalculateEvasionBonus(int dexModifier, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return cfg.dexEvasionPerMod * 100f * dexModifier;
+        }
+
+        public static float CalculateQteWindowBonus(int dexModifier, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return Math.Clamp(cfg.dexQteWindowPerMod * 100f * dexModifier, cfg.qteWindowMinFromAttr * 100f, cfg.qteWindowSharedMax * 100f);
+        }
+
+        public static int CalculateHealingOutput(float baseHealing, int wisModifier, float extraBasePercentAdd = 0f, float healingReceivedPercentAdd = 0f, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            float val = baseHealing * Math.Max(0f, 1f + cfg.wisHealingPowerPerMod * wisModifier + extraBasePercentAdd) * Math.Max(0f, 1f + healingReceivedPercentAdd);
+            return Math.Max(0, FloorInt(val));
+        }
+
+        public static float CalculateBuffEffectivenessBonus(int chaModifier, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return Math.Clamp(cfg.chaBuffEffectivenessPerMod * chaModifier, cfg.chaBuffEffMin, cfg.chaBuffEffMax);
+        }
+
+        public static float CalculateFinalBuffMagnitude(float baseBuffMagnitude, int chaModifier, AttributeSystemConfig config = null) =>
+            baseBuffMagnitude * (1f + CalculateBuffEffectivenessBonus(chaModifier, config));
+
+        public static int CalculateSocialCheckValue(int chaModifier, int socialBonus = 0) =>
+            10 + chaModifier + socialBonus;
+
+        // Evaluates a base value with flat, percentage, and multiplier modifiers using unified floor() rounding.
         public static int EvaluateModifiers(
             float baseValue,
             IEnumerable<StatModifier> modifiers,
@@ -1238,7 +1357,37 @@ namespace Obscure
                 ? (baseValue + flat) * Math.Max(0f, 1f + percentAdd) * mult
                 : (baseValue * Math.Max(0f, 1f + percentAdd) + flat) * mult;
 
-            return Math.Clamp((int)Math.Round(result), minValue, maxValue);
+            return Math.Clamp(FloorInt(result), minValue, maxValue);
+        }
+
+        // Non-compounding Base Value evaluation for percentage-scaled attribute stats (MaxHP, MaxMP, HealingPower).
+        public static int EvaluateBasePercentModifiers(
+            float baseValue,
+            float attributePercentAdd,
+            float preFlatBonus,
+            IEnumerable<StatModifier> modifiers,
+            int minValue = 0,
+            int maxValue = 9999)
+        {
+            float flat = preFlatBonus;
+            float percentAdd = attributePercentAdd;
+            float mult = 1f;
+
+            if (modifiers != null)
+            {
+                foreach (var m in modifiers)
+                {
+                    switch (m.kind)
+                    {
+                        case ModifierKind.Flat: flat += m.value; break;
+                        case ModifierKind.PercentAdd: percentAdd += m.value; break;
+                        case ModifierKind.Multiplier: mult *= m.value; break;
+                    }
+                }
+            }
+
+            float result = (baseValue * Math.Max(0f, 1f + percentAdd) + flat) * mult;
+            return Math.Clamp(FloorInt(result), minValue, maxValue);
         }
 
         // Calculates all Derived Stats from an AbilityScoreSheet, ClassDef, level, equipment, passives, and modifiers.
@@ -1252,6 +1401,8 @@ namespace Obscure
             IEnumerable<PassiveDef> passives = null,
             IReadOnlyDictionary<EquipmentSlot, EquipmentDef> equippedSlots = null)
         {
+            var cfg = AttributeSystemConfig.Default;
+            var scores = abilities.FinalScores;
             var mods = abilities.AbilityModifiers;
             var c = classDef ?? Database.Classes["knight"];
             int lvl = Math.Max(1, level);
@@ -1300,17 +1451,12 @@ namespace Obscure
                     if (e == null) continue;
 
                     if (slot == EquipmentSlot.SecondHand)
-                    {
-                        // Off-hand weapon penalty: 50% weapon power
-                        eqWeaponPower += (int)Math.Round(e.weaponPower * 0.5f);
-                    }
+                        eqWeaponPower += FloorInt(e.weaponPower * 0.5f);
                     else
-                    {
                         eqWeaponPower += e.weaponPower;
-                    }
 
                     eqWeaponScaling += e.weaponScaling;
-                    eqBreakBonus += e.breakPowerModifier; // Off-hand contributes 100% to break power
+                    eqBreakBonus += e.breakPowerModifier;
                     eqPhysDef += e.physicalDefense;
                     eqMagDef += e.magicDefense;
                 }
@@ -1320,13 +1466,9 @@ namespace Obscure
                 foreach (var e in eqList)
                 {
                     if (e.slot == EquipmentSlot.SecondHand)
-                    {
-                        eqWeaponPower += (int)Math.Round(e.weaponPower * 0.5f);
-                    }
+                        eqWeaponPower += FloorInt(e.weaponPower * 0.5f);
                     else
-                    {
                         eqWeaponPower += e.weaponPower;
-                    }
 
                     eqWeaponScaling += e.weaponScaling;
                     eqBreakBonus += e.breakPowerModifier;
@@ -1344,72 +1486,94 @@ namespace Obscure
                 return EvaluateModifiers(baseVal, statMods, order, minVal, maxVal);
             }
 
-            // 1. Resource Stats
-            float rawHp = c.baseHp + (lvl - 1) * c.levelHpGrowth + (mods.vit * c.hpGrowth) + permanentLegacyBonuses.maxHp;
-            float rawMp = c.baseMp + (lvl - 1) * c.levelMpGrowth + (mods.wis * c.mpGrowth) + permanentLegacyBonuses.maxMp;
-            float rawShield = c.baseShield + Math.Max(0, mods.vit * c.shieldGrowth);
+            int EvalBasePct(DerivedStatId id, float baseVal, float attrPct, float preFlat, int minVal = 0, int maxVal = 9999)
+            {
+                var statMods = allMods.Where(m => !m.isAbilityModifier && m.derivedStat == id);
+                return EvaluateBasePercentModifiers(baseVal, attrPct, preFlat, statMods, minVal, maxVal);
+            }
 
-            // 2. Offensive Stats
+            // 1. Resource Stats (Base Value Reference — non-compounding, floor once)
+            float baseHp = c.baseHp + (lvl - 1) * c.levelHpGrowth;
+            float baseMp = c.baseMp + (lvl - 1) * c.levelMpGrowth;
+            float rawShield = c.baseShield; // Shield Power is strictly separate from VIT, WIS, and CHA
+
+            // 2. Offensive & Support Stats
+            // STR -> Raw STR Physical scaling; INT -> Raw INT Elemental scaling (no double scaling)
             float weaponPower = c.baseWeaponPower + eqWeaponPower + permanentLegacyBonuses.atk;
-            float weaponScaling = c.weaponScaling + eqWeaponScaling;
-            float rawPhysPower = weaponPower + (mods.str * weaponScaling);
-            float rawRangedPower = c.baseRangedPower + eqWeaponPower + (mods.dex * c.rangedScaling);
+            float rawStrScaling = (c.weaponScaling + eqWeaponScaling) * 0.25f;
+            float rawPhysPower = weaponPower + (scores.str * rawStrScaling);
+            // DEX does NOT scale RangedPower or CriticalChance (DEX = Ranged Accuracy, Evasion, QTE Window only)
+            float rawRangedPower = c.baseRangedPower + eqWeaponPower + permanentLegacyBonuses.atk;
             float spellPower = c.baseSpellPower + permanentLegacyBonuses.mag;
-            float rawMagPower = spellPower + (mods.intel * c.spellScaling);
-            float rawHealPower = c.baseHealing + permanentLegacyBonuses.mag + (mods.wis * c.healingScaling);
-            float rawSupportPower = c.baseSupportPower + (mods.cha * c.supportScaling);
+            float rawIntScaling = c.spellScaling * 0.25f;
+            float rawMagPower = spellPower + (scores.intel * rawIntScaling);
 
-            float rawCritChance = c.baseCritChance + (mods.dex * c.critChanceScaling);
+            // WIS -> Healing Power (+4% Base Healing per WIS Modifier, separate from Shield/DR)
+            float flatHealMods = permanentLegacyBonuses.mag + allMods.Where(m => !m.isAbilityModifier && m.derivedStat == DerivedStatId.HealingPower && m.kind == ModifierKind.Flat).Sum(m => m.value);
+            float baseHealForWis = c.baseHealing + flatHealMods;
+            float healWisMult = Math.Max(0f, 1f + cfg.wisHealingPowerPerMod * mods.wis);
+            var nonFlatHealMods = allMods.Where(m => !m.isAbilityModifier && m.derivedStat == DerivedStatId.HealingPower && m.kind != ModifierKind.Flat);
+            int finalHealPower = EvaluateBasePercentModifiers(baseHealForWis, cfg.wisHealingPowerPerMod * mods.wis, 0f, nonFlatHealMods, 1, 9999);
+
+            // CHA -> Buff Effectiveness (+4% per CHA Modifier, opt-in positive buffs; negative modifiers apply)
+            float buffEffBonus = CalculateBuffEffectivenessBonus(mods.cha, cfg);
+            int finalSupportPower = Eval(DerivedStatId.SupportPower, buffEffBonus * 100f, -20, 40);
+
+            float rawCritChance = c.baseCritChance; // Separate from DEX
             float rawCritDamage = c.baseCritDamage;
-            float rawArmorPen = c.baseArmorPen + Math.Max(0, mods.str * c.armorPenScaling);
-            float rawMagicPen = c.baseMagicPen + Math.Max(0, mods.intel * c.magicPenScaling);
+            float rawArmorPen = c.baseArmorPen;     // Separate from STR
+            float rawMagicPen = c.baseMagicPen;     // Separate from INT
 
-            // 3. Defensive Stats
-            float rawPhysDef = c.basePhysicalDefense + eqPhysDef + permanentLegacyBonuses.def + (mods.vit * c.physicalDefenseScaling);
-            float rawMagDef = c.baseMagicDefense + eqMagDef + (mods.wis * c.magicDefenseScaling);
-            float rawEvasion = c.baseEvasion + (mods.dex * c.evasionScaling);
-            float rawBlock = c.baseBlockPower + (mods.str * c.blockScaling);
-            float rawStatusRes = c.baseStatusResistance + ((mods.vit + mods.wis) * c.statusResistanceScaling);
-            float rawStaggerRes = c.baseStaggerResistance + (mods.vit * c.staggerResistanceScaling);
+            // 3. Defensive Stats (Strictly decoupled from VIT, WIS, STR)
+            float rawPhysDef = c.basePhysicalDefense + eqPhysDef + permanentLegacyBonuses.def;
+            float rawMagDef = c.baseMagicDefense + eqMagDef;
+            float rawEvasion = c.baseEvasion + CalculateEvasionBonus(mods.dex, cfg); // 2% * DEX Mod
+            float rawBlock = c.baseBlockPower; // Fully decoupled from STR
+            float rawStatusRes = c.baseStatusResistance; // Shared combat system, decoupled from VIT/WIS, cap 75%
+            float rawStaggerRes = c.baseStaggerResistance; // Decoupled from VIT
 
-            // 4. Turn Stats
-            float rawInitiative = c.baseInitiative + mods.dex + permanentLegacyBonuses.spd;
-            float rawActionSpeed = c.baseActionSpeed + (mods.dex * c.actionSpeedScaling);
+            // 4. Turn Stats (DEX does NOT automatically increase Speed or grant extra turns)
+            float rawInitiative = c.baseInitiative + permanentLegacyBonuses.spd;
+            float rawActionSpeed = c.baseActionSpeed;
 
-            // 5. QTE Stats
-            float rawQteTiming = c.baseQteTimingBonus + (mods.dex * c.qteTimingScaling);
-            float rawQteStability = c.baseQteStability + Math.Max(0, mods.vit * c.qteStabilityScaling);
-            float rawCounterPower = c.baseCounterPower + ((mods.str + mods.dex) * c.counterPowerScaling);
+            // 5. QTE Stats (DEX is the ONLY ability affecting Timing QTE Window: 3% * DEX Mod, floor -15%, shared cap +25%)
+            float rawQteTiming = c.baseQteTimingBonus + CalculateQteWindowBonus(mods.dex, cfg);
+            float rawQteStability = c.baseQteStability; // Decoupled from VIT
+            float rawCounterPower = c.baseCounterPower; // Fully decoupled from STR and DEX
 
-            // 6. Break Stats
-            float rawPhysBreak = c.baseBreakPower + eqBreakBonus + (mods.str * c.breakPowerScaling);
-            float rawMagBreak = c.baseBreakPower + eqBreakBonus + (mods.intel * c.breakPowerScaling);
+            // 6. Break Stats (STR and INT do NOT grant universal Break Power bonuses)
+            float rawPhysBreak = c.baseBreakPower + eqBreakBonus;
+            float rawMagBreak = c.baseBreakPower + eqBreakBonus;
 
             return new DerivedStats
             {
-                maxHp = Eval(DerivedStatId.MaxHP, rawHp, 1, 9999),
-                maxMp = Eval(DerivedStatId.MaxMP, rawMp, 0, 9999),
+                maxHp = EvalBasePct(DerivedStatId.MaxHP, baseHp, cfg.vitMaxHpPerMod * mods.vit, permanentLegacyBonuses.maxHp, 1, 9999),
+                maxMp = EvalBasePct(DerivedStatId.MaxMP, baseMp, cfg.intMaxMpPerMod * mods.intel, permanentLegacyBonuses.maxMp, 0, 9999),
                 maxShield = Eval(DerivedStatId.MaxShield, rawShield, 0, 9999),
                 physicalPower = Eval(DerivedStatId.PhysicalPower, rawPhysPower, 1, 9999),
                 rangedPower = Eval(DerivedStatId.RangedPower, rawRangedPower, 1, 9999),
                 magicPower = Eval(DerivedStatId.MagicPower, rawMagPower, 1, 9999),
-                healingPower = Eval(DerivedStatId.HealingPower, rawHealPower, 1, 9999),
-                supportPower = Eval(DerivedStatId.SupportPower, rawSupportPower, 1, 9999),
-                criticalChance = Eval(DerivedStatId.CriticalChance, rawCritChance, 0, 100),
-                criticalDamage = Eval(DerivedStatId.CriticalDamage, rawCritDamage, 100, 500),
+                healingPower = finalHealPower,
+                unscaledHealingBase = Math.Max(1, FloorInt(baseHealForWis)),
+                healingWisMultiplier = healWisMult,
+                supportPower = finalSupportPower,
+                buffEffectivenessBonus = buffEffBonus,
+                rangedAccuracyBonus = FloorInt(CalculateRangedAccuracyBonus(mods.dex, cfg)),
+                criticalChance = Eval(DerivedStatId.CriticalChance, rawCritChance, 0, 95),
+                criticalDamage = Eval(DerivedStatId.CriticalDamage, rawCritDamage, 100, 300),
                 armorPenetration = Eval(DerivedStatId.ArmorPenetration, rawArmorPen, 0, 999),
                 magicPenetration = Eval(DerivedStatId.MagicPenetration, rawMagicPen, 0, 999),
                 physicalDefense = Eval(DerivedStatId.PhysicalDefense, rawPhysDef, 0, 999),
                 magicDefense = Eval(DerivedStatId.MagicDefense, rawMagDef, 0, 999),
                 evasion = Eval(DerivedStatId.Evasion, rawEvasion, 0, 75),
                 blockPower = Eval(DerivedStatId.BlockPower, rawBlock, 0, 90),
-                statusResistance = Eval(DerivedStatId.StatusResistance, rawStatusRes, 0, 90),
+                statusResistance = Eval(DerivedStatId.StatusResistance, rawStatusRes, 0, 75),
                 staggerResistance = Eval(DerivedStatId.StaggerResistance, rawStaggerRes, 0, 999),
                 initiative = Eval(DerivedStatId.Initiative, rawInitiative, 1, 999),
                 actionSpeed = Eval(DerivedStatId.ActionSpeed, rawActionSpeed, 10, 999),
                 qteTimingBonus = Eval(DerivedStatId.QteTimingBonus, rawQteTiming, -15, 25),
                 qteStability = Eval(DerivedStatId.QteStability, rawQteStability, 0, 35),
-                counterPower = Eval(DerivedStatId.CounterPower, rawCounterPower, 1, 999),
+                counterPower = Eval(DerivedStatId.CounterPower, rawCounterPower, 0, 999),
                 physicalBreakPower = Eval(DerivedStatId.PhysicalBreakPower, rawPhysBreak, 1, 999),
                 magicBreakPower = Eval(DerivedStatId.MagicBreakPower, rawMagBreak, 1, 999),
             };
@@ -1427,9 +1591,11 @@ namespace Obscure
             IEnumerable<PassiveDef> passives = null,
             IReadOnlyDictionary<EquipmentSlot, EquipmentDef> equippedSlots = null)
         {
+            var cfg = AttributeSystemConfig.Default;
             var def = Database.DerivedStatDefs[statId];
             var formula = Database.Formulas[def.formulaId];
             var c = classDef ?? Database.Classes["knight"];
+            var scores = abilities.FinalScores;
             var mods = abilities.AbilityModifiers;
             int lvl = Math.Max(1, level);
             var eqList = equipment?.Where(e => e != null).ToList() ?? new List<EquipmentDef>();
@@ -1453,15 +1619,13 @@ namespace Obscure
                     foreach (var kvp in equippedSlots)
                     {
                         if (kvp.Value == null) continue;
-                        total += kvp.Key == EquipmentSlot.SecondHand ? (int)Math.Round(kvp.Value.weaponPower * 0.5f) : kvp.Value.weaponPower;
+                        total += kvp.Key == EquipmentSlot.SecondHand ? FloorInt(kvp.Value.weaponPower * 0.5f) : kvp.Value.weaponPower;
                     }
                 }
                 else
                 {
                     foreach (var e in eqList)
-                    {
-                        total += e.slot == EquipmentSlot.SecondHand ? (int)Math.Round(e.weaponPower * 0.5f) : e.weaponPower;
-                    }
+                        total += e.slot == EquipmentSlot.SecondHand ? FloorInt(e.weaponPower * 0.5f) : e.weaponPower;
                 }
                 return total;
             }
@@ -1470,123 +1634,108 @@ namespace Obscure
             {
                 case DerivedStatId.MaxHP:
                     baseVal = c.baseHp + (lvl - 1) * c.levelHpGrowth;
-                    abilityContrib = (int)Math.Round(mods.vit * c.hpGrowth);
+                    abilityContrib = FloorInt(baseVal * (1f + cfg.vitMaxHpPerMod * mods.vit)) - baseVal;
                     permContrib = permanentLegacyBonuses.maxHp;
                     break;
                 case DerivedStatId.MaxMP:
                     baseVal = c.baseMp + (lvl - 1) * c.levelMpGrowth;
-                    abilityContrib = (int)Math.Round(mods.wis * c.mpGrowth);
+                    abilityContrib = FloorInt(baseVal * (1f + cfg.intMaxMpPerMod * mods.intel)) - baseVal;
                     permContrib = permanentLegacyBonuses.maxMp;
                     break;
                 case DerivedStatId.MaxShield:
                     baseVal = c.baseShield;
-                    abilityContrib = Math.Max(0, (int)Math.Round(mods.vit * c.shieldGrowth));
                     break;
                 case DerivedStatId.PhysicalPower:
                     baseVal = c.baseWeaponPower;
                     eqContrib = CalculateEqPower();
-                    abilityContrib = (int)Math.Round(mods.str * (c.weaponScaling + eqList.Sum(e => e.weaponScaling)));
+                    abilityContrib = FloorInt(scores.str * ((c.weaponScaling + eqList.Sum(e => e.weaponScaling)) * 0.25f));
                     permContrib = permanentLegacyBonuses.atk;
                     break;
                 case DerivedStatId.RangedPower:
                     baseVal = c.baseRangedPower;
                     eqContrib = CalculateEqPower();
-                    abilityContrib = (int)Math.Round(mods.dex * c.rangedScaling);
+                    permContrib = permanentLegacyBonuses.atk;
                     break;
                 case DerivedStatId.MagicPower:
                     baseVal = c.baseSpellPower;
-                    abilityContrib = (int)Math.Round(mods.intel * c.spellScaling);
+                    abilityContrib = FloorInt(scores.intel * (c.spellScaling * 0.25f));
                     permContrib = permanentLegacyBonuses.mag;
                     break;
                 case DerivedStatId.HealingPower:
                     baseVal = c.baseHealing;
-                    abilityContrib = (int)Math.Round(mods.wis * c.healingScaling);
+                    abilityContrib = FloorInt(c.baseHealing * (1f + cfg.wisHealingPowerPerMod * mods.wis)) - c.baseHealing;
                     permContrib = permanentLegacyBonuses.mag;
                     break;
                 case DerivedStatId.SupportPower:
-                    baseVal = c.baseSupportPower;
-                    abilityContrib = (int)Math.Round(mods.cha * c.supportScaling);
+                    baseVal = 0;
+                    abilityContrib = FloorInt(CalculateBuffEffectivenessBonus(mods.cha, cfg) * 100f);
                     break;
                 case DerivedStatId.CriticalChance:
                     baseVal = c.baseCritChance;
-                    abilityContrib = (int)Math.Round(mods.dex * c.critChanceScaling);
                     break;
                 case DerivedStatId.CriticalDamage:
                     baseVal = c.baseCritDamage;
                     break;
                 case DerivedStatId.ArmorPenetration:
                     baseVal = c.baseArmorPen;
-                    abilityContrib = Math.Max(0, (int)Math.Round(mods.str * c.armorPenScaling));
                     break;
                 case DerivedStatId.MagicPenetration:
                     baseVal = c.baseMagicPen;
-                    abilityContrib = Math.Max(0, (int)Math.Round(mods.intel * c.magicPenScaling));
                     break;
                 case DerivedStatId.PhysicalDefense:
                     baseVal = c.basePhysicalDefense;
                     eqContrib = eqList.Sum(e => e.physicalDefense);
-                    abilityContrib = (int)Math.Round(mods.vit * c.physicalDefenseScaling);
                     permContrib = permanentLegacyBonuses.def;
                     break;
                 case DerivedStatId.MagicDefense:
                     baseVal = c.baseMagicDefense;
                     eqContrib = eqList.Sum(e => e.magicDefense);
-                    abilityContrib = (int)Math.Round(mods.wis * c.magicDefenseScaling);
                     break;
                 case DerivedStatId.Evasion:
                     baseVal = c.baseEvasion;
-                    abilityContrib = (int)Math.Round(mods.dex * c.evasionScaling);
+                    abilityContrib = FloorInt(CalculateEvasionBonus(mods.dex, cfg));
                     break;
                 case DerivedStatId.BlockPower:
                     baseVal = c.baseBlockPower;
-                    abilityContrib = (int)Math.Round(mods.str * c.blockScaling);
                     break;
                 case DerivedStatId.StatusResistance:
                     baseVal = c.baseStatusResistance;
-                    abilityContrib = (int)Math.Round((mods.vit + mods.wis) * c.statusResistanceScaling);
                     break;
                 case DerivedStatId.StaggerResistance:
                     baseVal = c.baseStaggerResistance;
-                    abilityContrib = (int)Math.Round(mods.vit * c.staggerResistanceScaling);
                     break;
                 case DerivedStatId.Initiative:
                     baseVal = c.baseInitiative;
-                    abilityContrib = mods.dex;
                     permContrib = permanentLegacyBonuses.spd;
                     break;
                 case DerivedStatId.ActionSpeed:
                     baseVal = c.baseActionSpeed;
-                    abilityContrib = (int)Math.Round(mods.dex * c.actionSpeedScaling);
                     break;
                 case DerivedStatId.QteTimingBonus:
                     baseVal = c.baseQteTimingBonus;
-                    abilityContrib = (int)Math.Round(mods.dex * c.qteTimingScaling);
+                    abilityContrib = FloorInt(CalculateQteWindowBonus(mods.dex, cfg));
                     break;
                 case DerivedStatId.QteStability:
                     baseVal = c.baseQteStability;
-                    abilityContrib = Math.Max(0, (int)Math.Round(mods.vit * c.qteStabilityScaling));
                     break;
                 case DerivedStatId.CounterPower:
                     baseVal = c.baseCounterPower;
-                    abilityContrib = (int)Math.Round((mods.str + mods.dex) * c.counterPowerScaling);
                     break;
                 case DerivedStatId.PhysicalBreakPower:
                     baseVal = c.baseBreakPower;
                     eqContrib = eqList.Sum(e => e.breakPowerModifier);
-                    abilityContrib = (int)Math.Round(mods.str * c.breakPowerScaling);
                     break;
                 case DerivedStatId.MagicBreakPower:
                     baseVal = c.baseBreakPower;
                     eqContrib = eqList.Sum(e => e.breakPowerModifier);
-                    abilityContrib = (int)Math.Round(mods.intel * c.breakPowerScaling);
                     break;
             }
 
             var relevantMods = allMods.Where(m => !m.isAbilityModifier && m.derivedStat == statId).ToList();
-            int raceBgContrib = (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Race || m.source == ModifierSource.Background).Sum(m => m.value));
-            eqContrib += (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Equipment).Sum(m => m.value));
-            permContrib += (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Passive || m.source == ModifierSource.Upgrade || m.source == ModifierSource.Relic || m.source == ModifierSource.Talent).Sum(m => m.value));
-            int tempContrib = (int)Math.Round(relevantMods.Where(m => m.source == ModifierSource.Buff || m.source == ModifierSource.Debuff).Sum(m => m.value));
+            int raceBgContrib = FloorInt(relevantMods.Where(m => m.source == ModifierSource.Race || m.source == ModifierSource.Background).Sum(m => m.value));
+            eqContrib += FloorInt(relevantMods.Where(m => m.source == ModifierSource.Equipment).Sum(m => m.value));
+            permContrib += FloorInt(relevantMods.Where(m => m.source == ModifierSource.Passive || m.source == ModifierSource.Upgrade || m.source == ModifierSource.Relic || m.source == ModifierSource.Talent).Sum(m => m.value));
+            int tempContrib = FloorInt(relevantMods.Where(m => m.source == ModifierSource.Buff || m.source == ModifierSource.Debuff).Sum(m => m.value));
 
             return new StatBreakdown
             {

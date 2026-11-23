@@ -46,6 +46,7 @@ namespace Obscure
         public float magnitude;
         public float chance = 1f;  // a Perfect QTE on the action guarantees it
         public bool onSelf;        // apply to the user rather than the target
+        public bool supportsChaScaling; // explicit opt-in for CHA Buff Effectiveness scaling (FELNA-SYS-ATTR-001)
 
         // Optional DoT parameters (GDD Section 10 & 11)
         public DamageType? dotDamageType;
