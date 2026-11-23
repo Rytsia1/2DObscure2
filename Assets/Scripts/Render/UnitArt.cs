@@ -34,6 +34,7 @@ namespace Obscure
             "hollow_squire", "gravebound_archer", "cinder_wisp", "soulbound_hound", "possessed_royal_guard",
             "crypt_leech", "forgotten_militia", "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2",
             "reliquary_confessor", "graveglass_arcanist", "crownless_duelist", "tombstone_colossus", "mourning_bell_wraith", // roster v1.9 Elites
+            "ossuary_acolyte", "dirge_chanter", "hollow_banneret", // common supports
             // Tutorial Prologue (Tools/PixelArt/prologue.js); aetherion_p2 is art only, shown once Aetherion reaches phase 2
             "riftling", "shard_wisp", "veil_stalker", "aetherion", "aetherion_p2",
         };
