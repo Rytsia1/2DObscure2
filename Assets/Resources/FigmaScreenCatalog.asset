@@ -100,12 +100,267 @@ MonoBehaviour:
   - key: 22---Combat-HUD
     uxml: {fileID: 9197481963319205126, guid: 91b40fe982ef28c42bb94056d34c7b31, type: 3}
     uss: {fileID: 7433441132597879392, guid: 78badce33e3d21149af01cbac12f748f, type: 3}
+  - key: 22d-b---Combat---Analysis---Enemies---Active-Focus
+    uxml: {fileID: 9197481963319205126, guid: 6741c3fe929ea58418a27fe9c2ba2553, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 72b3b362f100f844fbf7bb8e2c827ea4, type: 3}
+  - key: 22d---Combat---Analysis---Enemies
+    uxml: {fileID: 9197481963319205126, guid: bbfd3eb6794add445895f42bb78d1a27, type: 3}
+    uss: {fileID: 7433441132597879392, guid: bda7ef228039a69418610e4077ec1bd3, type: 3}
+  - key: 22e---Combat---Analysis---Allies
+    uxml: {fileID: 9197481963319205126, guid: 92597c4b4ba126549b72cc0bbc0e2b16, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 9d5923b6076f905498c5ef5dca055327, type: 3}
+  - key: 22f---Status-Effect-Glossary
+    uxml: {fileID: 9197481963319205126, guid: 22c8903157ca7c44a997b6c552088645, type: 3}
+    uss: {fileID: 7433441132597879392, guid: f546fe923b7b1c54abda0c6d23caa8c7, type: 3}
   - key: 23---Dungeon-Clear
     uxml: {fileID: 9197481963319205126, guid: c4aa0aa8ec8bae841b9f7d46e1838032, type: 3}
     uss: {fileID: 7433441132597879392, guid: c3f8c7d69c529ed439bbe21c8a4910eb, type: 3}
   - key: 24---Run-Failure---Defeat
     uxml: {fileID: 9197481963319205126, guid: 671e2cd355e8dc64ab7b966fe5b9a525, type: 3}
     uss: {fileID: 7433441132597879392, guid: 98d5775fa99c85f4dba1237a942219aa, type: 3}
+  - key: Analysis-Affinity-Row-Normal
+    uxml: {fileID: 9197481963319205126, guid: 881fc342d7d68bb499bd4bc9f3346897, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 2ef5c7205c81e2c4fab9af067643e632, type: 3}
+  - key: Analysis-Affinity-Row-Normal-swap
+    uxml: {fileID: 9197481963319205126, guid: e91498cf87e28a342b13fc463fa4ea8d, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Normal-swap-2
+    uxml: {fileID: 9197481963319205126, guid: dcbcd3d03f0bfd04c99a7a74a71d9849, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Normal-swap-3
+    uxml: {fileID: 9197481963319205126, guid: e922d43fb6a0a3a45b78e48e63fe460a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Normal-swap-4
+    uxml: {fileID: 9197481963319205126, guid: 6af22e9d589331948a922f7a84699a92, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Normal-swap-5
+    uxml: {fileID: 9197481963319205126, guid: d6486c5f41199854b8e8902453b03634, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Normal-swap-6
+    uxml: {fileID: 9197481963319205126, guid: bae4848bcddddaa4eb582d82a0a36510, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Resist
+    uxml: {fileID: 9197481963319205126, guid: 62d129c31b9a8524f9d658ffa9b09387, type: 3}
+    uss: {fileID: 7433441132597879392, guid: ea4d27f82c6216f42835c0270d95c67c, type: 3}
+  - key: Analysis-Affinity-Row-Resist-swap
+    uxml: {fileID: 9197481963319205126, guid: 584a1027292b62342b9013705786c75f, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Resist-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 97a1bcaf434f9d142a927ba74431b62b, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Unknown
+    uxml: {fileID: 9197481963319205126, guid: 316dec0a64fc8e342925bc601bc43f3b, type: 3}
+    uss: {fileID: 7433441132597879392, guid: fed9bfc38947d694c890f2d3926813b0, type: 3}
+  - key: Analysis-Affinity-Row-Unknown-swap
+    uxml: {fileID: 9197481963319205126, guid: 7fc5b4244fb888c48a3c3f1ae84b54dc, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Unknown-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 6f976626d58c35440b5666968e2ba3ab, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Unknown-swap-3
+    uxml: {fileID: 9197481963319205126, guid: dcd3bd5507452f94cb9ce918a552ec77, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Unknown-swap-4
+    uxml: {fileID: 9197481963319205126, guid: 6ac931cfae2f9f54f929337b9231257b, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Unknown-swap-5
+    uxml: {fileID: 9197481963319205126, guid: 7c17b571740cb3948b67f676063961d3, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Unknown-swap-6
+    uxml: {fileID: 9197481963319205126, guid: 4f02c6941967ca74089b69add435433b, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Affinity-Row-Weak
+    uxml: {fileID: 9197481963319205126, guid: 91e3132693eeb8440b61280496702d3d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a4910ae1094d16b4686c54ea0820fc21, type: 3}
+  - key: Analysis-Affinity-Row-Weak-swap
+    uxml: {fileID: 9197481963319205126, guid: a6c1123ee85cb284eb96b212aff09772, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Effect-Badge-No
+    uxml: {fileID: 9197481963319205126, guid: 783bef084792c1d44a945547f8f5c93c, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c36cbe56faed2f54aaa30c755a257904, type: 3}
+  - key: Analysis-Effect-Badge-No-swap
+    uxml: {fileID: 9197481963319205126, guid: fca8dc3569b26e546a4ee26fdfc47a1f, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Effect-Badge-No-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 18e6250eff7c20d4bb356cf1b1ddc7e5, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Effect-Badge-No-swap-3
+    uxml: {fileID: 9197481963319205126, guid: d579f939ec0c371448a2409f143f4707, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Effect-Badge-Yes
+    uxml: {fileID: 9197481963319205126, guid: f4843a916e9ea2741900df888539982b, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6b4758ea44f1b6c44a3404aba3b358a0, type: 3}
+  - key: Analysis-Effect-Badge-Yes-swap
+    uxml: {fileID: 9197481963319205126, guid: 84814dca5a513e449808dc9371fd9383, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No
+    uxml: {fileID: 9197481963319205126, guid: 0dfd73f837f293e43bbbfc505f536391, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 14fe789b9c6fffe46a71c512818e0803, type: 3}
+  - key: Analysis-Resist-Row-Normal-No-swap
+    uxml: {fileID: 9197481963319205126, guid: 7dd915f138ca19e4a9686bc4cc399d17, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-10
+    uxml: {fileID: 9197481963319205126, guid: 7f0fb0807b2c888448dde873630276f9, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-2
+    uxml: {fileID: 9197481963319205126, guid: beabb91b398abf947b9082bb0940cf37, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-3
+    uxml: {fileID: 9197481963319205126, guid: c94d48a60e1ee6c40a884c4f934a05e5, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-4
+    uxml: {fileID: 9197481963319205126, guid: 6923602b1462fb74f81a5d5b2a61b90e, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-5
+    uxml: {fileID: 9197481963319205126, guid: 2cfc3ea41b56a2d478055f52f558eb96, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-6
+    uxml: {fileID: 9197481963319205126, guid: ecf5abacf21ef5e4a9354bf7b318ae05, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-7
+    uxml: {fileID: 9197481963319205126, guid: 17185f88bfebeae479a2af3dbe57802a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-8
+    uxml: {fileID: 9197481963319205126, guid: fbe7878b14abb5b45ad7cd97c4af3c00, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-No-swap-9
+    uxml: {fileID: 9197481963319205126, guid: 1491c9a6324d62a4dbeb759354aa3315, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Normal-Yes
+    uxml: {fileID: 9197481963319205126, guid: b493ffb4ff84d4042a5ac4d6d383a14f, type: 3}
+    uss: {fileID: 7433441132597879392, guid: fab95cc059654554696f2759ecb4a96f, type: 3}
+  - key: Analysis-Resist-Row-Resistant-No
+    uxml: {fileID: 9197481963319205126, guid: b76249be4b3607943ae2958cfa696329, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 6e157bae51ea06e40ae3fdc69523c3da, type: 3}
+  - key: Analysis-Resist-Row-Resistant-No-swap
+    uxml: {fileID: 9197481963319205126, guid: 98914f99541951c40872af6259cbe25d, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Resistant-No-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 8ac8304244ee7904daf99ac984a665cf, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No
+    uxml: {fileID: 9197481963319205126, guid: 018c70480c9b7694792a66a0c60cf75d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 480f1f092c1d1024984c6086ed4d4d99, type: 3}
+  - key: Analysis-Resist-Row-Unknown-No-swap
+    uxml: {fileID: 9197481963319205126, guid: e99a2c91170324b43a0a9c54a1f3a6d2, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-10
+    uxml: {fileID: 9197481963319205126, guid: 8ddf733f1a4ea3042869315cc19d335a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 2bcac03c21588da4290527e3481bb5d3, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-3
+    uxml: {fileID: 9197481963319205126, guid: d79a534093bbbdf4894a1b837c89e718, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-4
+    uxml: {fileID: 9197481963319205126, guid: 3d079757a1d479e40a76957428222c70, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-5
+    uxml: {fileID: 9197481963319205126, guid: 5273e551d52fce047b441eaff9bbf2b0, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-6
+    uxml: {fileID: 9197481963319205126, guid: 5af4f9df3b50dac4bb6a7f0806a7809c, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-7
+    uxml: {fileID: 9197481963319205126, guid: 05c66e7b672702445972255c6c0a498a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-8
+    uxml: {fileID: 9197481963319205126, guid: 7bc9de7435d53494094e86e360e7cf41, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Unknown-No-swap-9
+    uxml: {fileID: 9197481963319205126, guid: 2b938116b0864b64ebc2c7a0b614b75d, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Vulnerable-No
+    uxml: {fileID: 9197481963319205126, guid: 995ff8ab26926a744834dc93e6112026, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 1b831a6b1ef0d3d48b6a00d95789c2f0, type: 3}
+  - key: Analysis-Resist-Row-Vulnerable-No-swap
+    uxml: {fileID: 9197481963319205126, guid: 293b509739d137c4f96a963156303f69, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Resist-Row-Vulnerable-No-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 4376de2b8c136db468dfd669a07fb8b3, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card
+    uxml: {fileID: 9197481963319205126, guid: d2fb413aa9b657f4cbb8519d168babb5, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 412d2a8d5a33df146b6d5ebf497e9991, type: 3}
+  - key: Analysis-Status-Card-swap
+    uxml: {fileID: 9197481963319205126, guid: c1ba7ea44eabd234e8d12ba3d9f22929, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-10
+    uxml: {fileID: 9197481963319205126, guid: 35ec9ca48c43fb7469bc8a2fd4896c34, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-11
+    uxml: {fileID: 9197481963319205126, guid: 0afec263c3bc058419010163690cc2f4, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-12
+    uxml: {fileID: 9197481963319205126, guid: 0dbb1f05d404a4c4db0df69c8cee4238, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-13
+    uxml: {fileID: 9197481963319205126, guid: 7eab51088b75aa64fab344960797711e, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-14
+    uxml: {fileID: 9197481963319205126, guid: 09415957c53d3384c956c8652c984504, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-15
+    uxml: {fileID: 9197481963319205126, guid: cac9fe93a69396641919e0079f2b6b55, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-16
+    uxml: {fileID: 9197481963319205126, guid: 3d83290c736e57249ad7b66b26c128ec, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-17
+    uxml: {fileID: 9197481963319205126, guid: b69fa90901c199744857e52c53b2afa8, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-18
+    uxml: {fileID: 9197481963319205126, guid: a7bd91fa6b8896c4392dc0bed4083f45, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-19
+    uxml: {fileID: 9197481963319205126, guid: bf7246769f01e73469b2ddf36b925be1, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-2
+    uxml: {fileID: 9197481963319205126, guid: 9f6cb5d64c0714542837f027a4f84553, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-20
+    uxml: {fileID: 9197481963319205126, guid: 2d3c2756387e7d44683da3172b696ae9, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-21
+    uxml: {fileID: 9197481963319205126, guid: 716fc9b9fcc686e478f1f38f3477790a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-22
+    uxml: {fileID: 9197481963319205126, guid: 2b0aaa9c5d0ba264eaf9eb840c344649, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-23
+    uxml: {fileID: 9197481963319205126, guid: 966cb84658182db4d999952d5d02577b, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-24
+    uxml: {fileID: 9197481963319205126, guid: 8ca98972ebee50b43aa38e4fc722fcd1, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-25
+    uxml: {fileID: 9197481963319205126, guid: 7c52f9c8a51c66f49b4c59765cb5ab25, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-26
+    uxml: {fileID: 9197481963319205126, guid: 8e0507ba159143e40a9a151d4c38072a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-3
+    uxml: {fileID: 9197481963319205126, guid: 09a0eda192ea4b344a2d3ee14bd720a1, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-4
+    uxml: {fileID: 9197481963319205126, guid: 7629e8d38fa5fd245bf7ba695e2bc85a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-5
+    uxml: {fileID: 9197481963319205126, guid: 1a310ce5a18d8fb499b7acef4b5d165a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-6
+    uxml: {fileID: 9197481963319205126, guid: 5c80f92eae967ec4eb31636bad02240a, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-7
+    uxml: {fileID: 9197481963319205126, guid: d87ff057021b4274794b2ee532dd78d4, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-8
+    uxml: {fileID: 9197481963319205126, guid: 339074e8942226e4f98bb3a4df6b024c, type: 3}
+    uss: {fileID: 0}
+  - key: Analysis-Status-Card-swap-9
+    uxml: {fileID: 9197481963319205126, guid: 11321c5344fc359449824931e47c1fc2, type: 3}
+    uss: {fileID: 0}
   - key: Button-Flat-Focus
     uxml: {fileID: 9197481963319205126, guid: f5237baf3e9c772479920016c9bef1d8, type: 3}
     uss: {fileID: 7433441132597879392, guid: 6ec87486d88b1044c9fcc4daf6ae657c, type: 3}
@@ -175,6 +430,120 @@ MonoBehaviour:
   - key: Gauge-MP
     uxml: {fileID: 9197481963319205126, guid: b75d97139363dde4a9df2313694ee0a7, type: 3}
     uss: {fileID: 7433441132597879392, guid: 29a3f04064b65564ca330ed99df76d58, type: 3}
+  - key: Icon-Element-Dark
+    uxml: {fileID: 9197481963319205126, guid: 29c32667435c3cc4bb4c69fd5ff864b2, type: 3}
+    uss: {fileID: 7433441132597879392, guid: ea3c75e8e086df54bbb626fb94fc534a, type: 3}
+  - key: Icon-Element-Earth
+    uxml: {fileID: 9197481963319205126, guid: 45faa4566103f2b4eb11f6adac24e701, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 8d7d112f05b106b47b5db7947eac7540, type: 3}
+  - key: Icon-Element-Fire
+    uxml: {fileID: 9197481963319205126, guid: e740ba2d1f7f18f4dbe77d4da0c671db, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c1ae2d048baa7954d954012737bf2659, type: 3}
+  - key: Icon-Element-Holy
+    uxml: {fileID: 9197481963319205126, guid: fd8f2b10424720349bacddc3d6bf4bc0, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 4770c01a93a2693448d4709b4814d5b8, type: 3}
+  - key: Icon-Element-Ice
+    uxml: {fileID: 9197481963319205126, guid: 08bbe4fbf6452114f9148da0c2c20c3d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: f4d0cc36adc23db409bb30a65f4c8a48, type: 3}
+  - key: Icon-Element-Lightning
+    uxml: {fileID: 9197481963319205126, guid: 5987be03802c2874ea919ddb034109d1, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 5503aa3c024a8c04abbc8f070648e54e, type: 3}
+  - key: Icon-Element-Physical
+    uxml: {fileID: 9197481963319205126, guid: 007be3fa825da4e4abff366e4c6a519d, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 7a1a8da935b26cc4b9d4bcaf8804dc8e, type: 3}
+  - key: Icon-Element-Water
+    uxml: {fileID: 9197481963319205126, guid: adbd51741972fa545a9f24beec056f4f, type: 3}
+    uss: {fileID: 7433441132597879392, guid: d6f77bb25d5a37b4c869afb910558341, type: 3}
+  - key: Icon-Element-Wind
+    uxml: {fileID: 9197481963319205126, guid: e60cc919ee259a24681f20a7e7e300ff, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 15a88e37b871f084783ee147bd38016f, type: 3}
+  - key: Icon-Racial-determination
+    uxml: {fileID: 9197481963319205126, guid: 9d8fe4ef7755a8244a4633dff53f4314, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 0ac7152679e4d7d4985607fd8f2baa37, type: 3}
+  - key: Icon-Racial-oceans_embrace
+    uxml: {fileID: 9197481963319205126, guid: 0ca968ec373803546aa193ca380e785e, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 4ba76198e50d02e49aaef7773153f2e7, type: 3}
+  - key: Icon-Status-AttackDown
+    uxml: {fileID: 9197481963319205126, guid: 8bea00675e9c5d142ba6750ee3920e9a, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a64760b9efdb867468193b5998eb4861, type: 3}
+  - key: Icon-Status-AttackUp
+    uxml: {fileID: 9197481963319205126, guid: 17e3a2da2ded951488cd0e0bfa9be351, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 526efb6d4389f874f84a9edf9a2b2642, type: 3}
+  - key: Icon-Status-Bleed
+    uxml: {fileID: 9197481963319205126, guid: 5ed6bc25ce8e1a4428d20332b3ddbeb2, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 460b9a3da64239442a444b41f01c9ffa, type: 3}
+  - key: Icon-Status-Broken
+    uxml: {fileID: 9197481963319205126, guid: 9f8da8802515cde4590775b9525b4dfc, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a91633e94e3a7ac4cb338902b57be9ba, type: 3}
+  - key: Icon-Status-Burn
+    uxml: {fileID: 9197481963319205126, guid: 2d6dbae7f8d7f974eb3248328e24d064, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 2edf96b6420ac2741bf559360df06bee, type: 3}
+  - key: Icon-Status-Charm
+    uxml: {fileID: 9197481963319205126, guid: ab4bf2cf21e123043ad39a4aa850dc1e, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 7b92547ba4a9f5f498dc30e3390a09fb, type: 3}
+  - key: Icon-Status-Confusion
+    uxml: {fileID: 9197481963319205126, guid: 3b8352534c23526439617bc25ece7853, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 013eafd6b9aeaa840b0b60a1127340b8, type: 3}
+  - key: Icon-Status-Curse
+    uxml: {fileID: 9197481963319205126, guid: 5bc07ced9491d424b91e269bc9fe53aa, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 44309319b51c3444aa9b8d52f5b7bc0e, type: 3}
+  - key: Icon-Status-DefenseDown
+    uxml: {fileID: 9197481963319205126, guid: ff7eaa1e099a8fb49862fabc85582c9a, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a9f05e768a662e24b978f52b71bfbc2a, type: 3}
+  - key: Icon-Status-DefenseUp
+    uxml: {fileID: 9197481963319205126, guid: e05b319b8bb5b3a4183f7e036bdc1441, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 75cb135c48e0fe24481ccf51161bcd40, type: 3}
+  - key: Icon-Status-Despair
+    uxml: {fileID: 9197481963319205126, guid: f251fdcacc020884ba8db21b45de82d7, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 97753078f6060c84ead52f2c3d61eb3d, type: 3}
+  - key: Icon-Status-Evasion
+    uxml: {fileID: 9197481963319205126, guid: 9c38d06ac4dc742409d016faa5ed3a6c, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 24dc33c5cb998d145b85172eed19785c, type: 3}
+  - key: Icon-Status-Exhausted
+    uxml: {fileID: 9197481963319205126, guid: 0d288ce9ae0201849a75742833102be9, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 7b0f2f6063256f24bb4abbeda0e7d211, type: 3}
+  - key: Icon-Status-Fear
+    uxml: {fileID: 9197481963319205126, guid: 4e3fc011ff76ca748be90a1a8b5f4786, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 645a8e388c39d6549b4d75c5ac8b1d43, type: 3}
+  - key: Icon-Status-Freeze
+    uxml: {fileID: 9197481963319205126, guid: 188e9c0aa35f7e545aca070b4fc98e45, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c3b009bf374211745b767b8bfdd892b7, type: 3}
+  - key: Icon-Status-Guardian
+    uxml: {fileID: 9197481963319205126, guid: 6f0a869090b125f4894e3f998534a11b, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 24cd57d021447514fb303cf1b321bcfe, type: 3}
+  - key: Icon-Status-Madness
+    uxml: {fileID: 9197481963319205126, guid: bbd93b44526416a43a8bd7d6a5dc2085, type: 3}
+    uss: {fileID: 7433441132597879392, guid: d4563f7bf83d71c4284538439575173b, type: 3}
+  - key: Icon-Status-MagicDefenseDown
+    uxml: {fileID: 9197481963319205126, guid: 28afff6bc162d1f49bfdddaac03eb0a8, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 90c65cf45ac8bfd4d8ef22c6f5be72cc, type: 3}
+  - key: Icon-Status-MagicDefenseUp
+    uxml: {fileID: 9197481963319205126, guid: 31d3c494dde668044b9cbc2bbecac292, type: 3}
+    uss: {fileID: 7433441132597879392, guid: f6a0cb061001f8e4bb693100b8f37d7a, type: 3}
+  - key: Icon-Status-MindControl
+    uxml: {fileID: 9197481963319205126, guid: fb9de4877b5a95449b78878ceae88ce9, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 9b779e169d49f0941aa25fc57753a656, type: 3}
+  - key: Icon-Status-Poison
+    uxml: {fileID: 9197481963319205126, guid: 91087ea472a0a7246a29752ed6dfd233, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 290b116ea6b919d4baa2cf8977cb6618, type: 3}
+  - key: Icon-Status-ResistanceDown
+    uxml: {fileID: 9197481963319205126, guid: 548823fdeb578164893dae73bc9e4b45, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 40cacd464a8d0b741abb32ddced1ee49, type: 3}
+  - key: Icon-Status-Shock
+    uxml: {fileID: 9197481963319205126, guid: 8a247c6356540f14bac19e595330c9e2, type: 3}
+    uss: {fileID: 7433441132597879392, guid: f4f4fddfa729d7046be1c6f8707b9fb6, type: 3}
+  - key: Icon-Status-Silence
+    uxml: {fileID: 9197481963319205126, guid: 43a5873cc9ee7e04d936b561ac0087a2, type: 3}
+    uss: {fileID: 7433441132597879392, guid: 456874ce3b16b8342a1051a7db16c7c0, type: 3}
+  - key: Icon-Status-Sleep
+    uxml: {fileID: 9197481963319205126, guid: 17795f202548e3c43a5297144cd8ad26, type: 3}
+    uss: {fileID: 7433441132597879392, guid: c62fc52c758e7fe408a8dbe0686e29ff, type: 3}
+  - key: Icon-Status-Slow
+    uxml: {fileID: 9197481963319205126, guid: 745553eb9446b3542ba570d9a202d245, type: 3}
+    uss: {fileID: 7433441132597879392, guid: f0d10ce5b46a2b64d8ddc35ee4570135, type: 3}
+  - key: Icon-Status-Stun
+    uxml: {fileID: 9197481963319205126, guid: c3854409b0a0aea43961b85c3c1dd691, type: 3}
+    uss: {fileID: 7433441132597879392, guid: a9d0aac9402e1e94dbf25941548f6473, type: 3}
   - key: Item-Slot-Empty
     uxml: {fileID: 9197481963319205126, guid: b3ff03e98db4aa1429cac88cf8b0503b, type: 3}
     uss: {fileID: 7433441132597879392, guid: d67dfaf81e918134583193ef7af481f4, type: 3}

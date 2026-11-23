@@ -1469,3 +1469,865 @@ Button,
     align-items: center;
     margin-top: 24px;
 }
+
+/* ==========================================================================
+   Combat Analysis Modal (22d Enemies / 22d-b Active Focus / 22e Allies)
+   Strict Unity USS subset — explicit margins instead of CSS gap.
+   ========================================================================== */
+
+.uitk-analysis-backdrop {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    background-color: rgba(7, 10, 20, 0.86);
+    align-items: center;
+    justify-content: center;
+}
+
+.uitk-analysis-modal {
+    width: 1216px;
+    height: 688px;
+    padding-top: 14px;
+    padding-right: 20px;
+    padding-bottom: 12px;
+    padding-left: 20px;
+    flex-direction: column;
+    background-color: var(--bg-panel);
+    border-width: 2px;
+    border-color: var(--border-accent);
+    overflow: hidden;
+}
+
+.uitk-analysis-header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: 10px;
+}
+
+.uitk-analysis-title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 24px;
+    color: var(--text-accent);
+    white-space: nowrap;
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaDisplayFont.asset");
+}
+
+.uitk-analysis-cost {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-right: 14px;
+}
+
+.uitk-analysis-tab {
+    min-width: 108px;
+    height: 34px;
+    margin-right: 6px;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+.uitk-analysis-tab > Label {
+    font-size: 16px;
+}
+
+.uitk-analysis-close {
+    min-width: 88px;
+    height: 34px;
+    margin-left: 4px;
+    padding-top: 4px;
+    padding-right: 14px;
+    padding-bottom: 4px;
+    padding-left: 14px;
+}
+
+.uitk-analysis-close > Label {
+    font-size: 16px;
+}
+
+.uitk-analysis-cycle {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: 6px;
+    padding-right: 8px;
+    padding-bottom: 6px;
+    padding-left: 8px;
+    margin-bottom: 10px;
+    background-color: var(--bg-void);
+    border-width: 2px;
+    border-color: var(--border-line);
+}
+
+.uitk-analysis-cycle-btn {
+    min-width: 104px;
+    min-height: 32px;
+    height: 32px;
+    padding-top: 3px;
+    padding-right: 12px;
+    padding-bottom: 3px;
+    padding-left: 12px;
+}
+
+.uitk-analysis-cycle-btn > Label {
+    font-size: 15px;
+}
+
+.uitk-analysis-unit-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    font-size: 22px;
+    color: var(--text-primary);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaGothicFont.asset");
+}
+
+.uitk-analysis-body {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.uitk-analysis-col-left {
+    width: 290px;
+    flex-shrink: 0;
+    flex-direction: column;
+    margin-right: 10px;
+    min-height: 0px;
+}
+
+.uitk-analysis-col-elem {
+    width: 318px;
+    flex-shrink: 0;
+    flex-direction: column;
+    margin-right: 10px;
+    min-height: 0px;
+}
+
+.uitk-analysis-col-resist {
+    width: 254px;
+    flex-shrink: 0;
+    flex-direction: column;
+    margin-right: 10px;
+    min-height: 0px;
+}
+
+.uitk-analysis-col-right {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    flex-direction: column;
+    min-width: 0px;
+    min-height: 0px;
+}
+
+.uitk-analysis-card {
+    background-color: var(--bg-raised);
+    border-width: 2px;
+    border-color: var(--border-line);
+    padding-top: 8px;
+    padding-right: 12px;
+    padding-bottom: 10px;
+    padding-left: 12px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.uitk-analysis-card-mb {
+    margin-bottom: 10px;
+}
+
+.uitk-analysis-card-mb-sm {
+    margin-bottom: 8px;
+}
+
+.uitk-analysis-card-grow {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0px;
+}
+
+.uitk-analysis-card-explain {
+    border-color: var(--border-focus);
+}
+
+.uitk-analysis-sec-hdr {
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-alert {
+    background-color: rgba(138, 67, 23, 0.36);
+    border-width: 1px;
+    border-color: var(--currency-run);
+    padding-top: 4px;
+    padding-right: 8px;
+    padding-bottom: 4px;
+    padding-left: 8px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.44px;
+    color: var(--currency-run-text);
+    white-space: normal;
+}
+
+.uitk-analysis-identity-row {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-sprite {
+    width: 54px;
+    height: 54px;
+    flex-shrink: 0;
+    margin-right: 10px;
+    background-color: var(--bg-void);
+    border-width: 1px;
+    border-color: var(--border-line);
+}
+
+.uitk-analysis-sprite-ally {
+    width: 48px;
+    height: 60px;
+    flex-shrink: 0;
+    margin-right: 10px;
+    background-color: var(--bg-void);
+    border-width: 1px;
+    border-color: var(--border-line);
+}
+
+.uitk-analysis-id-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    flex-direction: column;
+    min-width: 0px;
+}
+
+.uitk-analysis-id-name {
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    color: var(--text-primary);
+    white-space: normal;
+    margin-bottom: 4px;
+}
+
+.uitk-analysis-id-tags {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.uitk-analysis-phase {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-accent);
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+.uitk-analysis-meta {
+    font-size: 11px;
+    letter-spacing: 0.44px;
+    color: var(--text-body);
+    white-space: normal;
+}
+
+.uitk-analysis-gauge-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+
+.uitk-analysis-gauge-lbl {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.uitk-analysis-gauge-val {
+    font-size: 13px;
+    letter-spacing: 0.52px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.uitk-analysis-gauge-track {
+    height: 8px;
+    align-self: stretch;
+    background-color: var(--bg-void);
+    border-width: 1px;
+    border-color: var(--border-line);
+    padding-top: 1px;
+    padding-right: 1px;
+    padding-bottom: 1px;
+    padding-left: 1px;
+    margin-bottom: 8px;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+.uitk-analysis-gauge-track-sm {
+    height: 7px;
+    margin-bottom: 6px;
+}
+
+.uitk-analysis-gauge-fill-hp {
+    background-color: var(--vital-hp);
+    height: 100%;
+}
+
+.uitk-analysis-gauge-fill-hp-low {
+    background-color: var(--vital-hp-low);
+    height: 100%;
+}
+
+.uitk-analysis-gauge-fill-mp {
+    background-color: var(--vital-mp);
+    height: 100%;
+}
+
+.uitk-analysis-gauge-fill-break {
+    background-color: var(--accent-gold);
+    height: 100%;
+}
+
+.uitk-analysis-intent-row {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-top: 2px;
+}
+
+.uitk-analysis-intent-lbl {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-intent-val {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--status-error);
+    white-space: normal;
+}
+
+.uitk-analysis-intent-calm {
+    color: var(--text-highlight);
+}
+
+.uitk-analysis-shield-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.uitk-analysis-shield-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.uitk-analysis-shield-txt {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    font-size: 11px;
+    letter-spacing: 0.44px;
+    color: var(--vital-shield);
+    white-space: normal;
+}
+
+/* Ally Attributes & Derived Grids */
+.uitk-analysis-attr-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.uitk-analysis-attr-cell {
+    width: 33%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 10px;
+    margin-bottom: 4px;
+}
+
+.uitk-analysis-derived-cell {
+    width: 50%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 10px;
+    margin-bottom: 4px;
+}
+
+.uitk-analysis-stat-k {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.uitk-analysis-stat-v {
+    font-size: 13px;
+    letter-spacing: 0.48px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+/* Active Effect Badges (Enemies & Allies) */
+.uitk-analysis-badge-wrap {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+}
+
+.uitk-analysis-effect-badge {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 3px;
+    padding-right: 8px;
+    padding-bottom: 3px;
+    padding-left: 5px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    background-color: var(--bg-panel);
+    border-width: 2px;
+    border-color: var(--border-default);
+}
+
+.mouse-active .uitk-analysis-effect-badge:hover {
+    background-color: rgba(154, 114, 34, 0.28);
+    border-color: var(--border-focus);
+}
+
+.uitk-analysis-effect-badge.uitk-analysis-focused {
+    background-color: var(--accent-focus-wash);
+    border-color: var(--border-accent);
+}
+
+.uitk-analysis-badge-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-right: 5px;
+}
+
+.uitk-analysis-badge-name {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.uitk-analysis-badge-turns {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-accent);
+    white-space: nowrap;
+    margin-left: 5px;
+}
+
+/* Elemental Affinity Rows (Col 2) */
+.uitk-analysis-elem-row {
+    flex-direction: row;
+    align-items: center;
+    height: 34px;
+    padding-top: 2px;
+    padding-right: 6px;
+    padding-bottom: 2px;
+    padding-left: 6px;
+    margin-bottom: 3px;
+    background-color: rgba(12, 17, 34, 0.45);
+    border-width: 1px;
+    border-color: rgba(37, 49, 90, 0.55);
+}
+
+.uitk-analysis-elem-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.uitk-analysis-elem-short {
+    width: 34px;
+    flex-shrink: 0;
+    font-size: 13px;
+    letter-spacing: 0.52px;
+    color: var(--text-accent);
+    white-space: nowrap;
+    margin-right: 4px;
+}
+
+.uitk-analysis-elem-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.uitk-analysis-elem-detail {
+    flex-shrink: 0;
+    font-size: 11px;
+    letter-spacing: 0.44px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-right: 8px;
+}
+
+/* Status Resistance Rows (Col 3) */
+.uitk-analysis-resist-row {
+    flex-direction: row;
+    align-items: center;
+    height: 30px;
+    padding-top: 2px;
+    padding-right: 6px;
+    padding-bottom: 2px;
+    padding-left: 4px;
+    margin-bottom: 2px;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.mouse-active .uitk-analysis-resist-row:hover {
+    background-color: rgba(154, 114, 34, 0.24);
+    border-color: var(--border-focus);
+}
+
+.uitk-analysis-resist-row.uitk-analysis-focused {
+    background-color: var(--accent-focus-wash);
+    border-color: var(--border-focus);
+}
+
+.uitk-analysis-resist-cursor {
+    width: 12px;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--text-accent);
+    visibility: hidden;
+    margin-right: 2px;
+}
+
+.uitk-analysis-resist-row.uitk-analysis-focused > .uitk-analysis-resist-cursor {
+    visibility: visible;
+}
+
+.uitk-analysis-resist-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.uitk-analysis-resist-name {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    font-size: 13px;
+    letter-spacing: 0.48px;
+    color: var(--text-body);
+    white-space: nowrap;
+    overflow: hidden;
+    margin-right: 6px;
+}
+
+.uitk-analysis-resist-row.uitk-analysis-focused > .uitk-analysis-resist-name {
+    color: var(--text-primary);
+}
+
+/* Shared Affinity & Resist Tier Pills */
+.uitk-analysis-pill {
+    padding-top: 1px;
+    padding-right: 6px;
+    padding-bottom: 1px;
+    padding-left: 6px;
+    border-width: 2px;
+    min-width: 56px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-pill-lbl {
+    font-size: 11px;
+    letter-spacing: 0.44px;
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+}
+
+.uitk-pill-ok {
+    border-color: var(--status-ok);
+}
+
+.uitk-pill-ok > .uitk-analysis-pill-lbl {
+    color: var(--status-ok);
+}
+
+.uitk-pill-warn {
+    border-color: var(--status-warn);
+}
+
+.uitk-pill-warn > .uitk-analysis-pill-lbl {
+    color: var(--status-warn);
+}
+
+.uitk-pill-err {
+    border-color: var(--status-error);
+}
+
+.uitk-pill-err > .uitk-analysis-pill-lbl {
+    color: var(--status-error);
+}
+
+.uitk-pill-null {
+    border-color: var(--cyan-1);
+}
+
+.uitk-pill-null > .uitk-analysis-pill-lbl {
+    color: var(--cyan-1);
+}
+
+.uitk-pill-drain {
+    border-color: var(--violet-1);
+}
+
+.uitk-pill-drain > .uitk-analysis-pill-lbl {
+    color: var(--violet-1);
+}
+
+.uitk-pill-normal {
+    border-color: var(--text-body);
+}
+
+.uitk-pill-normal > .uitk-analysis-pill-lbl {
+    color: var(--text-body);
+}
+
+.uitk-pill-muted {
+    border-color: var(--text-muted);
+}
+
+.uitk-pill-muted > .uitk-analysis-pill-lbl {
+    color: var(--text-muted);
+}
+
+.uitk-analysis-note {
+    margin-top: auto;
+    padding-top: 6px;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+    color: var(--text-muted);
+    white-space: normal;
+    flex-shrink: 0;
+}
+
+/* Defensive Effects (Allies Col 4) */
+.uitk-analysis-def-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-def-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.uitk-analysis-def-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    flex-direction: column;
+    min-width: 0px;
+}
+
+.uitk-analysis-def-name {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.uitk-analysis-def-sub {
+    font-size: 11px;
+    letter-spacing: 0.44px;
+    color: var(--text-muted);
+    white-space: normal;
+}
+
+/* Status Explanation Card (Col 4) */
+.uitk-analysis-explain-head {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-explain-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.uitk-analysis-explain-icon-sm {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.uitk-analysis-explain-meta {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0px;
+}
+
+.uitk-analysis-explain-name {
+    font-size: 24px;
+    color: var(--text-primary);
+    white-space: normal;
+    margin-bottom: 4px;
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaGothicFont.asset");
+}
+
+.uitk-analysis-explain-name-sm {
+    font-size: 20px;
+    margin-bottom: 0px;
+}
+
+.uitk-analysis-explain-desc {
+    font-size: 13px;
+    letter-spacing: 0.48px;
+    color: var(--text-body);
+    white-space: normal;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-state-box {
+    background-color: var(--bg-void);
+    border-width: 1px;
+    border-color: var(--border-line);
+    padding-top: 8px;
+    padding-right: 10px;
+    padding-bottom: 8px;
+    padding-left: 10px;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.uitk-analysis-state-row {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+.uitk-analysis-state-row-last {
+    margin-bottom: 0px;
+}
+
+.uitk-analysis-state-k {
+    width: 60px;
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-accent);
+    white-space: nowrap;
+}
+
+.uitk-analysis-state-v {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0px;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-primary);
+    white-space: normal;
+}
+
+.uitk-analysis-state-v-active {
+    color: var(--status-error);
+}
+
+.uitk-analysis-state-v-muted {
+    color: var(--text-muted);
+}
+
+.uitk-analysis-empty {
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    color: var(--text-muted);
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+/* Footer Key Hints */
+.uitk-analysis-footer {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+/* Codex Reveal Toast */
+.uitk-codex-toast {
+    position: absolute;
+    top: 442px;
+    left: 25%;
+    width: 50%;
+    padding-top: 6px;
+    padding-right: 14px;
+    padding-bottom: 6px;
+    padding-left: 14px;
+    background-color: var(--bg-ground);
+    border-width: 2px;
+    border-color: var(--border-accent);
+    align-items: center;
+    justify-content: center;
+}
+
+.uitk-codex-toast-label {
+    font-size: 13px;
+    letter-spacing: 0.52px;
+    color: var(--text-highlight);
+    -unity-text-align: middle-center;
+    -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaGothicFont.asset");
+}

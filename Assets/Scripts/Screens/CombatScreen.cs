@@ -1056,15 +1056,8 @@ namespace Obscure
 
         void Update()
         {
-            if (analysisOverlay != null)
-            {
-                if (Controls.Left) { analysisUnitIdx--; RenderAnalysisOverlay(); }
-                else if (Controls.Right) { analysisUnitIdx++; RenderAnalysisOverlay(); }
-                else if (Controls.Up && analysisScroll != null)
-                    analysisScroll.scrollOffset = new Vector2(0, Mathf.Max(0f, analysisScroll.scrollOffset.y - 48f));
-                else if (Controls.Down && analysisScroll != null)
-                    analysisScroll.scrollOffset = new Vector2(0, analysisScroll.scrollOffset.y + 48f);
-            }
+            if (analysisModal.IsOpen)
+                analysisModal.HandleInput();
             if (Controls.Details) ModifierHudHelper.ToggleDetails(modifierStrip);
             var a = Battle?.Active;
             if (a != null && activeMarker != null && activeMarker.style.display == DisplayStyle.Flex && huds.TryGetValue(a, out var ah))
@@ -2105,13 +2098,9 @@ namespace Obscure
         }
 
         // ---- ANALYSIS Overlay & Codex Reveal Toast (Felna_Analysis_System_Spec_v1.md Parts A-D) ----
-        VisualElement analysisOverlay;
-        ScrollView analysisScroll;
+        readonly CombatAnalysisModal analysisModal = new CombatAnalysisModal();
         VisualElement codexToastEl;
         Coroutine codexToastRoutine;
-        bool analysisOnAllies;
-        int analysisUnitIdx;
-        Action analysisOnClose;
 
         void ShowCodexToast(string message)
         {
@@ -2122,22 +2111,11 @@ namespace Obscure
             {
                 name = "CodexToast",
                 pickingMode = PickingMode.Ignore,
-                style =
-                {
-                    position = Position.Absolute,
-                    top = 442, left = Length.Percent(25), width = Length.Percent(50),
-                    paddingTop = 6, paddingBottom = 6, paddingLeft = 14, paddingRight = 14,
-                    backgroundColor = Palette.Ink1,
-                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
-                    borderTopColor = Palette.Gold2, borderBottomColor = Palette.Gold2,
-                    borderLeftColor = Palette.Gold2, borderRightColor = Palette.Gold2,
-                    alignItems = UnityEngine.UIElements.Align.Center,
-                }
             };
-            codexToastEl.Add(new UiLabel(message.ToUpperInvariant())
-            {
-                style = { fontSize = 13, color = Palette.Gold1, unityTextAlign = TextAnchor.MiddleCenter }
-            });
+            codexToastEl.AddToClassList("uitk-codex-toast");
+            var toastLbl = new UiLabel(message.ToUpperInvariant());
+            toastLbl.AddToClassList("uitk-codex-toast-label");
+            codexToastEl.Add(toastLbl);
             screenRoot.Add(codexToastEl);
             codexToastRoutine = StartCoroutine(HideCodexToastAfter(2.6f));
         }
@@ -2152,146 +2130,8 @@ namespace Obscure
         void OpenAnalysis(Action onClose)
         {
             if (Battle == null || screenRoot == null) return;
-            analysisOnClose = onClose;
-            analysisOnAllies = false;
-            analysisUnitIdx = 0;
             ClearPhase();
-            RenderAnalysisOverlay();
-        }
-
-        UitkMenu analysisMenu;
-
-        void CloseAnalysis()
-        {
-            FigmaUi.DestroyMenu(ref analysisMenu);
-            if (analysisOverlay != null) { analysisOverlay.RemoveFromHierarchy(); analysisOverlay = null; }
-            var resume = analysisOnClose;
-            analysisOnClose = null;
-            resume?.Invoke();
-        }
-
-        void RenderAnalysisOverlay()
-        {
-            if (analysisOverlay != null) analysisOverlay.RemoveFromHierarchy();
-            analysisOverlay = new VisualElement { name = "AnalysisOverlay" };
-            analysisOverlay.AddToClassList("uitk-modal-backdrop");
-
-            var panel = new VisualElement();
-            panel.AddToClassList("uitk-modal-panel");
-            panel.style.width = 760;
-            panel.style.maxHeight = 600;
-            panel.style.paddingTop = 14; panel.style.paddingBottom = 14;
-            panel.style.paddingLeft = 18; panel.style.paddingRight = 18;
-
-            // Header: title + ENEMIES / ALLIES tabs + CLOSE
-            var header = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8 } };
-            header.Add(new UiLabel("ANALYSIS — FREE INSPECTION") { style = { fontSize = 20, color = Palette.Gold1 } });
-            var tabRow = new VisualElement { style = { flexDirection = FlexDirection.Row } };
-            var enemiesBtn = FigmaUi.CreateButton("ENEMIES", analysisOnAllies ? "button-slab" : "button-primary", 110f);
-            enemiesBtn.style.height = 30; enemiesBtn.style.marginRight = 6;
-            enemiesBtn.RegisterCallback<ClickEvent>(_ => { analysisOnAllies = false; analysisUnitIdx = 0; RenderAnalysisOverlay(); });
-            var alliesBtn = FigmaUi.CreateButton("ALLIES", analysisOnAllies ? "button-primary" : "button-slab", 110f);
-            alliesBtn.style.height = 30; alliesBtn.style.marginRight = 6;
-            alliesBtn.RegisterCallback<ClickEvent>(_ => { analysisOnAllies = true; analysisUnitIdx = 0; RenderAnalysisOverlay(); });
-            var closeBtn = FigmaUi.CreateButton("CLOSE", "button-slab", 90f);
-            closeBtn.style.height = 30;
-            closeBtn.RegisterCallback<ClickEvent>(_ => CloseAnalysis());
-            tabRow.Add(enemiesBtn); tabRow.Add(alliesBtn); tabRow.Add(closeBtn);
-            header.Add(tabRow);
-            panel.Add(header);
-
-            var units = (analysisOnAllies ? Battle.Party : Battle.Enemies).Where(u => u != null && u.Alive).ToList();
-            if (units.Count == 0) units = (analysisOnAllies ? Battle.Party : Battle.Enemies).Where(u => u != null).ToList();
-            if (units.Count > 0) analysisUnitIdx = ((analysisUnitIdx % units.Count) + units.Count) % units.Count;
-
-            // Unit cycle bar
-            var cycleBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8 } };
-            var prevBtn = FigmaUi.CreateButton("< PREV", "button-slab", 88f);
-            prevBtn.style.height = 28;
-            prevBtn.RegisterCallback<ClickEvent>(_ => { if (units.Count > 1) { analysisUnitIdx = (analysisUnitIdx - 1 + units.Count) % units.Count; RenderAnalysisOverlay(); } });
-            var nextBtn = FigmaUi.CreateButton("NEXT >", "button-slab", 88f);
-            nextBtn.style.height = 28;
-            nextBtn.RegisterCallback<ClickEvent>(_ => { if (units.Count > 1) { analysisUnitIdx = (analysisUnitIdx + 1) % units.Count; RenderAnalysisOverlay(); } });
-            string unitTitle = units.Count > 0 ? $"{units[analysisUnitIdx].name.ToUpperInvariant()} ({analysisUnitIdx + 1}/{units.Count})" : "NONE";
-            cycleBar.Add(prevBtn);
-            cycleBar.Add(new UiLabel(unitTitle) { style = { fontSize = 16, color = Palette.Gold1 } });
-            cycleBar.Add(nextBtn);
-            panel.Add(cycleBar);
-
-            var scroll = FigmaUi.CreateVerticalScrollView();
-            analysisScroll = scroll;
-            scroll.style.flexGrow = 1;
-            scroll.style.maxHeight = 460;
-
-            void Section(string heading, IEnumerable<string> lines, Color? headingColor = null)
-            {
-                scroll.Add(new UiLabel(heading) { style = { fontSize = 13, color = headingColor ?? Palette.Gold2, marginTop = 8, marginBottom = 2 } });
-                foreach (var line in lines)
-                    scroll.Add(new UiLabel(line) { style = { fontSize = 12, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 1 } });
-            }
-
-            if (units.Count > 0)
-            {
-                var unit = units[analysisUnitIdx];
-                if (!analysisOnAllies)
-                {
-                    var ev = AnalysisInspector.BuildEnemyView(Battle, unit);
-                    if (ev.affinitiesShifted)
-                        Section("STATUS ALERT", new[] { "AFFINITIES SHIFTED — CHECK KNOWN ELEMENTS" }, Palette.Ember1);
-                    Section("IDENTITY", new[]
-                    {
-                        $"{ev.name.ToUpperInvariant()}  [{ev.tierBadge}]" + (string.IsNullOrEmpty(ev.phaseLabel) ? "" : $"  ·  {ev.phaseLabel}"),
-                        $"TYPE: {ev.family.ToUpperInvariant()}   ·   ROLE: {ev.role.ToUpperInvariant()}   ·   {ev.dungeonName.ToUpperInvariant()}",
-                    });
-                    var combatLines = new List<string> { $"HP: {ev.hp}/{ev.maxHp}   ·   BREAK SHIELD: {ev.breakCurrent}/{ev.breakMax}" };
-                    if (!string.IsNullOrEmpty(ev.telegraphedIntent)) combatLines.Add($"INTENT: {ev.telegraphedIntent}");
-                    Section("COMBAT READOUT", combatLines);
-                    Section("ELEMENTAL AFFINITIES (CODEX)", ev.elements.Select(r => $"{r.elementShort} ({r.element.ToString().ToUpperInvariant()}):  {r.label}"));
-                    Section("STATUS RESISTANCE (CODEX TIER)", ev.statusResistances.Select(r => $"{r.statusName.ToUpperInvariant()}:  {r.label}"));
-                    Section("ACTIVE EFFECTS", ev.activeEffects.Count > 0
-                        ? ev.activeEffects.Select(a => a.remainingTurns > 0 ? $"{a.label} ({a.remainingTurns}T)" : a.label)
-                        : new[] { "NONE" });
-                }
-                else
-                {
-                    var av = AnalysisInspector.BuildAllyView(unit);
-                    Section("RESOURCES", new[]
-                    {
-                        $"HP: {av.hp}/{av.maxHp}   ·   MP: {av.mp}/{av.maxMp}   ·   POISE: {av.poiseCurrent}/{av.poiseMax}",
-                        av.shield > 0 ? $"SHIELD: {av.shield} ({string.Join(", ", av.shieldSources)})" : "SHIELD: 0",
-                    });
-                    Section("ATTRIBUTES", new[]
-                    {
-                        $"STR {av.str}  ·  DEX (AGI) {av.dex}  ·  VIT {av.vit}  ·  INT {av.intel}  ·  WIS {av.wis}  ·  CHA {av.cha}",
-                    });
-                    Section("DERIVED STATS", new[]
-                    {
-                        $"ATK {av.atk}  ·  MATK {av.matk}  ·  DEF {av.def}  ·  MDEF {av.mdef}  ·  SPD {av.spd}",
-                        $"CRIT {av.critChancePct:0.#}% (x{av.critDamagePct / 100f:0.00})  ·  BLOCK {av.blockPower}  ·  STAGGER RES {av.staggerResistance}  ·  QTE BONUS +{av.qteTimingBonusPct:0.#}%",
-                    });
-                    Section("ELEMENTAL AFFINITIES", av.elements.Select(r => $"{r.elementShort} ({r.element.ToString().ToUpperInvariant()}):  {r.label}"));
-                    Section($"STATUS RESISTANCE (UNIVERSAL {av.universalStatusResistPct:0}%)", av.statusResistances.Select(r => $"{r.statusName.ToUpperInvariant()}:  {r.label}"));
-                    Section("ACTIVE STATUSES / BUFFS / DEBUFFS", av.activeStatuses.Count > 0
-                        ? av.activeStatuses.Select(a => $"{a.label} ({a.remainingTurns}T)")
-                        : new[] { "NONE" });
-                    Section("DEFENSIVE EFFECTS", av.defensiveEffects.Count > 0
-                        ? av.defensiveEffects.Select(a => a.remainingTurns > 0 ? $"{a.label} ({a.remainingTurns}T)" : a.label)
-                        : new[] { "NONE" });
-                }
-            }
-
-            panel.Add(scroll);
-            analysisOverlay.Add(panel);
-            screenRoot.Add(analysisOverlay);
-
-            FigmaUi.DestroyMenu(ref analysisMenu);
-            analysisMenu = phaseGo.AddComponent<UitkMenu>();
-            analysisMenu.AttachRoot(analysisOverlay);
-            analysisMenu.onBack = CloseAnalysis;
-            analysisMenu.onPrevPage = () => { analysisOnAllies = false; analysisUnitIdx = 0; RenderAnalysisOverlay(); };
-            analysisMenu.onNextPage = () => { analysisOnAllies = true; analysisUnitIdx = 0; RenderAnalysisOverlay(); };
-            analysisMenu.Add(closeBtn, "CLOSE", CloseAnalysis);
-            Hint("ANALYSIS · LEFT/RIGHT CYCLE UNIT · Q/E ENEMIES/ALLIES · ESC TO RETURN");
+            analysisModal.Open(Battle, screenRoot, phaseGo, onClose, Hint);
         }
 
         // Enemies/fallen: first valid in order. Living allies: the most injured (lowest HP %), so heals and potions

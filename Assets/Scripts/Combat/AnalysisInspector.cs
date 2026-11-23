@@ -27,6 +27,9 @@ namespace Obscure
     {
         public string label;
         public int remainingTurns; // <= 0 for stateless flags (Broken, Charging, Enhanced)
+        public StatusId? statusId;
+        public string subtitle; // optional detail line for defensive/racial effects
+        public string iconKey;  // optional Figma template key (e.g. Icon-Racial-oceans_embrace)
     }
 
     // Enemy inspection snapshot (Felna_Analysis_System_Spec_v1.md Part B).
@@ -202,15 +205,15 @@ namespace Obscure
 
             // Active effects — ALWAYS visible (Spec Part B).
             if (enemy.IsBroken)
-                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "BROKEN", remainingTurns = enemy.Get(StatusId.Broken)?.turns ?? 1 });
+                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "BROKEN", remainingTurns = enemy.Get(StatusId.Broken)?.turns ?? 1, statusId = StatusId.Broken });
             if (enemy.IsCharging)
-                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "CHARGING", remainingTurns = 1 });
+                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "CHARGING", remainingTurns = 1, subtitle = "Preparing a telegraphed heavy attack." });
             if (enemy.NullBreak != null && enemy.NullBreak.HasActiveNullBreak)
-                view.activeEffects.Add(new AnalysisActiveEffectRow { label = $"NULL BREAK ({enemy.NullBreak.ActiveInstance.targetKey})", remainingTurns = enemy.NullBreak.ActiveInstance.remainingTurns });
+                view.activeEffects.Add(new AnalysisActiveEffectRow { label = $"NULL BREAK ({enemy.NullBreak.ActiveInstance.targetKey})", remainingTurns = enemy.NullBreak.ActiveInstance.remainingTurns, subtitle = "Nullification broken — element deals normal damage." });
             if (def != null && def.isEnhanced)
-                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "ENHANCED", remainingTurns = 0 });
+                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "ENHANCED", remainingTurns = 0, subtitle = "Transformed enhanced variant with heightened power." });
             if (enemy.guarding)
-                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "GUARDING", remainingTurns = 1 });
+                view.activeEffects.Add(new AnalysisActiveEffectRow { label = "GUARDING", remainingTurns = 1, statusId = StatusId.Guardian, subtitle = "Braced against incoming attacks until next turn." });
 
             AppendActiveStatuses(enemy, view.activeEffects);
             return view;
@@ -300,26 +303,26 @@ namespace Obscure
 
             // Defensive & Racial Feat effects (Spec Part C).
             if (ally.guarding)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "GUARD", remainingTurns = 1 });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "GUARD", remainingTurns = 1, statusId = StatusId.Guardian, subtitle = "Incoming damage reduced until next turn" });
             if (ally.IsPhased)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "PHASED (FEY STEP)", remainingTurns = 1 });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "PHASED (FEY STEP)", remainingTurns = 1, statusId = StatusId.Evasion, subtitle = "Untargetable until next action" });
             if (ally.IronResolveActive)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "IRON RESOLVE", remainingTurns = 1 });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "IRON RESOLVE", remainingTurns = 1, statusId = StatusId.DefenseUp, subtitle = "Endures lethal damage once" });
             if (ally.OceansEmbraceShieldActive)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "OCEAN'S EMBRACE (+10% DEF QTE)", remainingTurns = Math.Max(1, ally.OceansEmbraceTurns) });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "OCEAN'S EMBRACE (+10% DEF QTE)", remainingTurns = Math.Max(1, ally.OceansEmbraceTurns), iconKey = "Icon-Racial-oceans_embrace", subtitle = u.shield > 0 ? $"+10% DEF ON QTE · SHIELD {u.shield}" : "+10% DEF ON QTE" });
             if (ally.LightboundTurns > 0)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "LIGHTBOUND (-10% DMG, +20% RES)", remainingTurns = ally.LightboundTurns });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "LIGHTBOUND (-10% DMG, +20% RES)", remainingTurns = ally.LightboundTurns, statusId = StatusId.MagicDefenseUp, subtitle = $"-10% DMG TAKEN · +20% RES · {ally.LightboundTurns}T" });
             if (ally.DeterminationTurns > 0)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "DETERMINATION (+15% DMG)", remainingTurns = ally.DeterminationTurns });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "DETERMINATION (+15% DMG)", remainingTurns = ally.DeterminationTurns, iconKey = "Icon-Racial-determination", subtitle = $"+15% DMG · {ally.DeterminationTurns}T" });
             if (ally.DraconicOverdriveTurns > 0)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "DRACONIC OVERDRIVE", remainingTurns = ally.DraconicOverdriveTurns });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "DRACONIC OVERDRIVE", remainingTurns = ally.DraconicOverdriveTurns, statusId = StatusId.AttackUp, subtitle = $"HEIGHTENED OUTPUT · {ally.DraconicOverdriveTurns}T" });
             if (ally.DraconicExhaustedTurns > 0)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "EXHAUSTED", remainingTurns = ally.DraconicExhaustedTurns });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = "EXHAUSTED", remainingTurns = ally.DraconicExhaustedTurns, statusId = StatusId.Exhausted, subtitle = $"ATK/MATK -20% · {ally.DraconicExhaustedTurns}T" });
             if (u.shield > 0)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = $"SHIELD: {u.shield} ({string.Join(", ", view.shieldSources)})", remainingTurns = 0 });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = $"SHIELD: {u.shield} ({string.Join(", ", view.shieldSources)})", remainingTurns = 0, statusId = StatusId.DefenseUp, subtitle = $"ABSORBS {u.shield} DAMAGE" });
             var guardian = ally.Get(StatusId.Guardian);
             if (guardian != null)
-                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = $"INTERPOSE (GUARDIAN)", remainingTurns = guardian.turns });
+                view.defensiveEffects.Add(new AnalysisActiveEffectRow { label = $"INTERPOSE (GUARDIAN)", remainingTurns = guardian.turns, statusId = StatusId.Guardian, subtitle = $"INTERCEPTS HITS · {guardian.turns}T" });
 
             return view;
         }
@@ -337,6 +340,7 @@ namespace Obscure
                     {
                         label = StatusInfo.Name(inst.statusId).ToUpperInvariant(),
                         remainingTurns = inst.remainingTurns,
+                        statusId = inst.statusId,
                     });
                 }
             }
@@ -350,6 +354,7 @@ namespace Obscure
                     {
                         label = StatusInfo.Name(s.id).ToUpperInvariant(),
                         remainingTurns = s.turns,
+                        statusId = s.id,
                     });
                 }
             }
