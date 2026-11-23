@@ -551,11 +551,18 @@ namespace Obscure
                     r002.counter++;
                     if (r002.counter % 3 == 0)
                     {
-                        int before = actor.unit.mp;
-                        int mpGained = Math.Max(1, (int)Math.Round(actor.Stats.maxMp * 0.02f));
-                        actor.unit.mp = Math.Min(actor.Stats.maxMp, actor.unit.mp + mpGained);
-                        int gained = actor.unit.mp - before;
-                        battle?.Say($"[Relic: Soulglass Shard] 3rd Perfect Offensive QTE! {actor.name} restores {gained} MP.");
+                        if (actor.StatusController != null && !actor.StatusController.CanRestoreMp())
+                        {
+                            battle?.Say($"[Relic: Soulglass Shard] {actor.name}'s Despair blocks MP recovery!");
+                        }
+                        else
+                        {
+                            int before = actor.unit.mp;
+                            int mpGained = Math.Max(1, (int)Math.Round(actor.Stats.maxMp * 0.02f));
+                            actor.unit.mp = Math.Min(actor.Stats.maxMp, actor.unit.mp + mpGained);
+                            int gained = actor.unit.mp - before;
+                            battle?.Say($"[Relic: Soulglass Shard] 3rd Perfect Offensive QTE! {actor.name} restores {gained} MP.");
+                        }
                     }
                 }
             }
@@ -585,11 +592,18 @@ namespace Obscure
                 if (r013 != null && r013.battleUsageCount < 2)
                 {
                     r013.battleUsageCount++;
-                    int before = killer.unit.mp;
-                    int mpGain = Math.Max(1, (int)Math.Round(killer.Stats.maxMp * 0.01f));
-                    killer.unit.mp = Math.Min(killer.Stats.maxMp, killer.unit.mp + mpGain);
-                    int gained = killer.unit.mp - before;
-                    battle?.Say($"[Relic: Dirge-Eater's Fang] Killing blow! {killer.name} restores {gained} MP ({r013.battleUsageCount}/2 this battle).");
+                    if (killer.StatusController != null && !killer.StatusController.CanRestoreMp())
+                    {
+                        battle?.Say($"[Relic: Dirge-Eater's Fang] {killer.name}'s Despair blocks MP recovery!");
+                    }
+                    else
+                    {
+                        int before = killer.unit.mp;
+                        int mpGain = Math.Max(1, (int)Math.Round(killer.Stats.maxMp * 0.01f));
+                        killer.unit.mp = Math.Min(killer.Stats.maxMp, killer.unit.mp + mpGain);
+                        int gained = killer.unit.mp - before;
+                        battle?.Say($"[Relic: Dirge-Eater's Fang] Killing blow! {killer.name} restores {gained} MP ({r013.battleUsageCount}/2 this battle).");
+                    }
                 }
             }
 
@@ -638,6 +652,7 @@ namespace Obscure
                         {
                             foreach (var member in battle.Party.Where(c => c.Alive))
                             {
+                                if (member.StatusController != null && !member.StatusController.CanRestoreMp()) continue;
                                 int mpGain = Math.Max(1, (int)Math.Round(member.Stats.maxMp * 0.02f));
                                 member.unit.mp = Math.Min(member.Stats.maxMp, member.unit.mp + mpGain);
                             }

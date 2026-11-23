@@ -79,7 +79,7 @@ namespace Obscure
             Register(new StatusEffectDef
             {
                 id = StatusId.Curse, name = "Curse", tag = "CU", category = StatusCategory.Debuff,
-                description = "Debilitates target combat capabilities.",
+                description = "Reduces healing received by 50% and increases all damage taken by 25%.",
                 stackingRule = StatusStackingRule.Independent, defaultMagnitude = 0.25f
             });
 
@@ -101,8 +101,8 @@ namespace Obscure
             Register(new StatusEffectDef
             {
                 id = StatusId.MindControl, name = "Mind Control", tag = "MC", category = StatusCategory.MentalEffect,
-                description = "Target loses control; controller dictates target's action.",
-                stackingRule = StatusStackingRule.RefreshDuration, defaultDuration = 1
+                description = "Target loses control and automatically attacks its own allies (or itself if alone).",
+                stackingRule = StatusStackingRule.RefreshDuration, defaultDuration = 2
             });
 
             Register(new StatusEffectDef
@@ -122,7 +122,7 @@ namespace Obscure
             Register(new StatusEffectDef
             {
                 id = StatusId.Despair, name = "Despair", tag = "DP", category = StatusCategory.MentalEffect,
-                description = "Action disruption: target has a chance to fail performing an action.",
+                description = "Blocks MP recovery and new buffs, and gives a chance to fail performing an action.",
                 stackingRule = StatusStackingRule.Independent, defaultMagnitude = 0.35f
             });
 

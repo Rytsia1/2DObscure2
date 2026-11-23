@@ -32,6 +32,8 @@ namespace Obscure
         // Null only when a Priority enemy has no legal action (Battle.NextTurn skips those turns first).
         public static BattleAction Choose(Battle battle, Combatant self)
         {
+            if (self.IsMindControlled)
+                return battle.BuildMindControlledAction(self);
             if (self.enemy?.attacks == null || self.enemy.attacks.Length == 0)
                 return BattleAction.Attack(self, RandomTarget(battle, self));
             return Brains[self.enemy.ai].Decide(battle, self);
@@ -43,7 +45,8 @@ namespace Obscure
         {
             if (self.enemy?.ai != AiKind.Priority) return;
             self.Intent = null;
-            if (!self.Alive || self.stunTurns > 0 || self.StatusController.HasStatus(StatusId.Stun) || self.StatusController.HasStatus(StatusId.Sleep)) return;
+            if (!self.Alive || self.stunTurns > 0 || self.StatusController.HasStatus(StatusId.Stun)
+                || self.StatusController.HasStatus(StatusId.Sleep) || self.IsMindControlled) return;
             var sw = Stopwatch.StartNew();
             AiDecisionTrace trace = null;
             if (self.Charge != null)
@@ -83,7 +86,7 @@ namespace Obscure
         }
 
         public static bool HasLegalAction(Battle b, Combatant self) =>
-            self.enemy?.ai != AiKind.Priority || self.Charge != null || self.Intent != null || PriorityBrain.Select(b, self) != null;
+            self.IsMindControlled || self.enemy?.ai != AiKind.Priority || self.Charge != null || self.Intent != null || PriorityBrain.Select(b, self) != null;
 
         // ---- helpers shared by brains ----
 

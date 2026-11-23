@@ -74,7 +74,7 @@ namespace Obscure
             string sign = ap.id switch
             {
                 StatusId.AttackUp or StatusId.DefenseUp or StatusId.MagicDefenseUp => "+",
-                StatusId.AttackDown or StatusId.DefenseDown or StatusId.MagicDefenseDown or StatusId.Slow => "-",
+                StatusId.AttackDown or StatusId.DefenseDown or StatusId.MagicDefenseDown or StatusId.Slow or StatusId.Freeze => "-",
                 _ => null,
             };
             var s = Name(ap.id).ToUpperInvariant();
@@ -195,15 +195,15 @@ namespace Obscure
             StatusId.Exhausted => "Skills cost more MP and output is reduced.",
             StatusId.Burn => "Takes fire damage at turn start.",
             StatusId.Bleed => "Takes bleed damage over time.",
-            StatusId.Freeze => "Frozen solid — cannot act until thawed.",
+            StatusId.Freeze => "Speed reduced, delaying turn order.",
             StatusId.Shock => "Lightning disruption — risk of losing action.",
-            StatusId.Curse => "Healing received reduced and dark vulnerability.",
+            StatusId.Curse => "Healing received reduced by 50% and takes 25% more damage.",
             StatusId.Stun => "Incapacitated — skips the next turn.",
             StatusId.ResistanceDown => "Elemental & status resistance reduced.",
-            StatusId.MindControl => "Compelled to act against allies.",
+            StatusId.MindControl => "Compelled to attack own allies.",
             StatusId.Confusion => "Actions target randomly.",
             StatusId.Fear => "Hesitates and deals reduced damage.",
-            StatusId.Despair => "Cannot restore MP or gain buffs.",
+            StatusId.Despair => "Cannot restore MP or gain buffs, and actions may fail.",
             StatusId.Charm => "Unable to attack the charmer.",
             StatusId.Sleep => "Asleep — skips turn until awakened.",
             StatusId.Silence => "Cannot cast magic skills.",

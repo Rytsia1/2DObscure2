@@ -1354,6 +1354,14 @@ namespace Obscure
                         _ => ((AutoQte)qte).Results,
                     });
                 }
+                else if (c.IsMindControlled)
+                {
+                    var act = Battle.BuildMindControlledAction(c);
+                    if (act == null) continue;
+                    Hint($"{c.name.ToUpperInvariant()} IS MIND CONTROLLED — STRIKES {act.target.name.ToUpperInvariant()}!");
+                    yield return new WaitForSeconds(EnemyThink);
+                    yield return Resolve(act);
+                }
                 else
                 {
                     chosen = null;
@@ -1538,8 +1546,9 @@ namespace Obscure
                 return null;
             }
             string element = move != null && move.element != Element.Physical ? " " + move.element.ToString().ToUpperInvariant() : "";
-            Hint(move == null ? $"{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
-                : $"{move.name.ToUpperInvariant()}{(move.hits > 1 ? $" X{move.hits}" : "")} > {who}  {EnemyAI.Severity(move)}{element}");
+            string mcPrefix = a.actor != null && a.actor.IsMindControlled ? "MIND CONTROLLED: " : "";
+            Hint(move == null ? $"{mcPrefix}{a.actor.name.ToUpperInvariant()} ATTACKS {who}"
+                : $"{mcPrefix}{move.name.ToUpperInvariant()}{(move.hits > 1 ? $" X{move.hits}" : "")} > {who}  {EnemyAI.Severity(move)}{element}");
             // Say up front when the grade is capped, instead of quietly downgrading it in Battle.Deal.
             if (a.target != null && a.target.CannotReact) return $"{who} CAN'T REACT!";
             return a.target != null && a.target.IsBroken ? $"GUARD {who}! (BROKEN: MAX BLOCK)" : $"GUARD {who}!";

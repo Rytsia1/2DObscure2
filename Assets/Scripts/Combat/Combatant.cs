@@ -300,6 +300,7 @@ namespace Obscure
         // Stun, Sleep and Mind Control: any Defensive QTE auto-resolves as Poor (GDD Bab 11 & 12).
         public bool CannotReact => stunTurns > 0 || StatusController.HasStatus(StatusId.Stun)
             || StatusController.HasStatus(StatusId.Sleep) || StatusController.HasStatus(StatusId.MindControl);
+        public bool IsMindControlled => StatusController.HasStatus(StatusId.MindControl);
 
         // Barbarian Starter Passive — Savage Instinct: grants Physical Power bonus when HP is below 50%.
         public int LowHpPhysicalPowerBonus
@@ -433,6 +434,8 @@ namespace Obscure
             var scores = unit != null ? unit.FinalScores : AbilityScores.Uniform(10);
             var attackerMods = DamageModifiers != null ? DamageModifiers.Clone() : new DamageModifierSet();
             var targetMods = target?.DamageModifiers != null ? target.DamageModifiers.Clone() : new DamageModifierSet();
+            if (target?.StatusController != null && target.StatusController.HasStatus(StatusId.Curse))
+                targetMods.AddMultiplier(DamageModifierScope.AllDamageTaken, target.StatusController.GetDamageTakenMultiplier(), sourceId: "status_curse");
 
             float physPen = (unit != null && unit.HasTalent("piercer")) ? TalentSystem.PiercerPenetration : 0f;
             if (IsPlayer && r?.ModifierManager != null)
@@ -691,7 +694,8 @@ namespace Obscure
             {
                 foreach (var a in allies.Where(c => c.Alive))
                 {
-                    int healAmt = Math.Max(1, (int)Math.Round(a.Stats.maxHp * 0.10f));
+                    float healMult = a.StatusController != null ? a.StatusController.GetHealingReceivedMultiplier() : 1f;
+                    int healAmt = Math.Max(1, (int)Math.Round(a.Stats.maxHp * 0.10f * healMult));
                     a.unit.hp = Math.Min(a.Stats.maxHp, a.unit.hp + healAmt);
                     a.LightboundTurns = 2;
                     a.DamageModifiers.AddMultiplier(DamageModifierScope.AllDamageTaken, 0.90f, sourceId: "lightbound");
@@ -730,7 +734,8 @@ namespace Obscure
                     OceansEmbraceTurns = 0;
                     OceansEmbraceTarget = null;
                 }
-                int healAmt = Math.Max(1, (int)Math.Round(target.Stats.maxHp * 0.10f));
+                float healMult = target.StatusController != null ? target.StatusController.GetHealingReceivedMultiplier() : 1f;
+                int healAmt = Math.Max(1, (int)Math.Round(target.Stats.maxHp * 0.10f * healMult));
                 target.unit.hp = Math.Min(target.Stats.maxHp, target.unit.hp + healAmt);
             }
         }
@@ -831,6 +836,9 @@ namespace Obscure
         // Reapplying refreshes: the longer duration and the stronger magnitude win. No stacking.
         public void AddStatus(StatusId id, int turns, float magnitude, Combatant source)
         {
+            if (StatusInfo.IsBuff(id) && StatusController != null && !StatusController.CanGainBuffs())
+                return;
+
             var s = statuses.Find(x => x.id == id);
             if (s == null) statuses.Add(new StatusEffect { id = id, turns = turns, magnitude = magnitude, source = source });
             else

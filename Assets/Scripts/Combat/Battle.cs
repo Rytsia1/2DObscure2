@@ -336,6 +336,9 @@ namespace Obscure
             }
         }
 
+        public BattleAction BuildMindControlledAction(Combatant actor) =>
+            StatusEffectController.BuildMindControlledAction(actor, this, Rng);
+
         // Null when the action is legal right now, otherwise a reason for the player.
         public string Validate(BattleAction a)
         {
@@ -350,6 +353,7 @@ namespace Obscure
                     if (a.attack != null && (a.attack.self || a.attack.Summons)) return null;
                     if (a.attack != null && a.attack.Heals) return IsAlly(a.actor, a.target) ? null : "Invalid target.";
                     if (a.attack != null && a.attack.allTargets) return Opponents(a.actor).Any(c => c.Alive) ? null : "Invalid target.";
+                    if (a.actor.IsMindControlled && a.target != null && a.target.Alive && a.target.side == a.actor.side) return null;
                     return IsFoe(a.actor, a.target) ? null : "Invalid target.";
                 case ActionKind.Guard:
                     return null;
@@ -429,12 +433,18 @@ namespace Obscure
                 return hits;
             }
 
-            // GDD Section 12: Check Confusion / Madness redirection
+            // GDD Section 12: Check Mind Control / Madness / Confusion redirection
             if (actor.StatusController.TryRedirectAction(a, this, Rng, out var redirectedAction))
             {
-                if (redirectedAction.target != a.target && redirectedAction.target != null)
+                if (actor.IsMindControlled && redirectedAction.target != null)
+                    Say($"{actor.name} is mind controlled! Attacks {redirectedAction.target.name}!");
+                else if (redirectedAction.target != a.target && redirectedAction.target != null)
                     Say($"{actor.name}'s senses are scrambled! Targets {redirectedAction.target.name} instead.");
                 a = redirectedAction;
+            }
+            else if (actor.IsMindControlled && a.kind == ActionKind.Attack && a.target != null && a.target.side == actor.side)
+            {
+                Say($"{actor.name} is mind controlled!");
             }
 
             switch (a.kind)
@@ -549,8 +559,13 @@ namespace Obscure
                             if (Rng.NextDouble() < bgRank.skillMpRefundChance)
                             {
                                 int refund = Math.Max(1, (int)Math.Round(actor.Stats.maxMp * bgRank.skillMpRefundPercent));
-                                actor.unit.RestoreMp(refund);
-                                Say($"{actor.name}'s Enlightened Mind restores {refund} MP.");
+                                if (actor.StatusController != null && !actor.StatusController.CanRestoreMp())
+                                    Say($"{actor.name}'s Despair blocks Enlightened Mind MP recovery!");
+                                else
+                                {
+                                    actor.unit.RestoreMp(refund);
+                                    Say($"{actor.name}'s Enlightened Mind restores {refund} MP.");
+                                }
                             }
                         }
                     }
@@ -732,15 +747,11 @@ namespace Obscure
                         if (item.manaPercent > 0)
                         {
                             int amt = Math.Max(1, (int)Math.Round(a.target.Stats.maxMp * item.manaPercent));
-                            int before = a.target.unit.mp;
-                            a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + amt);
-                            Say($"{a.target.name} recovers {a.target.unit.mp - before} MP.");
+                            RestoreMp(a.target, amt);
                         }
                         else if (item.mana > 0)
                         {
-                            int before = a.target.unit.mp;
-                            a.target.unit.mp = Math.Min(a.target.Stats.maxMp, before + item.mana);
-                            Say($"{a.target.name} recovers {a.target.unit.mp - before} MP.");
+                            RestoreMp(a.target, item.mana);
                         }
                     }
                     break;
@@ -882,6 +893,13 @@ namespace Obscure
         {
             if (!t.Alive) return;
 
+            if (StatusInfo.IsBuff(ap.id) && !t.StatusController.CanGainBuffs())
+            {
+                Say($"{t.name}'s Despair prevents gaining {StatusInfo.Name(ap.id)}!");
+                StatusResisted?.Invoke(t, ap.id, true);
+                return;
+            }
+
             // Check immunity (GDD Section 13 & Spec Part F)
             bool isBoss = t.enemy != null && t.enemy.tier == Tier.Boss;
             if (t.StatusController.ResistanceProfile.IsImmune(ap.id, isBoss))
@@ -922,6 +940,12 @@ namespace Obscure
             if (applied)
             {
                 t.AddStatus(ap.id, inst.remainingTurns, inst.magnitude, source);
+                if (ap.id == StatusId.MindControl && t.IsEnemy)
+                {
+                    t.Intent = null;
+                    t.Charge = null;
+                    Blackboard.ClearEnemy(this, t);
+                }
                 Say(StatusInfo.IsBuff(ap.id) ? $"{t.name} gains {StatusInfo.Name(ap.id)}." : $"{t.name} suffers {StatusInfo.Name(ap.id)}.");
                 StatusApplied?.Invoke(t, ap.id, StatusInfo.IsBuff(ap.id));
             }
@@ -939,8 +963,13 @@ namespace Obscure
                         {
                             t.hermitResistedThisTurn = true;
                             int mpRestore = Math.Max(1, (int)Math.Round(t.Stats.maxMp * bgRank.statusResistMpRestorePercent));
-                            t.unit.RestoreMp(mpRestore);
-                            Say($"{t.name}'s Tranquil Spirit restores {mpRestore} MP.");
+                            if (t.StatusController != null && !t.StatusController.CanRestoreMp())
+                                Say($"{t.name}'s Despair blocks Tranquil Spirit MP recovery!");
+                            else
+                            {
+                                t.unit.RestoreMp(mpRestore);
+                                Say($"{t.name}'s Tranquil Spirit restores {mpRestore} MP.");
+                            }
                         }
                     }
                 }
@@ -1094,6 +1123,16 @@ namespace Obscure
                 }
             }
 
+            // Curse: +25% All Damage Taken BEFORE Defensive QTE (GDD Bab 11 & Bab 12 §5.1)
+            if (t?.StatusController != null)
+            {
+                float statusDmgTakenMult = t.StatusController.GetDamageTakenMultiplier();
+                if (Math.Abs(statusDmgTakenMult - 1f) > 0.001f)
+                {
+                    amount = Math.Max(1, (int)Math.Round(amount * statusDmgTakenMult));
+                }
+            }
+
             // Spec Part E: Drain and Reflect resolve on NORMAL-equivalent damage with no Break, no status rider, and no QTE on reflection.
             if (effect == Effectiveness.Drain)
             {
@@ -1183,7 +1222,8 @@ namespace Obscure
         {
             if (target == null || !target.Alive)
                 return new Hit { target = target, amount = 0, effect = Effectiveness.Drain, element = element, drained = true };
-            int scaled = Math.Max(0, (int)Math.Round(normalDamage * AffinityResolver.DrainHealPct));
+            float drainHealMult = target.StatusController != null ? target.StatusController.GetHealingReceivedMultiplier() : 1f;
+            int scaled = Math.Max(0, (int)Math.Round(normalDamage * AffinityResolver.DrainHealPct * drainHealMult));
             int missing = Math.Max(0, target.Stats.maxHp - target.unit.hp);
             int healAmt = Math.Min(missing, scaled);
             target.unit.hp += healAmt;
@@ -1208,13 +1248,15 @@ namespace Obscure
             if (selfEff == Effectiveness.Drain)
             {
                 int missing = Math.Max(0, attacker.Stats.maxHp - attacker.unit.hp);
-                int healAmt = Math.Min(missing, Math.Max(0, (int)Math.Round(normalDamage * AffinityResolver.DrainHealPct)));
+                float drainHealMult = attacker.StatusController != null ? attacker.StatusController.GetHealingReceivedMultiplier() : 1f;
+                int healAmt = Math.Min(missing, Math.Max(0, (int)Math.Round(normalDamage * AffinityResolver.DrainHealPct * drainHealMult)));
                 attacker.unit.hp += healAmt;
                 Say($"{attacker.name} drains the reflected {element} for {healAmt} HP!");
                 return new Hit { target = reflector, amount = 0, effect = Effectiveness.Reflect, element = element, reflected = true, reflectedTarget = attacker, reflectedAmount = 0 };
             }
             float selfMult = selfEff == Effectiveness.Reflect ? 1f : AffinityResolver.DamageMultiplier(selfEff);
-            int scaled = Math.Max(1, (int)Math.Round(normalDamage * selfMult));
+            float curseMult = attacker.StatusController != null ? attacker.StatusController.GetDamageTakenMultiplier() : 1f;
+            int scaled = Math.Max(1, (int)Math.Round(normalDamage * selfMult * curseMult));
             int cap = Math.Max(1, (int)Math.Floor(attacker.Stats.maxHp * AffinityResolver.ReflectCapPct));
             int reflectedDmg = Math.Min(cap, scaled);
             var refHit = Damage(attacker, reflectedDmg, " (REFLECTED!)");
@@ -1401,9 +1443,15 @@ namespace Obscure
             if (d.phase2Buff != null) Apply(t, d.phase2Buff, t, 1f);
         }
 
-        // MP restoration skills (e.g. Arcane Charge); never exceeds Max MP.
+        // MP restoration skills (e.g. Arcane Charge); never exceeds Max MP. Blocked while Despair is active.
         public int RestoreMp(Combatant t, int amount)
         {
+            if (t == null || amount <= 0) return 0;
+            if (t.StatusController != null && !t.StatusController.CanRestoreMp())
+            {
+                Say($"{t.name}'s Despair blocks MP recovery!");
+                return 0;
+            }
             int gained = Math.Max(0, Math.Min(amount, t.Stats.maxMp - t.unit.mp));
             t.unit.mp += gained;
             Say($"{t.name} restores {gained} MP.");
@@ -1430,6 +1478,14 @@ namespace Obscure
                 if (Math.Abs(modHealMult - 1f) > 0.001f)
                 {
                     amount = modHealMult <= 0f ? 0 : Math.Max(1, (int)Math.Round(amount * modHealMult));
+                }
+            }
+            if (t?.StatusController != null && amount > 0)
+            {
+                float statusHealMult = t.StatusController.GetHealingReceivedMultiplier();
+                if (Math.Abs(statusHealMult - 1f) > 0.001f)
+                {
+                    amount = statusHealMult <= 0f ? 0 : Math.Max(1, (int)Math.Round(amount * statusHealMult));
                 }
             }
             int before = t.unit.hp;

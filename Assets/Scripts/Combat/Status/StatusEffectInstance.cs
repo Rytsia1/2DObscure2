@@ -88,6 +88,10 @@ namespace Obscure
                 _ => DamageComponent.Physical(dotSkillPower, dotScaling)
             };
 
+            var targetMods = target?.DamageModifiers != null ? target.DamageModifiers.Clone() : new DamageModifierSet();
+            if (target?.StatusController != null && target.StatusController.HasStatus(StatusId.Curse))
+                targetMods.AddMultiplier(DamageModifierScope.AllDamageTaken, target.StatusController.GetDamageTakenMultiplier(), sourceId: "status_curse");
+
             var context = new DamageContext
             {
                 attackerStr = attackerStr,
@@ -95,7 +99,7 @@ namespace Obscure
                 attackerModifiers = source?.DamageModifiers ?? new DamageModifierSet(),
                 criticalHitConfig = CriticalHitConfig.Default, // DoTs do not crit
                 targetPhysicalDefense = target != null ? target.Def : 0f,
-                targetModifiers = target?.DamageModifiers ?? new DamageModifierSet(),
+                targetModifiers = targetMods,
                 targetEnemyAffinity = target?.AffinityProfile ?? new EnemyAffinityProfile(),
                 targetNullBreak = target?.NullBreak,
                 targetElementalResistance = target?.ElementalResistances ?? new ElementalResistanceProfile(),

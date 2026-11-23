@@ -877,8 +877,8 @@ namespace Obscure
             if (a.kind == ActionKind.RacialFeat) return null;
             if (a.kind == ActionKind.Skill && a.actor != null && a.actor.IsPlayer) return null;
             var move = a.attack;
-            // Stances, charge turns, summons and status-only actions have no direct damage, so no Defensive QTE (Bab 11 §2.3).
-            if (a.charging || (move != null && (move.self || move.StatusOnly || move.Heals || move.Summons))) return null;
+            // Stances, charge turns, summons, status-only actions, and enemy-on-enemy friendly fire have no player Defensive QTE (Bab 11 §2.3).
+            if (a.charging || (a.target != null && a.target.IsEnemy) || (move != null && (move.self || move.StatusOnly || move.Heals || move.Summons))) return null;
             int hits = move?.hits ?? 1;
             if (a.target != null && a.target.CannotReact) return new AutoQte(hits, QteResult.Poor); // Battle.Deal forces Poor anyway
             if (assist == QteAssist.Auto) return new AutoQte(hits);

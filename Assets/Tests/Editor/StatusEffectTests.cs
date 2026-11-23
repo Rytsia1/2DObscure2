@@ -436,5 +436,466 @@ namespace Obscure.Tests
             Assert.AreSame(goblin, goblinTurn);
             Assert.Less(goblin.unit.hp, 80, "Goblin took Burn DoT damage at turn start");
         }
+
+        // =====================================================================
+        // 7. Freeze, Curse, Despair & Mind Control Design Alignment Tests
+        // =====================================================================
+
+        [Test]
+        public void Freeze_DescriptionAndChip_ReflectSpeedReduction()
+        {
+            string desc = StatusInfo.Description(StatusId.Freeze).ToLowerInvariant();
+            StringAssert.Contains("speed", desc);
+            StringAssert.DoesNotContain("cannot act", desc);
+
+            string chip = StatusInfo.ChipText(new StatusApply { id = StatusId.Freeze, turns = 2, magnitude = 0.35f });
+            StringAssert.Contains("-35%", chip);
+            StringAssert.EndsWith("· 2T", chip);
+        }
+
+        [Test]
+        public void Curse_ReducesHealingReceivedBy50Percent_FixedAcrossInstances()
+        {
+            var heroUnit = new Unit(Database.Characters["knight"]);
+            var enemyDef = new EnemyDef
+            {
+                id = "curse_dummy",
+                name = "Dummy",
+                shortName = "Dummy",
+                tag = "DUM",
+                tier = Tier.Normal,
+                stats = new Stats(maxHp: 200, maxMp: 20, atk: 10, def: 10, spd: 5, mag: 10)
+            };
+            var battle = new Battle(new[] { heroUnit }, new[] { enemyDef }, new List<string>(), new System.Random(1));
+            var hero = battle.Party[0];
+            hero.StatusController.ResistanceProfile.baseResistance = 0f;
+            hero.StatusController.ResistanceProfile.statsResistance = 0f;
+
+            // Uncursed heal
+            hero.unit.hp = 10;
+            var normalHeal = battle.Heal(hero, 40);
+            Assert.AreEqual(40, normalHeal.amount);
+
+            // Single Curse -> fixed -50% healing received
+            battle.Apply(hero, new StatusApply { id = StatusId.Curse, turns = 3, chance = 1f }, battle.Enemies[0], 1f);
+            Assert.IsTrue(hero.StatusController.HasStatus(StatusId.Curse));
+            Assert.AreEqual(0.50f, hero.StatusController.GetHealingReceivedMultiplier(), 0.001f);
+
+            hero.unit.hp = 10;
+            var cursedHeal = battle.Heal(hero, 40);
+            Assert.AreEqual(20, cursedHeal.amount, "Curse must reduce healing received by 50%");
+
+            // Overlapping Curse instance must NOT stack past fixed -50%
+            battle.Apply(hero, new StatusApply { id = StatusId.Curse, turns = 2, chance = 1f }, battle.Enemies[0], 1f);
+            Assert.AreEqual(2, hero.StatusController.CountStatus(StatusId.Curse));
+            hero.unit.hp = 10;
+            var multiCursedHeal = battle.Heal(hero, 40);
+            Assert.AreEqual(20, multiCursedHeal.amount, "Multiple Curse instances must remain fixed at -50% healing");
+
+            // Cleanse Curse -> healing returns to 100%
+            hero.StatusController.RemoveStatus(StatusId.Curse);
+            hero.unit.hp = 10;
+            var restoredHeal = battle.Heal(hero, 40);
+            Assert.AreEqual(40, restoredHeal.amount);
+        }
+
+        [Test]
+        public void Curse_IncreasesAllDamageTakenBy25Percent_WithoutDoubleApplication()
+        {
+            // 1. Modular DamageCalculator path via CreateDamageContext
+            var attacker = CreateMockHero("Attacker", str: 19, intel: 20);
+            var target = CreateMockEnemy("Target", hp: 500, def: 10);
+            target.StatusController.ResistanceProfile.baseResistance = 0f;
+
+            var comp = new[] { DamageComponent.Elemental(ElementType.Fire, 80f, 1.0f) };
+            var uncursedRes = DamageCalculator.Calculate(attacker.CreateDamageContext(target, comp, 1, QteResult.Good));
+            int baseDmg = uncursedRes.totalDamage; // 80 + 20 = 100
+
+            target.StatusController.TryApplyStatus(new StatusApply { id = StatusId.Curse, turns = 3, chance = 1f }, attacker, target, out _);
+            var cursedRes = DamageCalculator.Calculate(attacker.CreateDamageContext(target, comp, 1, QteResult.Good));
+            Assert.AreEqual((int)Math.Floor(baseDmg * 1.25f), cursedRes.totalDamage, "Curse must add +25% All Damage Taken in DamageCalculator");
+
+            // Second Curse instance stays fixed at +25%
+            target.StatusController.TryApplyStatus(new StatusApply { id = StatusId.Curse, turns = 2, chance = 1f }, attacker, target, out _);
+            var doubleCursedRes = DamageCalculator.Calculate(attacker.CreateDamageContext(target, comp, 1, QteResult.Good));
+            Assert.AreEqual(cursedRes.totalDamage, doubleCursedRes.totalDamage, "Multiple Curse instances must stay fixed at +25%");
+
+            // 2. Dynamic DoT path
+            var burnApply = new StatusApply
+            {
+                id = StatusId.Burn,
+                turns = 2,
+                chance = 1f,
+                dotSkillPower = 20f,
+                dotScaling = 1.0f,
+                dotDamageType = DamageType.Elemental,
+                dotElementType = ElementType.Fire
+            };
+            target.StatusController.TryApplyStatus(burnApply, attacker, target, out var burnInst);
+            // Base = 20 + 20 = 40; with Curse 1.25x = 50
+            Assert.AreEqual(50, burnInst.CalculateDynamicDoTDamage());
+
+            // 3. Battle.Perform legacy Attack path (Battle.Deal) vs Battle.Perform modular Skill path (no double-count)
+            var modSkill = new SkillDef
+            {
+                id = "test_curse_mod_skill",
+                name = "Arcane Test",
+                kind = SkillKind.Magic,
+                target = TargetType.Enemy,
+                mpCost = 0,
+                element = Element.Fire,
+                damageComponents = new[] { DamageComponent.Elemental(ElementType.Fire, 80f, 1.0f) }
+            };
+            Database.Skills[modSkill.id] = modSkill;
+
+            Battle MakeBattle(out Combatant h, out Combatant e)
+            {
+                var hu = new Unit(Database.Characters["mage"]);
+                hu.abilities.racialModifiers = AbilityScores.Zero;
+                hu.abilities.baseScores = new AbilityScores(10, 10, 10, 20, 10, 20);
+                hu.RecalculateStats(true);
+                hu.skillLoadout.UnlockActive(modSkill.id);
+                hu.skillLoadout.activeSlots[0] = modSkill.id;
+                var ed = new EnemyDef
+                {
+                    id = "curse_target",
+                    name = "Target",
+                    shortName = "Target",
+                    tag = "TGT",
+                    tier = Tier.Normal,
+                    stats = new Stats(maxHp: 1000, maxMp: 10, atk: 10, def: 10, spd: 1, mag: 10)
+                };
+                var b = new Battle(new[] { hu }, new[] { ed }, new List<string>(), new System.Random(7));
+                h = b.NextTurn();
+                e = b.Enemies[0];
+                e.StatusController.ResistanceProfile.baseResistance = 0f;
+                e.StatusController.ResistanceProfile.statsResistance = 0f;
+                return b;
+            }
+
+            // Legacy basic attack through Battle.Deal
+            var bBase = MakeBattle(out var h1, out var e1);
+            int legacyBase = bBase.Perform(BattleAction.Attack(h1, e1), 1f)[0].amount;
+
+            var bCursed = MakeBattle(out var h2, out var e2);
+            bCursed.Apply(e2, new StatusApply { id = StatusId.Curse, turns = 3, chance = 1f }, h2, 1f);
+            int legacyCursed = bCursed.Perform(BattleAction.Attack(h2, e2), 1f)[0].amount;
+            Assert.AreEqual((int)Math.Round(legacyBase * 1.25f), legacyCursed, "Legacy Battle.Deal must apply +25% Curse damage");
+
+            // Modular skill through Battle.Perform -> applied ONCE (not 1.25 * 1.25)
+            var bModBase = MakeBattle(out var h3, out var e3);
+            int modBase = bModBase.Perform(BattleAction.Skill(h3, modSkill, e3), 1f)[0].amount;
+
+            var bModCursed = MakeBattle(out var h4, out var e4);
+            bModCursed.Apply(e4, new StatusApply { id = StatusId.Curse, turns = 3, chance = 1f }, h4, 1f);
+            int modCursed = bModCursed.Perform(BattleAction.Skill(h4, modSkill, e4), 1f)[0].amount;
+            Assert.AreEqual((int)Math.Floor(modBase * 1.25f), modCursed, "Modular skill must apply Curse +25% exactly once");
+        }
+
+        [Test]
+        public void Despair_BlocksMpRecovery_AndResumesAfterCleanse()
+        {
+            var heroUnit = new Unit(Database.Characters["mage"]);
+            var enemyDef = new EnemyDef
+            {
+                id = "despair_foe",
+                name = "Wraith",
+                shortName = "Wraith",
+                tag = "WRT",
+                tier = Tier.Normal,
+                stats = new Stats(maxHp: 300, maxMp: 20, atk: 10, def: 5, spd: 1, mag: 10)
+            };
+            var manaItem = new ItemDef { id = "test_ether", name = "Test Ether", mana = 15 };
+            Database.Items[manaItem.id] = manaItem;
+
+            var battle = new Battle(new[] { heroUnit }, new[] { enemyDef }, new List<string> { manaItem.id }, new System.Random(1));
+            var hero = battle.NextTurn();
+            var foe = battle.Enemies[0];
+            hero.StatusController.ResistanceProfile.baseResistance = 0f;
+            hero.StatusController.ResistanceProfile.statsResistance = 0f;
+            hero.unit.mp = 5;
+
+            battle.Apply(hero, new StatusApply { id = StatusId.Despair, turns = 3, magnitude = 0f, chance = 1f }, foe, 1f);
+            Assert.IsFalse(hero.StatusController.CanRestoreMp());
+
+            // 1. Direct RestoreMp is blocked
+            int gained = battle.RestoreMp(hero, 10);
+            Assert.AreEqual(0, gained);
+            Assert.AreEqual(5, hero.unit.mp);
+
+            // 2. Mana item is blocked (pass 0% disruption magnitude via Despair instance to ensure action executes)
+            hero.StatusController.GetFirst(StatusId.Despair).magnitude = 0.0001f;
+            // Use RNG seed that won't disrupt (< 0.0001f)
+            battle.Perform(BattleAction.Item(hero, manaItem, hero));
+            Assert.AreEqual(5, hero.unit.mp, "Mana item must not restore MP while Despaired");
+
+            // 3. Perfect Offensive QTE MP refund is blocked
+            var nextHero = battle.NextTurn();
+            if (nextHero == foe)
+            {
+                battle.Perform(BattleAction.Attack(foe, hero));
+                nextHero = battle.NextTurn();
+            }
+            Assert.AreSame(hero, nextHero);
+            hero.StatusController.GetFirst(StatusId.Despair).magnitude = 0.0001f;
+            battle.Perform(BattleAction.Attack(hero, foe), power: QteConfig.PerfectPower);
+            Assert.AreEqual(5, hero.unit.mp, "Perfect QTE MP refund must be blocked while Despaired");
+
+            // 4. After cleansing Despair, MP recovery works again
+            hero.StatusController.CleanseMentalEffects();
+            Assert.IsTrue(hero.StatusController.CanRestoreMp());
+            int restored = battle.RestoreMp(hero, 10);
+            Assert.Greater(restored, 0);
+            Assert.AreEqual(5 + restored, hero.unit.mp);
+        }
+
+        [Test]
+        public void Despair_BlocksNewBuffs_PreservesExistingBuffs_AndKeepsActionDisruption()
+        {
+            var heroUnit = new Unit(Database.Characters["knight"]);
+            var enemyDef = new EnemyDef
+            {
+                id = "despair_foe_2",
+                name = "Wraith",
+                shortName = "Wraith",
+                tag = "WRT",
+                tier = Tier.Normal,
+                stats = new Stats(maxHp: 200, maxMp: 10, atk: 10, def: 5, spd: 5, mag: 10)
+            };
+            var battle = new Battle(new[] { heroUnit }, new[] { enemyDef }, new List<string>(), new System.Random(2));
+            var hero = battle.Party[0];
+            var foe = battle.Enemies[0];
+            hero.StatusController.ResistanceProfile.baseResistance = 0f;
+            hero.StatusController.ResistanceProfile.statsResistance = 0f;
+
+            // Pre-existing buff before Despair
+            battle.Apply(hero, new StatusApply { id = StatusId.DefenseUp, turns = 3, magnitude = 0.25f, chance = 1f }, hero, 1f);
+            Assert.IsTrue(hero.StatusController.HasStatus(StatusId.DefenseUp));
+
+            // Apply Despair
+            battle.Apply(hero, new StatusApply { id = StatusId.Despair, turns = 3, magnitude = 0.35f, chance = 1f }, foe, 1f);
+            Assert.IsFalse(hero.StatusController.CanGainBuffs());
+            Assert.IsTrue(hero.StatusController.HasStatus(StatusId.DefenseUp), "Existing buffs must remain active");
+
+            // New buff via Battle.Apply is blocked
+            battle.Apply(hero, new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.25f, chance = 1f }, hero, 1f);
+            Assert.IsFalse(hero.StatusController.HasStatus(StatusId.AttackUp), "Battle.Apply must block new buffs under Despair");
+            Assert.IsFalse(hero.Has(StatusId.AttackUp));
+
+            // Direct AddStatus and TryApplyStatus also block new buffs
+            hero.AddStatus(StatusId.Evasion, 2, 1.25f, hero);
+            Assert.IsFalse(hero.Has(StatusId.Evasion), "Combatant.AddStatus must block new buffs under Despair");
+            Assert.IsFalse(hero.StatusController.TryApplyStatus(new StatusApply { id = StatusId.MagicDefenseUp, turns = 2, magnitude = 0.2f, chance = 1f }, hero, hero, out _));
+
+            // Debuffs still apply normally
+            battle.Apply(hero, new StatusApply { id = StatusId.Burn, turns = 2, chance = 1f }, foe, 1f);
+            Assert.IsTrue(hero.StatusController.HasStatus(StatusId.Burn), "Debuffs must still apply under Despair");
+
+            // Action disruption still triggers on low roll and passes on high roll
+            var dummyAction = BattleAction.Attack(hero, foe);
+            bool disruptedLow = hero.StatusController.CheckActionDisruption(dummyAction, new FixedRandom(0.10), out var reason);
+            Assert.IsTrue(disruptedLow, "Despair must still disrupt actions on roll < 0.35");
+            StringAssert.Contains("Despair", reason);
+            bool disruptedHigh = hero.StatusController.CheckActionDisruption(dummyAction, new FixedRandom(0.90), out _);
+            Assert.IsFalse(disruptedHigh, "Despair should not disrupt actions on roll >= 0.35");
+
+            // Cleansing Despair re-enables buffs
+            hero.StatusController.CleanseMentalEffects();
+            battle.Apply(hero, new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.25f, chance = 1f }, hero, 1f);
+            Assert.IsTrue(hero.StatusController.HasStatus(StatusId.AttackUp));
+        }
+
+        [Test]
+        public void MindControl_HeroAttacksAlly_AndHitsSelfWhenAlone()
+        {
+            // Case 1: 2 heroes + 1 enemy -> Mind Controlled hero attacks living ally
+            var h1Unit = new Unit(Database.Characters["knight"]);
+            var h2Unit = new Unit(Database.Characters["mage"]);
+            var foeDef = new EnemyDef
+            {
+                id = "mc_siren",
+                name = "Siren",
+                shortName = "Siren",
+                tag = "SRN",
+                tier = Tier.Normal,
+                stats = new Stats(maxHp: 200, maxMp: 20, atk: 10, def: 5, spd: 1, mag: 10)
+            };
+            var battle = new Battle(new[] { h1Unit, h2Unit }, new[] { foeDef }, new List<string>(), new System.Random(10));
+            var hero1 = battle.NextTurn();
+            var ally = battle.Party.First(p => p != hero1);
+            var foe = battle.Enemies[0];
+            hero1.StatusController.ResistanceProfile.baseResistance = 0f;
+            hero1.StatusController.ResistanceProfile.statsResistance = 0f;
+
+            battle.Apply(hero1, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, foe, 1f);
+            Assert.IsTrue(hero1.IsMindControlled);
+
+            var mcAction = battle.BuildMindControlledAction(hero1);
+            Assert.AreEqual(ActionKind.Attack, mcAction.kind);
+            Assert.AreSame(ally, mcAction.target, "Mind Controlled hero must target a living ally when one exists");
+            Assert.IsNull(battle.Validate(mcAction), "Battle.Validate must accept Mind Control friendly-fire attack");
+
+            int allyHpBefore = ally.unit.hp;
+            int foeHpBefore = foe.unit.hp;
+            battle.Perform(mcAction);
+            Assert.Less(ally.unit.hp, allyHpBefore, "Ally must take damage from Mind Controlled hero");
+            Assert.AreEqual(foeHpBefore, foe.unit.hp, "Enemy must not take damage from Mind Controlled hero");
+
+            // Also verify direct foe-targeted BattleAction gets redirected by TryRedirectAction
+            var battle2 = new Battle(new[] { new Unit(Database.Characters["knight"]), new Unit(Database.Characters["mage"]) }, new[] { foeDef }, new List<string>(), new System.Random(11));
+            var a2 = battle2.NextTurn();
+            var ally2 = battle2.Party.First(p => p != a2);
+            var foe2 = battle2.Enemies[0];
+            a2.StatusController.ResistanceProfile.baseResistance = 0f;
+            a2.StatusController.ResistanceProfile.statsResistance = 0f;
+            battle2.Apply(a2, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, foe2, 1f);
+
+            int ally2Before = ally2.unit.hp;
+            int foe2Before = foe2.unit.hp;
+            battle2.Perform(BattleAction.Attack(a2, foe2));
+            Assert.Less(ally2.unit.hp, ally2Before, "TryRedirectAction must redirect foe-targeted attack to ally");
+            Assert.AreEqual(foe2Before, foe2.unit.hp);
+
+            // Case 2: Lone hero -> hits self cleanly
+            var soloBattle = new Battle(new[] { new Unit(Database.Characters["knight"]) }, new[] { foeDef }, new List<string>(), new System.Random(12));
+            var soloHero = soloBattle.NextTurn();
+            var soloFoe = soloBattle.Enemies[0];
+            soloHero.StatusController.ResistanceProfile.baseResistance = 0f;
+            soloHero.StatusController.ResistanceProfile.statsResistance = 0f;
+            soloBattle.Apply(soloHero, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, soloFoe, 1f);
+
+            var selfAct = soloBattle.BuildMindControlledAction(soloHero);
+            Assert.AreSame(soloHero, selfAct.target, "Lone Mind Controlled hero must target self");
+            Assert.IsNull(soloBattle.Validate(selfAct));
+            int soloHpBefore = soloHero.unit.hp;
+            soloBattle.Perform(selfAct);
+            Assert.Less(soloHero.unit.hp, soloHpBefore, "Lone Mind Controlled hero must damage self");
+        }
+
+        [Test]
+        public void MindControl_EnemyAttacksOtherEnemy_OrSelfWhenAlone_WithNoDefenseQte()
+        {
+            var heroUnit = new Unit(Database.Characters["knight"]);
+            var enemyDef = new EnemyDef
+            {
+                id = "mc_goblin",
+                name = "Goblin",
+                shortName = "Goblin",
+                tag = "GOB",
+                tier = Tier.Normal,
+                ai = AiKind.Priority,
+                stats = new Stats(maxHp: 200, maxMp: 20, atk: 18, def: 4, spd: 30, mag: 10),
+                attacks = new[]
+                {
+                    new EnemyAttack { name = "Slash", element = Element.Physical, hitDamage = new[] { 18 }, aiPriority = 1 }
+                }
+            };
+
+            // Case 1: 2 enemies -> controlled enemy attacks the other enemy, no Defense QTE, Plan skipped
+            var battle = new Battle(new[] { heroUnit }, new[] { enemyDef, enemyDef }, new List<string>(), new System.Random(20));
+            var e1 = battle.NextTurn();
+            Assert.IsTrue(e1.IsEnemy);
+            var e2 = battle.Enemies.First(e => e != e1);
+            var hero = battle.Party[0];
+            e1.StatusController.ResistanceProfile.baseResistance = 0f;
+            e1.StatusController.ResistanceProfile.statsResistance = 0f;
+
+            battle.Apply(e1, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, hero, 1f);
+            Assert.IsNull(e1.Intent, "Applying Mind Control must clear existing enemy intent");
+            EnemyAI.Plan(battle, e1);
+            Assert.IsNull(e1.Intent, "EnemyAI.Plan must not publish party-targeted intent while Mind Controlled");
+            Assert.IsTrue(EnemyAI.HasLegalAction(battle, e1), "Mind Controlled enemy must always have a legal friendly-fire action");
+
+            var enemyAct = EnemyAI.Choose(battle, e1);
+            Assert.AreSame(e2, enemyAct.target, "Mind Controlled enemy must target another living enemy");
+            Assert.IsNull(QteFactory.Defense(enemyAct, QteAssist.Standard, null, new System.Random(1)),
+                "Enemy-on-enemy Mind Control attack must not spawn a player Defensive QTE");
+
+            int e2Before = e2.unit.hp;
+            int heroBefore = hero.unit.hp;
+            battle.Perform(enemyAct);
+            Assert.Less(e2.unit.hp, e2Before, "Other enemy must take damage from Mind Controlled ally");
+            Assert.AreEqual(heroBefore, hero.unit.hp, "Hero must not take damage from Mind Controlled enemy");
+
+            // Case 2: Lone enemy -> hits self
+            var soloBattle = new Battle(new[] { new Unit(Database.Characters["knight"]) }, new[] { enemyDef }, new List<string>(), new System.Random(21));
+            var soloEnemy = soloBattle.NextTurn();
+            var soloHero = soloBattle.Party[0];
+            soloEnemy.StatusController.ResistanceProfile.baseResistance = 0f;
+            soloEnemy.StatusController.ResistanceProfile.statsResistance = 0f;
+            soloBattle.Apply(soloEnemy, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, soloHero, 1f);
+
+            Assert.IsTrue(EnemyAI.HasLegalAction(soloBattle, soloEnemy));
+            var soloAct = EnemyAI.Choose(soloBattle, soloEnemy);
+            Assert.AreSame(soloEnemy, soloAct.target, "Lone Mind Controlled enemy must target self");
+            int soloBefore = soloEnemy.unit.hp;
+            soloBattle.Perform(soloAct);
+            Assert.Less(soloEnemy.unit.hp, soloBefore);
+        }
+
+        [Test]
+        public void MindControl_DefaultDurationLastsOneControlledTurn_GrantsControlImmunity_AndBossesStayImmune()
+        {
+            Assert.AreEqual(2, StatusEffectDefs.Get(StatusId.MindControl).defaultDuration,
+                "Default Mind Control duration must be 2 so StartTurn tick leaves 1 controlled turn active");
+
+            var heroUnit = new Unit(Database.Characters["mage"]);
+            heroUnit.abilities.racialModifiers = AbilityScores.Zero;
+            heroUnit.abilities.baseScores = new AbilityScores(10, 10, 10, 15, 10, 30); // fast hero
+            heroUnit.RecalculateStats(true);
+
+            var enemyDef = new EnemyDef
+            {
+                id = "mc_lifecycle_foe",
+                name = "Bandit",
+                shortName = "Bandit",
+                tag = "BND",
+                tier = Tier.Normal,
+                stats = new Stats(maxHp: 300, maxMp: 10, atk: 12, def: 4, spd: 5, mag: 5)
+            };
+            var battle = new Battle(new[] { heroUnit }, new[] { enemyDef }, new List<string>(), new System.Random(30));
+            var hero = battle.NextTurn();
+            var enemy = battle.Enemies[0];
+            enemy.StatusController.ResistanceProfile.baseResistance = 0f;
+            enemy.StatusController.ResistanceProfile.statsResistance = 0f;
+
+            // Apply Mind Control using defaultDuration (turns = 0)
+            battle.Apply(enemy, new StatusApply { id = StatusId.MindControl, turns = 0, chance = 1f }, hero, 1f);
+            Assert.IsTrue(enemy.IsMindControlled);
+            battle.Perform(BattleAction.Guard(hero));
+
+            // Turn 1 of enemy: StartTurn ticks 2 -> 1, enemy is STILL Mind Controlled and hits self
+            var turn1 = battle.NextTurn();
+            Assert.AreSame(enemy, turn1);
+            Assert.IsTrue(enemy.IsMindControlled, "Enemy must still be Mind Controlled on its turn after StartTurn tick");
+            var act1 = EnemyAI.Choose(battle, enemy);
+            Assert.AreSame(enemy, act1.target);
+            battle.Perform(act1);
+
+            // Round 2: Hero acts, then Enemy's StartTurn ticks 1 -> 0 -> expires & grants Control Immunity
+            var hTurn2 = battle.NextTurn();
+            Assert.AreSame(hero, hTurn2);
+            battle.Perform(BattleAction.Guard(hero));
+
+            var turn2 = battle.NextTurn();
+            Assert.AreSame(enemy, turn2);
+            Assert.IsFalse(enemy.IsMindControlled, "Mind Control must expire on the following turn");
+            Assert.IsTrue(enemy.StatusController.HasControlImmunity(StatusId.MindControl), "Expiry must grant 1-turn Control Immunity");
+
+            // Immediate re-application must fail during Control Immunity
+            battle.Apply(enemy, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, hero, 1f);
+            Assert.IsFalse(enemy.IsMindControlled);
+
+            // Bosses remain immune to Mind Control
+            var boss = CreateMockEnemy("Boss", isBoss: true);
+            Assert.IsFalse(boss.StatusController.TryApplyStatus(new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, hero, boss, out _));
+        }
+
+        private class FixedRandom : System.Random
+        {
+            private readonly double value;
+            public FixedRandom(double value) => this.value = value;
+            public override double NextDouble() => value;
+        }
     }
 }

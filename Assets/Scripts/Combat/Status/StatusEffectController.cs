@@ -13,7 +13,15 @@ namespace Obscure
         public readonly StatusResistanceProfile ResistanceProfile = new StatusResistanceProfile();
         private readonly Dictionary<StatusId, int> controlImmunityTurns = new Dictionary<StatusId, int>();
 
+        public const float CurseHealingMultiplier = 0.50f;
+        public const float CurseDamageTakenMultiplier = 1.25f;
+
         public bool isBoss;
+        public bool IsMindControlled => HasStatus(StatusId.MindControl);
+        public bool CanRestoreMp() => !HasStatus(StatusId.Despair);
+        public bool CanGainBuffs() => !HasStatus(StatusId.Despair);
+        public float GetHealingReceivedMultiplier() => HasStatus(StatusId.Curse) ? CurseHealingMultiplier : 1f;
+        public float GetDamageTakenMultiplier() => HasStatus(StatusId.Curse) ? CurseDamageTakenMultiplier : 1f;
 
         // Bab 11 §8.1: Stun, Sleep, Mind Control, Madness, Silence
         public static bool IsControlEffect(StatusId id) =>
@@ -73,7 +81,10 @@ namespace Obscure
             if (apply == null || target == null || !target.Alive)
                 return false;
 
-            // 1. Check Immunity & Bab 11 §8.1 Control Effect Rules
+            // 1. Check Immunity, Despair buff block & Bab 11 §8.1 Control Effect Rules
+            if (StatusInfo.IsBuff(apply.id) && !CanGainBuffs())
+                return false;
+
             if (ResistanceProfile.IsImmune(apply.id, isBoss))
                 return false;
 
@@ -281,7 +292,35 @@ namespace Obscure
             return false;
         }
 
-        // Evaluates Confusion and Madness redirection (GDD Section 12).
+        // Builds an automatic friendly-fire attack for a Mind Controlled combatant:
+        // targets a random living ally on the actor's own side, or self if alone.
+        public static BattleAction BuildMindControlledAction(Combatant actor, Battle battle, System.Random rng)
+        {
+            if (actor == null || battle == null) return null;
+
+            var otherAllies = battle.Allies(actor).Where(c => c.Alive && c != actor).ToList();
+            Combatant target = otherAllies.Count > 0
+                ? otherAllies[rng != null ? rng.Next(otherAllies.Count) : UnityEngine.Random.Range(0, otherAllies.Count)]
+                : actor;
+
+            if (actor.IsEnemy && actor.enemy?.attacks != null && actor.enemy.attacks.Length > 0)
+            {
+                var legalMoves = EnemyAI.Moves(actor)
+                    .Where(m => !m.self && !m.Heals && !m.Summons && !m.allTargets && !m.telegraph
+                        && actor.unit.mp >= m.mpCost
+                        && actor.Cooldown(Combatant.MoveKey(m)) == 0)
+                    .ToList();
+                if (legalMoves.Count > 0)
+                {
+                    var move = legalMoves[rng != null ? rng.Next(legalMoves.Count) : UnityEngine.Random.Range(0, legalMoves.Count)];
+                    return BattleAction.Strike(actor, move, target);
+                }
+            }
+
+            return BattleAction.Attack(actor, target);
+        }
+
+        // Evaluates Mind Control, Madness, and Confusion redirection (GDD Section 12).
         public bool TryRedirectAction(
             BattleAction original,
             Battle battle,
@@ -289,6 +328,23 @@ namespace Obscure
             out BattleAction redirected)
         {
             redirected = original;
+
+            // Mind Control (GDD Section 12): compelled to attack own living allies (or self if alone).
+            if (HasStatus(StatusId.MindControl) && original?.actor != null && battle != null)
+            {
+                bool alreadyFriendlyStrike = original.kind == ActionKind.Attack
+                    && !original.charging
+                    && original.target != null
+                    && original.target.Alive
+                    && original.target.side == original.actor.side
+                    && (original.attack == null
+                        || (!original.attack.allTargets && !original.attack.self && !original.attack.Heals && !original.attack.Summons));
+                if (alreadyFriendlyStrike)
+                    return false;
+
+                redirected = BuildMindControlledAction(original.actor, battle, rng);
+                return redirected != null;
+            }
 
             // Madness (GDD Section 12.1): AI/Random action and random valid target
             if (HasStatus(StatusId.Madness))
