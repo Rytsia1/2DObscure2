@@ -1,0 +1,11 @@
+.icon-status-confusion {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-confusion__e.icon-status-confusion__e.icon-status-confusion__e.icon-status-confusion__e.icon-status-confusion__e.icon-status-confusion__e.icon-status-confusion__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1dr3v340b3k1ti02jp17m0ah82w0-385.png?fileID=2800000&guid=be375656132186b47af08d12f1c95279&type=3#img-1dr3v340b3k1ti02jp17m0ah82w0-385");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

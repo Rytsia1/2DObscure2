@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Affinity-Row-Resist.uss" />
+    <Template name="Icon-Element-Water" src="Icon-Element-Water.uxml" />
+    <ui:VisualElement class="analysis-affinity-row-resist">
+        <ui:Instance template="Icon-Element-Water" class="analysis-affinity-row-resist__e" />
+        <ui:Label name="text-0" text="FIR" class="unity-label analysis-affinity-row-resist__e-2" />
+        <ui:Label name="text-1" text="FIRE" class="unity-label analysis-affinity-row-resist__e-3" />
+        <ui:Label name="text-2" text="×0.5 DMG" class="unity-label analysis-affinity-row-resist__e-4" />
+        <ui:VisualElement class="analysis-affinity-row-resist__e-5">
+            <ui:Label name="text-3" text="RESIST" class="unity-label analysis-affinity-row-resist__e-6" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,11 @@
+.icon-status-sleep {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-sleep__e.icon-status-sleep__e.icon-status-sleep__e.icon-status-sleep__e.icon-status-sleep__e.icon-status-sleep__e.icon-status-sleep__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1gibiem1acisd203yb2wf0vfgshd-426.png?fileID=2800000&guid=38270dc2b0093704983cbf12cff6039f&type=3#img-1gibiem1acisd203yb2wf0vfgshd-426");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

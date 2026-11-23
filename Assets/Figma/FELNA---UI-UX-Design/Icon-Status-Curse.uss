@@ -1,0 +1,11 @@
+.icon-status-curse {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-curse__e.icon-status-curse__e.icon-status-curse__e.icon-status-curse__e.icon-status-curse__e.icon-status-curse__e.icon-status-curse__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1c83tdv0hg4f0504w7jit0b63h8r-449.png?fileID=2800000&guid=ea07e5a51fa8aea4487ae24dd02d646b&type=3#img-1c83tdv0hg4f0504w7jit0b63h8r-449");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

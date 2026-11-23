@@ -1,0 +1,11 @@
+.icon-status-charm {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-charm__e.icon-status-charm__e.icon-status-charm__e.icon-status-charm__e.icon-status-charm__e.icon-status-charm__e.icon-status-charm__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-01e3s9i19ztdo11abunj8032unfb-553.png?fileID=2800000&guid=6e1ddcc54fbe67542bc8333c477f6a59&type=3#img-01e3s9i19ztdo11abunj8032unfb-553");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

@@ -1,0 +1,11 @@
+.icon-status-bleed {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-bleed__e.icon-status-bleed__e.icon-status-bleed__e.icon-status-bleed__e.icon-status-bleed__e.icon-status-bleed__e.icon-status-bleed__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0sql7gh0j8pwil0kmo1ja14wim1v-355.png?fileID=2800000&guid=93254bc3c89dad84682246c080123a16&type=3#img-0sql7gh0j8pwil0kmo1ja14wim1v-355");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

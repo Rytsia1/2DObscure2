@@ -1,0 +1,11 @@
+.icon-status-attackup {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-attackup__e.icon-status-attackup__e.icon-status-attackup__e.icon-status-attackup__e.icon-status-attackup__e.icon-status-attackup__e.icon-status-attackup__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-105jkum09xlj600hfjn15159ablz-452.png?fileID=2800000&guid=7e07e660d06d6ee4abec46ed4457539f&type=3#img-105jkum09xlj600hfjn15159ablz-452");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

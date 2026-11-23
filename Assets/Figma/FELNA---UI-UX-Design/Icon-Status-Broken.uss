@@ -1,0 +1,11 @@
+.icon-status-broken {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-broken__e.icon-status-broken__e.icon-status-broken__e.icon-status-broken__e.icon-status-broken__e.icon-status-broken__e.icon-status-broken__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0mksv991m9ekph12gsc020fmo7ha-490.png?fileID=2800000&guid=92e83cbee3492c54ba8f549f1cae0bf4&type=3#img-0mksv991m9ekph12gsc020fmo7ha-490");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

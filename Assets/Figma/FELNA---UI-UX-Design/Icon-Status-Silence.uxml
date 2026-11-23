@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Status-Silence.uss" />
+    <ui:VisualElement class="icon-status-silence icon-status-silence__e" />
+</ui:UXML>

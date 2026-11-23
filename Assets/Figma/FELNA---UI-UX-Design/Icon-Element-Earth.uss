@@ -1,0 +1,11 @@
+.icon-element-earth {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-earth__e.icon-element-earth__e.icon-element-earth__e.icon-element-earth__e.icon-element-earth__e.icon-element-earth__e.icon-element-earth__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1tfvrvt13f4dhf1ks94dl0z7cbxl-418.png?fileID=2800000&guid=342a96924728d4c4fa9fd395d2ebd1a0&type=3#img-1tfvrvt13f4dhf1ks94dl0z7cbxl-418");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

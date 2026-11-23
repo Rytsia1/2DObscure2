@@ -1,0 +1,11 @@
+.icon-status-magicdefenseup {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-magicdefenseup__e.icon-status-magicdefenseup__e.icon-status-magicdefenseup__e.icon-status-magicdefenseup__e.icon-status-magicdefenseup__e.icon-status-magicdefenseup__e.icon-status-magicdefenseup__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0q43ig81pffslr0exe9o402gp1s1-451.png?fileID=2800000&guid=42788849e887bff4b8e19f2880add0d3&type=3#img-0q43ig81pffslr0exe9o402gp1s1-451");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

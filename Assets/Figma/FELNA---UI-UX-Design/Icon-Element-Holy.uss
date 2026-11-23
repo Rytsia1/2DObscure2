@@ -1,0 +1,11 @@
+.icon-element-holy {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-holy__e.icon-element-holy__e.icon-element-holy__e.icon-element-holy__e.icon-element-holy__e.icon-element-holy__e.icon-element-holy__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1n70dk80zup4j00egy8wk14nzmep-424.png?fileID=2800000&guid=80f84b98d35459040bb1a772636a28e2&type=3#img-1n70dk80zup4j00egy8wk14nzmep-424");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

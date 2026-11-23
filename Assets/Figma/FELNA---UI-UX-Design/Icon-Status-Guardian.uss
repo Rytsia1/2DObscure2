@@ -1,0 +1,11 @@
+.icon-status-guardian {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-guardian__e.icon-status-guardian__e.icon-status-guardian__e.icon-status-guardian__e.icon-status-guardian__e.icon-status-guardian__e.icon-status-guardian__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1yogf5n1umh49b1iqhoy11nvm3xq-468.png?fileID=2800000&guid=5cca900d04cd6834f83cfdcc44538e04&type=3#img-1yogf5n1umh49b1iqhoy11nvm3xq-468");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

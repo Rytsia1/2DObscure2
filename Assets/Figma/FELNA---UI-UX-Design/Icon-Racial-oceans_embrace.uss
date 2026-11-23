@@ -1,0 +1,11 @@
+.icon-racial-oceans_embrace {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-racial-oceans_embrace__e.icon-racial-oceans_embrace__e.icon-racial-oceans_embrace__e.icon-racial-oceans_embrace__e.icon-racial-oceans_embrace__e.icon-racial-oceans_embrace__e.icon-racial-oceans_embrace__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-02o8vbn1bc036t0qzir7e00ghdxj-500.png?fileID=2800000&guid=187c4ebe54494a3419666daace3a4d9a&type=3#img-02o8vbn1bc036t0qzir7e00ghdxj-500");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

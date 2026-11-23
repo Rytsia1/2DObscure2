@@ -1,0 +1,11 @@
+.icon-element-dark {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-dark__e.icon-element-dark__e.icon-element-dark__e.icon-element-dark__e.icon-element-dark__e.icon-element-dark__e.icon-element-dark__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1n1iwdv1q1hbyg1i6xx1d0hdbfd2-480.png?fileID=2800000&guid=a31deff43b666e84ca1044275e8dde02&type=3#img-1n1iwdv1q1hbyg1i6xx1d0hdbfd2-480");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

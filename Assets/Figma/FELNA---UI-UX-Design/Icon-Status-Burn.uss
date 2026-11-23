@@ -1,0 +1,11 @@
+.icon-status-burn {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-burn__e.icon-status-burn__e.icon-status-burn__e.icon-status-burn__e.icon-status-burn__e.icon-status-burn__e.icon-status-burn__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1sm20g50adukes1qa6sis0pzifcq-451.png?fileID=2800000&guid=13ebc886d2dfe044b97fe09f23686799&type=3#img-1sm20g50adukes1qa6sis0pzifcq-451");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

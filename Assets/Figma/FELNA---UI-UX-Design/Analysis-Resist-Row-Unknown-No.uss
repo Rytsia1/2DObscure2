@@ -1,0 +1,58 @@
+.analysis-resist-row-unknown-no {
+    display: flex;
+    width: 300px;
+    height: 30px;
+    padding: 3px 6px;
+    align-items: center;
+    flex-direction: row;
+}
+
+.analysis-resist-row-unknown-no__e.analysis-resist-row-unknown-no__e.analysis-resist-row-unknown-no__e.analysis-resist-row-unknown-no__e.analysis-resist-row-unknown-no__e.analysis-resist-row-unknown-no__e.analysis-resist-row-unknown-no__e {
+    display: none;
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-accent);
+}
+
+.analysis-resist-row-unknown-no__e-2.analysis-resist-row-unknown-no__e-2.analysis-resist-row-unknown-no__e-2.analysis-resist-row-unknown-no__e-2.analysis-resist-row-unknown-no__e-2.analysis-resist-row-unknown-no__e-2.analysis-resist-row-unknown-no__e-2 {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.analysis-resist-row-unknown-no__e-3.analysis-resist-row-unknown-no__e-3.analysis-resist-row-unknown-no__e-3.analysis-resist-row-unknown-no__e-3.analysis-resist-row-unknown-no__e-3.analysis-resist-row-unknown-no__e-3.analysis-resist-row-unknown-no__e-3 {
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 0px;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: normal;
+    color: var(--text-body);
+}
+
+.analysis-resist-row-unknown-no__e-4.analysis-resist-row-unknown-no__e-4.analysis-resist-row-unknown-no__e-4.analysis-resist-row-unknown-no__e-4.analysis-resist-row-unknown-no__e-4.analysis-resist-row-unknown-no__e-4.analysis-resist-row-unknown-no__e-4 {
+    display: flex;
+    padding: 2px 6px;
+    align-items: flex-start;
+    flex-shrink: 0;
+    border-width: 2px;
+    overflow: hidden;
+    flex-direction: row;
+    border-color: var(--text-muted);
+}
+
+.analysis-resist-row-unknown-no__e-5.analysis-resist-row-unknown-no__e-5.analysis-resist-row-unknown-no__e-5.analysis-resist-row-unknown-no__e-5.analysis-resist-row-unknown-no__e-5.analysis-resist-row-unknown-no__e-5.analysis-resist-row-unknown-no__e-5 {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.analysis-resist-row-unknown-no__e-2 > .icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn {
+    width: 100%;
+    height: 100%;
+}
+

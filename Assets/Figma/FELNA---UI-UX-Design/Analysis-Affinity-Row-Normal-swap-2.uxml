@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Affinity-Row-Normal.uss" />
+    <Template name="Icon-Element-Earth" src="Icon-Element-Earth.uxml" />
+    <ui:VisualElement class="analysis-affinity-row-normal">
+        <ui:Instance template="Icon-Element-Earth" class="analysis-affinity-row-normal__e" />
+        <ui:Label name="text-0" text="FIR" class="unity-label analysis-affinity-row-normal__e-2" />
+        <ui:Label name="text-1" text="FIRE" class="unity-label analysis-affinity-row-normal__e-3" />
+        <ui:Label name="text-2" text="×1.0" class="unity-label analysis-affinity-row-normal__e-4" />
+        <ui:VisualElement class="analysis-affinity-row-normal__e-5">
+            <ui:Label name="text-3" text="NORMAL" class="unity-label analysis-affinity-row-normal__e-6" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

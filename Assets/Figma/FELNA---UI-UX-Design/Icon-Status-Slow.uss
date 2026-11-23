@@ -1,0 +1,11 @@
+.icon-status-slow {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-slow__e.icon-status-slow__e.icon-status-slow__e.icon-status-slow__e.icon-status-slow__e.icon-status-slow__e.icon-status-slow__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-16thw6x0s6yern12h0zs20lfufbl-410.png?fileID=2800000&guid=e86d46b6b98f6024d94d6cb32810daca&type=3#img-16thw6x0s6yern12h0zs20lfufbl-410");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

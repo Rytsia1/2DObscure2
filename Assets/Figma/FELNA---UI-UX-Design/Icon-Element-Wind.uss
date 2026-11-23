@@ -1,0 +1,11 @@
+.icon-element-wind {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-wind__e.icon-element-wind__e.icon-element-wind__e.icon-element-wind__e.icon-element-wind__e.icon-element-wind__e.icon-element-wind__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0myfbyc1ok1g5t0x4n3hz01mgv6c-418.png?fileID=2800000&guid=6c1e3e5ead7ccef43804b7a42d392ef5&type=3#img-0myfbyc1ok1g5t0x4n3hz01mgv6c-418");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

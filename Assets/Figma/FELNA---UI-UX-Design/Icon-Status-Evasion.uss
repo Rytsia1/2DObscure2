@@ -1,0 +1,11 @@
+.icon-status-evasion {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-evasion__e.icon-status-evasion__e.icon-status-evasion__e.icon-status-evasion__e.icon-status-evasion__e.icon-status-evasion__e.icon-status-evasion__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0qu2kod16c1oo00c1u5bu19objto-471.png?fileID=2800000&guid=b715b86a8e7de42428da53e491d5bdf5&type=3#img-0qu2kod16c1oo00c1u5bu19objto-471");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

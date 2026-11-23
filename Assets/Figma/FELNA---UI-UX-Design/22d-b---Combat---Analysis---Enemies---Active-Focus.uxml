@@ -1,0 +1,563 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="22d-b---Combat---Analysis---Enemies---Active-Focus.uss" />
+    <Template name="Turn-Chip-Active" src="Turn-Chip-Active.uxml" />
+    <Template name="Turn-Chip-Hero" src="Turn-Chip-Hero.uxml" />
+    <Template name="Turn-Chip-Enemy" src="Turn-Chip-Enemy.uxml" />
+    <Template name="Turn-Chip-Next-Round" src="Turn-Chip-Next-Round.uxml" />
+    <Template name="Panel-Default" src="Panel-Default.uxml" />
+    <Template name="Status-Icon-Buff" src="Status-Icon-Buff.uxml" />
+    <Template name="Status-Icon-DoT" src="Status-Icon-DoT.uxml" />
+    <Template name="Status-Icon-Debuff" src="Status-Icon-Debuff.uxml" />
+    <Template name="Button-Slab-Focus" src="Button-Slab-Focus.uxml" />
+    <Template name="Panel-Raised" src="Panel-Raised.uxml" />
+    <Template name="Status-Icon-Control" src="Status-Icon-Control.uxml" />
+    <Template name="Status-Icon-Broken" src="Status-Icon-Broken.uxml" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Tag-Cls" src="Tag-Cls.uxml" />
+    <Template name="Analysis-Effect-Badge-No" src="Analysis-Effect-Badge-No.uxml" />
+    <Template name="Analysis-Effect-Badge-Yes-swap" src="Analysis-Effect-Badge-Yes-swap.uxml" />
+    <Template name="Analysis-Effect-Badge-No-swap-2" src="Analysis-Effect-Badge-No-swap-2.uxml" />
+    <Template name="Analysis-Affinity-Row-Normal-swap" src="Analysis-Affinity-Row-Normal-swap.uxml" />
+    <Template name="Analysis-Affinity-Row-Weak" src="Analysis-Affinity-Row-Weak.uxml" />
+    <Template name="Analysis-Affinity-Row-Unknown-swap-6" src="Analysis-Affinity-Row-Unknown-swap-6.uxml" />
+    <Template name="Analysis-Affinity-Row-Unknown-swap-2" src="Analysis-Affinity-Row-Unknown-swap-2.uxml" />
+    <Template name="Analysis-Affinity-Row-Unknown-swap-5" src="Analysis-Affinity-Row-Unknown-swap-5.uxml" />
+    <Template name="Analysis-Affinity-Row-Resist-swap" src="Analysis-Affinity-Row-Resist-swap.uxml" />
+    <Template name="Analysis-Affinity-Row-Unknown-swap" src="Analysis-Affinity-Row-Unknown-swap.uxml" />
+    <Template name="Analysis-Affinity-Row-Unknown-swap-3" src="Analysis-Affinity-Row-Unknown-swap-3.uxml" />
+    <Template name="Analysis-Affinity-Row-Unknown-swap-4" src="Analysis-Affinity-Row-Unknown-swap-4.uxml" />
+    <Template name="Analysis-Resist-Row-Normal-No" src="Analysis-Resist-Row-Normal-No.uxml" />
+    <Template name="Analysis-Resist-Row-Vulnerable-No-swap" src="Analysis-Resist-Row-Vulnerable-No-swap.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-8" src="Analysis-Resist-Row-Unknown-No-swap-8.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-5" src="Analysis-Resist-Row-Unknown-No-swap-5.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-4" src="Analysis-Resist-Row-Unknown-No-swap-4.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-9" src="Analysis-Resist-Row-Unknown-No-swap-9.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap" src="Analysis-Resist-Row-Unknown-No-swap.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-2" src="Analysis-Resist-Row-Unknown-No-swap-2.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-6" src="Analysis-Resist-Row-Unknown-No-swap-6.uxml" />
+    <Template name="Analysis-Resist-Row-Resistant-No-swap" src="Analysis-Resist-Row-Resistant-No-swap.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-3" src="Analysis-Resist-Row-Unknown-No-swap-3.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-7" src="Analysis-Resist-Row-Unknown-No-swap-7.uxml" />
+    <Template name="Analysis-Resist-Row-Unknown-No-swap-10" src="Analysis-Resist-Row-Unknown-No-swap-10.uxml" />
+    <Template name="Icon-Status-DefenseDown" src="Icon-Status-DefenseDown.uxml" />
+    <Template name="Tag-Cond" src="Tag-Cond.uxml" />
+    <Template name="Key-Hint" src="Key-Hint.uxml" />
+    <ui:VisualElement class="_22d-b-combat-analysis-enemies-active-focus _22d-b-combat-analysis-enemies-active-focus-vars" style="overflow: hidden;">
+        <ui:VisualElement class="backdrop-22b-combat-hud-vars-3" style="width: 1280px; height: 720px; overflow: hidden; position: absolute; left: 0px; top: 0px;">
+            <ui:VisualElement style="width: 1280px; height: 300px; background-color: #171E38; position: absolute; left: 0px; top: 0px;" />
+            <ui:VisualElement style="width: 1280px; height: 2px; background-color: #0B1022; position: absolute; left: 0px; top: 112px;" />
+            <ui:VisualElement style="width: 1280px; height: 2px; background-color: #0B1022; position: absolute; left: 0px; top: 144px;" />
+            <ui:VisualElement style="width: 1280px; height: 2px; background-color: #0B1022; position: absolute; left: 0px; top: 176px;" />
+            <ui:VisualElement style="width: 1280px; height: 2px; background-color: #0B1022; position: absolute; left: 0px; top: 208px;" />
+            <ui:VisualElement style="width: 1280px; height: 2px; background-color: #0B1022; position: absolute; left: 0px; top: 240px;" />
+            <ui:VisualElement style="width: 1280px; height: 2px; background-color: #0B1022; position: absolute; left: 0px; top: 272px;" />
+            <ui:VisualElement style="width: 1280px; height: 180px; background-color: #10152B; position: absolute; left: 0px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 94px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 190px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 286px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 382px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 478px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 574px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 670px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 766px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 862px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 958px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 1054px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 1150px; top: 300px;" />
+            <ui:VisualElement style="width: 2px; height: 180px; background-color: #0E1329; position: absolute; left: 1246px; top: 300px;" />
+            <ui:VisualElement style="width: 1280px; height: 46px; background-color: #070A14; position: absolute; left: 0px; top: 0px;" />
+            <ui:VisualElement class="rectangle-vars-239" style="width: 1280px; height: 2px; position: absolute; left: 0px; top: 46px;" />
+            <ui:Label text="ACT 1: ASHEN RUINS" class="unity-label act-1-ashen-ruins-vars-6" style="font-size: 20px; white-space: nowrap; position: absolute; left: 20px; top: 10px;" />
+            <ui:Label text="ROUND 1" class="unity-label round-1-vars-6" style="font-size: 20px; white-space: nowrap; position: absolute; left: 344px; top: 10px;" />
+            <ui:VisualElement style="display: flex; align-items: center; overflow: hidden; flex-direction: row; position: absolute; left: 454px; top: 6px;">
+                <ui:Instance template="Turn-Chip-Active" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="▸ROG" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Hero" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="HEA" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Hero" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="MAG" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Enemy" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="HSQA" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Enemy" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="HSQB" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Hero" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="KNI" />
+                </ui:Instance>
+                <ui:Label text="‖" class="unity-label node-vars-38" style="flex-shrink: 0; font-size: 20px; white-space: nowrap;" />
+                <ui:Instance template="Turn-Chip-Next-Round" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="ROG" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Next-Round" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="HEA" />
+                </ui:Instance>
+                <ui:Instance template="Turn-Chip-Next-Round" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="MAG" />
+                </ui:Instance>
+            </ui:VisualElement>
+            <ui:VisualElement style="width: 1280px; height: 34px; background-color: #070A14; position: absolute; left: 0px; top: 48px;" />
+            <ui:VisualElement class="rectangle-vars-240" style="width: 1280px; height: 34px; border-width: 2px; position: absolute; left: 0px; top: 48px;" />
+            <ui:Label text="CHOOSE A TARGET · SQUIRE A" class="unity-label choose-a-target-squire-a-vars-4" style="font-size: 20px; white-space: nowrap; position: absolute; left: 510px; top: 52px;" />
+            <ui:VisualElement class="sprite-knight" style="position: absolute; left: 260px; top: 170px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-001abf40f99d3a8a909e73fdfecbb0f5-2327.svg?fileID=7388822144124034973&amp;guid=e3c86600e3bf67a4ea96d6ae906600f1&amp;type=3#img-001abf40f99d3a8a909e73fdfecbb0f5-2327&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            <ui:VisualElement class="sprite-healer" style="position: absolute; left: 130px; top: 210px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-b8c42314fc01e32a02ce993f9ee102ba-1952.svg?fileID=7388822144124034973&amp;guid=f4a5a4a827247864ca1181d7b0efac48&amp;type=3#img-b8c42314fc01e32a02ce993f9ee102ba-1952&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            <ui:VisualElement class="sprite-rogue" style="position: absolute; left: 310px; top: 290px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-4ecacb58b56b4e2be0c0e2cb3db0bdf1-2161.svg?fileID=7388822144124034973&amp;guid=f22d76b9ab4583f4583376093192d29f&amp;type=3#img-4ecacb58b56b4e2be0c0e2cb3db0bdf1-2161&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            <ui:VisualElement class="sprite-mage" style="position: absolute; left: 180px; top: 330px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-dceec2a57a5a44b5f97211f36bf14124-1798.svg?fileID=7388822144124034973&amp;guid=64aa63ff9b4ae6744a4e7cb28da79aba&amp;type=3#img-dceec2a57a5a44b5f97211f36bf14124-1798&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            <ui:Label text="▾" class="unity-label node-vars-39" style="font-size: 24px; white-space: nowrap; position: absolute; left: 334px; top: 236px;" />
+            <ui:VisualElement class="sprite-skeleton" style="position: absolute; left: 840px; top: 170px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-6c21854a01136801a7808dd9021bc741-2470.svg?fileID=7388822144124034973&amp;guid=50fb3c0e45fe6614c9fd504dbf85ef8b&amp;type=3#img-6c21854a01136801a7808dd9021bc741-2470&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            <ui:Label text="▾" class="unity-label node-vars-40" style="font-size: 24px; white-space: nowrap; position: absolute; left: 864px; top: 140px;" />
+            <ui:Label text="SQUIRE A" class="unity-label squire-a-vars-8" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 833px; top: 258px;" />
+            <ui:Label text="SHIELD 100" class="unity-label shield-100-vars-9" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 824px; top: 278px;" />
+            <ui:VisualElement class="gauge-hp-low" style="width: 120px; height: 8px; padding: 1px; position: absolute; left: 812px; top: 302px;">
+                <ui:VisualElement class="fill-vars-122" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="gauge-break" style="width: 120px; height: 6px; padding: 1px; position: absolute; left: 812px; top: 312px;">
+                <ui:VisualElement class="fill-vars-123" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="WEAK: HO · FI" class="unity-label weak-ho-fi-vars-12" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 823px; top: 324px;" />
+            <ui:VisualElement class="sprite-skeleton" style="position: absolute; left: 1040px; top: 266px; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-6c21854a01136801a7808dd9021bc741-2470.svg?fileID=7388822144124034973&amp;guid=50fb3c0e45fe6614c9fd504dbf85ef8b&amp;type=3#img-6c21854a01136801a7808dd9021bc741-2470&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            <ui:Label text="SQUIRE B" class="unity-label squire-b-vars-5" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1033px; top: 354px;" />
+            <ui:Label text="SHIELD 100" class="unity-label shield-100-vars-10" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1024px; top: 374px;" />
+            <ui:VisualElement class="gauge-hp-low" style="width: 120px; height: 8px; padding: 1px; position: absolute; left: 1012px; top: 398px;">
+                <ui:VisualElement class="fill-vars-124" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="gauge-break" style="width: 120px; height: 6px; padding: 1px; position: absolute; left: 1012px; top: 408px;">
+                <ui:VisualElement class="fill-vars-125" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="WEAK: HO · FI" class="unity-label weak-ho-fi-vars-13" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 1023px; top: 420px;" />
+            <ui:Label text="INTENT: RUSTED CLEAVE · HEAVY" class="unity-label intent-rusted-cleave-heavy-vars-5" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 730px; top: 136px;" />
+            <ui:Instance template="Panel-Default" class="panel-default__i-52" style="position: absolute; left: 0px; top: 480px; width: 660px; height: 240px;" />
+            <ui:VisualElement class="vitals-knight-vars-6" style="width: 640px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 10px; top: 490px;">
+                <ui:Label text="KNIGHT" class="unity-label knight-vars-15" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 0px;" />
+                <ui:Label text="DEFENDER" class="unity-label defender-vars-6" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 12px; top: 30px;" />
+                <ui:Label text="HP" class="unity-label hp-vars-37" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 168px; top: 4px;" />
+                <ui:Label text="125/125" class="unity-label _125-125-vars-7" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 202px; top: 4px;" />
+                <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 168px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-126" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="MP" class="unity-label mp-vars-35" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 388px; top: 4px;" />
+                <ui:Label text="20/20" class="unity-label _20-20-vars-8" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 422px; top: 4px;" />
+                <ui:VisualElement class="gauge-mp" style="width: 150px; padding: 1px; position: absolute; left: 388px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-127" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 581px; top: 2px;">
+                    <ui:Instance template="Status-Icon-Buff" style="flex-shrink: 0;">
+                        <AttributeOverrides element-name="text-0" text="GU" />
+                        <AttributeOverrides element-name="text-1" text="1" />
+                    </ui:Instance>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="vitals-rogue-vars-6" style="width: 640px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 10px; top: 546px;">
+                <ui:Label text="ROGUE" class="unity-label rogue-vars-14" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 0px;" />
+                <ui:Label text="STRIKER" class="unity-label striker-vars-6" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 12px; top: 30px;" />
+                <ui:Label text="HP" class="unity-label hp-vars-38" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 168px; top: 4px;" />
+                <ui:Label text="85/85" class="unity-label _85-85-vars-6" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 202px; top: 4px;" />
+                <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 168px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-128" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="MP" class="unity-label mp-vars-36" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 388px; top: 4px;" />
+                <ui:Label text="25/25" class="unity-label _25-25-vars-6" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 422px; top: 4px;" />
+                <ui:VisualElement class="gauge-mp" style="width: 150px; padding: 1px; position: absolute; left: 388px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-129" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 578px; top: 2px;">
+                    <ui:Instance template="Status-Icon-Buff" style="flex-shrink: 0;">
+                        <AttributeOverrides element-name="text-0" text="A+" />
+                        <AttributeOverrides element-name="text-1" text="2" />
+                    </ui:Instance>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="vitals-mage-vars-6" style="width: 640px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 10px; top: 602px;">
+                <ui:Label text="MAGE" class="unity-label mage-vars-14" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 0px;" />
+                <ui:Label text="CASTER" class="unity-label caster-vars-6" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 12px; top: 30px;" />
+                <ui:Label text="HP" class="unity-label hp-vars-39" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 168px; top: 4px;" />
+                <ui:Label text="60/60" class="unity-label _60-60-vars-12" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 202px; top: 4px;" />
+                <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 168px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-130" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="MP" class="unity-label mp-vars-37" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 388px; top: 4px;" />
+                <ui:Label text="60/60" class="unity-label _60-60-vars-13" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 422px; top: 4px;" />
+                <ui:VisualElement class="gauge-mp" style="width: 150px; padding: 1px; position: absolute; left: 388px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-131" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 525px; top: 2px;">
+                    <ui:Instance template="Status-Icon-DoT" style="flex-shrink: 0;">
+                        <AttributeOverrides element-name="text-0" text="BN" />
+                        <AttributeOverrides element-name="text-1" text="2" />
+                    </ui:Instance>
+                    <ui:Instance template="Status-Icon-Debuff" style="flex-shrink: 0;">
+                        <AttributeOverrides element-name="text-0" text="M-" />
+                        <AttributeOverrides element-name="text-1" text="1" />
+                    </ui:Instance>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="vitals-healer-vars-6" style="width: 640px; height: 52px; border-width: 2px; overflow: hidden; position: absolute; left: 10px; top: 658px;">
+                <ui:Label text="HEALER" class="unity-label healer-vars-15" style="font-size: 20px; white-space: nowrap; position: absolute; left: 12px; top: 0px;" />
+                <ui:Label text="SUPPORT" class="unity-label support-vars-6" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 12px; top: 30px;" />
+                <ui:Label text="HP" class="unity-label hp-vars-40" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 168px; top: 4px;" />
+                <ui:Label text="80/80" class="unity-label _80-80-vars-6" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 202px; top: 4px;" />
+                <ui:VisualElement class="gauge-hp" style="width: 190px; padding: 1px; position: absolute; left: 168px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-132" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label text="MP" class="unity-label mp-vars-38" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 388px; top: 4px;" />
+                <ui:Label text="55/55" class="unity-label _55-55-vars-6" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 422px; top: 4px;" />
+                <ui:VisualElement class="gauge-mp" style="width: 150px; padding: 1px; position: absolute; left: 388px; top: 28px;">
+                    <ui:VisualElement class="fill-vars-133" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Instance template="Panel-Default" class="panel-default__i-53" style="position: absolute; left: 664px; top: 480px; width: 616px; height: 240px;" />
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; overflow: hidden; position: absolute; left: 676px; top: 494px;">
+                <ui:Instance template="Button-Slab-Focus" class="button-slab-2__i-7" style="flex-shrink: 0; width: 236px;">
+                    <AttributeOverrides element-name="text-0" text="▸" />
+                    <AttributeOverrides element-name="text-1" text="ATTACK" />
+                </ui:Instance>
+                <ui:Button text="SKILL" class="button-slab unity-button" style="width: 236px; flex-shrink: 0;" />
+                <ui:Button text="ITEM" class="button-slab unity-button" style="width: 236px; flex-shrink: 0;" />
+                <ui:Button text="GUARD" class="button-slab unity-button" style="width: 236px; flex-shrink: 0;" />
+            </ui:VisualElement>
+            <ui:Instance template="Panel-Raised" class="panel-raised__i-6" style="position: absolute; left: 924px; top: 490px; width: 346px; height: 220px;" />
+            <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 268px; top: 144px;">
+                <ui:Instance template="Status-Icon-Buff" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="GU" />
+                    <AttributeOverrides element-name="text-1" text="1" />
+                </ui:Instance>
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 316px; top: 264px;">
+                <ui:Instance template="Status-Icon-Buff" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="A+" />
+                    <AttributeOverrides element-name="text-1" text="2" />
+                </ui:Instance>
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 160px; top: 304px;">
+                <ui:Instance template="Status-Icon-DoT" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="BN" />
+                    <AttributeOverrides element-name="text-1" text="2" />
+                </ui:Instance>
+                <ui:Instance template="Status-Icon-Debuff" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="M-" />
+                    <AttributeOverrides element-name="text-1" text="1" />
+                </ui:Instance>
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 821px; top: 342px;">
+                <ui:Instance template="Status-Icon-DoT" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="BN" />
+                    <AttributeOverrides element-name="text-1" text="2" />
+                </ui:Instance>
+                <ui:Instance template="Status-Icon-Debuff" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="D-" />
+                    <AttributeOverrides element-name="text-1" text="1" />
+                </ui:Instance>
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; align-items: flex-start; overflow: hidden; flex-direction: row; position: absolute; left: 1021px; top: 438px;">
+                <ui:Instance template="Status-Icon-Control" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="ST" />
+                    <AttributeOverrides element-name="text-1" text="1" />
+                </ui:Instance>
+                <ui:Instance template="Status-Icon-Broken" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="BK" />
+                    <AttributeOverrides element-name="text-1" text="1" />
+                </ui:Instance>
+            </ui:VisualElement>
+            <ui:Label text="SQUIRE A" class="unity-label squire-a-vars-9" style="font-size: 20px; white-space: nowrap; position: absolute; left: 940px; top: 502px;" />
+            <ui:Label text="HP 60/60 · SHIELD 100" class="unity-label hp-60-60-shield-100-vars-4" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 1084px; top: 510px;" />
+            <ui:Label text="WEAK: HO · FI" class="unity-label weak-ho-fi-vars-14" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 940px; top: 532px;" />
+            <ui:Instance template="Status-Icon-DoT" style="position: absolute; left: 940px; top: 554px;">
+                <AttributeOverrides element-name="text-0" text="BN" />
+                <AttributeOverrides element-name="text-1" text="2" />
+            </ui:Instance>
+            <ui:Label text="Burn · 2 TURNS" class="unity-label burn-2-turns-vars-4" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 1002px; top: 556px;" />
+            <ui:Label text="6 FIRE DAMAGE AT TURN START" class="unity-label _6-fire-damage-at-turn-start-vars-4" style="width: 260px; font-size: 12px; letter-spacing: 0.48px; white-space: normal; position: absolute; left: 1002px; top: 576px;" />
+            <ui:Instance template="Status-Icon-Debuff" style="position: absolute; left: 940px; top: 606px;">
+                <AttributeOverrides element-name="text-0" text="D-" />
+                <AttributeOverrides element-name="text-1" text="1" />
+            </ui:Instance>
+            <ui:Label text="Defense Down · 1 TURN" class="unity-label defense-down-1-turn-vars-4" style="font-size: 14px; letter-spacing: 0.56px; white-space: nowrap; position: absolute; left: 997px; top: 608px;" />
+            <ui:Label text="PHYSICAL DEFENSE -20%" class="unity-label physical-defense-20-vars-4" style="width: 260px; font-size: 12px; letter-spacing: 0.48px; white-space: normal; position: absolute; left: 997px; top: 628px;" />
+            <ui:Label text="▸ ENTER TO STRIKE · ESC BACK" class="unity-label enter-to-strike-esc-back-vars-4" style="font-size: 12px; letter-spacing: 0.48px; white-space: nowrap; position: absolute; left: 940px; top: 680px;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="scrim-vars-3" style="width: 1280px; height: 720px; position: absolute; left: 0px; top: 0px;" />
+        <ui:VisualElement class="analysis-modal-vars-3" style="display: flex; width: 1216px; height: 688px; padding: 14px 20px 12px; flex-direction: column; align-items: flex-start; border-width: 2px; overflow: hidden; position: absolute; left: 32px; top: 16px;">
+            <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Label text="ANALYSIS — FREE INSPECTION" class="unity-label title-vars-4" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 24px; white-space: normal;" />
+                <ui:Label text="COST: FREE (NO TURN)" class="unity-label cost-vars-4" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                <ui:Tab label="ENEMIES" class="tab-2 unity-tab" style="flex-shrink: 0;" />
+                <ui:Tab label="ALLIES" class="tab unity-tab" style="flex-shrink: 0;" />
+                <ui:Button text="CLOSE" class="button-flat-2 unity-button" style="flex-shrink: 0;" />
+            </ui:VisualElement>
+            <ui:VisualElement class="unit-cycle-vars-3" style="display: flex; padding: 6px 8px; align-items: center; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden; flex-direction: row;">
+                <ui:Button text="◂ PREV" class="button-slab unity-button" style="flex-shrink: 0;" />
+                <ui:Label text="HOLLOW SQUIRE A  ·  1 / 2" class="unity-label unit-name-vars-3" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 24px; -unity-text-align: middle-center; white-space: normal;" />
+                <ui:Button text="NEXT ▸" class="button-slab unity-button" style="flex-shrink: 0;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:VisualElement style="display: flex; width: 290px; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+                    <ui:VisualElement class="identity-vars-2" style="display: flex; padding: 10px 12px 12px; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden;">
+                        <ui:Instance template="Section-Header" class="section-header__i-52" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                            <AttributeOverrides element-name="text-0" text="IDENTITY" />
+                        </ui:Instance>
+                        <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:VisualElement class="sprite-skeleton" style="flex-shrink: 0; background-image: url(&quot;project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-6c21854a01136801a7808dd9021bc741-2470.svg?fileID=7388822144124034973&amp;guid=50fb3c0e45fe6614c9fd504dbf85ef8b&amp;type=3#img-6c21854a01136801a7808dd9021bc741-2470&quot;); -unity-background-scale-mode: scale-to-fit;" />
+                            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                                <ui:Label text="HOLLOW SQUIRE" class="unity-label hollow-squire-vars-2" style="flex-shrink: 0; align-self: stretch; font-size: 14px; letter-spacing: 0.56px; white-space: normal;" />
+                                <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; overflow: hidden; flex-direction: row;">
+                                    <ui:Instance template="Tag-Cls" style="flex-shrink: 0;">
+                                        <AttributeOverrides element-name="text-0" text="NORMAL" />
+                                    </ui:Instance>
+                                    <ui:Label text="PHASE 1" class="unity-label phase-vars-2" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                                </ui:VisualElement>
+                                <ui:Label text="UNDEAD · VANGUARD · ASHEN RUINS" class="unity-label type-undead-role-vanguard-vars-2" style="flex-shrink: 0; align-self: stretch; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="combat-readout-vars-2" style="display: flex; padding: 10px 12px 12px; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden;">
+                        <ui:Instance template="Section-Header" class="section-header__i-53" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                            <AttributeOverrides element-name="text-0" text="COMBAT READOUT" />
+                        </ui:Instance>
+                        <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:Label text="HP" class="unity-label hp-vars-41" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                            <ui:Label text="98 / 145" class="unity-label _98-145-vars-2" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="gauge-hp" style="width: 262px; padding: 1px 85.276px 1px 1px; flex-shrink: 0;">
+                            <ui:VisualElement class="fill-vars-134" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:Label text="BREAK SHIELD" class="unity-label break-shield-vars-2" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                            <ui:Label text="4 / 6" class="unity-label _4-6-vars-2" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="gauge-break" style="width: 262px; padding: 1px 87.667px 1px 1px; flex-shrink: 0;">
+                            <ui:VisualElement class="fill-vars-135" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; overflow: hidden;">
+                                <ui:VisualElement style="height: 2px; background-color: rgba(255, 255, 255, 0.30); position: absolute; left: 0px; right: 0px; top: 0px;" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:Label text="INTENT:" class="unity-label intent-vars-2" style="flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: nowrap;" />
+                            <ui:Label text="WILL CHARGE: RUSTY CLEAVE" class="unity-label will-charge-rusty-cleave-vars-2" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="active-effects-vars-2" style="display: flex; padding: 10px 12px 6px; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; border-width: 2px; overflow: hidden;">
+                        <ui:Instance template="Section-Header" class="section-header__i-54" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                            <AttributeOverrides element-name="text-0" text="ACTIVE EFFECTS" />
+                        </ui:Instance>
+                        <ui:VisualElement style="display: flex; align-items: flex-start; align-content: flex-start; flex-wrap: wrap; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:Instance template="Analysis-Effect-Badge-No" style="flex-shrink: 0;">
+                                <AttributeOverrides element-name="text-0" text="BURN" />
+                                <AttributeOverrides element-name="text-1" text="2T" />
+                            </ui:Instance>
+                            <ui:Instance template="Analysis-Effect-Badge-Yes-swap" class="analysis-effect-badge-yes__i" style="flex-shrink: 0;">
+                                <AttributeOverrides element-name="text-0" text="DEF DOWN" />
+                                <AttributeOverrides element-name="text-1" text="1T" />
+                            </ui:Instance>
+                            <ui:Instance template="Analysis-Effect-Badge-No-swap-2" class="analysis-effect-badge-no__i-4" style="flex-shrink: 0;">
+                                <AttributeOverrides element-name="text-0" text="GUARDING" />
+                                <AttributeOverrides element-name="text-1" text="1T" />
+                            </ui:Instance>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="elemental-affinities-vars-3" style="display: flex; width: 318px; padding: 10px 12px 12px; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden;">
+                    <ui:Instance template="Section-Header" class="section-header__i-55" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                        <AttributeOverrides element-name="text-0" text="ELEMENTAL AFFINITIES" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Normal-swap" class="analysis-affinity-row-normal__i-9" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="PHY" />
+                        <AttributeOverrides element-name="text-1" text="PHYSICAL" />
+                        <AttributeOverrides element-name="text-2" text="×1.0" />
+                        <AttributeOverrides element-name="text-3" text="NORMAL" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Weak" class="analysis-affinity-row-weak__i-3" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="FIR" />
+                        <AttributeOverrides element-name="text-1" text="FIRE" />
+                        <AttributeOverrides element-name="text-2" text="×1.5 DMG" />
+                        <AttributeOverrides element-name="text-3" text="WEAK" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Unknown-swap-6" class="analysis-affinity-row-unknown__i-7" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="ICE" />
+                        <AttributeOverrides element-name="text-1" text="ICE" />
+                        <AttributeOverrides element-name="text-2" text="HIT TO REVEAL" />
+                        <AttributeOverrides element-name="text-3" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Unknown-swap-2" class="analysis-affinity-row-unknown__i-8" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="LIG" />
+                        <AttributeOverrides element-name="text-1" text="LIGHTNING" />
+                        <AttributeOverrides element-name="text-2" text="HIT TO REVEAL" />
+                        <AttributeOverrides element-name="text-3" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Unknown-swap-5" class="analysis-affinity-row-unknown__i-9" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="HOL" />
+                        <AttributeOverrides element-name="text-1" text="HOLY" />
+                        <AttributeOverrides element-name="text-2" text="HIT TO REVEAL" />
+                        <AttributeOverrides element-name="text-3" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Resist-swap" class="analysis-affinity-row-resist__i-3" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="DRK" />
+                        <AttributeOverrides element-name="text-1" text="DARK" />
+                        <AttributeOverrides element-name="text-2" text="×0.5 DMG" />
+                        <AttributeOverrides element-name="text-3" text="RESIST" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Unknown-swap" class="analysis-affinity-row-unknown__i-10" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="ERT" />
+                        <AttributeOverrides element-name="text-1" text="EARTH" />
+                        <AttributeOverrides element-name="text-2" text="HIT TO REVEAL" />
+                        <AttributeOverrides element-name="text-3" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Unknown-swap-3" class="analysis-affinity-row-unknown__i-11" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="WND" />
+                        <AttributeOverrides element-name="text-1" text="WIND" />
+                        <AttributeOverrides element-name="text-2" text="HIT TO REVEAL" />
+                        <AttributeOverrides element-name="text-3" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Affinity-Row-Unknown-swap-4" class="analysis-affinity-row-unknown__i-12" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="WTR" />
+                        <AttributeOverrides element-name="text-1" text="WATER" />
+                        <AttributeOverrides element-name="text-2" text="HIT TO REVEAL" />
+                        <AttributeOverrides element-name="text-3" text="???" />
+                    </ui:Instance>
+                    <ui:Label text="Revealed on first hit (DoT ticks count). WEAK ×1.5 · RESIST ×0.5 · NULL ×0 · DRAIN heals foe · REFLECT bounces ≤35%." class="unity-label revealed-on-first-hit-dot-tic-vars-2" style="flex-shrink: 0; align-self: stretch; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                </ui:VisualElement>
+                <ui:VisualElement class="status-resistance-vars-3" style="display: flex; width: 250px; padding: 10px 12px 12px; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden;">
+                    <ui:Instance template="Section-Header" class="section-header__i-56" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                        <AttributeOverrides element-name="text-0" text="STATUS RESISTANCE" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Normal-No" class="analysis-resist-row-normal-no__i-11" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="BURN" />
+                        <AttributeOverrides element-name="text-2" text="NORMAL" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Vulnerable-No-swap" class="analysis-resist-row-vulnerable-no__i-3" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="BLEED" />
+                        <AttributeOverrides element-name="text-2" text="VULNERABLE" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-8" class="analysis-resist-row-unknown-no__i-11" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="FREEZE" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-5" class="analysis-resist-row-unknown-no__i-12" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="POISON" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-4" class="analysis-resist-row-unknown-no__i-13" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="SHOCK" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-9" class="analysis-resist-row-unknown-no__i-14" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="CURSE" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap" class="analysis-resist-row-unknown-no__i-15" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="STUN" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-2" class="analysis-resist-row-unknown-no__i-16" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="SILENCE" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-6" class="analysis-resist-row-unknown-no__i-17" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="SLEEP" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Resistant-No-swap" class="analysis-resist-row-resistant-no__i-3" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="FEAR" />
+                        <AttributeOverrides element-name="text-2" text="RESISTANT" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-3" class="analysis-resist-row-unknown-no__i-18" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="CONFUSION" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-7" class="analysis-resist-row-unknown-no__i-19" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="MIND CTRL" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                    <ui:Instance template="Analysis-Resist-Row-Unknown-No-swap-10" class="analysis-resist-row-unknown-no__i-20" style="flex-shrink: 0; align-self: stretch;">
+                        <AttributeOverrides element-name="text-0" text="▸" />
+                        <AttributeOverrides element-name="text-1" text="DESPAIR" />
+                        <AttributeOverrides element-name="text-2" text="???" />
+                    </ui:Instance>
+                </ui:VisualElement>
+                <ui:VisualElement class="status-explanation-vars-3" style="display: flex; padding: 10px 12px 12px; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; align-self: stretch; border-width: 2px; overflow: hidden;">
+                    <ui:Instance template="Section-Header" class="section-header__i-57" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                        <AttributeOverrides element-name="text-0" text="STATUS EXPLANATION" />
+                    </ui:Instance>
+                    <ui:VisualElement style="display: flex; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                        <ui:Instance template="Icon-Status-DefenseDown" class="icon-status-defensedown__i" style="flex-shrink: 0; width: 48px; height: 48px;" />
+                        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                            <ui:Label text="DEFENSE DOWN" class="unity-label status-name-vars-3" style="flex-shrink: 0; align-self: stretch; font-size: 32px; white-space: normal;" />
+                            <ui:Instance template="Tag-Cond" style="flex-shrink: 0;">
+                                <AttributeOverrides element-name="text-0" text="DEBUFF" />
+                            </ui:Instance>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:Label text="Physical defense reduced." class="unity-label description-vars-3" style="flex-shrink: 0; align-self: stretch; font-size: 14px; letter-spacing: 0.56px; white-space: normal;" />
+                    <ui:VisualElement class="state-vars-3" style="display: flex; padding: 8px 10px; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+                        <ui:VisualElement style="display: flex; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:Label text="ACTIVE" class="unity-label active-vars-4" style="width: 56px; flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                            <ui:Label text="YES · 1T LEFT" class="unity-label yes-1t-left-vars" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                        </ui:VisualElement>
+                        <ui:VisualElement style="display: flex; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                            <ui:Label text="RESIST" class="unity-label resist-vars-3" style="width: 56px; flex-shrink: 0; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                            <ui:Label text="—  NOT A RESISTED STATUS" class="unity-label not-a-resisted-status-vars" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; justify-content: center; align-items: center; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="←/→" />
+                    <AttributeOverrides element-name="text-1" text="CYCLE UNIT" />
+                </ui:Instance>
+                <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="↑/↓" />
+                    <AttributeOverrides element-name="text-1" text="SELECT EFFECT / STATUS" />
+                </ui:Instance>
+                <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="Q/E" />
+                    <AttributeOverrides element-name="text-1" text="ENEMIES / ALLIES" />
+                </ui:Instance>
+                <ui:Instance template="Key-Hint" style="flex-shrink: 0;">
+                    <AttributeOverrides element-name="text-0" text="ESC" />
+                    <AttributeOverrides element-name="text-1" text="RETURN" />
+                </ui:Instance>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

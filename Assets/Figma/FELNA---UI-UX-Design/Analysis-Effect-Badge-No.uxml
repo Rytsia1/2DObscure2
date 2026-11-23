@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Effect-Badge-No.uss" />
+    <Template name="Icon-Status-Burn" src="Icon-Status-Burn.uxml" />
+    <ui:VisualElement class="analysis-effect-badge-no">
+        <ui:Instance template="Icon-Status-Burn" class="analysis-effect-badge-no__e" />
+        <ui:Label name="text-0" text="BURN" class="unity-label analysis-effect-badge-no__e-2" />
+        <ui:Label name="text-1" text="2T" class="unity-label analysis-effect-badge-no__e-3" />
+    </ui:VisualElement>
+</ui:UXML>

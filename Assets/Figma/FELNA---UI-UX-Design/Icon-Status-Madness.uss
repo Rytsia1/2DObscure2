@@ -1,0 +1,11 @@
+.icon-status-madness {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-madness__e.icon-status-madness__e.icon-status-madness__e.icon-status-madness__e.icon-status-madness__e.icon-status-madness__e.icon-status-madness__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-10bk16f0ux16mv0sk9oxf025xqxe-417.png?fileID=2800000&guid=57e1c28f0f120084e8f8a9501bc389c9&type=3#img-10bk16f0ux16mv0sk9oxf025xqxe-417");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

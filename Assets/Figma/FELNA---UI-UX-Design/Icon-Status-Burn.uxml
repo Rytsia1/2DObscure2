@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Status-Burn.uss" />
+    <ui:VisualElement class="icon-status-burn icon-status-burn__e" />
+</ui:UXML>

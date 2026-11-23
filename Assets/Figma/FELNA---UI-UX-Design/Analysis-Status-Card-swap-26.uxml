@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Status-Card.uss" />
+    <Template name="Icon-Status-Bleed" src="Icon-Status-Bleed.uxml" />
+    <ui:VisualElement class="analysis-status-card">
+        <ui:VisualElement class="analysis-status-card__e">
+            <ui:Instance template="Icon-Status-Bleed" class="analysis-status-card__e-2" />
+            <ui:VisualElement class="analysis-status-card__e-3">
+                <ui:Label name="text-0" text="BURN" class="unity-label analysis-status-card__e-4" />
+                <ui:Label name="text-1" text="DOT · DEBUFF · FIRE" class="unity-label analysis-status-card__e-5" />
+            </ui:VisualElement>
+            <ui:Label name="text-2" text="BN" class="unity-label analysis-status-card__e-6" />
+        </ui:VisualElement>
+        <ui:Label name="text-3" text="Takes fire damage at turn start." class="unity-label analysis-status-card__e-7" />
+        <ui:VisualElement class="analysis-status-card__e-8">
+            <ui:Label name="text-4" text="IN CODE" class="unity-label analysis-status-card__e-9" />
+            <ui:Label name="text-5" text="15 POWER" class="unity-label analysis-status-card__e-10" />
+        </ui:VisualElement>
+        <ui:VisualElement class="analysis-status-card__e-11">
+            <ui:Label name="text-6" text="⚠ GAP: —" class="unity-label analysis-status-card__e-12" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

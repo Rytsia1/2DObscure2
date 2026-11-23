@@ -1,0 +1,11 @@
+.icon-status-poison {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-poison__e.icon-status-poison__e.icon-status-poison__e.icon-status-poison__e.icon-status-poison__e.icon-status-poison__e.icon-status-poison__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1k2cz740h7eeg017r6f5909yq65y-499.png?fileID=2800000&guid=39be08f38d125bf4db5b468354cafed1&type=3#img-1k2cz740h7eeg017r6f5909yq65y-499");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

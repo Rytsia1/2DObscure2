@@ -1,0 +1,37 @@
+.analysis-effect-badge-no {
+    display: flex;
+    padding: 3px 8px 3px 4px;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+}
+
+.analysis-effect-badge-no__e.analysis-effect-badge-no__e.analysis-effect-badge-no__e.analysis-effect-badge-no__e.analysis-effect-badge-no__e.analysis-effect-badge-no__e.analysis-effect-badge-no__e {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.analysis-effect-badge-no__e-2.analysis-effect-badge-no__e-2.analysis-effect-badge-no__e-2.analysis-effect-badge-no__e-2.analysis-effect-badge-no__e-2.analysis-effect-badge-no__e-2.analysis-effect-badge-no__e-2 {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.analysis-effect-badge-no__e-3.analysis-effect-badge-no__e-3.analysis-effect-badge-no__e-3.analysis-effect-badge-no__e-3.analysis-effect-badge-no__e-3.analysis-effect-badge-no__e-3.analysis-effect-badge-no__e-3 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-accent);
+}
+
+.analysis-effect-badge-no__e > .icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn {
+    width: 100%;
+    height: 100%;
+}
+

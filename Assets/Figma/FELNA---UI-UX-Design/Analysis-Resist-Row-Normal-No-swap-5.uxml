@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Resist-Row-Normal-No.uss" />
+    <Template name="Icon-Status-MindControl" src="Icon-Status-MindControl.uxml" />
+    <ui:VisualElement class="analysis-resist-row-normal-no">
+        <ui:Label name="text-0" text="▸" class="unity-label analysis-resist-row-normal-no__e" />
+        <ui:Instance template="Icon-Status-MindControl" class="analysis-resist-row-normal-no__e-2" />
+        <ui:Label name="text-1" text="BURN" class="unity-label analysis-resist-row-normal-no__e-3" />
+        <ui:VisualElement class="analysis-resist-row-normal-no__e-4">
+            <ui:Label name="text-2" text="NORMAL" class="unity-label analysis-resist-row-normal-no__e-5" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

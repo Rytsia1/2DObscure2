@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Element-Holy.uss" />
+    <ui:VisualElement class="icon-element-holy icon-element-holy__e" />
+</ui:UXML>

@@ -1,0 +1,11 @@
+.icon-status-resistancedown {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-resistancedown__e.icon-status-resistancedown__e.icon-status-resistancedown__e.icon-status-resistancedown__e.icon-status-resistancedown__e.icon-status-resistancedown__e.icon-status-resistancedown__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1ohxeie0kwnr1l02wzxsl11qxdqj-435.png?fileID=2800000&guid=dc10491bb9f8d0d40a44f52f3c31b42b&type=3#img-1ohxeie0kwnr1l02wzxsl11qxdqj-435");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

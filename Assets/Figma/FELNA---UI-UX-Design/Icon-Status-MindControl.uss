@@ -1,0 +1,11 @@
+.icon-status-mindcontrol {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-mindcontrol__e.icon-status-mindcontrol__e.icon-status-mindcontrol__e.icon-status-mindcontrol__e.icon-status-mindcontrol__e.icon-status-mindcontrol__e.icon-status-mindcontrol__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1ox77mq0e0zpjj0abmpw61nav3ky-642.png?fileID=2800000&guid=a728978ad2657fa47aa11ff354012bae&type=3#img-1ox77mq0e0zpjj0abmpw61nav3ky-642");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

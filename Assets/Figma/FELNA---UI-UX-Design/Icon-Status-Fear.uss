@@ -1,0 +1,11 @@
+.icon-status-fear {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-fear__e.icon-status-fear__e.icon-status-fear__e.icon-status-fear__e.icon-status-fear__e.icon-status-fear__e.icon-status-fear__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0heo1ww00rp3ij0rq3l9n010t0gt-480.png?fileID=2800000&guid=ead1be8e01ac40046a7e96fa2ce51afb&type=3#img-0heo1ww00rp3ij0rq3l9n010t0gt-480");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

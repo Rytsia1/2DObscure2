@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Status-Shock.uss" />
+    <ui:VisualElement class="icon-status-shock icon-status-shock__e" />
+</ui:UXML>

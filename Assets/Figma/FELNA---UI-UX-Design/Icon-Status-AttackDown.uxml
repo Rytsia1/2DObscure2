@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Status-AttackDown.uss" />
+    <ui:VisualElement class="icon-status-attackdown icon-status-attackdown__e" />
+</ui:UXML>

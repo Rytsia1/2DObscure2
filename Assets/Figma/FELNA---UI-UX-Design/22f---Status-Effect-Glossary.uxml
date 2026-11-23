@@ -1,0 +1,338 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="22f---Status-Effect-Glossary.uss" />
+    <Template name="Section-Header" src="Section-Header.uxml" />
+    <Template name="Analysis-Status-Card" src="Analysis-Status-Card.uxml" />
+    <Template name="Analysis-Status-Card-swap-12" src="Analysis-Status-Card-swap-12.uxml" />
+    <Template name="Analysis-Status-Card-swap-26" src="Analysis-Status-Card-swap-26.uxml" />
+    <Template name="Analysis-Status-Card-swap-6" src="Analysis-Status-Card-swap-6.uxml" />
+    <Template name="Analysis-Status-Card-swap-19" src="Analysis-Status-Card-swap-19.uxml" />
+    <Template name="Analysis-Status-Card-swap-10" src="Analysis-Status-Card-swap-10.uxml" />
+    <Template name="Analysis-Status-Card-swap-15" src="Analysis-Status-Card-swap-15.uxml" />
+    <Template name="Analysis-Status-Card-swap-7" src="Analysis-Status-Card-swap-7.uxml" />
+    <Template name="Analysis-Status-Card-swap-20" src="Analysis-Status-Card-swap-20.uxml" />
+    <Template name="Analysis-Status-Card-swap-25" src="Analysis-Status-Card-swap-25.uxml" />
+    <Template name="Analysis-Status-Card-swap-9" src="Analysis-Status-Card-swap-9.uxml" />
+    <Template name="Analysis-Status-Card-swap-13" src="Analysis-Status-Card-swap-13.uxml" />
+    <Template name="Analysis-Status-Card-swap-14" src="Analysis-Status-Card-swap-14.uxml" />
+    <Template name="Analysis-Status-Card-swap-17" src="Analysis-Status-Card-swap-17.uxml" />
+    <Template name="Analysis-Status-Card-swap-22" src="Analysis-Status-Card-swap-22.uxml" />
+    <Template name="Analysis-Status-Card-swap-18" src="Analysis-Status-Card-swap-18.uxml" />
+    <Template name="Analysis-Status-Card-swap-21" src="Analysis-Status-Card-swap-21.uxml" />
+    <Template name="Analysis-Status-Card-swap-16" src="Analysis-Status-Card-swap-16.uxml" />
+    <Template name="Analysis-Status-Card-swap-5" src="Analysis-Status-Card-swap-5.uxml" />
+    <Template name="Analysis-Status-Card-swap-11" src="Analysis-Status-Card-swap-11.uxml" />
+    <Template name="Analysis-Status-Card-swap-3" src="Analysis-Status-Card-swap-3.uxml" />
+    <Template name="Analysis-Status-Card-swap-8" src="Analysis-Status-Card-swap-8.uxml" />
+    <Template name="Analysis-Status-Card-swap-4" src="Analysis-Status-Card-swap-4.uxml" />
+    <Template name="Analysis-Status-Card-swap-2" src="Analysis-Status-Card-swap-2.uxml" />
+    <Template name="Analysis-Status-Card-swap" src="Analysis-Status-Card-swap.uxml" />
+    <Template name="Analysis-Status-Card-swap-23" src="Analysis-Status-Card-swap-23.uxml" />
+    <Template name="Analysis-Status-Card-swap-24" src="Analysis-Status-Card-swap-24.uxml" />
+    <ui:VisualElement class="_22f-status-effect-glossary _22f-status-effect-glossary-vars" style="display: flex; padding: 28px 32px 32px; flex-direction: column; align-items: flex-start; overflow: hidden;">
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+            <ui:Label text="STATUS EFFECT GLOSSARY" class="unity-label title-vars-3" style="flex-shrink: 0; font-size: 32px; white-space: nowrap;" />
+            <ui:Label text="Dev reference only. The in-game explanation panel stays brief: icon, name, one tag, the one-line description, and ACTIVE / RESIST state for the focused unit (unrevealed tiers stay ???). Descriptions = StatusInfo.Description; IN CODE lines are never shown to players." class="unity-label reference-for-the-analysis-exp-vars" style="flex-shrink: 0; align-self: stretch; font-size: 14px; letter-spacing: 0.56px; white-space: normal;" />
+        </ui:VisualElement>
+        <ui:VisualElement class="shared-rules-vars" style="display: flex; padding: 12px 16px; align-items: flex-start; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden; flex-direction: row;">
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:Label text="DURATION" class="unity-label duration-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                <ui:Label text="Counts the bearer's turns; −1 at the start of each of their turns. Default 2T." class="unity-label counts-the-bearer-s-turns-1-vars" style="flex-shrink: 0; align-self: stretch; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:Label text="STACKING" class="unity-label stacking-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                <ui:Label text="INDEPENDENT: each application is its own timer. REFRESH: keeps the longer duration and bigger magnitude." class="unity-label independent-each-application-vars" style="flex-shrink: 0; align-self: stretch; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:Label text="CONTROL" class="unity-label control-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                <ui:Label text="Stun, Sleep, Silence, Madness, Mind Control cannot be re-applied while active and give 1T immunity after." class="unity-label stun-sleep-silence-madness-vars" style="flex-shrink: 0; align-self: stretch; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+            </ui:VisualElement>
+            <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-grow: 1; flex-shrink: 0; flex-basis: 0px; overflow: hidden;">
+                <ui:Label text="APPLY CHANCE" class="unity-label apply-chance-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+                <ui:Label text="P = BASE × (1 − RES). RES = universal + per-status, clamped 0–75%. Bosses ignore all mental effects." class="unity-label p-base-1-res-res-un-vars" style="flex-shrink: 0; align-self: stretch; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="design-note-code-gaps-vars" style="display: flex; padding: 10px 16px; align-items: center; flex-shrink: 0; align-self: stretch; border-width: 2px; overflow: hidden; flex-direction: row;">
+            <ui:Label text="DESIGN NOTE" class="unity-label design-note-vars" style="flex-shrink: 0; font-size: 14px; letter-spacing: 0.56px; white-space: nowrap;" />
+            <ui:Label text="Explanations show the intended design. Four effects differ from the code today: FREEZE only slows (no turn skip) · CURSE has no mechanic · MIND CONTROL does not redirect actions · DESPAIR fails actions instead of blocking MP/buffs. Fix the code or the text before shipping the panel." class="unity-label explanations-show-the-intended-vars" style="flex-grow: 1; flex-shrink: 0; flex-basis: 0px; font-size: 12px; letter-spacing: 0.48px; white-space: normal;" />
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+            <ui:Instance template="Section-Header" class="section-header__i-47" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                <AttributeOverrides element-name="text-0" text="DAMAGE OVER TIME · TICKS AT BEARER'S TURN START" />
+            </ui:Instance>
+            <ui:VisualElement style="display: flex; align-items: flex-start; align-content: flex-start; flex-wrap: wrap; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Instance template="Analysis-Status-Card" class="analysis-status-card__i" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="BURN" />
+                    <AttributeOverrides element-name="text-1" text="DOT · DEBUFF · FIRE" />
+                    <AttributeOverrides element-name="text-2" text="BN" />
+                    <AttributeOverrides element-name="text-3" text="Takes fire damage at turn start." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="15 POWER × CASTER INT ×1.0 · FIRE AFFINITY APPLIES · INDEPENDENT STACKS · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-12" class="analysis-status-card__i-2" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="POISON" />
+                    <AttributeOverrides element-name="text-1" text="DOT · DEBUFF · SHADOW" />
+                    <AttributeOverrides element-name="text-2" text="PS" />
+                    <AttributeOverrides element-name="text-3" text="Takes poison damage at turn start." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="12 POWER × CASTER INT ×0.8 · SHADOW AFFINITY APPLIES · POISONER TALENT BOOSTS · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-26" class="analysis-status-card__i-3" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="BLEED" />
+                    <AttributeOverrides element-name="text-1" text="DOT · DEBUFF · PHYSICAL" />
+                    <AttributeOverrides element-name="text-2" text="BL" />
+                    <AttributeOverrides element-name="text-3" text="Takes bleed damage over time." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="15 POWER × CASTER STR ×1.0 · PHYSICAL · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+            <ui:Instance template="Section-Header" class="section-header__i-48" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                <AttributeOverrides element-name="text-0" text="CONTROL" />
+            </ui:Instance>
+            <ui:VisualElement style="display: flex; align-items: flex-start; align-content: flex-start; flex-wrap: wrap; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Instance template="Analysis-Status-Card-swap-6" class="analysis-status-card__i-4" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="STUN" />
+                    <AttributeOverrides element-name="text-1" text="CONTROL" />
+                    <AttributeOverrides element-name="text-2" text="ST" />
+                    <AttributeOverrides element-name="text-3" text="Incapacitated — skips the next turn." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="SKIPS ROUND · DEFENSIVE QTE = POOR · REFRESH · 1T · 1T IMMUNITY AFTER" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-19" class="analysis-status-card__i-5" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="FREEZE" />
+                    <AttributeOverrides element-name="text-1" text="CONTROL" />
+                    <AttributeOverrides element-name="text-2" text="FZ" />
+                    <AttributeOverrides element-name="text-3" text="Frozen solid — cannot act until thawed." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="SPEED ×(1 − 35%) · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="⚠ GAP: CODE ONLY SLOWS — NO TURN SKIP" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-10" class="analysis-status-card__i-6" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="SHOCK" />
+                    <AttributeOverrides element-name="text-1" text="CONTROL · LIGHTNING" />
+                    <AttributeOverrides element-name="text-2" text="SK" />
+                    <AttributeOverrides element-name="text-3" text="Lightning disruption — risk of losing action." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="30% CHANCE THE ACTION FAILS · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+            <ui:Instance template="Section-Header" class="section-header__i-49" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                <AttributeOverrides element-name="text-0" text="MENTAL · BOSSES ARE IMMUNE" />
+            </ui:Instance>
+            <ui:VisualElement style="display: flex; align-items: flex-start; align-content: flex-start; flex-wrap: wrap; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Instance template="Analysis-Status-Card-swap-15" class="analysis-status-card__i-7" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="SLEEP" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL · CONTROL" />
+                    <AttributeOverrides element-name="text-2" text="SLP" />
+                    <AttributeOverrides element-name="text-3" text="Asleep — skips turn until awakened." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="SKIPS ROUND · ENDS ON ANY DAMAGE (DOT TOO) · REFRESH · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-7" class="analysis-status-card__i-8" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="SILENCE" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL · CONTROL" />
+                    <AttributeOverrides element-name="text-2" text="SIL" />
+                    <AttributeOverrides element-name="text-3" text="Cannot cast magic skills." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="SKILLS BLOCKED · REFRESH · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-20" class="analysis-status-card__i-9" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="FEAR" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL" />
+                    <AttributeOverrides element-name="text-2" text="FR" />
+                    <AttributeOverrides element-name="text-3" text="Hesitates and deals reduced damage." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="DAMAGE DEALT ×(1 − 30%) · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-25" class="analysis-status-card__i-10" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="DESPAIR" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL" />
+                    <AttributeOverrides element-name="text-2" text="DP" />
+                    <AttributeOverrides element-name="text-3" text="Cannot restore MP or gain buffs." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="35% CHANCE THE ACTION FAILS · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="⚠ GAP: CODE FAILS ACTIONS — NO MP/BUFF BLOCK" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-9" class="analysis-status-card__i-11" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="CONFUSION" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL" />
+                    <AttributeOverrides element-name="text-2" text="CF" />
+                    <AttributeOverrides element-name="text-3" text="Actions target randomly." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="50% CHANCE TO RETARGET A RANDOM UNIT · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-13" class="analysis-status-card__i-12" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="CHARM" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL" />
+                    <AttributeOverrides element-name="text-2" text="CH" />
+                    <AttributeOverrides element-name="text-3" text="Unable to attack the charmer." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="CANNOT TARGET THE CHARMER · REFRESH · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-14" class="analysis-status-card__i-13" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="MADNESS" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL · CONTROL" />
+                    <AttributeOverrides element-name="text-2" text="MD" />
+                    <AttributeOverrides element-name="text-3" text="Erratic high-damage strikes without control." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="FORCED BASIC ATTACK ON A RANDOM LIVING UNIT · REFRESH · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-17" class="analysis-status-card__i-14" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="MIND CONTROL" />
+                    <AttributeOverrides element-name="text-1" text="MENTAL · CONTROL" />
+                    <AttributeOverrides element-name="text-2" text="MC" />
+                    <AttributeOverrides element-name="text-3" text="Compelled to act against allies." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="RECORDS CONTROLLER · DEFENSIVE QTE = POOR · REFRESH · 1T" />
+                    <AttributeOverrides element-name="text-6" text="⚠ GAP: ACTIONS ARE NOT REDIRECTED YET" />
+                </ui:Instance>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+            <ui:Instance template="Section-Header" class="section-header__i-50" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                <AttributeOverrides element-name="text-0" text="DEBUFFS" />
+            </ui:Instance>
+            <ui:VisualElement style="display: flex; align-items: flex-start; align-content: flex-start; flex-wrap: wrap; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Instance template="Analysis-Status-Card-swap-22" class="analysis-status-card__i-15" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="CURSE" />
+                    <AttributeOverrides element-name="text-1" text="DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="CU" />
+                    <AttributeOverrides element-name="text-3" text="Healing received reduced and dark vulnerability." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="MAGNITUDE 25% · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="⚠ GAP: NO MECHANIC READS CURSE YET" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-18" class="analysis-status-card__i-16" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="RESISTANCE DOWN" />
+                    <AttributeOverrides element-name="text-1" text="DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="RD" />
+                    <AttributeOverrides element-name="text-3" text="Elemental &amp; status resistance reduced." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="RESISTANCE × (1 − 20%) · MULTIPLICATIVE · INDEPENDENT · 2T" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-21" class="analysis-status-card__i-17" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="DEFENSE DOWN" />
+                    <AttributeOverrides element-name="text-1" text="STAT DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="D-" />
+                    <AttributeOverrides element-name="text-3" text="Physical defense reduced." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="DEF × (1 + UP − DOWN) · SIZE SET BY SKILL · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-16" class="analysis-status-card__i-18" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="MAGIC DEF DOWN" />
+                    <AttributeOverrides element-name="text-1" text="STAT DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="M-" />
+                    <AttributeOverrides element-name="text-3" text="Magic defense reduced." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="MDEF × (1 + UP − DOWN) · SIZE SET BY SKILL · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-5" class="analysis-status-card__i-19" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="ATTACK DOWN" />
+                    <AttributeOverrides element-name="text-1" text="STAT DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="A-" />
+                    <AttributeOverrides element-name="text-3" text="Attack power reduced." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="ATK/MATK × (1 + UP − DOWN) · SIZE SET BY SKILL · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-11" class="analysis-status-card__i-20" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="SLOW" />
+                    <AttributeOverrides element-name="text-1" text="STAT DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="SL" />
+                    <AttributeOverrides element-name="text-3" text="Initiative and turn speed reduced." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="SPEED ×(1 − MAGNITUDE), MIN ×0.1 · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-3" class="analysis-status-card__i-21" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="EXHAUSTED" />
+                    <AttributeOverrides element-name="text-1" text="DEBUFF" />
+                    <AttributeOverrides element-name="text-2" text="EX" />
+                    <AttributeOverrides element-name="text-3" text="Skills cost more MP and output is reduced." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="ATK/MATK −20% · 2T (AFTER DRACONIC OVERDRIVE)" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-8" class="analysis-status-card__i-22" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="BROKEN" />
+                    <AttributeOverrides element-name="text-1" text="SPECIAL" />
+                    <AttributeOverrides element-name="text-2" text="BK" />
+                    <AttributeOverrides element-name="text-3" text="Staggered — takes extra damage (+50% foes, +25% heroes) and skips turn." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="DMG TAKEN ×1.5 FOES / ×1.25 HEROES · STUNNED 1T · BREAK GAUGE REFILLS AFTER" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement style="display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; align-self: stretch; overflow: hidden;">
+            <ui:Instance template="Section-Header" class="section-header__i-51" style="flex-shrink: 0; align-self: stretch; height: 40px;">
+                <AttributeOverrides element-name="text-0" text="BUFFS" />
+            </ui:Instance>
+            <ui:VisualElement style="display: flex; align-items: flex-start; align-content: flex-start; flex-wrap: wrap; flex-shrink: 0; align-self: stretch; overflow: hidden; flex-direction: row;">
+                <ui:Instance template="Analysis-Status-Card-swap-4" class="analysis-status-card__i-23" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="DEFENSE UP" />
+                    <AttributeOverrides element-name="text-1" text="STAT BUFF" />
+                    <AttributeOverrides element-name="text-2" text="D+" />
+                    <AttributeOverrides element-name="text-3" text="Physical defense increased." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="DEF × (1 + UP − DOWN) · SIZE SET BY SKILL · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-2" class="analysis-status-card__i-24" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="MAGIC DEF UP" />
+                    <AttributeOverrides element-name="text-1" text="STAT BUFF" />
+                    <AttributeOverrides element-name="text-2" text="M+" />
+                    <AttributeOverrides element-name="text-3" text="Magic defense increased." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="MDEF × (1 + UP − DOWN) · SIZE SET BY SKILL · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap" class="analysis-status-card__i-25" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="ATTACK UP" />
+                    <AttributeOverrides element-name="text-1" text="STAT BUFF" />
+                    <AttributeOverrides element-name="text-2" text="A+" />
+                    <AttributeOverrides element-name="text-3" text="Attack power increased." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="ATK/MATK × (1 + UP − DOWN) · SIZE SET BY SKILL · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-23" class="analysis-status-card__i-26" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="EVASION" />
+                    <AttributeOverrides element-name="text-1" text="BUFF" />
+                    <AttributeOverrides element-name="text-2" text="EV" />
+                    <AttributeOverrides element-name="text-3" text="Increased chance to evade incoming strikes." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="EVASION × MAGNITUDE · CAPPED AT 75 · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+                <ui:Instance template="Analysis-Status-Card-swap-24" class="analysis-status-card__i-27" style="flex-shrink: 0; width: 394px;">
+                    <AttributeOverrides element-name="text-0" text="GUARDIAN" />
+                    <AttributeOverrides element-name="text-1" text="BUFF" />
+                    <AttributeOverrides element-name="text-2" text="GU" />
+                    <AttributeOverrides element-name="text-3" text="Intercepts attacks targeting protected ally." />
+                    <AttributeOverrides element-name="text-4" text="IN CODE" />
+                    <AttributeOverrides element-name="text-5" text="BEARER TAKES HITS AIMED AT THE LINKED ALLY · REFRESH" />
+                    <AttributeOverrides element-name="text-6" text="" />
+                </ui:Instance>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

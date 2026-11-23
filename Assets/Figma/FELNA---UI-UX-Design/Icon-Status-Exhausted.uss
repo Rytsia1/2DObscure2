@@ -1,0 +1,11 @@
+.icon-status-exhausted {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-exhausted__e.icon-status-exhausted__e.icon-status-exhausted__e.icon-status-exhausted__e.icon-status-exhausted__e.icon-status-exhausted__e.icon-status-exhausted__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1olg5951gewizr1i6etzt00oj9ng-470.png?fileID=2800000&guid=05b044561194f2241ad04b49cdb1166c&type=3#img-1olg5951gewizr1i6etzt00oj9ng-470");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

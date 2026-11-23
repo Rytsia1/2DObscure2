@@ -1,0 +1,842 @@
+.sprite-knight {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-healer {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-rogue {
+    width: 64px;
+    height: 80px;
+}
+
+.sprite-mage {
+    width: 64px;
+    height: 76px;
+}
+
+.sprite-skeleton {
+    width: 64px;
+    height: 80px;
+}
+
+.gauge-hp-low {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-break {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-hp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.gauge-mp {
+    display: flex;
+    width: 160px;
+    height: 10px;
+    padding: 1px 47px 1px 1px;
+    align-items: flex-start;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.button-slab {
+    display: flex;
+    padding: 6px 20px;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+}
+
+.button-slab:disabled {
+    opacity: 0.85;
+    color: var(--text-muted);
+}
+
+.button-slab:focus {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+    color: var(--text-highlight);
+}
+
+.tab-2 {
+    display: flex;
+    padding: 6px 16px;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-panel);
+    border-color: var(--border-focus);
+    color: var(--text-accent);
+}
+
+.tab {
+    display: flex;
+    padding: 6px 16px;
+    align-items: center;
+    border-width: 2px;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    background-color: var(--bg-raised);
+    border-color: var(--border-default);
+    color: var(--text-body);
+}
+
+.tab:checked {
+    background-color: var(--bg-panel);
+    border-color: var(--border-focus);
+    color: var(--text-accent);
+}
+
+.button-flat-2 {
+    display: flex;
+    padding: 6px 20px 6px 12px;
+    align-items: center;
+    flex-direction: row;
+    font-size: 20px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.button-flat-2:disabled {
+    opacity: 0.6;
+    color: var(--text-muted);
+}
+
+.button-flat-2:focus {
+    background-color: var(--accent-focus-wash);
+    color: var(--text-highlight);
+}
+
+._22d-b-combat-analysis-enemies-active-focus {
+    width: 1280px;
+    height: 720px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._22d-b-combat-analysis-enemies-active-focus {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: auto;
+    height: auto;
+}
+
+._22d-b-combat-analysis-enemies-active-focus-vars._22d-b-combat-analysis-enemies-active-focus-vars._22d-b-combat-analysis-enemies-active-focus-vars._22d-b-combat-analysis-enemies-active-focus-vars._22d-b-combat-analysis-enemies-active-focus-vars._22d-b-combat-analysis-enemies-active-focus-vars {
+    background-color: var(--bg-ground);
+}
+
+.backdrop-22b-combat-hud-vars-3.backdrop-22b-combat-hud-vars-3.backdrop-22b-combat-hud-vars-3.backdrop-22b-combat-hud-vars-3.backdrop-22b-combat-hud-vars-3.backdrop-22b-combat-hud-vars-3 {
+    background-color: var(--bg-ground);
+}
+
+.rectangle-vars-239.rectangle-vars-239.rectangle-vars-239.rectangle-vars-239.rectangle-vars-239.rectangle-vars-239 {
+    background-color: var(--border-line);
+}
+
+.act-1-ashen-ruins-vars-6.act-1-ashen-ruins-vars-6.act-1-ashen-ruins-vars-6.act-1-ashen-ruins-vars-6.act-1-ashen-ruins-vars-6.act-1-ashen-ruins-vars-6 {
+    color: var(--text-highlight);
+}
+
+.round-1-vars-6.round-1-vars-6.round-1-vars-6.round-1-vars-6.round-1-vars-6.round-1-vars-6 {
+    color: var(--text-accent);
+}
+
+.node-vars-38.node-vars-38.node-vars-38.node-vars-38.node-vars-38.node-vars-38 {
+    color: var(--text-muted);
+}
+
+.rectangle-vars-240.rectangle-vars-240.rectangle-vars-240.rectangle-vars-240.rectangle-vars-240.rectangle-vars-240 {
+    border-color: var(--border-focus);
+}
+
+.choose-a-target-squire-a-vars-4.choose-a-target-squire-a-vars-4.choose-a-target-squire-a-vars-4.choose-a-target-squire-a-vars-4.choose-a-target-squire-a-vars-4.choose-a-target-squire-a-vars-4 {
+    color: var(--text-primary);
+}
+
+.node-vars-39.node-vars-39.node-vars-39.node-vars-39.node-vars-39.node-vars-39 {
+    color: var(--text-highlight);
+}
+
+.node-vars-40.node-vars-40.node-vars-40.node-vars-40.node-vars-40.node-vars-40 {
+    color: var(--text-highlight);
+}
+
+.squire-a-vars-8.squire-a-vars-8.squire-a-vars-8.squire-a-vars-8.squire-a-vars-8.squire-a-vars-8 {
+    color: var(--text-primary);
+}
+
+.shield-100-vars-9.shield-100-vars-9.shield-100-vars-9.shield-100-vars-9.shield-100-vars-9.shield-100-vars-9 {
+    color: var(--text-accent);
+}
+
+.fill-vars-122.fill-vars-122.fill-vars-122.fill-vars-122.fill-vars-122.fill-vars-122 {
+    background-color: var(--vital-hp-low);
+}
+
+.fill-vars-123.fill-vars-123.fill-vars-123.fill-vars-123.fill-vars-123.fill-vars-123 {
+    background-color: var(--accent-gold);
+}
+
+.weak-ho-fi-vars-12.weak-ho-fi-vars-12.weak-ho-fi-vars-12.weak-ho-fi-vars-12.weak-ho-fi-vars-12.weak-ho-fi-vars-12 {
+    color: var(--text-muted);
+}
+
+.squire-b-vars-5.squire-b-vars-5.squire-b-vars-5.squire-b-vars-5.squire-b-vars-5.squire-b-vars-5 {
+    color: var(--text-primary);
+}
+
+.shield-100-vars-10.shield-100-vars-10.shield-100-vars-10.shield-100-vars-10.shield-100-vars-10.shield-100-vars-10 {
+    color: var(--text-accent);
+}
+
+.fill-vars-124.fill-vars-124.fill-vars-124.fill-vars-124.fill-vars-124.fill-vars-124 {
+    background-color: var(--vital-hp-low);
+}
+
+.fill-vars-125.fill-vars-125.fill-vars-125.fill-vars-125.fill-vars-125.fill-vars-125 {
+    background-color: var(--accent-gold);
+}
+
+.weak-ho-fi-vars-13.weak-ho-fi-vars-13.weak-ho-fi-vars-13.weak-ho-fi-vars-13.weak-ho-fi-vars-13.weak-ho-fi-vars-13 {
+    color: var(--text-muted);
+}
+
+.intent-rusted-cleave-heavy-vars-5.intent-rusted-cleave-heavy-vars-5.intent-rusted-cleave-heavy-vars-5.intent-rusted-cleave-heavy-vars-5.intent-rusted-cleave-heavy-vars-5.intent-rusted-cleave-heavy-vars-5 {
+    color: var(--status-error);
+}
+
+.vitals-knight-vars-6.vitals-knight-vars-6.vitals-knight-vars-6.vitals-knight-vars-6.vitals-knight-vars-6.vitals-knight-vars-6 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.knight-vars-15.knight-vars-15.knight-vars-15.knight-vars-15.knight-vars-15.knight-vars-15 {
+    color: var(--text-primary);
+}
+
+.defender-vars-6.defender-vars-6.defender-vars-6.defender-vars-6.defender-vars-6.defender-vars-6 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-37.hp-vars-37.hp-vars-37.hp-vars-37.hp-vars-37.hp-vars-37 {
+    color: var(--vital-hp);
+}
+
+._125-125-vars-7._125-125-vars-7._125-125-vars-7._125-125-vars-7._125-125-vars-7._125-125-vars-7 {
+    color: var(--text-primary);
+}
+
+.fill-vars-126.fill-vars-126.fill-vars-126.fill-vars-126.fill-vars-126.fill-vars-126 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-35.mp-vars-35.mp-vars-35.mp-vars-35.mp-vars-35.mp-vars-35 {
+    color: var(--vital-mp);
+}
+
+._20-20-vars-8._20-20-vars-8._20-20-vars-8._20-20-vars-8._20-20-vars-8._20-20-vars-8 {
+    color: var(--text-primary);
+}
+
+.fill-vars-127.fill-vars-127.fill-vars-127.fill-vars-127.fill-vars-127.fill-vars-127 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-rogue-vars-6.vitals-rogue-vars-6.vitals-rogue-vars-6.vitals-rogue-vars-6.vitals-rogue-vars-6.vitals-rogue-vars-6 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+}
+
+.rogue-vars-14.rogue-vars-14.rogue-vars-14.rogue-vars-14.rogue-vars-14.rogue-vars-14 {
+    color: var(--text-highlight);
+}
+
+.striker-vars-6.striker-vars-6.striker-vars-6.striker-vars-6.striker-vars-6.striker-vars-6 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-38.hp-vars-38.hp-vars-38.hp-vars-38.hp-vars-38.hp-vars-38 {
+    color: var(--vital-hp);
+}
+
+._85-85-vars-6._85-85-vars-6._85-85-vars-6._85-85-vars-6._85-85-vars-6._85-85-vars-6 {
+    color: var(--text-primary);
+}
+
+.fill-vars-128.fill-vars-128.fill-vars-128.fill-vars-128.fill-vars-128.fill-vars-128 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-36.mp-vars-36.mp-vars-36.mp-vars-36.mp-vars-36.mp-vars-36 {
+    color: var(--vital-mp);
+}
+
+._25-25-vars-6._25-25-vars-6._25-25-vars-6._25-25-vars-6._25-25-vars-6._25-25-vars-6 {
+    color: var(--text-primary);
+}
+
+.fill-vars-129.fill-vars-129.fill-vars-129.fill-vars-129.fill-vars-129.fill-vars-129 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-mage-vars-6.vitals-mage-vars-6.vitals-mage-vars-6.vitals-mage-vars-6.vitals-mage-vars-6.vitals-mage-vars-6 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.mage-vars-14.mage-vars-14.mage-vars-14.mage-vars-14.mage-vars-14.mage-vars-14 {
+    color: var(--text-primary);
+}
+
+.caster-vars-6.caster-vars-6.caster-vars-6.caster-vars-6.caster-vars-6.caster-vars-6 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-39.hp-vars-39.hp-vars-39.hp-vars-39.hp-vars-39.hp-vars-39 {
+    color: var(--vital-hp);
+}
+
+._60-60-vars-12._60-60-vars-12._60-60-vars-12._60-60-vars-12._60-60-vars-12._60-60-vars-12 {
+    color: var(--text-primary);
+}
+
+.fill-vars-130.fill-vars-130.fill-vars-130.fill-vars-130.fill-vars-130.fill-vars-130 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-37.mp-vars-37.mp-vars-37.mp-vars-37.mp-vars-37.mp-vars-37 {
+    color: var(--vital-mp);
+}
+
+._60-60-vars-13._60-60-vars-13._60-60-vars-13._60-60-vars-13._60-60-vars-13._60-60-vars-13 {
+    color: var(--text-primary);
+}
+
+.fill-vars-131.fill-vars-131.fill-vars-131.fill-vars-131.fill-vars-131.fill-vars-131 {
+    background-color: var(--vital-mp);
+}
+
+.vitals-healer-vars-6.vitals-healer-vars-6.vitals-healer-vars-6.vitals-healer-vars-6.vitals-healer-vars-6.vitals-healer-vars-6 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-default);
+}
+
+.healer-vars-15.healer-vars-15.healer-vars-15.healer-vars-15.healer-vars-15.healer-vars-15 {
+    color: var(--text-primary);
+}
+
+.support-vars-6.support-vars-6.support-vars-6.support-vars-6.support-vars-6.support-vars-6 {
+    color: var(--accent-gold-dim);
+}
+
+.hp-vars-40.hp-vars-40.hp-vars-40.hp-vars-40.hp-vars-40.hp-vars-40 {
+    color: var(--vital-hp);
+}
+
+._80-80-vars-6._80-80-vars-6._80-80-vars-6._80-80-vars-6._80-80-vars-6._80-80-vars-6 {
+    color: var(--text-primary);
+}
+
+.fill-vars-132.fill-vars-132.fill-vars-132.fill-vars-132.fill-vars-132.fill-vars-132 {
+    background-color: var(--vital-hp);
+}
+
+.mp-vars-38.mp-vars-38.mp-vars-38.mp-vars-38.mp-vars-38.mp-vars-38 {
+    color: var(--vital-mp);
+}
+
+._55-55-vars-6._55-55-vars-6._55-55-vars-6._55-55-vars-6._55-55-vars-6._55-55-vars-6 {
+    color: var(--text-primary);
+}
+
+.fill-vars-133.fill-vars-133.fill-vars-133.fill-vars-133.fill-vars-133.fill-vars-133 {
+    background-color: var(--vital-mp);
+}
+
+.squire-a-vars-9.squire-a-vars-9.squire-a-vars-9.squire-a-vars-9.squire-a-vars-9.squire-a-vars-9 {
+    color: var(--text-highlight);
+}
+
+.hp-60-60-shield-100-vars-4.hp-60-60-shield-100-vars-4.hp-60-60-shield-100-vars-4.hp-60-60-shield-100-vars-4.hp-60-60-shield-100-vars-4.hp-60-60-shield-100-vars-4 {
+    color: var(--text-body);
+}
+
+.weak-ho-fi-vars-14.weak-ho-fi-vars-14.weak-ho-fi-vars-14.weak-ho-fi-vars-14.weak-ho-fi-vars-14.weak-ho-fi-vars-14 {
+    color: var(--text-muted);
+}
+
+.burn-2-turns-vars-4.burn-2-turns-vars-4.burn-2-turns-vars-4.burn-2-turns-vars-4.burn-2-turns-vars-4.burn-2-turns-vars-4 {
+    color: var(--text-primary);
+}
+
+._6-fire-damage-at-turn-start-vars-4._6-fire-damage-at-turn-start-vars-4._6-fire-damage-at-turn-start-vars-4._6-fire-damage-at-turn-start-vars-4._6-fire-damage-at-turn-start-vars-4._6-fire-damage-at-turn-start-vars-4 {
+    color: var(--text-body);
+}
+
+.defense-down-1-turn-vars-4.defense-down-1-turn-vars-4.defense-down-1-turn-vars-4.defense-down-1-turn-vars-4.defense-down-1-turn-vars-4.defense-down-1-turn-vars-4 {
+    color: var(--text-primary);
+}
+
+.physical-defense-20-vars-4.physical-defense-20-vars-4.physical-defense-20-vars-4.physical-defense-20-vars-4.physical-defense-20-vars-4.physical-defense-20-vars-4 {
+    color: var(--text-body);
+}
+
+.enter-to-strike-esc-back-vars-4.enter-to-strike-esc-back-vars-4.enter-to-strike-esc-back-vars-4.enter-to-strike-esc-back-vars-4.enter-to-strike-esc-back-vars-4.enter-to-strike-esc-back-vars-4 {
+    color: var(--text-accent);
+}
+
+.scrim-vars-3.scrim-vars-3.scrim-vars-3.scrim-vars-3.scrim-vars-3.scrim-vars-3 {
+    background-color: var(--bg-void);
+}
+
+.analysis-modal-vars-3.analysis-modal-vars-3.analysis-modal-vars-3.analysis-modal-vars-3.analysis-modal-vars-3.analysis-modal-vars-3 {
+    background-color: var(--bg-panel);
+    border-color: var(--border-accent);
+}
+
+.title-vars-4.title-vars-4.title-vars-4.title-vars-4.title-vars-4.title-vars-4 {
+    color: var(--text-accent);
+}
+
+.cost-vars-4.cost-vars-4.cost-vars-4.cost-vars-4.cost-vars-4.cost-vars-4 {
+    color: var(--text-muted);
+}
+
+.unit-cycle-vars-3.unit-cycle-vars-3.unit-cycle-vars-3.unit-cycle-vars-3.unit-cycle-vars-3.unit-cycle-vars-3 {
+    background-color: var(--bg-void);
+    border-color: var(--border-line);
+}
+
+.unit-name-vars-3.unit-name-vars-3.unit-name-vars-3.unit-name-vars-3.unit-name-vars-3.unit-name-vars-3 {
+    color: var(--text-primary);
+}
+
+.identity-vars-2.identity-vars-2.identity-vars-2.identity-vars-2.identity-vars-2.identity-vars-2 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-line);
+}
+
+.hollow-squire-vars-2.hollow-squire-vars-2.hollow-squire-vars-2.hollow-squire-vars-2.hollow-squire-vars-2.hollow-squire-vars-2 {
+    color: var(--text-primary);
+}
+
+.phase-vars-2.phase-vars-2.phase-vars-2.phase-vars-2.phase-vars-2.phase-vars-2 {
+    color: var(--text-accent);
+}
+
+.type-undead-role-vanguard-vars-2.type-undead-role-vanguard-vars-2.type-undead-role-vanguard-vars-2.type-undead-role-vanguard-vars-2.type-undead-role-vanguard-vars-2.type-undead-role-vanguard-vars-2 {
+    color: var(--text-body);
+}
+
+.combat-readout-vars-2.combat-readout-vars-2.combat-readout-vars-2.combat-readout-vars-2.combat-readout-vars-2.combat-readout-vars-2 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-line);
+}
+
+.hp-vars-41.hp-vars-41.hp-vars-41.hp-vars-41.hp-vars-41.hp-vars-41 {
+    color: var(--text-muted);
+}
+
+._98-145-vars-2._98-145-vars-2._98-145-vars-2._98-145-vars-2._98-145-vars-2._98-145-vars-2 {
+    color: var(--text-primary);
+}
+
+.fill-vars-134.fill-vars-134.fill-vars-134.fill-vars-134.fill-vars-134.fill-vars-134 {
+    background-color: var(--vital-hp);
+}
+
+.break-shield-vars-2.break-shield-vars-2.break-shield-vars-2.break-shield-vars-2.break-shield-vars-2.break-shield-vars-2 {
+    color: var(--text-muted);
+}
+
+._4-6-vars-2._4-6-vars-2._4-6-vars-2._4-6-vars-2._4-6-vars-2._4-6-vars-2 {
+    color: var(--text-primary);
+}
+
+.fill-vars-135.fill-vars-135.fill-vars-135.fill-vars-135.fill-vars-135.fill-vars-135 {
+    background-color: var(--accent-gold);
+}
+
+.intent-vars-2.intent-vars-2.intent-vars-2.intent-vars-2.intent-vars-2.intent-vars-2 {
+    color: var(--text-muted);
+}
+
+.will-charge-rusty-cleave-vars-2.will-charge-rusty-cleave-vars-2.will-charge-rusty-cleave-vars-2.will-charge-rusty-cleave-vars-2.will-charge-rusty-cleave-vars-2.will-charge-rusty-cleave-vars-2 {
+    color: var(--status-error);
+}
+
+.active-effects-vars-2.active-effects-vars-2.active-effects-vars-2.active-effects-vars-2.active-effects-vars-2.active-effects-vars-2 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-line);
+}
+
+.elemental-affinities-vars-3.elemental-affinities-vars-3.elemental-affinities-vars-3.elemental-affinities-vars-3.elemental-affinities-vars-3.elemental-affinities-vars-3 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-line);
+}
+
+.revealed-on-first-hit-dot-tic-vars-2.revealed-on-first-hit-dot-tic-vars-2.revealed-on-first-hit-dot-tic-vars-2.revealed-on-first-hit-dot-tic-vars-2.revealed-on-first-hit-dot-tic-vars-2.revealed-on-first-hit-dot-tic-vars-2 {
+    color: var(--text-muted);
+}
+
+.status-resistance-vars-3.status-resistance-vars-3.status-resistance-vars-3.status-resistance-vars-3.status-resistance-vars-3.status-resistance-vars-3 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-line);
+}
+
+.status-explanation-vars-3.status-explanation-vars-3.status-explanation-vars-3.status-explanation-vars-3.status-explanation-vars-3.status-explanation-vars-3 {
+    background-color: var(--bg-raised);
+    border-color: var(--border-focus);
+}
+
+.status-name-vars-3.status-name-vars-3.status-name-vars-3.status-name-vars-3.status-name-vars-3.status-name-vars-3 {
+    color: var(--text-primary);
+}
+
+.description-vars-3.description-vars-3.description-vars-3.description-vars-3.description-vars-3.description-vars-3 {
+    color: var(--text-body);
+}
+
+.state-vars-3.state-vars-3.state-vars-3.state-vars-3.state-vars-3.state-vars-3 {
+    background-color: var(--bg-void);
+}
+
+.active-vars-4.active-vars-4.active-vars-4.active-vars-4.active-vars-4.active-vars-4 {
+    color: var(--text-accent);
+}
+
+.yes-1t-left-vars.yes-1t-left-vars.yes-1t-left-vars.yes-1t-left-vars.yes-1t-left-vars.yes-1t-left-vars {
+    color: var(--text-primary);
+}
+
+.resist-vars-3.resist-vars-3.resist-vars-3.resist-vars-3.resist-vars-3.resist-vars-3 {
+    color: var(--text-accent);
+}
+
+.not-a-resisted-status-vars.not-a-resisted-status-vars.not-a-resisted-status-vars.not-a-resisted-status-vars.not-a-resisted-status-vars.not-a-resisted-status-vars {
+    color: var(--text-muted);
+}
+
+.panel-default__i-52 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.panel-default__i-53 > .panel-default.panel-default.panel-default.panel-default.panel-default.panel-default.panel-default {
+    width: 100%;
+    height: 100%;
+}
+
+.button-slab-2__i-7 > .button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2.button-slab-2 {
+    width: 100%;
+}
+
+.panel-raised__i-6 > .panel-raised.panel-raised.panel-raised.panel-raised.panel-raised.panel-raised.panel-raised {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-52 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.section-header__i-53 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.section-header__i-54 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-effect-badge-yes__i .analysis-effect-badge-yes__e > .icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-effect-badge-no__i-4 .analysis-effect-badge-no__e > .icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-55 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-affinity-row-normal__i-9 > .analysis-affinity-row-normal.analysis-affinity-row-normal.analysis-affinity-row-normal.analysis-affinity-row-normal.analysis-affinity-row-normal.analysis-affinity-row-normal.analysis-affinity-row-normal {
+    width: auto;
+}
+
+.analysis-affinity-row-normal__i-9 .analysis-affinity-row-normal__e > .icon-element-physical.icon-element-physical.icon-element-physical.icon-element-physical.icon-element-physical.icon-element-physical.icon-element-physical {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-weak__i-3 > .analysis-affinity-row-weak.analysis-affinity-row-weak.analysis-affinity-row-weak.analysis-affinity-row-weak.analysis-affinity-row-weak.analysis-affinity-row-weak.analysis-affinity-row-weak {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-7 > .analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-7 .analysis-affinity-row-unknown__e > .icon-element-ice.icon-element-ice.icon-element-ice.icon-element-ice.icon-element-ice.icon-element-ice.icon-element-ice {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-7 .analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4 {
+    display: none;
+}
+
+.analysis-affinity-row-unknown__i-8 > .analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-8 .analysis-affinity-row-unknown__e > .icon-element-lightning.icon-element-lightning.icon-element-lightning.icon-element-lightning.icon-element-lightning.icon-element-lightning.icon-element-lightning {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-8 .analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4 {
+    display: none;
+}
+
+.analysis-affinity-row-unknown__i-9 > .analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-9 .analysis-affinity-row-unknown__e > .icon-element-holy.icon-element-holy.icon-element-holy.icon-element-holy.icon-element-holy.icon-element-holy.icon-element-holy {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-9 .analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4 {
+    display: none;
+}
+
+.analysis-affinity-row-resist__i-3 > .analysis-affinity-row-resist.analysis-affinity-row-resist.analysis-affinity-row-resist.analysis-affinity-row-resist.analysis-affinity-row-resist.analysis-affinity-row-resist.analysis-affinity-row-resist {
+    width: auto;
+}
+
+.analysis-affinity-row-resist__i-3 .analysis-affinity-row-resist__e > .icon-element-dark.icon-element-dark.icon-element-dark.icon-element-dark.icon-element-dark.icon-element-dark.icon-element-dark {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-10 > .analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-10 .analysis-affinity-row-unknown__e > .icon-element-earth.icon-element-earth.icon-element-earth.icon-element-earth.icon-element-earth.icon-element-earth.icon-element-earth {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-10 .analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4 {
+    display: none;
+}
+
+.analysis-affinity-row-unknown__i-11 > .analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-11 .analysis-affinity-row-unknown__e > .icon-element-wind.icon-element-wind.icon-element-wind.icon-element-wind.icon-element-wind.icon-element-wind.icon-element-wind {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-11 .analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4 {
+    display: none;
+}
+
+.analysis-affinity-row-unknown__i-12 > .analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown.analysis-affinity-row-unknown {
+    width: auto;
+}
+
+.analysis-affinity-row-unknown__i-12 .analysis-affinity-row-unknown__e > .icon-element-water.icon-element-water.icon-element-water.icon-element-water.icon-element-water.icon-element-water.icon-element-water {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-affinity-row-unknown__i-12 .analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4.analysis-affinity-row-unknown__e-4 {
+    display: none;
+}
+
+.section-header__i-56 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-resist-row-normal-no__i-11 > .analysis-resist-row-normal-no.analysis-resist-row-normal-no.analysis-resist-row-normal-no.analysis-resist-row-normal-no.analysis-resist-row-normal-no.analysis-resist-row-normal-no.analysis-resist-row-normal-no {
+    width: auto;
+}
+
+.analysis-resist-row-vulnerable-no__i-3 > .analysis-resist-row-vulnerable-no.analysis-resist-row-vulnerable-no.analysis-resist-row-vulnerable-no.analysis-resist-row-vulnerable-no.analysis-resist-row-vulnerable-no.analysis-resist-row-vulnerable-no.analysis-resist-row-vulnerable-no {
+    width: auto;
+}
+
+.analysis-resist-row-vulnerable-no__i-3 .analysis-resist-row-vulnerable-no__e-2 > .icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-11 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-11 .analysis-resist-row-unknown-no__e-2 > .icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-12 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-12 .analysis-resist-row-unknown-no__e-2 > .icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-13 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-13 .analysis-resist-row-unknown-no__e-2 > .icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-14 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-14 .analysis-resist-row-unknown-no__e-2 > .icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-15 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-15 .analysis-resist-row-unknown-no__e-2 > .icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-16 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-16 .analysis-resist-row-unknown-no__e-2 > .icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-17 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-17 .analysis-resist-row-unknown-no__e-2 > .icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-resistant-no__i-3 > .analysis-resist-row-resistant-no.analysis-resist-row-resistant-no.analysis-resist-row-resistant-no.analysis-resist-row-resistant-no.analysis-resist-row-resistant-no.analysis-resist-row-resistant-no.analysis-resist-row-resistant-no {
+    width: auto;
+}
+
+.analysis-resist-row-resistant-no__i-3 .analysis-resist-row-resistant-no__e-2 > .icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-18 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-18 .analysis-resist-row-unknown-no__e-2 > .icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-19 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-19 .analysis-resist-row-unknown-no__e-2 > .icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-resist-row-unknown-no__i-20 > .analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no.analysis-resist-row-unknown-no {
+    width: auto;
+}
+
+.analysis-resist-row-unknown-no__i-20 .analysis-resist-row-unknown-no__e-2 > .icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-57 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.icon-status-defensedown__i > .icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown {
+    width: 100%;
+    height: 100%;
+}
+

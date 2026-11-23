@@ -1,0 +1,11 @@
+.icon-element-water {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-water__e.icon-element-water__e.icon-element-water__e.icon-element-water__e.icon-element-water__e.icon-element-water__e.icon-element-water__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1n2d1r914vezrv078ebz60jirmol-355.png?fileID=2800000&guid=c0d8106f1199dde4a837f825c7cf708e&type=3#img-1n2d1r914vezrv078ebz60jirmol-355");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

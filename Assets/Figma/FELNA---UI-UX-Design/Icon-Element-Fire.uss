@@ -1,0 +1,11 @@
+.icon-element-fire {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-fire__e.icon-element-fire__e.icon-element-fire__e.icon-element-fire__e.icon-element-fire__e.icon-element-fire__e.icon-element-fire__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1itk3620xboejb1xwb8be01e5c9s-428.png?fileID=2800000&guid=ea827de4d4366a344aff016a60990d15&type=3#img-1itk3620xboejb1xwb8be01e5c9s-428");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

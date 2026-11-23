@@ -1,0 +1,11 @@
+.icon-status-attackdown {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-attackdown__e.icon-status-attackdown__e.icon-status-attackdown__e.icon-status-attackdown__e.icon-status-attackdown__e.icon-status-attackdown__e.icon-status-attackdown__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1o9mkal1fdjqbk00q796t091fj4q-503.png?fileID=2800000&guid=248d49c5041b9834991bd42799075151&type=3#img-1o9mkal1fdjqbk00q796t091fj4q-503");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

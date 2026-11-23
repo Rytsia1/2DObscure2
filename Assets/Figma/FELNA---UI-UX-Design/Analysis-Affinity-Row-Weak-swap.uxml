@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Affinity-Row-Weak.uss" />
+    <Template name="Icon-Element-Ice" src="Icon-Element-Ice.uxml" />
+    <ui:VisualElement class="analysis-affinity-row-weak">
+        <ui:Instance template="Icon-Element-Ice" class="analysis-affinity-row-weak__e" />
+        <ui:Label name="text-0" text="FIR" class="unity-label analysis-affinity-row-weak__e-2" />
+        <ui:Label name="text-1" text="FIRE" class="unity-label analysis-affinity-row-weak__e-3" />
+        <ui:Label name="text-2" text="×1.5 DMG" class="unity-label analysis-affinity-row-weak__e-4" />
+        <ui:VisualElement class="analysis-affinity-row-weak__e-5">
+            <ui:Label name="text-3" text="WEAK" class="unity-label analysis-affinity-row-weak__e-6" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

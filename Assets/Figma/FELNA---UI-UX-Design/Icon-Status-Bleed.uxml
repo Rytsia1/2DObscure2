@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Status-Bleed.uss" />
+    <ui:VisualElement class="icon-status-bleed icon-status-bleed__e" />
+</ui:UXML>

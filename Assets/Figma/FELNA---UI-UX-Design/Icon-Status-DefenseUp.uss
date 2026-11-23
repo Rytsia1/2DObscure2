@@ -1,0 +1,11 @@
+.icon-status-defenseup {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-defenseup__e.icon-status-defenseup__e.icon-status-defenseup__e.icon-status-defenseup__e.icon-status-defenseup__e.icon-status-defenseup__e.icon-status-defenseup__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1kd3g140qpjscf0bth99n1rq2fgg-500.png?fileID=2800000&guid=97b960a776f664d489a8b6a515611269&type=3#img-1kd3g140qpjscf0bth99n1rq2fgg-500");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

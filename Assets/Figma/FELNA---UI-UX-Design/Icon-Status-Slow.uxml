@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Icon-Status-Slow.uss" />
+    <ui:VisualElement class="icon-status-slow icon-status-slow__e" />
+</ui:UXML>

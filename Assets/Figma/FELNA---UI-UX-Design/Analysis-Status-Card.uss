@@ -1,0 +1,123 @@
+.analysis-status-card {
+    display: flex;
+    width: 380px;
+    padding: 12px 14px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    border-width: 2px;
+    background-color: var(--bg-raised);
+    border-color: var(--border-line);
+}
+
+.analysis-status-card__e.analysis-status-card__e.analysis-status-card__e.analysis-status-card__e.analysis-status-card__e.analysis-status-card__e.analysis-status-card__e {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    align-self: stretch;
+    overflow: hidden;
+    flex-direction: row;
+}
+
+.analysis-status-card__e-2.analysis-status-card__e-2.analysis-status-card__e-2.analysis-status-card__e-2.analysis-status-card__e-2.analysis-status-card__e-2.analysis-status-card__e-2 {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+}
+
+.analysis-status-card__e-3.analysis-status-card__e-3.analysis-status-card__e-3.analysis-status-card__e-3.analysis-status-card__e-3.analysis-status-card__e-3.analysis-status-card__e-3 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 0px;
+    overflow: hidden;
+}
+
+.analysis-status-card__e-4.analysis-status-card__e-4.analysis-status-card__e-4.analysis-status-card__e-4.analysis-status-card__e-4.analysis-status-card__e-4.analysis-status-card__e-4 {
+    flex-shrink: 0;
+    font-size: 24px;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.analysis-status-card__e-5.analysis-status-card__e-5.analysis-status-card__e-5.analysis-status-card__e-5.analysis-status-card__e-5.analysis-status-card__e-5.analysis-status-card__e-5 {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--text-accent);
+}
+
+.analysis-status-card__e-6.analysis-status-card__e-6.analysis-status-card__e-6.analysis-status-card__e-6.analysis-status-card__e-6.analysis-status-card__e-6.analysis-status-card__e-6 {
+    flex-shrink: 0;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.analysis-status-card__e-7.analysis-status-card__e-7.analysis-status-card__e-7.analysis-status-card__e-7.analysis-status-card__e-7.analysis-status-card__e-7.analysis-status-card__e-7 {
+    flex-shrink: 0;
+    align-self: stretch;
+    font-size: 14px;
+    letter-spacing: 0.56px;
+    white-space: normal;
+    color: var(--text-body);
+}
+
+.analysis-status-card__e-8.analysis-status-card__e-8.analysis-status-card__e-8.analysis-status-card__e-8.analysis-status-card__e-8.analysis-status-card__e-8.analysis-status-card__e-8 {
+    display: flex;
+    padding: 6px 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    flex-shrink: 0;
+    align-self: stretch;
+    overflow: hidden;
+    background-color: var(--bg-void);
+}
+
+.analysis-status-card__e-9.analysis-status-card__e-9.analysis-status-card__e-9.analysis-status-card__e-9.analysis-status-card__e-9.analysis-status-card__e-9.analysis-status-card__e-9 {
+    flex-shrink: 0;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: nowrap;
+    color: var(--text-accent);
+}
+
+.analysis-status-card__e-10.analysis-status-card__e-10.analysis-status-card__e-10.analysis-status-card__e-10.analysis-status-card__e-10.analysis-status-card__e-10.analysis-status-card__e-10 {
+    flex-shrink: 0;
+    align-self: stretch;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: normal;
+    color: var(--text-body);
+}
+
+.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11 {
+    display: none;
+    width: 348px;
+    padding: 4px 8px;
+    align-items: flex-start;
+    flex-shrink: 0;
+    border-width: 2px;
+    overflow: hidden;
+    flex-direction: row;
+    border-color: var(--status-warn);
+}
+
+.analysis-status-card__e-12.analysis-status-card__e-12.analysis-status-card__e-12.analysis-status-card__e-12.analysis-status-card__e-12.analysis-status-card__e-12.analysis-status-card__e-12 {
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: 0px;
+    font-size: 12px;
+    letter-spacing: 0.48px;
+    white-space: normal;
+    color: var(--status-warn);
+}
+
+.analysis-status-card__e-2 > .icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn.icon-status-burn {
+    width: 100%;
+    height: 100%;
+}
+

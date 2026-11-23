@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <Style src="tokens.uss" />
+    <Style src="Analysis-Effect-Badge-Yes.uss" />
+    <Template name="Icon-Status-DefenseDown" src="Icon-Status-DefenseDown.uxml" />
+    <ui:VisualElement class="analysis-effect-badge-yes">
+        <ui:Instance template="Icon-Status-DefenseDown" class="analysis-effect-badge-yes__e" />
+        <ui:Label name="text-0" text="BURN" class="unity-label analysis-effect-badge-yes__e-2" />
+        <ui:Label name="text-1" text="2T" class="unity-label analysis-effect-badge-yes__e-3" />
+    </ui:VisualElement>
+</ui:UXML>

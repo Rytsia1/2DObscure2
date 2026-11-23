@@ -1,0 +1,11 @@
+.icon-element-lightning {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-element-lightning__e.icon-element-lightning__e.icon-element-lightning__e.icon-element-lightning__e.icon-element-lightning__e.icon-element-lightning__e.icon-element-lightning__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-19svvrs0dysx3t0m8ajzm0kgex7u-308.png?fileID=2800000&guid=6e160bd013ff51d4aae39fd1f46d77e7&type=3#img-19svvrs0dysx3t0m8ajzm0kgex7u-308");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

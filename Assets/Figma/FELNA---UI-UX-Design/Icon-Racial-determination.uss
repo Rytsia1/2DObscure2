@@ -1,0 +1,11 @@
+.icon-racial-determination {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-racial-determination__e.icon-racial-determination__e.icon-racial-determination__e.icon-racial-determination__e.icon-racial-determination__e.icon-racial-determination__e.icon-racial-determination__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-1v4c1qh134i7os1l1v561032w7mn-503.png?fileID=2800000&guid=cbd8dafa157bad34abe614f588ac8aee&type=3#img-1v4c1qh134i7os1l1v561032w7mn-503");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

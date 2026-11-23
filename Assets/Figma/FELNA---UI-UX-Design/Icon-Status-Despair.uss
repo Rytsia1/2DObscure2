@@ -1,0 +1,11 @@
+.icon-status-despair {
+    width: 32px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.icon-status-despair__e.icon-status-despair__e.icon-status-despair__e.icon-status-despair__e.icon-status-despair__e.icon-status-despair__e.icon-status-despair__e {
+    background-image: url("project://database/Assets/Figma/FELNA---UI-UX-Design/images/img-0anphbk0jviimb0vo7rt9031ova3-485.png?fileID=2800000&guid=7fe8213da63b404459fd009add6ed4c4&type=3#img-0anphbk0jviimb0vo7rt9031ova3-485");
+    -unity-background-scale-mode: scale-to-fit;
+}
+

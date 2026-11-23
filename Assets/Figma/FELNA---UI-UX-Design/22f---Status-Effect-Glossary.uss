@@ -1,0 +1,361 @@
+._22f-status-effect-glossary {
+    width: 1280px;
+    flex-shrink: 0;
+}
+
+.unity-ui-document__root > ._22f-status-effect-glossary {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    width: auto;
+}
+
+._22f-status-effect-glossary-vars._22f-status-effect-glossary-vars._22f-status-effect-glossary-vars._22f-status-effect-glossary-vars._22f-status-effect-glossary-vars._22f-status-effect-glossary-vars {
+    background-color: var(--bg-ground);
+}
+
+.title-vars-3.title-vars-3.title-vars-3.title-vars-3.title-vars-3.title-vars-3 {
+    color: var(--text-accent);
+}
+
+.reference-for-the-analysis-exp-vars.reference-for-the-analysis-exp-vars.reference-for-the-analysis-exp-vars.reference-for-the-analysis-exp-vars.reference-for-the-analysis-exp-vars.reference-for-the-analysis-exp-vars {
+    color: var(--text-body);
+}
+
+.shared-rules-vars.shared-rules-vars.shared-rules-vars.shared-rules-vars.shared-rules-vars.shared-rules-vars {
+    background-color: var(--bg-panel);
+    border-color: var(--border-accent);
+}
+
+.duration-vars.duration-vars.duration-vars.duration-vars.duration-vars.duration-vars {
+    color: var(--text-accent);
+}
+
+.counts-the-bearer-s-turns-1-vars.counts-the-bearer-s-turns-1-vars.counts-the-bearer-s-turns-1-vars.counts-the-bearer-s-turns-1-vars.counts-the-bearer-s-turns-1-vars.counts-the-bearer-s-turns-1-vars {
+    color: var(--text-body);
+}
+
+.stacking-vars.stacking-vars.stacking-vars.stacking-vars.stacking-vars.stacking-vars {
+    color: var(--text-accent);
+}
+
+.independent-each-application-vars.independent-each-application-vars.independent-each-application-vars.independent-each-application-vars.independent-each-application-vars.independent-each-application-vars {
+    color: var(--text-body);
+}
+
+.control-vars.control-vars.control-vars.control-vars.control-vars.control-vars {
+    color: var(--text-accent);
+}
+
+.stun-sleep-silence-madness-vars.stun-sleep-silence-madness-vars.stun-sleep-silence-madness-vars.stun-sleep-silence-madness-vars.stun-sleep-silence-madness-vars.stun-sleep-silence-madness-vars {
+    color: var(--text-body);
+}
+
+.apply-chance-vars.apply-chance-vars.apply-chance-vars.apply-chance-vars.apply-chance-vars.apply-chance-vars {
+    color: var(--text-accent);
+}
+
+.p-base-1-res-res-un-vars.p-base-1-res-res-un-vars.p-base-1-res-res-un-vars.p-base-1-res-res-un-vars.p-base-1-res-res-un-vars.p-base-1-res-res-un-vars {
+    color: var(--text-body);
+}
+
+.design-note-code-gaps-vars.design-note-code-gaps-vars.design-note-code-gaps-vars.design-note-code-gaps-vars.design-note-code-gaps-vars.design-note-code-gaps-vars {
+    border-color: var(--status-warn);
+}
+
+.design-note-vars.design-note-vars.design-note-vars.design-note-vars.design-note-vars.design-note-vars {
+    color: var(--status-warn);
+}
+
+.explanations-show-the-intended-vars.explanations-show-the-intended-vars.explanations-show-the-intended-vars.explanations-show-the-intended-vars.explanations-show-the-intended-vars.explanations-show-the-intended-vars {
+    color: var(--text-body);
+}
+
+.section-header__i-47 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-status-card__i > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-2 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-2 .analysis-status-card__e-2 > .icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison.icon-status-poison {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-3 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-3 .analysis-status-card__e-2 > .icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed.icon-status-bleed {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-48 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-status-card__i-4 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-4 .analysis-status-card__e-2 > .icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun.icon-status-stun {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-5 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-5 .analysis-status-card__e-2 > .icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze.icon-status-freeze {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-5 .analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11 {
+    width: initial;
+    display: flex;
+    align-self: stretch;
+}
+
+.analysis-status-card__i-6 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-6 .analysis-status-card__e-2 > .icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock.icon-status-shock {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-49 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-status-card__i-7 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-7 .analysis-status-card__e-2 > .icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep.icon-status-sleep {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-8 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-8 .analysis-status-card__e-2 > .icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence.icon-status-silence {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-9 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-9 .analysis-status-card__e-2 > .icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear.icon-status-fear {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-10 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-10 .analysis-status-card__e-2 > .icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair.icon-status-despair {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-10 .analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11 {
+    width: initial;
+    display: flex;
+    align-self: stretch;
+}
+
+.analysis-status-card__i-11 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-11 .analysis-status-card__e-2 > .icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion.icon-status-confusion {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-12 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-12 .analysis-status-card__e-2 > .icon-status-charm.icon-status-charm.icon-status-charm.icon-status-charm.icon-status-charm.icon-status-charm.icon-status-charm {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-13 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-13 .analysis-status-card__e-2 > .icon-status-madness.icon-status-madness.icon-status-madness.icon-status-madness.icon-status-madness.icon-status-madness.icon-status-madness {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-14 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-14 .analysis-status-card__e-2 > .icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol.icon-status-mindcontrol {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-14 .analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11 {
+    width: initial;
+    display: flex;
+    align-self: stretch;
+}
+
+.section-header__i-50 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-status-card__i-15 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-15 .analysis-status-card__e-2 > .icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse.icon-status-curse {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-15 .analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11.analysis-status-card__e-11 {
+    width: initial;
+    display: flex;
+    align-self: stretch;
+}
+
+.analysis-status-card__i-16 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-16 .analysis-status-card__e-2 > .icon-status-resistancedown.icon-status-resistancedown.icon-status-resistancedown.icon-status-resistancedown.icon-status-resistancedown.icon-status-resistancedown.icon-status-resistancedown {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-17 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-17 .analysis-status-card__e-2 > .icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown.icon-status-defensedown {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-18 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-18 .analysis-status-card__e-2 > .icon-status-magicdefensedown.icon-status-magicdefensedown.icon-status-magicdefensedown.icon-status-magicdefensedown.icon-status-magicdefensedown.icon-status-magicdefensedown.icon-status-magicdefensedown {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-19 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-19 .analysis-status-card__e-2 > .icon-status-attackdown.icon-status-attackdown.icon-status-attackdown.icon-status-attackdown.icon-status-attackdown.icon-status-attackdown.icon-status-attackdown {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-20 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-20 .analysis-status-card__e-2 > .icon-status-slow.icon-status-slow.icon-status-slow.icon-status-slow.icon-status-slow.icon-status-slow.icon-status-slow {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-21 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-21 .analysis-status-card__e-2 > .icon-status-exhausted.icon-status-exhausted.icon-status-exhausted.icon-status-exhausted.icon-status-exhausted.icon-status-exhausted.icon-status-exhausted {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-22 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-22 .analysis-status-card__e-2 > .icon-status-broken.icon-status-broken.icon-status-broken.icon-status-broken.icon-status-broken.icon-status-broken.icon-status-broken {
+    width: 100%;
+    height: 100%;
+}
+
+.section-header__i-51 > .section-header.section-header.section-header.section-header.section-header.section-header.section-header {
+    width: auto;
+    height: 100%;
+}
+
+.analysis-status-card__i-23 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-23 .analysis-status-card__e-2 > .icon-status-defenseup.icon-status-defenseup.icon-status-defenseup.icon-status-defenseup.icon-status-defenseup.icon-status-defenseup.icon-status-defenseup {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-24 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-24 .analysis-status-card__e-2 > .icon-status-magicdefenseup.icon-status-magicdefenseup.icon-status-magicdefenseup.icon-status-magicdefenseup.icon-status-magicdefenseup.icon-status-magicdefenseup.icon-status-magicdefenseup {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-25 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-25 .analysis-status-card__e-2 > .icon-status-attackup.icon-status-attackup.icon-status-attackup.icon-status-attackup.icon-status-attackup.icon-status-attackup.icon-status-attackup {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-26 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-26 .analysis-status-card__e-2 > .icon-status-evasion.icon-status-evasion.icon-status-evasion.icon-status-evasion.icon-status-evasion.icon-status-evasion.icon-status-evasion {
+    width: 100%;
+    height: 100%;
+}
+
+.analysis-status-card__i-27 > .analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card.analysis-status-card {
+    width: 100%;
+}
+
+.analysis-status-card__i-27 .analysis-status-card__e-2 > .icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian.icon-status-guardian {
+    width: 100%;
+    height: 100%;
+}
+
