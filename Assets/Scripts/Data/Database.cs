@@ -68,7 +68,7 @@ namespace Obscure
 
 
 
-        // ---- 1. Ability Score Definitions (FELNA-SYS-ATTR-001 FINAL) ----
+        // ---- 1. Ability Score Definitions (FELNA-SYS-ATTR-002 v2.0 FINAL) ----
 
         public static readonly Dictionary<Ability, AbilityScoreDef> AbilityDefs = new Dictionary<Ability, AbilityScoreDef>
 
@@ -80,7 +80,7 @@ namespace Obscure
 
                 abilityId = "STR", ability = Ability.STR, displayName = "Strength",
 
-                description = "Physical damage scaling on skills that explicitly scale with Raw STR.",
+                description = "Physical damage (Raw STR); Primary: Physical Defense, Armor Pen, Block Power, Universal Break Power; Secondary: DR, Stagger Res, Physical Crit, Counter Power.",
 
                 baseScore = 8, minimumScore = 8, maximumScore = 20, pointBuyEnabled = true
 
@@ -92,7 +92,7 @@ namespace Obscure
 
                 abilityId = "DEX", ability = Ability.DEX, displayName = "Dexterity",
 
-                description = "Ranged accuracy (+2%/mod), evasion (+2%/mod), and timing QTE window (+3%/mod).",
+                description = "Ranged accuracy (+2%/mod), evasion (+2%/mod), QTE window (+3%/mod); Primary: Initiative, Action Speed, Physical Crit, Counter Power, QTE Stability; Secondary: Armor Pen, Universal Break Power.",
 
                 baseScore = 8, minimumScore = 8, maximumScore = 20, pointBuyEnabled = true
 
@@ -104,7 +104,7 @@ namespace Obscure
 
                 abilityId = "VIT", ability = Ability.VIT, displayName = "Vitality",
 
-                description = "Maximum HP (+4% of Base HP per VIT modifier).",
+                description = "Max HP (+4% Base HP/mod); Primary: Damage Reduction, Status Resistance, Stagger Resistance; Secondary: Physical Defense, Block Power.",
 
                 baseScore = 8, minimumScore = 8, maximumScore = 20, pointBuyEnabled = true
 
@@ -116,7 +116,7 @@ namespace Obscure
 
                 abilityId = "INT", ability = Ability.INT, displayName = "Intelligence",
 
-                description = "Elemental damage scaling (Raw INT) and Maximum MP (+4% of Base MP per INT modifier).",
+                description = "Elemental damage (Raw INT), Max MP (+4% Base MP/mod); Primary: Magic Defense, Magic Penetration; Secondary: Initiative, Action Speed, Debuff Effectiveness.",
 
                 baseScore = 8, minimumScore = 8, maximumScore = 20, pointBuyEnabled = true
 
@@ -128,7 +128,7 @@ namespace Obscure
 
                 abilityId = "WIS", ability = Ability.WIS, displayName = "Wisdom",
 
-                description = "Healing power (+4% of Base Healing per WIS modifier).",
+                description = "Healing power (+4% Base Healing/mod); Primary: Shield Power; Secondary: Status Resistance, Magic Defense, Magic Penetration, QTE Stability, Buff Effectiveness, Support Skill Power.",
 
                 baseScore = 8, minimumScore = 8, maximumScore = 20, pointBuyEnabled = true
 
@@ -140,7 +140,7 @@ namespace Obscure
 
                 abilityId = "CHA", ability = Ability.CHA, displayName = "Charisma",
 
-                description = "Buff effectiveness (+4%/mod on CHA-scalable positive buffs), social checks, and class support.",
+                description = "Social checks; Primary: Buff Effectiveness, Debuff Effectiveness, Support Skill Power; Secondary: Shield Power.",
 
                 baseScore = 8, minimumScore = 8, maximumScore = 20, pointBuyEnabled = true
 
@@ -150,7 +150,7 @@ namespace Obscure
 
 
 
-        // ---- 2. Formula Configurations (FELNA-SYS-ATTR-001 FINAL) ----
+        // ---- 2. Formula Configurations (FELNA-SYS-ATTR-002 v2.0 FINAL) ----
 
         public static readonly Dictionary<string, FormulaDef> Formulas = Index(new[]
 
@@ -160,7 +160,7 @@ namespace Obscure
 
             new FormulaDef { formulaId = "max_mp_v1", inputs = new[] { "baseMp", "INTModifier" }, calculation = "floor(BaseMP * (1 + 0.04 * INTMod))", scalingAbilities = new[] { Ability.INT } },
 
-            new FormulaDef { formulaId = "max_shield_v1", inputs = new[] { "baseShield" }, calculation = "BaseShield + Separate Shield Modifiers" },
+            new FormulaDef { formulaId = "max_shield_v1", inputs = new[] { "baseShield", "WISModifier", "CHAModifier" }, calculation = "floor(BaseShield * (1 + 0.035 * WISMod + 0.015 * CHAMod))", scalingAbilities = new[] { Ability.WIS, Ability.CHA } },
 
             new FormulaDef { formulaId = "physical_damage_v1", inputs = new[] { "skillPower", "STR", "scaling" }, calculation = "SkillPower + (STR * Scaling)", scalingAbilities = new[] { Ability.STR } },
 
@@ -170,41 +170,41 @@ namespace Obscure
 
             new FormulaDef { formulaId = "healing_v1", inputs = new[] { "baseHealing", "WISModifier" }, calculation = "floor(BaseHealing * (1 + 0.04 * WISMod))", scalingAbilities = new[] { Ability.WIS } },
 
-            new FormulaDef { formulaId = "support_v1", inputs = new[] { "CHAModifier" }, calculation = "4% * CHAMod (FinalBuff = Base * (1 + Bonus))", scalingAbilities = new[] { Ability.CHA } },
+            new FormulaDef { formulaId = "support_v1", inputs = new[] { "baseSupport", "CHAModifier", "WISModifier" }, calculation = "BaseSupport + floor(3.0 * CHAMod + 1.5 * WISMod)", scalingAbilities = new[] { Ability.CHA, Ability.WIS } },
 
-            new FormulaDef { formulaId = "crit_chance_v1", inputs = new[] { "baseCrit" }, calculation = "BaseCrit + Bonuses (Cap 95%)" },
+            new FormulaDef { formulaId = "crit_chance_v1", inputs = new[] { "baseCrit", "DEXModifier", "STRModifier" }, calculation = "BaseCrit + floor(1.5 * DEXMod + 0.5 * STRMod) (Physical Only, Cap 95%)", scalingAbilities = new[] { Ability.DEX, Ability.STR } },
 
             new FormulaDef { formulaId = "crit_damage_v1", inputs = new[] { "baseCritDamage" }, calculation = "BaseCritDamage + Bonuses (Cap 300%)" },
 
-            new FormulaDef { formulaId = "armor_pen_v1", inputs = new[] { "baseArmorPen" }, calculation = "BasePen + Bonuses" },
+            new FormulaDef { formulaId = "armor_pen_v1", inputs = new[] { "baseArmorPen", "STRModifier", "DEXModifier" }, calculation = "BasePen + floor(1.2 * STRMod + 0.6 * DEXMod)", scalingAbilities = new[] { Ability.STR, Ability.DEX } },
 
-            new FormulaDef { formulaId = "magic_pen_v1", inputs = new[] { "baseMagicPen" }, calculation = "BasePen + Bonuses" },
+            new FormulaDef { formulaId = "magic_pen_v1", inputs = new[] { "baseMagicPen", "INTModifier", "WISModifier" }, calculation = "BasePen + floor(1.2 * INTMod + 0.6 * WISMod)", scalingAbilities = new[] { Ability.INT, Ability.WIS } },
 
-            new FormulaDef { formulaId = "phys_def_v1", inputs = new[] { "baseDef", "armor" }, calculation = "BaseDef + Armor" },
+            new FormulaDef { formulaId = "phys_def_v1", inputs = new[] { "baseDef", "STRModifier", "VITModifier", "armor" }, calculation = "BaseDef + floor(1.5 * STRMod + 0.75 * VITMod) + Armor", scalingAbilities = new[] { Ability.STR, Ability.VIT } },
 
-            new FormulaDef { formulaId = "magic_def_v1", inputs = new[] { "baseMagDef", "equip" }, calculation = "BaseMagDef + Equip" },
+            new FormulaDef { formulaId = "magic_def_v1", inputs = new[] { "baseMagDef", "INTModifier", "WISModifier", "equip" }, calculation = "BaseMagDef + floor(1.5 * INTMod + 0.75 * WISMod) + Equip", scalingAbilities = new[] { Ability.INT, Ability.WIS } },
 
             new FormulaDef { formulaId = "evasion_v1", inputs = new[] { "baseEvasion", "DEXModifier" }, calculation = "BaseEva + (2% * DEXMod)", scalingAbilities = new[] { Ability.DEX } },
 
-            new FormulaDef { formulaId = "block_power_v1", inputs = new[] { "baseBlock", "shield" }, calculation = "BaseBlock + Shield + Passives (Cap 90%)" },
+            new FormulaDef { formulaId = "block_power_v1", inputs = new[] { "baseBlock", "STRModifier", "VITModifier", "shield" }, calculation = "BaseBlock + floor(2.0 * STRMod + 1.0 * VITMod) + Shield (Cap 90%)", scalingAbilities = new[] { Ability.STR, Ability.VIT } },
 
-            new FormulaDef { formulaId = "status_res_v1", inputs = new[] { "baseRes", "equip", "buffs" }, calculation = "min(BaseRes + Bonuses, 75%)" },
+            new FormulaDef { formulaId = "status_res_v1", inputs = new[] { "baseRes", "VITModifier", "WISModifier", "equip" }, calculation = "min(BaseRes + floor(2.0 * VITMod + 1.0 * WISMod) + Bonuses, 75%)", scalingAbilities = new[] { Ability.VIT, Ability.WIS } },
 
-            new FormulaDef { formulaId = "stagger_res_v1", inputs = new[] { "baseStaggerRes", "equip" }, calculation = "BaseStagger + Bonuses" },
+            new FormulaDef { formulaId = "stagger_res_v1", inputs = new[] { "baseStaggerRes", "VITModifier", "STRModifier", "equip" }, calculation = "BaseStagger + floor(2.0 * VITMod + 1.0 * STRMod) + Bonuses", scalingAbilities = new[] { Ability.VIT, Ability.STR } },
 
-            new FormulaDef { formulaId = "initiative_v1", inputs = new[] { "baseInitiative", "bonuses" }, calculation = "BaseSPD + Bonuses" },
+            new FormulaDef { formulaId = "initiative_v1", inputs = new[] { "baseInitiative", "DEXModifier", "INTModifier" }, calculation = "BaseSPD + floor(1.0 * DEXMod + 0.5 * INTMod) + Bonuses", scalingAbilities = new[] { Ability.DEX, Ability.INT } },
 
-            new FormulaDef { formulaId = "action_speed_v1", inputs = new[] { "baseSpeed" }, calculation = "BaseSpeed + Bonuses" },
+            new FormulaDef { formulaId = "action_speed_v1", inputs = new[] { "baseSpeed", "DEXModifier", "INTModifier" }, calculation = "BaseSpeed + floor(1.5 * DEXMod + 0.75 * INTMod) + Bonuses", scalingAbilities = new[] { Ability.DEX, Ability.INT } },
 
             new FormulaDef { formulaId = "qte_timing_v1", inputs = new[] { "baseQte", "DEXModifier" }, calculation = "clamp(3% * DEXMod + Bonuses, -15%, +25%)", scalingAbilities = new[] { Ability.DEX } },
 
-            new FormulaDef { formulaId = "qte_stability_v1", inputs = new[] { "baseStability" }, calculation = "BaseStability + Bonuses" },
+            new FormulaDef { formulaId = "qte_stability_v1", inputs = new[] { "baseStability", "DEXModifier", "WISModifier" }, calculation = "BaseStability + floor(2.0 * DEXMod + 1.0 * WISMod) (Cap 50%)", scalingAbilities = new[] { Ability.DEX, Ability.WIS } },
 
-            new FormulaDef { formulaId = "counter_power_v1", inputs = new[] { "baseCounter", "equip" }, calculation = "BaseCounter + Class/Gear/Passive Bonuses" },
+            new FormulaDef { formulaId = "counter_power_v1", inputs = new[] { "baseCounter", "DEXModifier", "STRModifier" }, calculation = "BaseCounter + floor(2.5 * DEXMod + 1.5 * STRMod) + Bonuses", scalingAbilities = new[] { Ability.DEX, Ability.STR } },
 
-            new FormulaDef { formulaId = "phys_break_v1", inputs = new[] { "baseBreak", "weapon" }, calculation = "BaseBreak + WeaponBreak" },
+            new FormulaDef { formulaId = "phys_break_v1", inputs = new[] { "baseBreak", "STRModifier", "DEXModifier", "weapon" }, calculation = "BaseBreak + WeaponBreak + floor(1.5 * STRMod + 0.75 * DEXMod)", scalingAbilities = new[] { Ability.STR, Ability.DEX } },
 
-            new FormulaDef { formulaId = "magic_break_v1", inputs = new[] { "baseBreak", "weapon" }, calculation = "BaseBreak + WeaponBreak" },
+            new FormulaDef { formulaId = "magic_break_v1", inputs = new[] { "baseBreak", "STRModifier", "DEXModifier", "weapon" }, calculation = "BaseBreak + WeaponBreak + floor(1.5 * STRMod + 0.75 * DEXMod)", scalingAbilities = new[] { Ability.STR, Ability.DEX } },
 
             new FormulaDef { formulaId = "defense_mitigation_v1", inputs = new[] { "rawDamage", "defense", "penetration" }, calculation = "RawDamage * (100 / (100 + Defense))" },
 
@@ -214,7 +214,7 @@ namespace Obscure
 
 
 
-        // ---- 3. Derived Stat Definitions (FELNA-SYS-ATTR-001 FINAL) ----
+        // ---- 3. Derived Stat Definitions (FELNA-SYS-ATTR-002 v2.0 FINAL) ----
 
         public static readonly Dictionary<DerivedStatId, DerivedStatDef> DerivedStatDefs = new Dictionary<DerivedStatId, DerivedStatDef>
 
@@ -224,7 +224,7 @@ namespace Obscure
 
             [DerivedStatId.MaxMP] = new DerivedStatDef { statId = "MAX_MP", id = DerivedStatId.MaxMP, displayName = "Max MP", shortName = "MP", primarySources = new[] { "INT" }, formulaId = "max_mp_v1", description = "Maximum mana resource (+4% Base MP per INT mod)." },
 
-            [DerivedStatId.MaxShield] = new DerivedStatDef { statId = "MAX_SHIELD", id = DerivedStatId.MaxShield, displayName = "Max Shield", shortName = "SHD", primarySources = new[] { "SEPARATE" }, formulaId = "max_shield_v1", description = "Shield capacity (independent of WIS, CHA, and VIT)." },
+            [DerivedStatId.MaxShield] = new DerivedStatDef { statId = "MAX_SHIELD", id = DerivedStatId.MaxShield, displayName = "Shield Power", shortName = "SHD", primarySources = new[] { "WIS", "CHA" }, formulaId = "max_shield_v1", description = "Shield potency (+3.5% WIS mod, +1.5% CHA mod; separate from Healing Power)." },
 
             [DerivedStatId.PhysicalPower] = new DerivedStatDef { statId = "PHYS_PWR", id = DerivedStatId.PhysicalPower, displayName = "Physical Power", shortName = "ATK", primarySources = new[] { "STR" }, formulaId = "physical_damage_v1", description = "Physical damage scaling (Raw STR)." },
 
@@ -234,41 +234,41 @@ namespace Obscure
 
             [DerivedStatId.HealingPower] = new DerivedStatDef { statId = "HEAL_PWR", id = DerivedStatId.HealingPower, displayName = "Healing Power", shortName = "HEL", primarySources = new[] { "WIS" }, formulaId = "healing_v1", description = "Healing output (+4% Base Healing per WIS mod)." },
 
-            [DerivedStatId.SupportPower] = new DerivedStatDef { statId = "SUP_PWR", id = DerivedStatId.SupportPower, displayName = "Buff Effectiveness", shortName = "SUP", primarySources = new[] { "CHA" }, formulaId = "support_v1", description = "Positive buff magnitude bonus (+4% per CHA mod)." },
+            [DerivedStatId.SupportPower] = new DerivedStatDef { statId = "SUP_PWR", id = DerivedStatId.SupportPower, displayName = "Support Skill Power", shortName = "SUP", primarySources = new[] { "CHA", "WIS" }, formulaId = "support_v1", description = "Support & command skill potency (Primary CHA +3/mod, Secondary WIS +1.5/mod)." },
 
-            [DerivedStatId.CriticalChance] = new DerivedStatDef { statId = "CRIT_CHC", id = DerivedStatId.CriticalChance, displayName = "Critical Chance", shortName = "CRT", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "crit_chance_v1", description = "Probability to land a Physical critical hit." },
+            [DerivedStatId.CriticalChance] = new DerivedStatDef { statId = "CRIT_CHC", id = DerivedStatId.CriticalChance, displayName = "Physical Crit Chance", shortName = "CRT", primarySources = new[] { "DEX", "STR" }, formulaId = "crit_chance_v1", description = "Physical critical hit chance (Primary DEX +1.5%/mod, Secondary STR +0.5%/mod; Elemental has no Crit)." },
 
             [DerivedStatId.CriticalDamage] = new DerivedStatDef { statId = "CRIT_DMG", id = DerivedStatId.CriticalDamage, displayName = "Critical Damage", shortName = "CDM", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "crit_damage_v1", description = "Damage multiplier on Physical critical hits." },
 
-            [DerivedStatId.ArmorPenetration] = new DerivedStatDef { statId = "ARM_PEN", id = DerivedStatId.ArmorPenetration, displayName = "Armor Penetration", shortName = "APN", primarySources = new[] { "GEAR" }, formulaId = "armor_pen_v1", description = "Ignores enemy Physical Defense." },
+            [DerivedStatId.ArmorPenetration] = new DerivedStatDef { statId = "ARM_PEN", id = DerivedStatId.ArmorPenetration, displayName = "Armor Penetration", shortName = "APN", primarySources = new[] { "STR", "DEX" }, formulaId = "armor_pen_v1", description = "Ignores enemy Physical Defense (Primary STR +1.2/mod, Secondary DEX +0.6/mod)." },
 
-            [DerivedStatId.MagicPenetration] = new DerivedStatDef { statId = "MAG_PEN", id = DerivedStatId.MagicPenetration, displayName = "Elemental Penetration", shortName = "MPN", primarySources = new[] { "GEAR" }, formulaId = "magic_pen_v1", description = "Ignores enemy Elemental Defense." },
+            [DerivedStatId.MagicPenetration] = new DerivedStatDef { statId = "MAG_PEN", id = DerivedStatId.MagicPenetration, displayName = "Magic Penetration", shortName = "MPN", primarySources = new[] { "INT", "WIS" }, formulaId = "magic_pen_v1", description = "Ignores enemy Magic Defense (Primary INT +1.2/mod, Secondary WIS +0.6/mod)." },
 
-            [DerivedStatId.PhysicalDefense] = new DerivedStatDef { statId = "PHYS_DEF", id = DerivedStatId.PhysicalDefense, displayName = "Physical Defense", shortName = "DEF", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "phys_def_v1", description = "Mitigates incoming physical damage." },
+            [DerivedStatId.PhysicalDefense] = new DerivedStatDef { statId = "PHYS_DEF", id = DerivedStatId.PhysicalDefense, displayName = "Physical Defense", shortName = "DEF", primarySources = new[] { "STR", "VIT" }, formulaId = "phys_def_v1", description = "Mitigates incoming physical damage (Primary STR +1.5/mod, Secondary VIT +0.75/mod)." },
 
-            [DerivedStatId.MagicDefense] = new DerivedStatDef { statId = "MAG_DEF", id = DerivedStatId.MagicDefense, displayName = "Elemental Defense", shortName = "MDF", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "magic_def_v1", description = "Mitigates incoming elemental damage." },
+            [DerivedStatId.MagicDefense] = new DerivedStatDef { statId = "MAG_DEF", id = DerivedStatId.MagicDefense, displayName = "Magic Defense", shortName = "MDF", primarySources = new[] { "INT", "WIS" }, formulaId = "magic_def_v1", description = "Mitigates incoming elemental/magical damage (Primary INT +1.5/mod, Secondary WIS +0.75/mod)." },
 
             [DerivedStatId.Evasion] = new DerivedStatDef { statId = "EVASION", id = DerivedStatId.Evasion, displayName = "Evasion", shortName = "EVA", primarySources = new[] { "DEX" }, formulaId = "evasion_v1", description = "Avoidance chance (+2% per DEX mod, cap 75%)." },
 
-            [DerivedStatId.BlockPower] = new DerivedStatDef { statId = "BLK_PWR", id = DerivedStatId.BlockPower, displayName = "Block Power", shortName = "BLK", primarySources = new[] { "CLASS", "SHIELD" }, formulaId = "block_power_v1", description = "Defensive QTE mitigation from class, shield, and passives." },
+            [DerivedStatId.BlockPower] = new DerivedStatDef { statId = "BLK_PWR", id = DerivedStatId.BlockPower, displayName = "Block Power", shortName = "BLK", primarySources = new[] { "STR", "VIT" }, formulaId = "block_power_v1", description = "Defensive QTE mitigation (Primary STR +2/mod, Secondary VIT +1/mod, cap 90%)." },
 
-            [DerivedStatId.StatusResistance] = new DerivedStatDef { statId = "STAT_RES", id = DerivedStatId.StatusResistance, displayName = "Status Resistance", shortName = "SRS", primarySources = new[] { "SHARED" }, formulaId = "status_res_v1", description = "Universal status resistance (cap 75%)." },
+            [DerivedStatId.StatusResistance] = new DerivedStatDef { statId = "STAT_RES", id = DerivedStatId.StatusResistance, displayName = "Status Resistance", shortName = "SRS", primarySources = new[] { "VIT", "WIS" }, formulaId = "status_res_v1", description = "Universal status resistance (Primary VIT +2%/mod, Secondary WIS +1%/mod, cap 75%)." },
 
-            [DerivedStatId.StaggerResistance] = new DerivedStatDef { statId = "STG_RES", id = DerivedStatId.StaggerResistance, displayName = "Stagger Resistance", shortName = "STRS", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "stagger_res_v1", description = "Reduces incoming stagger and break damage." },
+            [DerivedStatId.StaggerResistance] = new DerivedStatDef { statId = "STG_RES", id = DerivedStatId.StaggerResistance, displayName = "Stagger Resistance", shortName = "STRS", primarySources = new[] { "VIT", "STR" }, formulaId = "stagger_res_v1", description = "Reduces incoming poise/break damage (Primary VIT +2%/mod, Secondary STR +1%/mod, cap 75%)." },
 
-            [DerivedStatId.Initiative] = new DerivedStatDef { statId = "INIT", id = DerivedStatId.Initiative, displayName = "Initiative", shortName = "INI", primarySources = new[] { "SPD" }, formulaId = "initiative_v1", description = "Determines individual turn order each round." },
+            [DerivedStatId.Initiative] = new DerivedStatDef { statId = "INIT", id = DerivedStatId.Initiative, displayName = "Initiative", shortName = "INI", primarySources = new[] { "DEX", "INT" }, formulaId = "initiative_v1", description = "Turn order priority (Primary DEX +1/mod, Secondary INT +0.5/mod; never grants extra turns)." },
 
-            [DerivedStatId.ActionSpeed] = new DerivedStatDef { statId = "ACT_SPD", id = DerivedStatId.ActionSpeed, displayName = "Action Speed", shortName = "SPD", primarySources = new[] { "SPD" }, formulaId = "action_speed_v1", description = "Tempo rating for speed-scaling skills." },
+            [DerivedStatId.ActionSpeed] = new DerivedStatDef { statId = "ACT_SPD", id = DerivedStatId.ActionSpeed, displayName = "Action Speed", shortName = "SPD", primarySources = new[] { "DEX", "INT" }, formulaId = "action_speed_v1", description = "Tempo rating for speed-scaling skills (Primary DEX +1.5/mod, Secondary INT +0.75/mod)." },
 
             [DerivedStatId.QteTimingBonus] = new DerivedStatDef { statId = "QTE_TIME", id = DerivedStatId.QteTimingBonus, displayName = "QTE Timing Bonus", shortName = "QTE", primarySources = new[] { "DEX" }, formulaId = "qte_timing_v1", description = "Timing QTE window bonus (+3% per DEX mod, shared cap +25%)." },
 
-            [DerivedStatId.QteStability] = new DerivedStatDef { statId = "QTE_STAB", id = DerivedStatId.QteStability, displayName = "QTE Stability", shortName = "QST", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "qte_stability_v1", description = "Reduces penalties on partial/failed reactions." },
+            [DerivedStatId.QteStability] = new DerivedStatDef { statId = "QTE_STAB", id = DerivedStatId.QteStability, displayName = "QTE Stability", shortName = "QST", primarySources = new[] { "DEX", "WIS" }, formulaId = "qte_stability_v1", description = "Freeze window penalty & distortion mitigation + partial buffer (Primary DEX +2%/mod, Secondary WIS +1%/mod, cap 50%)." },
 
-            [DerivedStatId.CounterPower] = new DerivedStatDef { statId = "CNT_PWR", id = DerivedStatId.CounterPower, displayName = "Counter Power", shortName = "CNT", primarySources = new[] { "CLASS", "GEAR" }, formulaId = "counter_power_v1", description = "Effectiveness of physical counterattacks." },
+            [DerivedStatId.CounterPower] = new DerivedStatDef { statId = "CNT_PWR", id = DerivedStatId.CounterPower, displayName = "Counter Power", shortName = "CNT", primarySources = new[] { "DEX", "STR" }, formulaId = "counter_power_v1", description = "Defensive-Perfect counterattack scaling (Primary DEX +2.5/mod, Secondary STR +1.5/mod)." },
 
-            [DerivedStatId.PhysicalBreakPower] = new DerivedStatDef { statId = "P_BREAK", id = DerivedStatId.PhysicalBreakPower, displayName = "Physical Break", shortName = "PBR", primarySources = new[] { "WEAPON", "SKILL" }, formulaId = "phys_break_v1", description = "Break Gauge damage dealt by physical hits." },
+            [DerivedStatId.PhysicalBreakPower] = new DerivedStatDef { statId = "P_BREAK", id = DerivedStatId.PhysicalBreakPower, displayName = "Universal Break Power", shortName = "PBR", primarySources = new[] { "STR", "DEX" }, formulaId = "phys_break_v1", description = "Enemy Break Gauge damage dealt (Primary STR +1.5/mod, Secondary DEX +0.75/mod)." },
 
-            [DerivedStatId.MagicBreakPower] = new DerivedStatDef { statId = "M_BREAK", id = DerivedStatId.MagicBreakPower, displayName = "Elemental Break", shortName = "MBR", primarySources = new[] { "WEAPON", "SKILL" }, formulaId = "magic_break_v1", description = "Break Gauge damage dealt by elemental hits." },
+            [DerivedStatId.MagicBreakPower] = new DerivedStatDef { statId = "M_BREAK", id = DerivedStatId.MagicBreakPower, displayName = "Universal Break Power", shortName = "MBR", primarySources = new[] { "STR", "DEX" }, formulaId = "magic_break_v1", description = "Enemy Break Gauge damage dealt (Primary STR +1.5/mod, Secondary DEX +0.75/mod)." },
 
         };
 
@@ -1959,11 +1959,11 @@ namespace Obscure
 
                 baseSupportPower = 8, supportScaling = 2f,
 
-                basePhysicalDefense = 11, physicalDefenseScaling = 2f,
+                basePhysicalDefense = 7, physicalDefenseScaling = 2f,
 
-                baseMagicDefense = 7, magicDefenseScaling = 2f,
+                baseMagicDefense = 8, magicDefenseScaling = 2f,
 
-                baseInitiative = 6,
+                baseInitiative = 7,
 
                 baseBreakPower = 14, breakPowerScaling = 3f
 
@@ -5034,7 +5034,7 @@ namespace Obscure
 
                 baseScores = new AbilityScores(15, 10, 15, 8, 12, 11), // 9 + 2 + 9 + 0 + 4 + 3 = 27
 
-                stats = new Stats(106, 14, 16, 11, 6, 10),
+                stats = new Stats(106, 14, 16, 13, 6, 10),
 
                 skills = new[] { "shield_bash", "fortify", "interpose" }, sprite = Art.Knight,
 

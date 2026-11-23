@@ -524,9 +524,9 @@ namespace Obscure
         public int baseBlockPower = 50;
         public float blockScaling = 3f;           // multiplied by STRModifier
         public int baseStatusResistance = 5;
-        public float statusResistanceScaling = 3f; // legacy field (decoupled from VIT/WIS)
-        public int baseStaggerResistance = 22;
-        public float staggerResistanceScaling = 4f; // multiplied by VITModifier
+        public float statusResistanceScaling = 3f;
+        public int baseStaggerResistance = 13;
+        public float staggerResistanceScaling = 4f;
 
         // Turn scaling
         public int baseInitiative = 8;            // + DEXModifier + bonuses

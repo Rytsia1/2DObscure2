@@ -471,7 +471,7 @@ namespace Obscure.Tests
             caster.unit.AddPermanentAbilityBonus(Ability.CHA, 20 - caster.unit.Score(Ability.CHA)); // CHA 20 -> +5 modifier
 
             Assert.Greater(Battle.SupportScaled(attackUp, caster).magnitude, 0.25f);
-            Assert.LessOrEqual(Battle.SupportScaled(attackUp, caster).magnitude, 0.25f * 1.2001f, "capped by the CHA maxBonus");
+            Assert.LessOrEqual(Battle.SupportScaled(attackUp, caster).magnitude, 0.25f * 1.2151f, "capped by CHA (+20%) + WIS (+1.5%) Buff Effectiveness");
             Assert.AreSame(evasion, Battle.SupportScaled(evasion, caster), "QTE window statuses stay data-driven");
         }
     }

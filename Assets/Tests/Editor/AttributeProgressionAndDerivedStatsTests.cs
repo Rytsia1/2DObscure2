@@ -1,35 +1,37 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Obscure;
 
 namespace Obscure.Tests
 {
-    // Comprehensive EditMode test suite verifying FELNA_Attribute_Progression_Derived_Stats_Spec_v1.0 (FINAL).
+    // Comprehensive verification suite for FELNA Attribute-Driven Derived Stats Integration & Balancing (FELNA-SYS-ATTR-002 v2.0 FINAL).
     public class AttributeProgressionAndDerivedStatsTests
     {
         [Test]
         public void AttributeProgression_MilestonesAndActiveCap15_MatchFinalSpec()
         {
-            var cfg = Database.AsiConfig;
-            CollectionAssert.AreEqual(new[] { 4, 7, 10, 13, 16, 19, 22, 25, 28 }, cfg.availableAtLevels);
-            Assert.AreEqual(2, cfg.pointsGranted);
-            Assert.AreEqual(20, cfg.maxAbilityScore);
+            var expectedMilestones = new[] { 4, 7, 10, 13, 16, 19, 22, 25, 28 };
+            CollectionAssert.AreEqual(expectedMilestones, Database.AsiConfig.availableAtLevels);
+            Assert.AreEqual(2, Database.AsiConfig.pointsGranted);
+            Assert.AreEqual(20, Database.AsiConfig.maxAbilityScore);
 
-            // Total AP across Level 1..30 is exactly 18 AP; Level 1 grants 0 AP
-            int totalTo30 = 0;
-            Assert.IsFalse(cfg.GrantsAtLevel(1));
-            for (int lv = 1; lv <= 30; lv++)
-                if (cfg.GrantsAtLevel(lv)) totalTo30 += cfg.pointsGranted;
-            Assert.AreEqual(18, totalTo30);
-
-            // Active Level Cap remains 15 for now -> 4 active milestones (4, 7, 10, 13) = 8 AP
+            // Active build phase keeps Level Cap at 15 (4 active milestones: Lv 4, 7, 10, 13 = 8 AP)
             Assert.AreEqual(15, RunConfig.MaxLevel);
-            var unit = new Unit(Database.Characters["knight"]);
-            Assert.AreEqual(0, unit.unspentAsiPoints);
-            for (int lv = 2; lv <= RunConfig.MaxLevel; lv++)
-                unit.LevelUp();
-            Assert.AreEqual(15, unit.level);
-            Assert.AreEqual(8, unit.unspentAsiPoints, "Levels 4, 7, 10, 13 grant 8 AP under active Level Cap 15.");
+
+            int totalApAt15 = 0;
+            int totalApAt30 = 0;
+            for (int lv = 1; lv <= 30; lv++)
+            {
+                if (Array.IndexOf(Database.AsiConfig.availableAtLevels, lv) >= 0)
+                {
+                    if (lv <= 15) totalApAt15 += Database.AsiConfig.pointsGranted;
+                    totalApAt30 += Database.AsiConfig.pointsGranted;
+                }
+            }
+            Assert.AreEqual(8, totalApAt15, "Total AP up to active Level Cap 15 must be 8 AP.");
+            Assert.AreEqual(18, totalApAt30, "Total AP up to target Level Cap 30 must be 18 AP.");
+            Assert.IsTrue(Array.IndexOf(Database.AsiConfig.availableAtLevels, 1) < 0, "Level 1 grants 0 AP (Point Buy used at Creation).");
         }
 
         [Test]
@@ -37,213 +39,206 @@ namespace Obscure.Tests
         {
             var def = new CharacterDef
             {
-                id = "liicht_cleric",
-                name = "Cleric",
+                id = "test_cleric",
+                name = "Test Cleric",
                 raceId = "liichtian",
                 classId = "cleric",
-                racialBonusChoice = new[] { Ability.WIS }, // +2 WIS
-                baseScores = new AbilityScores(10, 12, 12, 14, 15, 9) // 27 pts -> WIS 17
+                baseScores = new AbilityScores(10, 12, 12, 14, 15, 9), // WIS 15 + 2 racial = 17
+                stats = new Stats(75, 42, 8, 8, 10, 10)
             };
             var unit = new Unit(def);
-            Assert.AreEqual(17, unit.Score(Ability.WIS));
-
-            // Level 4 grants +2 AP; both AP can be allocated to WIS (17 -> 19)
-            unit.LevelUp(); unit.LevelUp(); unit.LevelUp();
-            Assert.AreEqual(2, unit.unspentAsiPoints);
-            Assert.IsTrue(unit.TrySpendAsiPoint(Ability.WIS));
-            Assert.IsTrue(unit.TrySpendAsiPoint(Ability.WIS));
-            Assert.AreEqual(19, unit.Score(Ability.WIS));
+            Assert.AreEqual(17, unit.FinalScores.wis);
             Assert.AreEqual(0, unit.unspentAsiPoints);
 
-            // Bank AP across Level 7 and Level 10 (+4 AP banked)
-            for (int i = 0; i < 6; i++) unit.LevelUp(); // Lv 4 -> Lv 10
-            Assert.AreEqual(4, unit.unspentAsiPoints);
+            // Level up 1 -> 4 (+2 AP) and bank them through Level 7 (+2 AP = 4 banked AP)
+            while (unit.level < 7) unit.LevelUp();
+            Assert.AreEqual(4, unit.unspentAsiPoints, "Player can bank AP across milestones.");
 
-            // Raise WIS 19 -> 20 (cap); attempting to spend again fails and NEVER loses AP
+            // Spend 3 AP on the same ability (WIS 17 -> 20)
             Assert.IsTrue(unit.TrySpendAsiPoint(Ability.WIS));
-            Assert.AreEqual(20, unit.Score(Ability.WIS));
-            Assert.AreEqual(3, unit.unspentAsiPoints);
+            Assert.IsTrue(unit.TrySpendAsiPoint(Ability.WIS));
+            Assert.IsTrue(unit.TrySpendAsiPoint(Ability.WIS));
+            Assert.AreEqual(20, unit.FinalScores.wis);
+            Assert.AreEqual(1, unit.unspentAsiPoints);
 
-            Assert.IsFalse(unit.TrySpendAsiPoint(Ability.WIS), "Cannot allocate AP beyond normal cap 20.");
-            Assert.AreEqual(3, unit.unspentAsiPoints, "AP must never be lost when blocked by Attribute Cap 20.");
+            // Attempting to spend the remaining 1 AP on WIS at Cap 20 must fail and MUST NOT burn the AP
+            Assert.IsFalse(unit.TrySpendAsiPoint(Ability.WIS));
+            Assert.AreEqual(20, unit.FinalScores.wis);
+            Assert.AreEqual(1, unit.unspentAsiPoints, "AP that cannot be used due to Attribute Cap 20 must never be lost.");
         }
 
         [Test]
         public void AttributeCaps_Enforce20NormalAndAllowExplicitCapBreakingTempBuff()
         {
-            var sheet = new AbilityScoreSheet
+            var def = new CharacterDef
             {
-                baseScores = new AbilityScores(15, 10, 10, 10, 10, 10),
-                racialModifiers = new AbilityScores(2, 0, 0, 0, 0, 0),
-                permanentBonuses = new AbilityScores(3, 0, 0, 0, 0, 0) // 15 + 2 + 3 = 20
-            };
-            Assert.AreEqual(20, sheet.Score(Ability.STR));
-
-            // Standard equipment and standard temp buff cannot exceed 20
-            sheet.equipmentBonuses = new AbilityScores(4, 0, 0, 0, 0, 0);
-            Assert.AreEqual(20, sheet.Score(Ability.STR));
-
-            sheet.temporaryModifiers = new AbilityScores(3, 0, 0, 0, 0, 0);
-            Assert.AreEqual(20, sheet.Score(Ability.STR));
-
-            // Debuff lowers cleanly from 20 to 18 (not masked by overflow)
-            sheet.temporaryModifiers = new AbilityScores(-2, 0, 0, 0, 0, 0);
-            Assert.AreEqual(18, sheet.Score(Ability.STR));
-
-            // Explicit cap-breaking temp buff exceeds 20 (up to hard ceiling 30)
-            sheet.temporaryModifiers = AbilityScores.Zero;
-            sheet.capBreakingTemporaryModifiers = new AbilityScores(4, 0, 0, 0, 0, 0);
-            Assert.AreEqual(24, sheet.Score(Ability.STR));
-            Assert.AreEqual(7, sheet.Mod(Ability.STR));
-        }
-
-        [Test]
-        public void WorkedExamples_AllSixAbilityScores_MatchExactSpecNumbers()
-        {
-            // 1. STR 14 with SkillPower 40, Scaling 1.5 -> 61 (Raw STR)
-            Assert.AreEqual(61f, StatCalculator.CalculatePhysicalSkillBaseDamage(40f, 14, 1.5f), 1e-4f);
-            var physComp = DamageComponent.Physical(40f, 1.5f);
-            Assert.AreEqual(61f, physComp.CalculateBaseDamage(attackerStr: 14, attackerInt: 10), 1e-4f);
-
-            // 2. DEX 16 (Mod +3) -> Ranged Acc +6%, Evasion +6%, QTE Window +9%
-            int dex16Mod = AbilityScores.GetModifier(16);
-            Assert.AreEqual(3, dex16Mod);
-            Assert.AreEqual(6f, StatCalculator.CalculateRangedAccuracyBonus(dex16Mod), 1e-4f);
-            Assert.AreEqual(6f, StatCalculator.CalculateEvasionBonus(dex16Mod), 1e-4f);
-            Assert.AreEqual(9f, StatCalculator.CalculateQteWindowBonus(dex16Mod), 1e-4f);
-
-            // 3. VIT 16 (Mod +3) with Base HP 1,000 -> 1,120
-            int vit16Mod = AbilityScores.GetModifier(16);
-            Assert.AreEqual(1120, StatCalculator.CalculateMaxHp(1000f, vit16Mod));
-
-            // 4. INT 16 (Mod +3) with SkillPower 50, Scaling 1.5 -> 74; Base MP 200 -> 224
-            Assert.AreEqual(74f, StatCalculator.CalculateElementalSkillBaseDamage(50f, 16, 1.5f), 1e-4f);
-            var elemComp = DamageComponent.Elemental(ElementType.Holy, 50f, 1.5f);
-            Assert.AreEqual(74f, elemComp.CalculateBaseDamage(attackerStr: 10, attackerInt: 16), 1e-4f);
-            Assert.AreEqual(224, StatCalculator.CalculateMaxMp(200f, AbilityScores.GetModifier(16)));
-
-            // 5. WIS 16 (Mod +3) with Base Healing 200 -> 224
-            Assert.AreEqual(224, StatCalculator.CalculateHealingOutput(200f, AbilityScores.GetModifier(16)));
-
-            // 6. CHA 16 (Mod +3) with Base Attack Buff +10% -> +11.2%
-            int cha16Mod = AbilityScores.GetModifier(16);
-            Assert.AreEqual(0.12f, StatCalculator.CalculateBuffEffectivenessBonus(cha16Mod), 1e-5f);
-            Assert.AreEqual(0.112f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, cha16Mod), 1e-5f);
-        }
-
-        [Test]
-        public void NegativeModifiersAndAntiCompounding_BehavePerFinalSpec()
-        {
-            // Score 8 -> Mod -1
-            int negMod = AbilityScores.GetModifier(8);
-            Assert.AreEqual(-1, negMod);
-
-            Assert.AreEqual(960, StatCalculator.CalculateMaxHp(1000f, negMod));
-            Assert.AreEqual(192, StatCalculator.CalculateMaxMp(200f, negMod));
-            Assert.AreEqual(-2f, StatCalculator.CalculateRangedAccuracyBonus(negMod), 1e-4f);
-            Assert.AreEqual(-2f, StatCalculator.CalculateEvasionBonus(negMod), 1e-4f);
-            Assert.AreEqual(-3f, StatCalculator.CalculateQteWindowBonus(negMod), 1e-4f);
-            Assert.AreEqual(192, StatCalculator.CalculateHealingOutput(200f, negMod));
-            Assert.AreEqual(0.096f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, negMod), 1e-5f);
-
-            // Non-compounding Max HP: VIT 16 (+12%) + Farmer V (+10%) on Base HP 1,000 = 1,220 (NOT 1,232)
-            Assert.AreEqual(1220, StatCalculator.CalculateMaxHp(1000f, AbilityScores.GetModifier(16), extraBasePercentAdd: 0.10f));
-
-            // Negative CHA modifier applies in Battle.SupportScaled for CHA-scaled Support skills (e.g., Blessing)
-            var lowChaDef = new CharacterDef
-            {
-                id = "low_cha_cleric",
-                name = "Cleric",
-                raceId = "human",
-                classId = "cleric",
-                racialBonusChoice = new[] { Ability.WIS, Ability.VIT },
-                baseScores = new AbilityScores(10, 10, 12, 12, 15, 8) // CHA 8 -> Mod -1
-            };
-            var caster = new Combatant(new Unit(lowChaDef), Side.Party, 0, "Cleric", "CLR");
-            var blessingSkill = Database.Skills["blessing"]; // scalingAbility = CHA
-            var buff = new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.10f, supportsChaScaling = true };
-            var scaled = Battle.SupportScaled(buff, caster, blessingSkill);
-            Assert.AreEqual(0.096f, scaled.magnitude, 1e-5f);
-            Assert.AreEqual(2, scaled.turns, "CHA must never alter buff duration.");
-            Assert.AreEqual(1f, scaled.chance, 1e-5f, "CHA must never alter status chance.");
-
-            // Non-CHA support skill (e.g., Fighter Guard Stance scaled with VIT) is NOT scaled by CHA
-            var highChaDef = new CharacterDef
-            {
-                id = "high_cha_fighter",
-                name = "Fighter",
-                raceId = "liichtian",
+                id = "test_cap",
+                name = "Test Cap",
+                raceId = "dwarf", // +2 VIT
                 classId = "fighter",
-                racialBonusChoice = new[] { Ability.CHA },
-                baseScores = new AbilityScores(12, 10, 12, 10, 10, 15) // CHA 17 -> Mod +3
+                baseScores = new AbilityScores(15, 10, 15, 10, 12, 9), // VIT 15 + 2 = 17
+                stats = new Stats(95, 15, 8, 11, 8, 6)
             };
-            var fighter = new Combatant(new Unit(highChaDef), Side.Party, 0, "Fighter", "FGT");
-            var guardStance = Database.Skills["guard_stance"]; // scalingAbility = VIT
-            var defBuff = new StatusApply { id = StatusId.DefenseUp, turns = 2, magnitude = 0.45f };
-            var unscaled = Battle.SupportScaled(defBuff, fighter, guardStance);
-            Assert.AreEqual(0.45f, unscaled.magnitude, 1e-5f, "CHA must not automatically scale non-CHA buffs.");
+            var unit = new Unit(def);
+            unit.AddPermanentAbilityBonus(Ability.VIT, 3); // VIT -> 20
+            Assert.AreEqual(20, unit.FinalScores.vit);
+
+            // Standard temporary buff is clamped at 20
+            unit.SetTemporaryAbilityModifiers(AbilityScores.Zero.Add(Ability.VIT, 4));
+            Assert.AreEqual(20, unit.FinalScores.vit, "Standard temp buff cannot exceed normal progression cap 20.");
+            unit.ClearTemporaryModifiers();
+
+            // Explicit cap-breaking temporary buff may exceed 20
+            unit.AddCapBreakingTemporaryAbilityModifier(Ability.VIT, 2);
+            Assert.AreEqual(22, unit.FinalScores.vit, "Explicit cap-breaking temporary buff can exceed 20.");
+            Assert.AreEqual(6, unit.Mod(Ability.VIT), "Modifier at score 22 is floor((22-10)/2) = +6.");
+            unit.ClearTemporaryModifiers();
+            Assert.AreEqual(20, unit.FinalScores.vit);
+
+            // Negative temporary modifier lowers from capped 20 cleanly
+            unit.SetTemporaryAbilityModifiers(AbilityScores.Zero.Add(Ability.VIT, -4));
+            Assert.AreEqual(16, unit.FinalScores.vit);
+            Assert.AreEqual(3, unit.Mod(Ability.VIT));
         }
 
         [Test]
-        public void SupportAndStatSeparation_DecouplesShieldBlockCounterSpeedAndBreak()
+        public void WorkedExamples_AllSixAbilityScoresAndDerivedStats_MatchExactSpecNumbers()
         {
-            var sheetLow = new AbilityScoreSheet { baseScores = new AbilityScores(8, 8, 8, 8, 8, 8) };
-            var sheetHigh = new AbilityScoreSheet { baseScores = new AbilityScores(20, 20, 20, 20, 20, 20) };
-            var cls = Database.Classes["fighter"];
+            // 1. STR 16 (+3), VIT 14 (+2), DEX 12 (+1)
+            Assert.AreEqual(64f, StatCalculator.CalculatePhysicalSkillBaseDamage(40f, 16, 1.5f), 1e-4f);
+            Assert.AreEqual(6, StatCalculator.CalculatePhysicalDefenseBonus(3, 2));      // floor(3*1.5 + 2*0.75) = 6
+            Assert.AreEqual(8, StatCalculator.CalculateBlockPowerBonus(3, 2));           // floor(3*2.0 + 2*1.0) = 8
+            Assert.AreEqual(5, StatCalculator.CalculateUniversalBreakPowerBonus(3, 1));  // floor(3*1.5 + 1*0.75) = 5
+            Assert.AreEqual(4, StatCalculator.CalculateArmorPenetrationBonus(3, 1));     // floor(3*1.2 + 1*0.6) = 4
 
-            var dLow = StatCalculator.Calculate(sheetLow, cls, 1);
-            var dHigh = StatCalculator.Calculate(sheetHigh, cls, 1);
+            // 2. DEX 16 (+3), STR 14 (+2), INT 12 (+1), WIS 12 (+1)
+            Assert.AreEqual(6f, StatCalculator.CalculateRangedAccuracyBonus(3), 1e-4f);
+            Assert.AreEqual(6f, StatCalculator.CalculateEvasionBonus(3), 1e-4f);
+            Assert.AreEqual(9f, StatCalculator.CalculateQteWindowBonus(3), 1e-4f);
+            Assert.AreEqual(7, StatCalculator.CalculateQteStabilityBonus(3, 1));         // floor(3*2.0 + 1*1.0) = 7
+            Assert.AreEqual(5, StatCalculator.CalculatePhysicalCritChanceBonus(3, 2));   // floor(3*1.5 + 2*0.5) = 5
+            Assert.AreEqual(10, StatCalculator.CalculateCounterPowerBonus(3, 2));        // floor(3*2.5 + 2*1.5) = 10
+            Assert.AreEqual(3, StatCalculator.CalculateInitiativeBonus(3, 1));           // floor(3*1.0 + 1*0.5) = 3
 
-            // Decoupled stats must remain identical regardless of all 6 Ability Scores
-            Assert.AreEqual(dLow.maxShield, dHigh.maxShield, "Shield Power must stay separate from VIT/WIS/CHA.");
-            Assert.AreEqual(dLow.blockPower, dHigh.blockPower, "Block Power must stay decoupled from STR.");
-            Assert.AreEqual(dLow.counterPower, dHigh.counterPower, "Counter Power must stay decoupled from STR & DEX.");
-            Assert.AreEqual(dLow.physicalBreakPower, dHigh.physicalBreakPower, "STR must not grant universal Break Power.");
-            Assert.AreEqual(dLow.magicBreakPower, dHigh.magicBreakPower, "INT must not grant universal Break Power.");
-            Assert.AreEqual(dLow.physicalDefense, dHigh.physicalDefense, "VIT must not alter Physical Defense.");
-            Assert.AreEqual(dLow.magicDefense, dHigh.magicDefense, "WIS must not alter Magic Defense.");
-            Assert.AreEqual(dLow.statusResistance, dHigh.statusResistance, "VIT/WIS must not alter Status Resistance.");
-            Assert.AreEqual(dLow.staggerResistance, dHigh.staggerResistance, "VIT must not alter Stagger Resistance.");
-            Assert.AreEqual(dLow.initiative, dHigh.initiative, "DEX must not alter Speed/Initiative.");
-            Assert.AreEqual(dLow.actionSpeed, dHigh.actionSpeed, "DEX must not alter Action Speed.");
-            Assert.AreEqual(dLow.criticalChance, dHigh.criticalChance, "DEX must not alter Critical Chance.");
-            Assert.AreEqual(dLow.qteStability, dHigh.qteStability, "VIT must not alter QTE Stability.");
+            // 3. VIT 16 (+3), STR 14 (+2), WIS 14 (+2)
+            Assert.AreEqual(1120, StatCalculator.CalculateMaxHp(1000f, 3));
+            Assert.AreEqual(0.04f, StatCalculator.CalculateDamageReductionBonus(3, 2), 1e-4f); // 3*1% + 2*0.5% = 4%
+            Assert.AreEqual(8, StatCalculator.CalculateStatusResistanceBonus(3, 2));     // floor(3*2.0 + 2*1.0) = 8
+            Assert.AreEqual(8, StatCalculator.CalculateStaggerResistanceBonus(3, 2));    // floor(3*2.0 + 2*1.0) = 8
 
-            // Coupled stats must scale strictly according to the 6 Ability Scores spec
-            Assert.Greater(dHigh.maxHp, dLow.maxHp);
-            Assert.Greater(dHigh.maxMp, dLow.maxMp);
-            Assert.Greater(dHigh.physicalPower, dLow.physicalPower);
-            Assert.Greater(dHigh.magicPower, dLow.magicPower);
-            Assert.Greater(dHigh.healingWisMultiplier, dLow.healingWisMultiplier);
-            Assert.Greater(dHigh.evasion, dLow.evasion);
-            Assert.Greater(dHigh.qteTimingBonus, dLow.qteTimingBonus);
-            Assert.Greater(dHigh.rangedAccuracyBonus, dLow.rangedAccuracyBonus);
-            Assert.Greater(dHigh.buffEffectivenessBonus, dLow.buffEffectivenessBonus);
+            // 4. INT 16 (+3), WIS 14 (+2)
+            Assert.AreEqual(74f, StatCalculator.CalculateElementalSkillBaseDamage(50f, 16, 1.5f), 1e-4f);
+            Assert.AreEqual(224, StatCalculator.CalculateMaxMp(200f, 3));
+            Assert.AreEqual(6, StatCalculator.CalculateMagicDefenseBonus(3, 2));         // floor(3*1.5 + 2*0.75) = 6
+            Assert.AreEqual(4, StatCalculator.CalculateMagicPenetrationBonus(3, 2));     // floor(3*1.2 + 2*0.6) = 4
+
+            // 5. WIS 16 (+3), CHA 14 (+2)
+            Assert.AreEqual(224, StatCalculator.CalculateHealingOutput(200f, 3));
+            Assert.AreEqual(0.135f, StatCalculator.CalculateShieldPowerBonus(3, 2), 1e-4f); // 3*3.5% + 2*1.5% = 13.5%
+            Assert.AreEqual(170, StatCalculator.CalculateShieldOutput(150f, 3, 2));         // floor(150 * 1.135) = 170
+
+            // 6. CHA 16 (+3), WIS 14 (+2), INT 12 (+1)
+            Assert.AreEqual(0.15f, StatCalculator.CalculateBuffEffectivenessBonus(3, 2), 1e-4f);    // 3*4% + 2*1.5% = 15%
+            Assert.AreEqual(0.115f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, 3, 2), 1e-5f); // 10% * 1.15 = 11.5%
+            Assert.AreEqual(0.12f, StatCalculator.CalculateDebuffEffectivenessBonus(3, 1), 1e-4f);  // 3*3.5% + 1*1.5% = 12%
+            Assert.AreEqual(0.224f, StatCalculator.CalculateFinalDebuffMagnitude(0.20f, 3, 1), 1e-5f);
+            Assert.AreEqual(12, StatCalculator.CalculateSupportSkillPowerBonus(3, 2));   // floor(3*3.0 + 2*1.5) = 12
+        }
+
+        [Test]
+        public void PrimaryDominatesSecondary_AndNegativeModifiersApplyCleanly()
+        {
+            // Verify w1 > w2 > 0 for every composite Derived Stat at equal modifier (+4)
+            Assert.Greater(StatCalculator.CalculateShieldPowerBonus(4, 0), StatCalculator.CalculateShieldPowerBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateDamageReductionBonus(4, 0), StatCalculator.CalculateDamageReductionBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateStatusResistanceBonus(4, 0), StatCalculator.CalculateStatusResistanceBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateStaggerResistanceBonus(4, 0), StatCalculator.CalculateStaggerResistanceBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculatePhysicalDefenseBonus(4, 0), StatCalculator.CalculatePhysicalDefenseBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateMagicDefenseBonus(4, 0), StatCalculator.CalculateMagicDefenseBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateBlockPowerBonus(4, 0), StatCalculator.CalculateBlockPowerBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculatePhysicalCritChanceBonus(4, 0), StatCalculator.CalculatePhysicalCritChanceBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateArmorPenetrationBonus(4, 0), StatCalculator.CalculateArmorPenetrationBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateMagicPenetrationBonus(4, 0), StatCalculator.CalculateMagicPenetrationBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateCounterPowerBonus(4, 0), StatCalculator.CalculateCounterPowerBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateUniversalBreakPowerBonus(4, 0), StatCalculator.CalculateUniversalBreakPowerBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateInitiativeBonus(4, 0), StatCalculator.CalculateInitiativeBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateActionSpeedBonus(4, 0), StatCalculator.CalculateActionSpeedBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateQteStabilityBonus(4, 0), StatCalculator.CalculateQteStabilityBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateBuffEffectivenessBonus(4, 0), StatCalculator.CalculateBuffEffectivenessBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateDebuffEffectivenessBonus(4, 0), StatCalculator.CalculateDebuffEffectivenessBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateSupportSkillPowerBonus(4, 0), StatCalculator.CalculateSupportSkillPowerBonus(0, 4));
+
+            // Negative modifiers apply cleanly
+            Assert.AreEqual(960, StatCalculator.CalculateMaxHp(1000f, -1));
+            Assert.AreEqual(-0.05f, StatCalculator.CalculateShieldPowerBonus(-1, -1), 1e-4f);
+            Assert.AreEqual(1220, StatCalculator.CalculateMaxHp(1000f, 3, extraBasePercentAdd: 0.10f), "Non-compounding: 1000 * (1 + 0.12 + 0.10) = 1220.");
+        }
+
+        [Test]
+        public void CharismaThreePillars_AndPhysicalOnlyCritical_AndQteStabilityMechanism()
+        {
+            // 1. Critical Chance is strictly Physical-only (Elemental has no Critical Chance)
+            Assert.IsTrue(CriticalHitSystem.CanCriticalHit(DamageType.Physical, false));
+            Assert.IsFalse(CriticalHitSystem.CanCriticalHit(DamageType.Elemental, false), "Elemental Damage never Critically Hits.");
+            Assert.IsFalse(CriticalHitSystem.CanCriticalHit(DamageType.Almighty, false));
+
+            // 2. QTE Stability (Primary DEX, Secondary WIS) mitigates Freeze penalty & widens PartialSuccess without altering W_P/W_G
+            var normalProfile = QteConfig.Profiles[Tier.Normal];
+            float wp0 = QteConfig.ScalePerfect(normalProfile, 0f);
+            float wg0 = QteConfig.ScaleGood(normalProfile, 0f);
+            Assert.AreEqual(0.1125f, QteConfig.EffectiveFreezeWindowPenalty(0.15f, 0.25f), 1e-4f, "25% QTE Stability reduces 15% Freeze shrink by 25% -> 11.25%.");
+            Assert.Greater(QteConfig.EffectivePartialWindowMultiplier(0.25f), QteConfig.PartialWindowMultiplier);
+            Assert.AreEqual(wp0, QteConfig.ScalePerfect(normalProfile, 0f));
+            Assert.AreEqual(wg0, QteConfig.ScaleGood(normalProfile, 0f));
+
+            // 3. Charisma 3 Pillars in Battle: Commanding (Buff Eff CHA+WIS) & Disruptive (Debuff Eff CHA+INT)
+            var warlockDef = new CharacterDef
+            {
+                id = "cha_warlock",
+                name = "Cha Warlock",
+                raceId = "human",
+                classId = "warlock",
+                baseScores = new AbilityScores(10, 10, 10, 14, 14, 16), // INT 14 (+2), WIS 14 (+2), CHA 16 (+3)
+                stats = new Stats(80, 50, 10, 8, 10, 15)
+            };
+            var caster = new Combatant(new Unit(warlockDef), Side.Party, 0, "Warlock", "WLK");
+
+            var buffAp = new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.20f, chance = 1f, supportsChaScaling = true };
+            var scaledBuff = Battle.SupportScaled(buffAp, caster);
+            // CHA +3 (+12%) + WIS +2 (+3%) = +15% -> 0.20 * 1.15 = 0.23
+            Assert.AreEqual(0.23f, scaledBuff.magnitude, 1e-4f);
+            Assert.AreEqual(2, scaledBuff.turns, "CHA/WIS must never alter buff duration.");
+
+            var debuffAp = new StatusApply { id = StatusId.AttackDown, turns = 2, magnitude = 0.20f, chance = 1f, supportsChaScaling = true };
+            var scaledDebuff = Battle.DebuffScaled(debuffAp, caster);
+            // CHA +3 (+10.5%) + INT +2 (+3%) = +13.5% -> 0.20 * 1.135 = 0.227
+            Assert.AreEqual(0.227f, scaledDebuff.magnitude, 1e-4f);
+            Assert.AreEqual(2, scaledDebuff.turns, "CHA/INT must never alter debuff duration.");
         }
 
         [Test]
         public void CharacterSimulation_LiichtianCleric_Level1To30MatchesSpecTable()
         {
-            // Lv 1: STR 10(0), DEX 12(+1), VIT 12(+1), INT 14(+2), WIS 17(+3), CHA 9(-1)
-            Assert.AreEqual(312, StatCalculator.CalculateMaxHp(300f, AbilityScores.GetModifier(12)));
-            Assert.AreEqual(86, StatCalculator.CalculateMaxMp(80f, AbilityScores.GetModifier(14)));
-            Assert.AreEqual(42f, StatCalculator.CalculatePhysicalSkillBaseDamage(30f, 10, 1.2f), 1e-4f);
-            Assert.AreEqual(71f, StatCalculator.CalculateElementalSkillBaseDamage(50f, 14, 1.5f), 1e-4f);
-            Assert.AreEqual(224, StatCalculator.CalculateHealingOutput(200f, AbilityScores.GetModifier(17)));
-            Assert.AreEqual(0.096f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, AbilityScores.GetModifier(9)), 1e-5f);
-            Assert.AreEqual(9, StatCalculator.CalculateSocialCheckValue(AbilityScores.GetModifier(9)));
+            // Level 1: STR 10 (0), DEX 12 (+1), VIT 12 (+1), INT 14 (+2), WIS 17 (+3), CHA 9 (-1)
+            Assert.AreEqual(312, StatCalculator.CalculateMaxHp(300f, 1));
+            Assert.AreEqual(86, StatCalculator.CalculateMaxMp(80f, 2));
+            Assert.AreEqual(224, StatCalculator.CalculateHealingOutput(200f, 3));
+            Assert.AreEqual(163, StatCalculator.CalculateShieldOutput(150f, 3, -1)); // +10.5% - 1.5% = +9.0% -> floor(150 * 1.09) = 163
+            Assert.AreEqual(0.1005f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, -1, 3), 1e-5f); // -4% + 4.5% = +0.5%
 
-            // Lv 30 (18 AP): STR 12(+1), DEX 14(+2), VIT 14(+2), INT 18(+4), WIS 20(+5), CHA 14(+2)
-            Assert.AreEqual(1404, StatCalculator.CalculateMaxHp(1300f, AbilityScores.GetModifier(14)));
-            Assert.AreEqual(301, StatCalculator.CalculateMaxMp(260f, AbilityScores.GetModifier(18)));
-            Assert.AreEqual(44, StatCalculator.FloorInt(StatCalculator.CalculatePhysicalSkillBaseDamage(30f, 12, 1.2f)));
-            Assert.AreEqual(77f, StatCalculator.CalculateElementalSkillBaseDamage(50f, 18, 1.5f), 1e-4f);
-            Assert.AreEqual(4f, StatCalculator.CalculateRangedAccuracyBonus(AbilityScores.GetModifier(14)), 1e-4f);
-            Assert.AreEqual(4f, StatCalculator.CalculateEvasionBonus(AbilityScores.GetModifier(14)), 1e-4f);
-            Assert.AreEqual(6f, StatCalculator.CalculateQteWindowBonus(AbilityScores.GetModifier(14)), 1e-4f);
-            Assert.AreEqual(240, StatCalculator.CalculateHealingOutput(200f, AbilityScores.GetModifier(20)));
-            Assert.AreEqual(0.108f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, AbilityScores.GetModifier(14)), 1e-5f);
-            Assert.AreEqual(12, StatCalculator.CalculateSocialCheckValue(AbilityScores.GetModifier(14)));
+            // Level 15 (8 AP — Active Cap 15): STR 10 (0), DEX 12 (+1), VIT 14 (+2), INT 16 (+3), WIS 20 (+5), CHA 10 (0)
+            Assert.AreEqual(777, StatCalculator.CalculateMaxHp(720f, 2));
+            Assert.AreEqual(179, StatCalculator.CalculateMaxMp(160f, 3));
+            Assert.AreEqual(240, StatCalculator.CalculateHealingOutput(200f, 5));
+            Assert.AreEqual(176, StatCalculator.CalculateShieldOutput(150f, 5, 0)); // +17.5% -> floor(150 * 1.175) = 176
+            Assert.AreEqual(0.1075f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, 0, 5), 1e-5f); // +7.5%
+
+            // Level 30 (18 AP — Target Cap 30): STR 12 (+1), DEX 14 (+2), VIT 14 (+2), INT 18 (+4), WIS 20 (+5), CHA 14 (+2)
+            Assert.AreEqual(1404, StatCalculator.CalculateMaxHp(1300f, 2));
+            Assert.AreEqual(301, StatCalculator.CalculateMaxMp(260f, 4));
+            Assert.AreEqual(240, StatCalculator.CalculateHealingOutput(200f, 5));
+            Assert.AreEqual(180, StatCalculator.CalculateShieldOutput(150f, 5, 2)); // +17.5% + 3.0% = +20.5% -> floor(150 * 1.205) = 180
+            Assert.AreEqual(0.1155f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, 2, 5), 1e-5f); // +8% + 7.5% = +15.5%
         }
     }
 }

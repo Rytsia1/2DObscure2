@@ -1639,7 +1639,7 @@ namespace Obscure.Tests
             Assert.AreEqual(15, unit.FinalScores.str, "Base 10 + Human Racial +1 + Ring +4 = 15 STR.");
             Assert.AreEqual(2, unit.AbilityModifiers.str);
             Assert.Greater(unit.Derived.physicalPower, pwrBeforeRing, "Raw STR increase raises PhysicalPower.");
-            Assert.AreEqual(penBeforeRing, unit.Derived.armorPenetration, "Armor Penetration is decoupled from STR per FELNA-SYS-ATTR-001.");
+            Assert.AreEqual(penBeforeRing + 2, unit.Derived.armorPenetration, "STR +2 mod adds floor(2 * 1.2) = +2 Armor Penetration per FELNA-SYS-ATTR-002.");
         }
 
         [Test]

@@ -213,48 +213,50 @@ namespace Obscure.Tests
             var knight = new Unit(Database.Characters["knight"]);
             // Knight: Human (+1 STR, +1 VIT) + Base(15,10,15,8,12,11) = Final(16,10,16,8,12,11)
             // Modifiers: STR +3, DEX 0, VIT +3, INT -1, WIS +1, CHA 0
-            // FELNA-SYS-ATTR-001 FINAL formulas (Base Value Reference + floor):
-            Assert.AreEqual(106, knight.Derived.maxHp);           // floor(95 * (1 + 0.04 * 3)) = floor(106.4) = 106
-            Assert.AreEqual(14, knight.Derived.maxMp);            // floor(15 * (1 + 0.04 * -1)) = floor(14.4) = 14 (INT governs Max MP)
+            // FELNA-SYS-ATTR-002 v2.0 FINAL formulas (Connected Primary + Secondary Attribute Modifiers + floor):
+            Assert.AreEqual(106, knight.Derived.maxHp);           // floor(95 * (1 + 0.04 * 3)) = 106
+            Assert.AreEqual(14, knight.Derived.maxMp);            // floor(15 * (1 + 0.04 * -1)) = 14 (INT governs Max MP)
             Assert.AreEqual(16, knight.Derived.physicalPower);    // floor(8 + 16 * (2 * 0.25)) = 16 (Raw STR)
             Assert.AreEqual(10, knight.Derived.magicPower);       // floor(6 + 8 * (2 * 0.25)) = 10 (Raw INT)
-            Assert.AreEqual(6, knight.Derived.healingPower);      // floor(6 * (1 + 0.04 * 1)) = floor(6.24) = 6
-            Assert.AreEqual(0, knight.Derived.supportPower);      // 4% * CHA Mod(0) = 0%
-            Assert.AreEqual(11, knight.Derived.physicalDefense);  // Base 11 (decoupled from VIT)
-            Assert.AreEqual(7, knight.Derived.magicDefense);      // Base 7 (decoupled from WIS)
-            Assert.AreEqual(6, knight.Derived.initiative);        // Base 6 (decoupled from DEX)
-            Assert.AreEqual(54, knight.Derived.blockPower);       // Base 50 + Oathsworn +4 (decoupled from STR)
-            Assert.AreEqual(10, knight.Derived.counterPower);     // Base 10 (decoupled from STR/DEX)
+            Assert.AreEqual(6, knight.Derived.healingPower);      // floor(6 * (1 + 0.04 * 1)) = 6
+            Assert.AreEqual(9, knight.Derived.supportPower);      // Base 8 + floor(3.0*CHA(0) + 1.5*WIS(1)) = 9
+            Assert.AreEqual(13, knight.Derived.physicalDefense);  // Base 7 + floor(1.5*STR(3) + 0.75*VIT(3)) = 7 + 6 = 13
+            Assert.AreEqual(7, knight.Derived.magicDefense);      // Base 8 + floor(1.5*INT(-1) + 0.75*WIS(1)) = 8 - 1 = 7
+            Assert.AreEqual(6, knight.Derived.initiative);        // Base 7 + floor(1.0*DEX(0) + 0.5*INT(-1)) = 7 - 1 = 6
+            Assert.AreEqual(63, knight.Derived.blockPower);       // Base 50 + floor(2.0*STR(3) + 1.0*VIT(3)) + Oathsworn(+4) = 63
+            Assert.AreEqual(14, knight.Derived.counterPower);     // Base 10 + floor(2.5*DEX(0) + 1.5*STR(3)) = 14
 
-            // Changing VIT updates ONLY MaxHP (does NOT change PhysicalDefense, Shield, StatusResistance, StaggerResistance, or QteStability)
+            // Changing VIT updates MaxHP, PhysicalDefense (secondary), StatusResistance (primary), StaggerResistance (primary), and BlockPower (secondary)
             int pDefBefore = knight.Derived.physicalDefense;
             int statusResBefore = knight.Derived.statusResistance;
             knight.AddPermanentAbilityBonus(Ability.VIT, 2); // VIT 16 -> 18 (mod +3 -> +4)
-            Assert.AreEqual(110, knight.Derived.maxHp); // floor(95 * 1.16) = floor(110.2) = 110
-            Assert.AreEqual(pDefBefore, knight.Derived.physicalDefense);
-            Assert.AreEqual(statusResBefore, knight.Derived.statusResistance);
+            Assert.AreEqual(110, knight.Derived.maxHp); // floor(95 * 1.16) = 110
+            Assert.Greater(knight.Derived.physicalDefense, pDefBefore);
+            Assert.Greater(knight.Derived.statusResistance, statusResBefore);
 
-            // Changing INT updates MaxMP and Elemental Power (WIS no longer affects MaxMP or MagicDefense)
+            // Changing WIS updates HealingPower, ShieldPower, MagicDefense (secondary), StatusResistance (secondary), without altering MaxMP
             int mpBeforeWis = knight.Derived.maxMp;
             int mDefBeforeWis = knight.Derived.magicDefense;
             knight.AddPermanentAbilityBonus(Ability.WIS, 4); // WIS 12 -> 16 (mod +1 -> +3)
             Assert.AreEqual(mpBeforeWis, knight.Derived.maxMp, "WIS must not alter Max MP");
-            Assert.AreEqual(mDefBeforeWis, knight.Derived.magicDefense, "WIS must not alter Magic Defense");
+            Assert.Greater(knight.Derived.magicDefense, mDefBeforeWis, "WIS secondary (+0.75/mod) increases Magic Defense");
             Assert.AreEqual(1.12f, knight.Derived.healingWisMultiplier, 1e-4f);
 
             knight.AddPermanentAbilityBonus(Ability.INT, 8); // INT 8 -> 16 (mod -1 -> +3)
-            Assert.AreEqual(16, knight.Derived.maxMp); // floor(15 * 1.12) = floor(16.8) = 16
+            Assert.AreEqual(16, knight.Derived.maxMp); // floor(15 * 1.12) = 16
 
-            // Changing DEX updates Ranged Accuracy, Evasion, and QTE Timing Window ONLY (NOT Initiative, RangedPower, CritChance, or CounterPower)
+            // Changing DEX updates Ranged Accuracy, Evasion, QTE Timing Window, Initiative, CriticalChance, CounterPower, and QTE Stability
             int initBefore = knight.Derived.initiative;
             int rangedPwrBefore = knight.Derived.rangedPower;
             int evaBefore = knight.Derived.evasion;
+            int critBefore = knight.Derived.criticalChance;
             knight.AddPermanentAbilityBonus(Ability.DEX, 6); // DEX 10 -> 16 (mod 0 -> +3)
-            Assert.AreEqual(initBefore, knight.Derived.initiative, "DEX must not alter Speed/Initiative");
-            Assert.AreEqual(rangedPwrBefore, knight.Derived.rangedPower, "DEX must not alter RangedPower");
+            Assert.Greater(knight.Derived.initiative, initBefore, "DEX primary (+1.0/mod) increases Initiative");
+            Assert.AreEqual(rangedPwrBefore, knight.Derived.rangedPower, "DEX must not alter flat RangedPower");
             Assert.AreEqual(evaBefore + 6, knight.Derived.evasion, "DEX +3 mod adds +6% Evasion");
             Assert.AreEqual(9, knight.Derived.qteTimingBonus, "DEX +3 mod adds +9% QTE Window");
             Assert.AreEqual(6, knight.Derived.rangedAccuracyBonus, "DEX +3 mod adds +6% Ranged Accuracy");
+            Assert.Greater(knight.Derived.criticalChance, critBefore, "DEX primary (+1.5%/mod) increases Physical Critical Chance");
         }
 
         [Test]
@@ -527,7 +529,7 @@ namespace Obscure.Tests
 
                 string defTooltip = status.GetStatTooltip(DerivedStatId.PhysicalDefense);
                 StringAssert.Contains("PHYSICAL DEFENSE", defTooltip);
-                StringAssert.Contains("SRC: CLASS+GEAR", defTooltip);
+                StringAssert.Contains("SRC: STR+VIT", defTooltip);
                 StringAssert.Contains("FORMULA:", defTooltip);
                 StringAssert.Contains("EQP +4", defTooltip);
 

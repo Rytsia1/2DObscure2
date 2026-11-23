@@ -186,14 +186,45 @@ namespace Obscure
         }
 
         // Evaluates into the 4 PRD categories (Perfect, Success, PartialSuccess, Failure).
-        public static QteOutcomeCategory JudgeCategory(float error, QteProfile p, float timingBonusFraction = 0f)
+        // QTE Stability (Primary DEX +2%/mod, Secondary WIS +1%/mod, cap 50%) expands the outer PartialSuccess buffer
+        // without altering W_P (Perfect), W_G (Good), or R_QTE (GDD Bab 12 §3.4 & §8.2).
+        public static QteOutcomeCategory JudgeCategory(float error, QteProfile p, float timingBonusFraction = 0f, float qteStabilityFraction = 0f)
         {
             float e = Math.Abs(error);
             float good = ScaleGood(p, timingBonusFraction);
+            float partialMult = EffectivePartialWindowMultiplier(qteStabilityFraction);
             if (e <= ScalePerfect(p, timingBonusFraction)) return QteOutcomeCategory.Perfect;
             if (e <= good) return QteOutcomeCategory.Success;
-            if (e <= good * PartialWindowMultiplier) return QteOutcomeCategory.PartialSuccess;
+            if (e <= good * partialMult) return QteOutcomeCategory.PartialSuccess;
             return QteOutcomeCategory.Failure;
+        }
+
+        // QTE Stability helpers (FELNA-SYS-ATTR-002 v2.0 FINAL):
+        // 1. Mitigates Freeze window shrinkage (-15%) by up to 50% relatively.
+        // 2. Mitigates status visual distortion shake (ShakePx) and widens undistorted ClearZone (150ms -> up to 220ms).
+        // 3. Expands PartialSuccess outer tolerance multiplier without touching W_P, W_G, or R_QTE.
+        public static float EffectiveFreezeWindowPenalty(float baseFreezePenalty = 0.15f, float qteStabilityFraction = 0f)
+        {
+            float stab = Math.Clamp(qteStabilityFraction, 0f, 0.50f);
+            return Math.Max(0f, baseFreezePenalty * (1f - stab));
+        }
+
+        public static float EffectiveDistortionShake(float baseShakePx = ShakePx, float qteStabilityFraction = 0f)
+        {
+            float stab = Math.Clamp(qteStabilityFraction, 0f, 0.50f);
+            return Math.Max(0f, baseShakePx * (1f - stab));
+        }
+
+        public static float EffectiveClearZone(float qteStabilityFraction = 0f)
+        {
+            float stab = Math.Clamp(qteStabilityFraction, 0f, 0.50f);
+            return ClearZone + (0.220f - ClearZone) * (stab / 0.50f);
+        }
+
+        public static float EffectivePartialWindowMultiplier(float qteStabilityFraction = 0f)
+        {
+            float stab = Math.Clamp(qteStabilityFraction, 0f, 0.50f);
+            return PartialWindowMultiplier * (1f + 0.20f * stab);
         }
 
         public static QteOutcomeCategory ToCategory(QteResult r) => r switch
@@ -240,12 +271,19 @@ namespace Obscure
             return Rules.Physical(defender, attacker, multiplier * (1f + counterBonus), rng);
         }
 
-        // Calculates CHA Buff Effectiveness multiplier: 1 + clamp(0.04 * CHA Modifier, -0.20, +0.40).
-        // Applies both positive and negative CHA modifiers on explicitly CHA-scalable positive buffs.
+        // Calculates Buff Effectiveness multiplier: 1 + clamp(0.04 * CHA Mod + 0.015 * WIS Mod, -0.20, +0.40).
+        // Applies both positive and negative modifiers on explicitly scalable positive buffs.
         public static float SupportPotencyMultiplier(Combatant actor)
         {
             if (actor?.unit == null) return 1f;
-            return 1f + StatCalculator.CalculateBuffEffectivenessBonus(actor.unit.Mod(Ability.CHA));
+            return 1f + StatCalculator.CalculateBuffEffectivenessBonus(actor.unit.Mod(Ability.CHA), actor.unit.Mod(Ability.WIS));
+        }
+
+        // Calculates Debuff Effectiveness multiplier: 1 + clamp(0.035 * CHA Mod + 0.015 * INT Mod, -0.20, +0.40).
+        public static float DebuffPotencyMultiplier(Combatant actor)
+        {
+            if (actor?.unit == null) return 1f;
+            return 1f + StatCalculator.CalculateDebuffEffectivenessBonus(actor.unit.Mod(Ability.CHA), actor.unit.Mod(Ability.INT));
         }
     }
 }

@@ -394,7 +394,7 @@ namespace Obscure
         public override int GetHashCode() => HashCode.Combine(str, dex, vit, intel, wis, cha);
     }
 
-    // Data-driven configuration for FELNA Attribute Progression & Derived Stats System (FELNA-SYS-ATTR-001 FINAL).
+    // Data-driven configuration for FELNA Attribute-Driven Derived Stats System (FELNA-SYS-ATTR-002 v2.0 FINAL).
     [Serializable]
     public class AttributeSystemConfig
     {
@@ -402,20 +402,108 @@ namespace Obscure
         public int absoluteHardCap = 30;
         public int absoluteMinScore = 1;
 
-        public float vitMaxHpPerMod = 0.04f;             // +4% Base HP per VIT modifier
-        public float intMaxMpPerMod = 0.04f;             // +4% Base MP per INT modifier
-        public float dexRangedAccuracyPerMod = 0.02f;    // +2% Ranged Accuracy per DEX modifier (Ranged only)
-        public float dexEvasionPerMod = 0.02f;           // +2% Evasion per DEX modifier
-        public float dexQteWindowPerMod = 0.03f;         // +3% Timing QTE Window per DEX modifier
-        public float wisHealingPowerPerMod = 0.04f;      // +4% Base Healing per WIS modifier
-        public float chaBuffEffectivenessPerMod = 0.04f; // +4% Buff Magnitude per CHA modifier (opt-in positive buffs)
+        // Core Resource & Direct Derived Stat Coefficients
+        public float vitMaxHpPerMod = 0.04f;             // +4.0% Base HP per VIT modifier
+        public float intMaxMpPerMod = 0.04f;             // +4.0% Base MP per INT modifier
+        public float wisHealingPowerPerMod = 0.04f;      // +4.0% Base Healing per WIS modifier
+        public float dexRangedAccuracyPerMod = 0.02f;    // +2.0% Ranged Accuracy per DEX modifier (Ranged only)
+        public float dexEvasionPerMod = 0.02f;           // +2.0% Evasion per DEX modifier
+        public float dexQteWindowPerMod = 0.03f;         // +3.0% Timing QTE Window per DEX modifier
+
+        // 1. Defensive Statistics (Primary w1 > Secondary w2)
+        // Shield Power: Primary WIS (+3.5%/mod), Secondary CHA (+1.5%/mod)
+        public float wisShieldPowerPerMod = 0.035f;
+        public float chaShieldPowerPerMod = 0.015f;
+        public float shieldPowerMin = -0.25f;
+        public float shieldPowerMax = 0.50f;
+
+        // Damage Reduction: Primary VIT (+1.0%/mod), Secondary STR (+0.5%/mod), shared cap 25%
+        public float vitDamageReductionPerMod = 0.01f;
+        public float strDamageReductionPerMod = 0.005f;
+        public float maxDamageReduction = 0.25f;
+
+        // Status Resistance: Primary VIT (+2.0%/mod), Secondary WIS (+1.0%/mod), additive cap 75%
+        public float vitStatusResPerMod = 2.0f;
+        public float wisStatusResPerMod = 1.0f;
+        public float maxStatusResistance = 0.75f;
+
+        // Stagger Resistance: Primary VIT (+2.0%/mod), Secondary STR (+1.0%/mod), cap 75%
+        public float vitStaggerResPerMod = 2.0f;
+        public float strStaggerResPerMod = 1.0f;
+        public int maxStaggerResistance = 75;
+
+        // Physical Defense: Primary STR (+1.5/mod), Secondary VIT (+0.75/mod)
+        public float strPhysDefPerMod = 1.5f;
+        public float vitPhysDefPerMod = 0.75f;
+
+        // Magic Defense: Primary INT (+1.5/mod), Secondary WIS (+0.75/mod)
+        public float intMagDefPerMod = 1.5f;
+        public float wisMagDefPerMod = 0.75f;
+
+        // Block Power: Primary STR (+2.0/mod), Secondary VIT (+1.0/mod), cap 90%
+        public float strBlockPowerPerMod = 2.0f;
+        public float vitBlockPowerPerMod = 1.0f;
+        public int maxBlockPower = 90;
+
+        // 2. Offensive Statistics (Physical Crit only; Elemental has no Crit Chance per GDD Bab 11 §3)
+        // Physical Critical Chance: Primary DEX (+1.5%/mod), Secondary STR (+0.5%/mod), cap 95%
+        public float dexCritChancePerMod = 1.5f;
+        public float strCritChancePerMod = 0.5f;
+        public int maxCritChance = 95;
+
+        // Armor Penetration: Primary STR (+1.2/mod), Secondary DEX (+0.6/mod)
+        public float strArmorPenPerMod = 1.2f;
+        public float dexArmorPenPerMod = 0.6f;
+
+        // Magic Penetration: Primary INT (+1.2/mod), Secondary WIS (+0.6/mod)
+        public float intMagicPenPerMod = 1.2f;
+        public float wisMagicPenPerMod = 0.6f;
+
+        // Counter Power: Primary DEX (+2.5/mod), Secondary STR (+1.5/mod), cap 100%
+        public float dexCounterPowerPerMod = 2.5f;
+        public float strCounterPowerPerMod = 1.5f;
+        public int maxCounterPower = 100;
+
+        // Universal Break Power: Primary STR (+1.5/mod), Secondary DEX (+0.75/mod)
+        public float strBreakPowerPerMod = 1.5f;
+        public float dexBreakPowerPerMod = 0.75f;
+
+        // 3. Combat Execution Statistics
+        // Initiative (SPD): Primary DEX (+1.0/mod), Secondary INT (+0.5/mod)
+        public float dexInitiativePerMod = 1.0f;
+        public float intInitiativePerMod = 0.5f;
+
+        // Action Speed: Primary DEX (+1.5/mod), Secondary INT (+0.75/mod)
+        public float dexActionSpeedPerMod = 1.5f;
+        public float intActionSpeedPerMod = 0.75f;
+
+        // QTE Stability: Primary DEX (+2.0%/mod), Secondary WIS (+1.0%/mod), cap 50%
+        public float dexQteStabilityPerMod = 2.0f;
+        public float wisQteStabilityPerMod = 1.0f;
+        public int maxQteStability = 50;
+
+        // 4. Support Statistics
+        // Buff Effectiveness: Primary CHA (+4.0%/mod), Secondary WIS (+1.5%/mod), clamp [-20%, +40%]
+        public float chaBuffEffectivenessPerMod = 0.04f;
+        public float wisBuffEffectivenessPerMod = 0.015f;
+        public float chaBuffEffMin = -0.20f;
+        public float chaBuffEffMax = 0.40f;
+
+        // Debuff Effectiveness: Primary CHA (+3.5%/mod), Secondary INT (+1.5%/mod), clamp [-20%, +40%]
+        public float chaDebuffEffectivenessPerMod = 0.035f;
+        public float intDebuffEffectivenessPerMod = 0.015f;
+        public float debuffEffMin = -0.20f;
+        public float debuffEffMax = 0.40f;
+
+        // Support Skill Power: Primary CHA (+3.0%/mod), Secondary WIS (+1.5%/mod), clamp [-20%, +50%]
+        public float chaSupportPowerPerMod = 3.0f;
+        public float wisSupportPowerPerMod = 1.5f;
+        public int supportPowerMin = -20;
+        public int supportPowerMax = 50;
 
         public float qteWindowMinFromAttr = -0.15f;
         public float qteWindowSharedMax = 0.25f;
         public float maxEvasion = 0.75f;
-        public float maxStatusResistance = 0.75f;
-        public float chaBuffEffMin = -0.20f;
-        public float chaBuffEffMax = 0.40f;
 
         public static readonly AttributeSystemConfig Default = new AttributeSystemConfig();
     }
@@ -661,12 +749,16 @@ namespace Obscure
         public int rangedPower;
         public int magicPower;
         public int healingPower;
-        public int supportPower;     // CHA Buff Effectiveness bonus in percentage points (e.g. 12 = +12%, -4 = -4%)
-        public int rangedAccuracyBonus; // DEX Ranged Accuracy bonus in percentage points (e.g. 6 = +6%)
-        public float healingWisMultiplier; // 1 + 0.04 * WISMod for single-floor final healing resolution
-        public int unscaledHealingBase;    // Base healing + flat bonuses before WIS % scaling
-        public float buffEffectivenessBonus; // clamp(0.04 * CHAMod, -0.20, +0.40)
-        public int criticalChance;   // percentage (e.g. 5 = 5%)
+        public int supportPower;            // Support Skill Power (BaseSupport + floor(3.0*CHA + 1.5*WIS))
+        public int supportSkillPower;       // Explicit alias for Support Skill Power
+        public int rangedAccuracyBonus;     // DEX Ranged Accuracy bonus in percentage points (e.g. 6 = +6%)
+        public float healingWisMultiplier;  // 1 + 0.04 * WISMod for single-floor final healing resolution
+        public int unscaledHealingBase;     // Base healing + flat bonuses before WIS % scaling
+        public float shieldPowerBonus;      // clamp(0.035*WISMod + 0.015*CHAMod, -0.25, +0.50)
+        public float damageReductionBonus;  // clamp(0.01*VITMod + 0.005*STRMod, 0.0, 0.25)
+        public float buffEffectivenessBonus;   // clamp(0.04*CHAMod + 0.015*WISMod, -0.20, +0.40)
+        public float debuffEffectivenessBonus; // clamp(0.035*CHAMod + 0.015*INTMod, -0.20, +0.40)
+        public int criticalChance;   // Physical Critical Chance percentage (e.g. 5 = 5%; Elemental has no Crit)
         public int criticalDamage;   // percentage (e.g. 150 = 150%)
         public int armorPenetration;
         public int magicPenetration;
@@ -685,10 +777,10 @@ namespace Obscure
 
         // QTE Stats
         public int qteTimingBonus;   // percentage (e.g. 6 = +6% timing window)
-        public int qteStability;     // percentage (e.g. 8 = 8% reduced failure penalty)
+        public int qteStability;     // percentage (e.g. 7 = 7% Freeze/distortion mitigation & partial buffer)
         public int counterPower;
 
-        // Break Stats
+        // Break Stats (Universal Break Power)
         public int physicalBreakPower;
         public int magicBreakPower;
 
@@ -698,7 +790,7 @@ namespace Obscure
         public float BlockFraction => Mathf.Clamp(blockPower / 100f, 0f, 0.90f);
         public float StatusResistFraction => Mathf.Clamp(statusResistance / 100f, 0f, 0.75f);
         public float QteTimingBonusFraction => Mathf.Clamp(qteTimingBonus / 100f, -0.15f, 0.25f);
-        public float QteStabilityFraction => Mathf.Clamp(qteStability / 100f, 0f, 0.35f);
+        public float QteStabilityFraction => Mathf.Clamp(qteStability / 100f, 0f, 0.50f);
 
         public int Get(DerivedStatId id) => id switch
         {
@@ -1316,14 +1408,140 @@ namespace Obscure
             return Math.Max(0, FloorInt(val));
         }
 
-        public static float CalculateBuffEffectivenessBonus(int chaModifier, AttributeSystemConfig config = null)
+        // 1. Defensive Attribute-Driven Helpers (Primary w1 > Secondary w2)
+        public static float CalculateShieldPowerBonus(int wisModifier, int chaModifier = 0, AttributeSystemConfig config = null)
         {
             var cfg = config ?? AttributeSystemConfig.Default;
-            return Math.Clamp(cfg.chaBuffEffectivenessPerMod * chaModifier, cfg.chaBuffEffMin, cfg.chaBuffEffMax);
+            float raw = cfg.wisShieldPowerPerMod * wisModifier + cfg.chaShieldPowerPerMod * chaModifier;
+            return Math.Clamp(raw, cfg.shieldPowerMin, cfg.shieldPowerMax);
         }
 
-        public static float CalculateFinalBuffMagnitude(float baseBuffMagnitude, int chaModifier, AttributeSystemConfig config = null) =>
-            baseBuffMagnitude * (1f + CalculateBuffEffectivenessBonus(chaModifier, config));
+        public static int CalculateShieldOutput(float baseShield, int wisModifier, int chaModifier = 0, float extraBasePercentAdd = 0f, float flatBonus = 0f, AttributeSystemConfig config = null)
+        {
+            float bonus = CalculateShieldPowerBonus(wisModifier, chaModifier, config);
+            float val = baseShield * Math.Max(0f, 1f + bonus + extraBasePercentAdd) + flatBonus;
+            return Math.Max(0, FloorInt(val));
+        }
+
+        public static float CalculateDamageReductionBonus(int vitModifier, int strModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            float raw = cfg.vitDamageReductionPerMod * vitModifier + cfg.strDamageReductionPerMod * strModifier;
+            return Math.Clamp(raw, 0f, cfg.maxDamageReduction);
+        }
+
+        public static int CalculateStatusResistanceBonus(int vitModifier, int wisModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.vitStatusResPerMod * vitModifier + cfg.wisStatusResPerMod * wisModifier);
+        }
+
+        public static int CalculateStaggerResistanceBonus(int vitModifier, int strModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.vitStaggerResPerMod * vitModifier + cfg.strStaggerResPerMod * strModifier);
+        }
+
+        public static int CalculatePhysicalDefenseBonus(int strModifier, int vitModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.strPhysDefPerMod * strModifier + cfg.vitPhysDefPerMod * vitModifier);
+        }
+
+        public static int CalculateMagicDefenseBonus(int intModifier, int wisModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.intMagDefPerMod * intModifier + cfg.wisMagDefPerMod * wisModifier);
+        }
+
+        public static int CalculateBlockPowerBonus(int strModifier, int vitModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.strBlockPowerPerMod * strModifier + cfg.vitBlockPowerPerMod * vitModifier);
+        }
+
+        // 2. Offensive Attribute-Driven Helpers (Physical Crit only; Elemental has no Crit Chance)
+        public static int CalculatePhysicalCritChanceBonus(int dexModifier, int strModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.dexCritChancePerMod * dexModifier + cfg.strCritChancePerMod * strModifier);
+        }
+
+        public static int CalculateArmorPenetrationBonus(int strModifier, int dexModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.strArmorPenPerMod * strModifier + cfg.dexArmorPenPerMod * dexModifier);
+        }
+
+        public static int CalculateMagicPenetrationBonus(int intModifier, int wisModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.intMagicPenPerMod * intModifier + cfg.wisMagicPenPerMod * wisModifier);
+        }
+
+        public static int CalculateCounterPowerBonus(int dexModifier, int strModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.dexCounterPowerPerMod * dexModifier + cfg.strCounterPowerPerMod * strModifier);
+        }
+
+        public static int CalculateUniversalBreakPowerBonus(int strModifier, int dexModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.strBreakPowerPerMod * strModifier + cfg.dexBreakPowerPerMod * dexModifier);
+        }
+
+        // 3. Combat Execution Attribute-Driven Helpers
+        public static int CalculateInitiativeBonus(int dexModifier, int intModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.dexInitiativePerMod * dexModifier + cfg.intInitiativePerMod * intModifier);
+        }
+
+        public static int CalculateActionSpeedBonus(int dexModifier, int intModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.dexActionSpeedPerMod * dexModifier + cfg.intActionSpeedPerMod * intModifier);
+        }
+
+        public static int CalculateQteStabilityBonus(int dexModifier, int wisModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.dexQteStabilityPerMod * dexModifier + cfg.wisQteStabilityPerMod * wisModifier);
+        }
+
+        // 4. Support Attribute-Driven Helpers (CHA Primary + WIS/INT Secondary)
+        public static float CalculateBuffEffectivenessBonus(int chaModifier, AttributeSystemConfig config) =>
+            CalculateBuffEffectivenessBonus(chaModifier, 0, config);
+
+        public static float CalculateBuffEffectivenessBonus(int chaModifier, int wisModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            float raw = cfg.chaBuffEffectivenessPerMod * chaModifier + cfg.wisBuffEffectivenessPerMod * wisModifier;
+            return Math.Clamp(raw, cfg.chaBuffEffMin, cfg.chaBuffEffMax);
+        }
+
+        public static float CalculateFinalBuffMagnitude(float baseBuffMagnitude, int chaModifier, AttributeSystemConfig config) =>
+            CalculateFinalBuffMagnitude(baseBuffMagnitude, chaModifier, 0, config);
+
+        public static float CalculateFinalBuffMagnitude(float baseBuffMagnitude, int chaModifier, int wisModifier = 0, AttributeSystemConfig config = null) =>
+            baseBuffMagnitude * (1f + CalculateBuffEffectivenessBonus(chaModifier, wisModifier, config));
+
+        public static float CalculateDebuffEffectivenessBonus(int chaModifier, int intModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            float raw = cfg.chaDebuffEffectivenessPerMod * chaModifier + cfg.intDebuffEffectivenessPerMod * intModifier;
+            return Math.Clamp(raw, cfg.debuffEffMin, cfg.debuffEffMax);
+        }
+
+        public static float CalculateFinalDebuffMagnitude(float baseDebuffMagnitude, int chaModifier, int intModifier = 0, AttributeSystemConfig config = null) =>
+            baseDebuffMagnitude * (1f + CalculateDebuffEffectivenessBonus(chaModifier, intModifier, config));
+
+        public static int CalculateSupportSkillPowerBonus(int chaModifier, int wisModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.chaSupportPowerPerMod * chaModifier + cfg.wisSupportPowerPerMod * wisModifier);
+        }
 
         public static int CalculateSocialCheckValue(int chaModifier, int socialBonus = 0) =>
             10 + chaModifier + socialBonus;
@@ -1495,61 +1713,83 @@ namespace Obscure
             // 1. Resource Stats (Base Value Reference — non-compounding, floor once)
             float baseHp = c.baseHp + (lvl - 1) * c.levelHpGrowth;
             float baseMp = c.baseMp + (lvl - 1) * c.levelMpGrowth;
-            float rawShield = c.baseShield; // Shield Power is strictly separate from VIT, WIS, and CHA
+            // Shield Power: Primary WIS (+3.5%/mod), Secondary CHA (+1.5%/mod) — separate from Healing Power (GDD Bab 8 §8.1)
+            float shieldBonusPct = CalculateShieldPowerBonus(mods.wis, mods.cha, cfg);
+            float baseShield = c.baseShield;
 
             // 2. Offensive & Support Stats
             // STR -> Raw STR Physical scaling; INT -> Raw INT Elemental scaling (no double scaling)
             float weaponPower = c.baseWeaponPower + eqWeaponPower + permanentLegacyBonuses.atk;
             float rawStrScaling = (c.weaponScaling + eqWeaponScaling) * 0.25f;
             float rawPhysPower = weaponPower + (scores.str * rawStrScaling);
-            // DEX does NOT scale RangedPower or CriticalChance (DEX = Ranged Accuracy, Evasion, QTE Window only)
             float rawRangedPower = c.baseRangedPower + eqWeaponPower + permanentLegacyBonuses.atk;
             float spellPower = c.baseSpellPower + permanentLegacyBonuses.mag;
             float rawIntScaling = c.spellScaling * 0.25f;
             float rawMagPower = spellPower + (scores.intel * rawIntScaling);
 
-            // WIS -> Healing Power (+4% Base Healing per WIS Modifier, separate from Shield/DR)
+            // WIS -> Healing Power (+4% Base Healing per WIS Modifier, strictly separate from Shield Power & DR)
             float flatHealMods = permanentLegacyBonuses.mag + allMods.Where(m => !m.isAbilityModifier && m.derivedStat == DerivedStatId.HealingPower && m.kind == ModifierKind.Flat).Sum(m => m.value);
             float baseHealForWis = c.baseHealing + flatHealMods;
             float healWisMult = Math.Max(0f, 1f + cfg.wisHealingPowerPerMod * mods.wis);
             var nonFlatHealMods = allMods.Where(m => !m.isAbilityModifier && m.derivedStat == DerivedStatId.HealingPower && m.kind != ModifierKind.Flat);
             int finalHealPower = EvaluateBasePercentModifiers(baseHealForWis, cfg.wisHealingPowerPerMod * mods.wis, 0f, nonFlatHealMods, 1, 9999);
 
-            // CHA -> Buff Effectiveness (+4% per CHA Modifier, opt-in positive buffs; negative modifiers apply)
-            float buffEffBonus = CalculateBuffEffectivenessBonus(mods.cha, cfg);
-            int finalSupportPower = Eval(DerivedStatId.SupportPower, buffEffBonus * 100f, -20, 40);
+            // CHA -> Buff Effectiveness (Primary CHA +4%/mod, Secondary WIS +1.5%/mod),
+            //        Debuff Effectiveness (Primary CHA +3.5%/mod, Secondary INT +1.5%/mod),
+            //        Support Skill Power (Primary CHA +3%/mod, Secondary WIS +1.5%/mod)
+            float buffEffBonus = CalculateBuffEffectivenessBonus(mods.cha, mods.wis, cfg);
+            float debuffEffBonus = CalculateDebuffEffectivenessBonus(mods.cha, mods.intel, cfg);
+            float rawSupportSkillPower = c.baseSupportPower + CalculateSupportSkillPowerBonus(mods.cha, mods.wis, cfg);
+            int finalSupportPower = Eval(DerivedStatId.SupportPower, rawSupportSkillPower, cfg.supportPowerMin, cfg.supportPowerMax);
 
-            float rawCritChance = c.baseCritChance; // Separate from DEX
+            // Physical Critical Chance: Primary DEX (+1.5%/mod), Secondary STR (+0.5%/mod); Elemental has no Critical Chance
+            float rawCritChance = c.baseCritChance + CalculatePhysicalCritChanceBonus(mods.dex, mods.str, cfg);
             float rawCritDamage = c.baseCritDamage;
-            float rawArmorPen = c.baseArmorPen;     // Separate from STR
-            float rawMagicPen = c.baseMagicPen;     // Separate from INT
+            // Armor Penetration: Primary STR (+1.2/mod), Secondary DEX (+0.6/mod)
+            float rawArmorPen = c.baseArmorPen + CalculateArmorPenetrationBonus(mods.str, mods.dex, cfg);
+            // Magic Penetration: Primary INT (+1.2/mod), Secondary WIS (+0.6/mod)
+            float rawMagicPen = c.baseMagicPen + CalculateMagicPenetrationBonus(mods.intel, mods.wis, cfg);
 
-            // 3. Defensive Stats (Strictly decoupled from VIT, WIS, STR)
-            float rawPhysDef = c.basePhysicalDefense + eqPhysDef + permanentLegacyBonuses.def;
-            float rawMagDef = c.baseMagicDefense + eqMagDef;
-            float rawEvasion = c.baseEvasion + CalculateEvasionBonus(mods.dex, cfg); // 2% * DEX Mod
-            float rawBlock = c.baseBlockPower; // Fully decoupled from STR
-            float rawStatusRes = c.baseStatusResistance; // Shared combat system, decoupled from VIT/WIS, cap 75%
-            float rawStaggerRes = c.baseStaggerResistance; // Decoupled from VIT
+            // 3. Defensive Stats (Connected Primary + Secondary Attribute Modifiers)
+            // Physical Defense: Primary STR (+1.5/mod), Secondary VIT (+0.75/mod)
+            float rawPhysDef = c.basePhysicalDefense + eqPhysDef + permanentLegacyBonuses.def + CalculatePhysicalDefenseBonus(mods.str, mods.vit, cfg);
+            // Magic Defense: Primary INT (+1.5/mod), Secondary WIS (+0.75/mod)
+            float rawMagDef = c.baseMagicDefense + eqMagDef + CalculateMagicDefenseBonus(mods.intel, mods.wis, cfg);
+            // Evasion: Primary DEX (+2.0%/mod), cap 75%
+            float rawEvasion = c.baseEvasion + CalculateEvasionBonus(mods.dex, cfg);
+            // Block Power: Primary STR (+2.0/mod), Secondary VIT (+1.0/mod), cap 90%
+            float rawBlock = c.baseBlockPower + CalculateBlockPowerBonus(mods.str, mods.vit, cfg);
+            // Status Resistance: Primary VIT (+2.0%/mod), Secondary WIS (+1.0%/mod), additive cap 75%
+            float rawStatusRes = c.baseStatusResistance + CalculateStatusResistanceBonus(mods.vit, mods.wis, cfg);
+            // Stagger Resistance: Primary VIT (+2.0%/mod), Secondary STR (+1.0%/mod), cap 75%
+            float rawStaggerRes = c.baseStaggerResistance + CalculateStaggerResistanceBonus(mods.vit, mods.str, cfg);
+            // Damage Reduction: Primary VIT (+1.0%/mod), Secondary STR (+0.5%/mod), shared cap 25%
+            float drBonus = CalculateDamageReductionBonus(mods.vit, mods.str, cfg);
 
-            // 4. Turn Stats (DEX does NOT automatically increase Speed or grant extra turns)
-            float rawInitiative = c.baseInitiative + permanentLegacyBonuses.spd;
-            float rawActionSpeed = c.baseActionSpeed;
+            // 4. Turn & Execution Stats (Primary DEX, Secondary INT — never grants extra turns)
+            float rawInitiative = c.baseInitiative + permanentLegacyBonuses.spd + CalculateInitiativeBonus(mods.dex, mods.intel, cfg);
+            float rawActionSpeed = c.baseActionSpeed + CalculateActionSpeedBonus(mods.dex, mods.intel, cfg);
 
-            // 5. QTE Stats (DEX is the ONLY ability affecting Timing QTE Window: 3% * DEX Mod, floor -15%, shared cap +25%)
+            // 5. QTE & Reaction Stats
+            // Timing QTE Window: DEX only (+3%/mod, floor -15%, shared cap +25%)
             float rawQteTiming = c.baseQteTimingBonus + CalculateQteWindowBonus(mods.dex, cfg);
-            float rawQteStability = c.baseQteStability; // Decoupled from VIT
-            float rawCounterPower = c.baseCounterPower; // Fully decoupled from STR and DEX
+            // QTE Stability: Primary DEX (+2.0%/mod), Secondary WIS (+1.0%/mod), cap 50%
+            float rawQteStability = c.baseQteStability + CalculateQteStabilityBonus(mods.dex, mods.wis, cfg);
+            // Counter Power: Primary DEX (+2.5/mod), Secondary STR (+1.5/mod), cap 100%
+            float rawCounterPower = c.baseCounterPower + CalculateCounterPowerBonus(mods.dex, mods.str, cfg);
 
-            // 6. Break Stats (STR and INT do NOT grant universal Break Power bonuses)
-            float rawPhysBreak = c.baseBreakPower + eqBreakBonus;
-            float rawMagBreak = c.baseBreakPower + eqBreakBonus;
+            // 6. Universal Break Power: Primary STR (+1.5/mod), Secondary DEX (+0.75/mod)
+            int univBreakBonus = CalculateUniversalBreakPowerBonus(mods.str, mods.dex, cfg);
+            float rawPhysBreak = c.baseBreakPower + eqBreakBonus + univBreakBonus;
+            float rawMagBreak = c.baseBreakPower + eqBreakBonus + univBreakBonus;
 
             return new DerivedStats
             {
                 maxHp = EvalBasePct(DerivedStatId.MaxHP, baseHp, cfg.vitMaxHpPerMod * mods.vit, permanentLegacyBonuses.maxHp, 1, 9999),
                 maxMp = EvalBasePct(DerivedStatId.MaxMP, baseMp, cfg.intMaxMpPerMod * mods.intel, permanentLegacyBonuses.maxMp, 0, 9999),
-                maxShield = Eval(DerivedStatId.MaxShield, rawShield, 0, 9999),
+                maxShield = EvalBasePct(DerivedStatId.MaxShield, baseShield, shieldBonusPct, 0f, 0, 9999),
+                shieldPowerBonus = shieldBonusPct,
+                damageReductionBonus = drBonus,
                 physicalPower = Eval(DerivedStatId.PhysicalPower, rawPhysPower, 1, 9999),
                 rangedPower = Eval(DerivedStatId.RangedPower, rawRangedPower, 1, 9999),
                 magicPower = Eval(DerivedStatId.MagicPower, rawMagPower, 1, 9999),
@@ -1557,23 +1797,25 @@ namespace Obscure
                 unscaledHealingBase = Math.Max(1, FloorInt(baseHealForWis)),
                 healingWisMultiplier = healWisMult,
                 supportPower = finalSupportPower,
+                supportSkillPower = finalSupportPower,
                 buffEffectivenessBonus = buffEffBonus,
+                debuffEffectivenessBonus = debuffEffBonus,
                 rangedAccuracyBonus = FloorInt(CalculateRangedAccuracyBonus(mods.dex, cfg)),
-                criticalChance = Eval(DerivedStatId.CriticalChance, rawCritChance, 0, 95),
+                criticalChance = Eval(DerivedStatId.CriticalChance, rawCritChance, 0, cfg.maxCritChance),
                 criticalDamage = Eval(DerivedStatId.CriticalDamage, rawCritDamage, 100, 300),
                 armorPenetration = Eval(DerivedStatId.ArmorPenetration, rawArmorPen, 0, 999),
                 magicPenetration = Eval(DerivedStatId.MagicPenetration, rawMagicPen, 0, 999),
                 physicalDefense = Eval(DerivedStatId.PhysicalDefense, rawPhysDef, 0, 999),
                 magicDefense = Eval(DerivedStatId.MagicDefense, rawMagDef, 0, 999),
                 evasion = Eval(DerivedStatId.Evasion, rawEvasion, 0, 75),
-                blockPower = Eval(DerivedStatId.BlockPower, rawBlock, 0, 90),
+                blockPower = Eval(DerivedStatId.BlockPower, rawBlock, 0, cfg.maxBlockPower),
                 statusResistance = Eval(DerivedStatId.StatusResistance, rawStatusRes, 0, 75),
-                staggerResistance = Eval(DerivedStatId.StaggerResistance, rawStaggerRes, 0, 999),
+                staggerResistance = Eval(DerivedStatId.StaggerResistance, rawStaggerRes, 0, cfg.maxStaggerResistance),
                 initiative = Eval(DerivedStatId.Initiative, rawInitiative, 1, 999),
-                actionSpeed = Eval(DerivedStatId.ActionSpeed, rawActionSpeed, 10, 999),
+                actionSpeed = Eval(DerivedStatId.ActionSpeed, rawActionSpeed, 1, 999),
                 qteTimingBonus = Eval(DerivedStatId.QteTimingBonus, rawQteTiming, -15, 25),
-                qteStability = Eval(DerivedStatId.QteStability, rawQteStability, 0, 35),
-                counterPower = Eval(DerivedStatId.CounterPower, rawCounterPower, 0, 999),
+                qteStability = Eval(DerivedStatId.QteStability, rawQteStability, 0, cfg.maxQteStability),
+                counterPower = Eval(DerivedStatId.CounterPower, rawCounterPower, 0, cfg.maxCounterPower),
                 physicalBreakPower = Eval(DerivedStatId.PhysicalBreakPower, rawPhysBreak, 1, 999),
                 magicBreakPower = Eval(DerivedStatId.MagicBreakPower, rawMagBreak, 1, 999),
             };
@@ -1644,6 +1886,7 @@ namespace Obscure
                     break;
                 case DerivedStatId.MaxShield:
                     baseVal = c.baseShield;
+                    abilityContrib = FloorInt(c.baseShield * (1f + CalculateShieldPowerBonus(mods.wis, mods.cha, cfg))) - c.baseShield;
                     break;
                 case DerivedStatId.PhysicalPower:
                     baseVal = c.baseWeaponPower;
@@ -1667,29 +1910,34 @@ namespace Obscure
                     permContrib = permanentLegacyBonuses.mag;
                     break;
                 case DerivedStatId.SupportPower:
-                    baseVal = 0;
-                    abilityContrib = FloorInt(CalculateBuffEffectivenessBonus(mods.cha, cfg) * 100f);
+                    baseVal = c.baseSupportPower;
+                    abilityContrib = CalculateSupportSkillPowerBonus(mods.cha, mods.wis, cfg);
                     break;
                 case DerivedStatId.CriticalChance:
                     baseVal = c.baseCritChance;
+                    abilityContrib = CalculatePhysicalCritChanceBonus(mods.dex, mods.str, cfg);
                     break;
                 case DerivedStatId.CriticalDamage:
                     baseVal = c.baseCritDamage;
                     break;
                 case DerivedStatId.ArmorPenetration:
                     baseVal = c.baseArmorPen;
+                    abilityContrib = CalculateArmorPenetrationBonus(mods.str, mods.dex, cfg);
                     break;
                 case DerivedStatId.MagicPenetration:
                     baseVal = c.baseMagicPen;
+                    abilityContrib = CalculateMagicPenetrationBonus(mods.intel, mods.wis, cfg);
                     break;
                 case DerivedStatId.PhysicalDefense:
                     baseVal = c.basePhysicalDefense;
                     eqContrib = eqList.Sum(e => e.physicalDefense);
+                    abilityContrib = CalculatePhysicalDefenseBonus(mods.str, mods.vit, cfg);
                     permContrib = permanentLegacyBonuses.def;
                     break;
                 case DerivedStatId.MagicDefense:
                     baseVal = c.baseMagicDefense;
                     eqContrib = eqList.Sum(e => e.magicDefense);
+                    abilityContrib = CalculateMagicDefenseBonus(mods.intel, mods.wis, cfg);
                     break;
                 case DerivedStatId.Evasion:
                     baseVal = c.baseEvasion;
@@ -1697,19 +1945,24 @@ namespace Obscure
                     break;
                 case DerivedStatId.BlockPower:
                     baseVal = c.baseBlockPower;
+                    abilityContrib = CalculateBlockPowerBonus(mods.str, mods.vit, cfg);
                     break;
                 case DerivedStatId.StatusResistance:
                     baseVal = c.baseStatusResistance;
+                    abilityContrib = CalculateStatusResistanceBonus(mods.vit, mods.wis, cfg);
                     break;
                 case DerivedStatId.StaggerResistance:
                     baseVal = c.baseStaggerResistance;
+                    abilityContrib = CalculateStaggerResistanceBonus(mods.vit, mods.str, cfg);
                     break;
                 case DerivedStatId.Initiative:
                     baseVal = c.baseInitiative;
+                    abilityContrib = CalculateInitiativeBonus(mods.dex, mods.intel, cfg);
                     permContrib = permanentLegacyBonuses.spd;
                     break;
                 case DerivedStatId.ActionSpeed:
                     baseVal = c.baseActionSpeed;
+                    abilityContrib = CalculateActionSpeedBonus(mods.dex, mods.intel, cfg);
                     break;
                 case DerivedStatId.QteTimingBonus:
                     baseVal = c.baseQteTimingBonus;
@@ -1717,17 +1970,21 @@ namespace Obscure
                     break;
                 case DerivedStatId.QteStability:
                     baseVal = c.baseQteStability;
+                    abilityContrib = CalculateQteStabilityBonus(mods.dex, mods.wis, cfg);
                     break;
                 case DerivedStatId.CounterPower:
                     baseVal = c.baseCounterPower;
+                    abilityContrib = CalculateCounterPowerBonus(mods.dex, mods.str, cfg);
                     break;
                 case DerivedStatId.PhysicalBreakPower:
                     baseVal = c.baseBreakPower;
                     eqContrib = eqList.Sum(e => e.breakPowerModifier);
+                    abilityContrib = CalculateUniversalBreakPowerBonus(mods.str, mods.dex, cfg);
                     break;
                 case DerivedStatId.MagicBreakPower:
                     baseVal = c.baseBreakPower;
                     eqContrib = eqList.Sum(e => e.breakPowerModifier);
+                    abilityContrib = CalculateUniversalBreakPowerBonus(mods.str, mods.dex, cfg);
                     break;
             }
 

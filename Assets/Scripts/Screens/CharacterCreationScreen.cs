@@ -1097,22 +1097,22 @@ namespace Obscure
 
         static string AbilitySubtitle(Ability a) => a switch
         {
-            Ability.STR => "PHYSICAL DAMAGE SCALING (RAW)",
-            Ability.DEX => "RANGED ACC · EVASION · QTE WINDOW",
-            Ability.VIT => "MAX HP (+4% BASE HP / MOD)",
-            Ability.INT => "ELEMENTAL DAMAGE · MAX MP",
-            Ability.WIS => "HEALING POWER (+4% / MOD)",
-            _ => "BUFF EFFECTIVENESS · SOCIAL"
+            Ability.STR => "PHYS DMG · DEF · BLOCK · BREAK · APEN",
+            Ability.DEX => "ACC · EVA · QTE · SPD · CRIT · COUNTER",
+            Ability.VIT => "MAX HP · DR · STATUS & STAGGER RES",
+            Ability.INT => "ELEM DMG · MAX MP · MDEF · MPEN",
+            Ability.WIS => "HEALING · SHIELD · STATUS & QTE STAB",
+            _ => "BUFF & DEBUFF EFF · SUPPORT · SHIELD"
         };
 
         static DerivedStatId[] PreviewStatsFor(Ability a) => a switch
         {
-            Ability.STR => new[] { DerivedStatId.PhysicalPower },
-            Ability.DEX => new[] { DerivedStatId.Evasion, DerivedStatId.QteTimingBonus },
-            Ability.VIT => new[] { DerivedStatId.MaxHP },
-            Ability.INT => new[] { DerivedStatId.MagicPower, DerivedStatId.MaxMP },
-            Ability.WIS => new[] { DerivedStatId.HealingPower },
-            _ => new[] { DerivedStatId.SupportPower }
+            Ability.STR => new[] { DerivedStatId.PhysicalPower, DerivedStatId.PhysicalDefense, DerivedStatId.BlockPower, DerivedStatId.PhysicalBreakPower },
+            Ability.DEX => new[] { DerivedStatId.Evasion, DerivedStatId.QteTimingBonus, DerivedStatId.Initiative, DerivedStatId.CriticalChance },
+            Ability.VIT => new[] { DerivedStatId.MaxHP, DerivedStatId.StatusResistance, DerivedStatId.StaggerResistance },
+            Ability.INT => new[] { DerivedStatId.MagicPower, DerivedStatId.MaxMP, DerivedStatId.MagicDefense, DerivedStatId.MagicPenetration },
+            Ability.WIS => new[] { DerivedStatId.HealingPower, DerivedStatId.MaxShield, DerivedStatId.QteStability },
+            _ => new[] { DerivedStatId.SupportPower, DerivedStatId.MaxShield }
         };
 
         void BuildAbilitiesPage()
