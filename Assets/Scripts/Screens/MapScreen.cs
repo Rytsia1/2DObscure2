@@ -50,7 +50,7 @@ namespace Obscure
             var map = currentMap = Run?.Map ?? MapGenerator.Generate(1);
             MountFigma("12---Dungeon-Map");
             StripStaticNodesAndPreview();
-            FigmaUi.HideByClass(UiRoot, "toast-info__i-2"); // baked "ONE-WAY: OTHER PATHS CLOSE…" rule note
+            FigmaUi.HideByClass(UiRoot, "toast-info__i-2", "final-dashed-locked-vars"); // baked rule note & dashed-locked legend
             FigmaUi.HideInstancesWithText(UiRoot, "RUN PROGRESS");
 
             var available = Run != null ? Run.Available.ToList() : map.nodes.Where(n => n.floor == 0).ToList();

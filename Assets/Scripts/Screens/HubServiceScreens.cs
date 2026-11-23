@@ -268,10 +268,7 @@ namespace Obscure
 
             var armoryBtn = FigmaUi.FindButton(UiRoot, "Armory ›");
             if (armoryBtn != null)
-            {
-                armoryBtn.style.left = 220;
-                FigmaUi.ApplyDefaultFocusVisual(menu.Add(armoryBtn, "Armory", () => Game?.Go(GameState.Armory)), armoryBtn);
-            }
+                armoryBtn.style.display = DisplayStyle.None;
 
             var bagLbl = UiRoot.Q<UiLabel>(className: "bag-0-100-vars");
             // Consumables don't use the 100 equipment slots (they cap per item), so count what this shop sells.

@@ -540,14 +540,42 @@ namespace Obscure
                 foreach (var b in bakedBadges) b.RemoveFromHierarchy();
             }
 
-            var statusRow = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, right = 8, top = 8, maxWidth = 92, overflow = Overflow.Hidden, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            var hpGauge = card?.Q<VisualElement>(className: "gauge-hp");
+            var mpGauge = card?.Q<VisualElement>(className: "gauge-mp");
+            var mpValLbl = idx < 4 ? card?.Q<UiLabel>(className: mpClasses[idx]) : null;
+            if (card != null)
+            {
+                if (hpGauge != null) hpGauge.style.width = 152;
+                var mpTitle = card.Query<UiLabel>().ToList().FirstOrDefault(l => l.text == "MP");
+                if (mpTitle != null) mpTitle.style.left = 336;
+                if (mpValLbl != null) mpValLbl.style.left = 368;
+                if (mpGauge != null) { mpGauge.style.left = 336; mpGauge.style.width = 112; }
+            }
+
+            var statusRow = new VisualElement
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    position = Position.Absolute,
+                    right = 6,
+                    top = 2,
+                    bottom = 2,
+                    width = 180,
+                    overflow = Overflow.Hidden,
+                    flexDirection = FlexDirection.Row,
+                    flexWrap = Wrap.Wrap,
+                    justifyContent = Justify.FlexEnd,
+                    alignItems = UnityEngine.UIElements.Align.Center,
+                    alignContent = UnityEngine.UIElements.Align.Center,
+                }
+            };
             var statusLbl = new UiLabel("") { style = { fontSize = 11, color = Palette.Frost, marginRight = 3 } };
             statusRow.Add(statusLbl);
             card?.Add(statusRow);
 
-            // Poise (player Break) bar: the Figma party card has no slot, so pin a thin bar to the card's bottom edge,
-            // spanning the HP..MP gauge columns so it clears the role label on the left.
-            var poiseBar = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, left = Length.Percent(26.8f), right = Length.Percent(15.7f), bottom = 3, height = 4, backgroundColor = Palette.Ink0 } };
+            // Poise (player Break) bar: spans HP..MP gauge columns cleanly without intruding on status badges.
+            var poiseBar = new VisualElement { pickingMode = PickingMode.Ignore, style = { position = Position.Absolute, left = 168, width = 280, bottom = 3, height = 4, backgroundColor = Palette.Ink0 } };
             poiseBar.Add(new VisualElement { style = { width = Length.Percent(100), height = Length.Percent(100), backgroundColor = Palette.Gold2 } });
             card?.Add(poiseBar);
 
@@ -563,9 +591,9 @@ namespace Obscure
                 nameLbl = idx < 4 ? card?.Q<UiLabel>(className: nameClasses[idx]) : null,
                 roleLbl = idx < 4 ? card?.Q<UiLabel>(className: roleClasses[idx]) : null,
                 hpLbl = idx < 4 ? card?.Q<UiLabel>(className: hpClasses[idx]) : null,
-                mpLbl = idx < 4 ? card?.Q<UiLabel>(className: mpClasses[idx]) : null,
-                hpGauge = card?.Q<VisualElement>(className: "gauge-hp"),
-                mpGauge = card?.Q<VisualElement>(className: "gauge-mp"),
+                mpLbl = mpValLbl,
+                hpGauge = hpGauge,
+                mpGauge = mpGauge,
                 brkGauge = card != null ? poiseBar : null,
                 statusLbl = statusLbl,
                 statusRow = statusRow,
@@ -756,6 +784,7 @@ namespace Obscure
                 FigmaUi.SetInstanceText(tpl, "text-0", StatusInfo.Tag(id));
                 FigmaUi.SetInstanceText(tpl, "text-1", stacks > 1 ? $"{turns}×{stacks}" : turns.ToString());
                 tpl.style.marginRight = 3;
+                tpl.style.marginBottom = 2;
                 tpl.style.flexShrink = 0;
 
                 var row = tpl;
@@ -797,6 +826,7 @@ namespace Obscure
                 FigmaUi.SetInstanceText(tpl, "text-0", tag);
                 FigmaUi.SetInstanceText(tpl, "text-1", turns.ToString());
                 tpl.style.marginRight = 3;
+                tpl.style.marginBottom = 2;
                 tpl.style.flexShrink = 0;
                 return tpl;
             }
@@ -919,12 +949,7 @@ namespace Obscure
                             bossBrkLbl.style.color = c.IsBroken ? Palette.Gold1 : Palette.Mist2;
                         }
                         if (bossSubLbl != null)
-                        {
-                            var weaks = c.Affinities?.weak;
-                            bossSubLbl.text = weaks != null && weaks.Length > 0
-                                ? "BOSS · WEAK: " + string.Join(" · ", weaks.Select(ElementConfig.Short))
-                                : "BOSS · INNER SANCTUM";
-                        }
+                            bossSubLbl.text = "BOSS · INNER SANCTUM";
                         if (h.statusLbl != null)
                         {
                             h.statusLbl.text = c.guarding ? "GD" : "";
@@ -947,10 +972,8 @@ namespace Obscure
 
                         if (h.weakLbl != null)
                         {
-                            var weaks = c.Affinities?.weak;
-                            h.weakLbl.text = weaks != null && weaks.Length > 0
-                                ? "WEAK: " + string.Join(" · ", weaks.Select(ElementConfig.Short))
-                                : "";
+                            h.weakLbl.text = "";
+                            h.weakLbl.style.display = DisplayStyle.None;
                         }
 
                         if (h.statusLbl != null)

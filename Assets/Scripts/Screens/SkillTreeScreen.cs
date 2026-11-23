@@ -212,10 +212,21 @@ namespace Obscure
             var heroLbl = UiRoot.Q<UiLabel>(className: "knight-knight-lv-1-vars");
             if (heroLbl != null)
             {
-                heroLbl.text = $"{hero.name} · {hero.classDef?.name} · Lv {hero.level}";
+                string cls = hero.classDef?.name;
+                heroLbl.text = string.IsNullOrEmpty(cls) || string.Equals(hero.name?.Trim(), cls.Trim(), StringComparison.OrdinalIgnoreCase)
+                    ? $"{hero.name} · Lv {hero.level}"
+                    : $"{hero.name} · {cls} · Lv {hero.level}";
                 heroLbl.style.fontSize = 16;
                 heroLbl.style.maxWidth = 300;
                 heroLbl.style.overflow = Overflow.Hidden;
+                if (switcherRow != null)
+                {
+                    FigmaUi.OnFirstLayout(switcherRow, () =>
+                    {
+                        float minLeft = switcherRow.layout.xMax + 14f;
+                        if (minLeft > heroLbl.resolvedStyle.left) heroLbl.style.left = minLeft;
+                    });
+                }
             }
 
             var talBtn = FigmaUi.FindButton(UiRoot, "Talents ›");

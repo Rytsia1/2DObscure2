@@ -189,11 +189,23 @@ namespace Obscure
                 }
             }
 
-            var heroLbl = new UiLabel($"{hero.name} · {ClassName(hero)} · Lv {hero.level}")
+            string cls = ClassName(hero);
+            string heroText = string.IsNullOrEmpty(cls) || string.Equals(hero.name?.Trim(), cls.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? $"{hero.name} · Lv {hero.level}"
+                : $"{hero.name} · {cls} · Lv {hero.level}";
+            var heroLbl = new UiLabel(heroText)
             {
-                style = { position = Position.Absolute, left = 460, top = 26, fontSize = 16, color = Palette.Mist1, maxWidth = 340, overflow = Overflow.Hidden }
+                style = { position = Position.Absolute, left = 504, top = 26, fontSize = 16, color = Palette.Mist1, maxWidth = 340, overflow = Overflow.Hidden }
             };
             UiRoot.Add(heroLbl);
+            if (switcherRow != null)
+            {
+                FigmaUi.OnFirstLayout(switcherRow, () =>
+                {
+                    float minLeft = switcherRow.layout.xMax + 14f;
+                    if (minLeft > 0f) heroLbl.style.left = Mathf.Max(504f, minLeft);
+                });
+            }
 
             var scrollTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "SCROLL OF EMPTINESS × 1");
             if (scrollTag != null)

@@ -25,11 +25,11 @@ namespace Obscure
             Element.Fire,
             Element.Ice,
             Element.Lightning,
-            Element.Holy,
-            Element.Dark,
             Element.Earth,
             Element.Wind,
             Element.Water,
+            Element.Holy,
+            Element.Dark,
         };
 
         public static Effectiveness ToEffectiveness(AffinityType affinity) => affinity switch
