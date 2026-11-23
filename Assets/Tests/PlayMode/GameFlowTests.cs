@@ -530,8 +530,8 @@ namespace Obscure.Tests
         {
             yield return Begin();
             yield return StartRunOnMap();
-            // Only elite and stage-boss fights offer modifiers. Dungeon 1 stage 1 has no elites, but its boss (d1_e6) is a
-            // stage boss, not the final one. No public way to jump nodes, so point the run at it as if the player walked there.
+            // Stage-boss fights offer modifiers (Dungeon 1 stage 1 boss d1_e6 is a stage boss, not the final one).
+            // No public way to jump nodes, so point the run at it as if the player walked there.
             Assert.IsFalse(Run.IsFinalStage, "stage 1 of Dungeon 1 must not be the final stage");
             var stageBoss = Run.Map.nodes.First(n => n.type == NodeType.Boss);
             typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(Run, stageBoss);
@@ -562,6 +562,133 @@ namespace Obscure.Tests
             Assert.AreNotEqual(GameState.Reward, State);
             Assert.IsTrue(Run.ModifierManager.ActiveModifiers.Any(i => i.modifierId == lasting.id),
                 "skipping the prize must still grant the chosen modifier");
+        }
+
+        [UnityTest]
+        public IEnumerator NormalBattleReward_EquipmentWithModifiers_LayoutUnclippedAndClaimsBoth()
+        {
+            yield return Begin();
+            yield return StartRunOnMap();
+            yield return TapAndSettle(Key.Enter); // select floor-0 Normal battle
+            yield return TapAndSettle(Key.Enter); // Travel
+            Assert.AreEqual(GameState.Combat, State);
+            yield return WinBattle();
+            Assert.AreEqual(GameState.Reward, State);
+
+            var offer = Run.PendingReward;
+            Assert.AreEqual(3, offer.modifierChoices.Count, "normal battle must offer 3 modifiers");
+            int equipIdx = offer.choices.FindIndex(c => c.kind == RewardKind.Equipment);
+            Assert.GreaterOrEqual(equipIdx, 0, "normal battle must offer an equipment card");
+            string equipId = offer.choices[equipIdx].id;
+            string equipName = Database.Equipment[equipId].name;
+
+            // Select the Equipment reward card so both hero selector and modifier row render in the confirm panel.
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == equipName), false, true);
+            yield return Tap(Key.Enter);
+            yield return null;
+            yield return null;
+
+            // Verify every interactive control (cards, heroes, modifiers, Back, Store in bag, Confirm) is unclipped & clickable.
+            var menu = UitkMenu.ActiveMenu;
+            Assert.IsNotNull(menu);
+            Assert.IsTrue(menu.items.Any(it => it.text == "Back"), "Back button must exist");
+            Assert.IsTrue(menu.items.Any(it => it.text == "Store in bag"), "Store in bag button must exist");
+            var confirmItem = menu.items.FirstOrDefault(it => it.text.StartsWith("Confirm"));
+            Assert.IsNotNull(confirmItem, "Primary Confirm button must exist");
+
+            foreach (var it in menu.items)
+            {
+                var el = it.element;
+                Assert.IsNotNull(el?.panel, $"Item '{it.text}' not attached to panel");
+                var wb = el.worldBound;
+                var panelRect = el.panel.visualTree.layout;
+                Assert.Greater(wb.width, 0f, $"Item '{it.text}' width <= 0");
+                Assert.Greater(wb.height, 0f, $"Item '{it.text}' height <= 0");
+                Assert.GreaterOrEqual(wb.yMin, -2f, $"Item '{it.text}' clipped top ({wb})");
+                Assert.LessOrEqual(wb.yMax, panelRect.height + 2f, $"Item '{it.text}' clipped bottom ({wb} vs {panelRect})");
+                Assert.LessOrEqual(wb.xMax, panelRect.width + 2f, $"Item '{it.text}' clipped right ({wb} vs {panelRect})");
+                var picked = el.panel.Pick(wb.center);
+                Assert.IsTrue(picked != null && (picked == el || el.Contains(picked)),
+                    $"Item '{it.text}' at {wb} blocked or clipped (picked={picked?.name})");
+            }
+
+            // Pick a lasting modifier, then confirm & store/equip.
+            var lasting = offer.modifierChoices.First(m => !Database.DungeonModifiers[m.id].IsOneShot);
+            var (modLabel, _) = RewardGenerator.Describe(
+                new RewardOption { kind = RewardKind.Modifier, id = lasting.id, element = lasting.element }, Run.ModifierManager);
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == modLabel), false, true);
+            yield return Tap(Key.Enter);
+            yield return null;
+
+            int equipCountBefore = Run.Inventory.equipment.Count;
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == "Store in bag"), false, true);
+            yield return TapAndSettle(Key.Enter);
+            Assert.AreEqual(GameState.Map, State);
+            Assert.AreEqual(equipCountBefore + 1, Run.Inventory.equipment.Count, "equipment must be granted");
+            Assert.IsTrue(Run.ModifierManager.ActiveModifiers.Any(i => i.modifierId == lasting.id),
+                "chosen modifier must be granted alongside equipment");
+        }
+
+        [UnityTest]
+        public IEnumerator PrologueBattleReward_ShowsThreeModifierCardsAndApplies()
+        {
+            yield return Begin();
+            bool prevCleared = Game.I.Settings.prologueCleared;
+            Game.I.Settings.prologueCleared = true; // skip blocking tutorial coach prompts
+            try
+            {
+                yield return StartRunOnMap();
+                Run.BeginPrologue();
+                Game.I.Go(GameState.Map);
+                yield return Settle();
+                Assert.IsTrue(Run.IsPrologue);
+
+                yield return TapAndSettle(Key.Enter); // select p0
+                yield return TapAndSettle(Key.Enter); // Travel
+                Assert.AreEqual(GameState.Combat, State);
+                yield return WinBattle();
+                Assert.AreEqual(GameState.Reward, State);
+
+                var offer = Run.PendingReward;
+                Assert.AreEqual(0, offer.choices.Count, "Prologue node 0 has no standard prize cards");
+                Assert.AreEqual(3, offer.modifierChoices.Count, "Prologue node 0 must offer 3 modifiers");
+
+                var menu = UitkMenu.ActiveMenu;
+                Assert.IsNotNull(menu);
+                Assert.IsTrue(menu.items.Any(it => it.text == "Continue to map"), "Continue to map button must exist");
+                foreach (var it in menu.items)
+                {
+                    var el = it.element;
+                    Assert.IsNotNull(el?.panel, $"Item '{it.text}' not attached to panel");
+                    var wb = el.worldBound;
+                    var panelRect = el.panel.visualTree.layout;
+                    Assert.Greater(wb.width, 0f, $"Item '{it.text}' width <= 0");
+                    Assert.Greater(wb.height, 0f, $"Item '{it.text}' height <= 0");
+                    Assert.LessOrEqual(wb.yMax, panelRect.height + 2f, $"Item '{it.text}' clipped bottom ({wb})");
+                    var picked = el.panel.Pick(wb.center);
+                    Assert.IsTrue(picked != null && (picked == el || el.Contains(picked)),
+                        $"Item '{it.text}' at {wb} blocked or clipped (picked={picked?.name})");
+                }
+
+                var lasting = offer.modifierChoices.First(m => !Database.DungeonModifiers[m.id].IsOneShot);
+                var (modLabel, modDetail) = RewardGenerator.Describe(
+                    new RewardOption { kind = RewardKind.Modifier, id = lasting.id, element = lasting.element }, Run.ModifierManager);
+                CollectionAssert.Contains(ActiveUiTexts(), modDetail, "modifier effect text must be visible on Prologue reward card");
+
+                UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == modLabel), false, true);
+                yield return Tap(Key.Enter);
+                yield return null;
+
+                UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == "Continue to map"), false, true);
+                yield return TapAndSettle(Key.Enter);
+                Assert.AreEqual(GameState.Map, State);
+                Assert.IsTrue(Run.ModifierManager.ActiveModifiers.Any(i => i.modifierId == lasting.id),
+                    "chosen Prologue modifier must be granted");
+            }
+            finally
+            {
+                Game.I.Settings.prologueCleared = prevCleared;
+            }
         }
     }
 }

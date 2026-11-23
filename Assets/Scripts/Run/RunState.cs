@@ -1009,8 +1009,9 @@ namespace Obscure
                 PendingReward.bonusGoldFromModifier = fortuneBonus;
                 PendingReward.gold += fortuneBonus;
             }
-            // Modifiers come from elites and stage bosses (and treasure/events), not every normal fight, so each pick matters.
-            if (!isFinalBoss && enc.tier != Tier.Normal)
+            // Every non-final-boss battle offers 3 modifier choices; the final dungeon boss excludes them
+            // because all modifiers expire immediately on dungeon clear (GDD Bab 15 §3.1).
+            if (!isFinalBoss)
             {
                 PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(NodeRng(Current, 3), count: 3, isMaxed: ModifierManager.IsAtCap);
             }
@@ -1089,6 +1090,7 @@ namespace Obscure
             Current = null;
             Cleared.Clear();
             PendingReward = null;
+            ModifierManager.ClearAll();
         }
 
         // Skipping grants exactly what playing grants (design §4.2).
@@ -1109,6 +1111,7 @@ namespace Obscure
             Cleared.Clear();
             PendingReward = null;
             BattleBuffs.Clear();
+            ModifierManager.ClearAll();
             Stats.nodesCompleted = Stats.battlesWon = 0;
             foreach (var u in Party) { u.hp = u.stats.maxHp; u.mp = u.stats.maxMp; u.shield = 0; }
             HubGold += Prologue.ClearGold;
@@ -1164,6 +1167,14 @@ namespace Obscure
             };
             AwardBattleExp(Prologue.NodeExp[Math.Min(Current.floor, Prologue.NodeExp.Length - 1)], standing);
             if (Current.floor == 1) foreach (var id in Prologue.Node2Items) TryAddConsumable(id);
+            // Non-boss Prologue battles offer 3 combat/recovery/QTE modifiers (Utility gold/loot mods have no effect in Prologue).
+            // The Prologue boss (p2) excludes modifiers because EndPrologue clears them before entering the Hub.
+            if (!boss)
+            {
+                PendingReward.modifierChoices = RewardGenerator.GenerateModifierChoices(
+                    NodeRng(Current, 3), count: 3, isMaxed: ModifierManager.IsAtCap,
+                    filter: m => m.category != ModifierCategory.Utility);
+            }
         }
 
         // ---- rewards ----

@@ -21,6 +21,7 @@ namespace Obscure
         bool isBossReward;
         bool isStageBossReward;
         UitkMenu menu;
+        VisualElement panelGold;
         VisualElement cardsHost;
         VisualElement confirmHost;
 
@@ -236,17 +237,29 @@ namespace Obscure
                 notesCol.Add(noteTop);
                 notesCol.Add(noteBottom);
             }
+            bool hasModifierOffers = currentOffer.modifierChoices != null && currentOffer.modifierChoices.Count > 0;
             var rewardHdr = UiRoot.Q<VisualElement>(className: "section-header__i-32");
             if (rewardHdr != null)
-                FigmaUi.SetInstanceText(rewardHdr, "text-0", currentOffer.choices.Count > 0 ? "Choose one reward" : "No prize this time");
+                FigmaUi.SetInstanceText(rewardHdr, "text-0",
+                    currentOffer.choices.Count > 0 ? "Choose one reward"
+                    : hasModifierOffers ? "Choose a modifier"
+                    : "No prize this time");
 
             var subHdr = UiRoot.Q<UiLabel>(className: "pick-1-of-3-your-pick-is-final-kept-items-survive-a-wipe-vars");
             if (subHdr != null)
             {
-                // With no prize, the header and the confirm panel already say so.
+                // With no prize and no modifiers, the header and the confirm panel already say so.
                 if (currentOffer.choices.Count > 0) subHdr.text = $"PICK 1 OF {currentOffer.choices.Count}";
+                else if (hasModifierOffers)
+                {
+                    int modCount = Mathf.Min(3, currentOffer.modifierChoices.Count);
+                    string scopeNote = Run != null && Run.IsPrologue ? "ACTIVE UNTIL PROLOGUE ENDS" : "ACTIVE UNTIL DUNGEON EXIT";
+                    subHdr.text = $"PICK 1 OF {modCount} · {scopeNote}";
+                }
                 else subHdr.style.display = DisplayStyle.None;
             }
+
+            panelGold = UiRoot.Q<VisualElement>(className: "panel-gold__i-22");
 
             // Remove baked static cards, baked overlay icons, and baked confirm panel children (including baked <Button>s)
             StripBakedRewardElements(screen);
@@ -332,8 +345,34 @@ namespace Obscure
 
             int choiceCount = Mathf.Min(3, currentOffer.choices.Count);
             bool hasModifierOffers = currentOffer.modifierChoices != null && currentOffer.modifierChoices.Count > 0;
+            bool modifierOnlyCards = choiceCount == 0 && hasModifierOffers;
+            bool isEquipmentSelected = selectedChoiceIdx >= 0 && selectedChoiceIdx < choiceCount &&
+                currentOffer.choices[selectedChoiceIdx].kind == RewardKind.Equipment &&
+                Database.Equipment.ContainsKey(currentOffer.choices[selectedChoiceIdx].id);
 
-            // 1. Build 1..3 Figma Reward-Card / Reward-Card-Selected cards
+            // Size the card host and bottom confirmation panel so modifier rows and Equipment hero selectors never clip.
+            float cardHeight = !hasModifierOffers || modifierOnlyCards ? 380f : (isEquipmentSelected ? 304f : 364f);
+            float confirmTop = !hasModifierOffers || modifierOnlyCards ? 524f : (isEquipmentSelected ? 446f : 508f);
+            float confirmHeight = 684f - confirmTop;
+            bool compactCards = cardHeight < 340f;
+
+            cardsHost.style.height = cardHeight;
+            confirmHost.style.top = confirmTop;
+            confirmHost.style.height = confirmHeight;
+            confirmHost.style.paddingTop = isEquipmentSelected && hasModifierOffers ? 8 : 6;
+            confirmHost.style.paddingBottom = isEquipmentSelected && hasModifierOffers ? 10 : 12;
+            if (panelGold != null)
+            {
+                panelGold.style.top = confirmTop;
+                panelGold.style.height = confirmHeight;
+            }
+
+            // 1. Build 1..3 Figma Reward-Card / Reward-Card-Selected cards (or full modifier cards when choiceCount == 0)
+            if (modifierOnlyCards)
+            {
+                BuildModifierOnlyCards(cardHeight);
+            }
+            else
             for (int i = 0; i < choiceCount; i++)
             {
                 int choiceIdx = i;
@@ -343,10 +382,15 @@ namespace Obscure
                 VisualElement cardRoot = tpl ?? new VisualElement();
                 var inner = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2" : "reward-card") ?? cardRoot;
                 cardRoot.style.width = 268;
-                cardRoot.style.height = 380;
+                cardRoot.style.height = cardHeight;
                 cardRoot.style.marginRight = i < choiceCount - 1 ? 16 : 0;
                 inner.style.width = 268;
-                inner.style.height = 380;
+                inner.style.height = cardHeight;
+                if (compactCards)
+                {
+                    inner.style.paddingTop = 10; inner.style.paddingBottom = 10;
+                    inner.style.paddingLeft = 12; inner.style.paddingRight = 12;
+                }
 
                 var (rawLabel, rawDetail) = RewardGenerator.Describe(o, Run?.ModifierManager, currentParty);
                 string displayTitle = FormatCardTitle(o, rawLabel);
@@ -372,13 +416,13 @@ namespace Obscure
                 if (titleLbl != null)
                 {
                     titleLbl.style.color = rarityColor;
-                    titleLbl.style.fontSize = 19;
+                    titleLbl.style.fontSize = compactCards ? 17 : 19;
                     titleLbl.style.whiteSpace = WhiteSpace.Normal;
                 }
                 var detailLbl = cardRoot.Q<UiLabel>("text-3");
-                if (detailLbl != null) detailLbl.style.fontSize = 12;
+                if (detailLbl != null) detailLbl.style.fontSize = compactCards ? 11 : 12;
                 var cmpLbl = cardRoot.Q<UiLabel>("text-4");
-                if (cmpLbl != null) cmpLbl.style.fontSize = 12;
+                if (cmpLbl != null) cmpLbl.style.fontSize = compactCards ? 11 : 12;
 
                 // Tag badge styling for RUN ONLY vs KEPT
                 var tagBox = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2__e-12" : "reward-card__e-12");
@@ -398,6 +442,8 @@ namespace Obscure
                 if (well != null)
                 {
                     well.Clear();
+                    if (compactCards) well.style.height = 72;
+                    else if (cardHeight < 380f) well.style.height = 94;
                     well.style.borderTopColor = rarityColor;
                     well.style.borderBottomColor = rarityColor;
                     well.style.borderLeftColor = rarityColor;
@@ -417,7 +463,8 @@ namespace Obscure
                     };
                     if (tex != null)
                     {
-                        var img = new VisualElement { style = { width = 64, height = 64 } };
+                        float iconSize = compactCards ? 48f : 64f;
+                        var img = new VisualElement { style = { width = iconSize, height = iconSize } };
                         FigmaUi.SetBackgroundContain(img, tex);
                         well.Add(img);
                     }
@@ -427,7 +474,7 @@ namespace Obscure
                         {
                             style =
                             {
-                                fontSize = 36, color = rarityColor,
+                                fontSize = compactCards ? 28 : 36, color = rarityColor,
                                 unityFontStyleAndWeight = FontStyle.Bold,
                                 unityTextAlign = TextAnchor.MiddleCenter
                             }
@@ -462,7 +509,47 @@ namespace Obscure
             // 2. Build Bottom Confirmation Panel
             int confirmFocusIdx = -1;
 
-            if (selectedChoiceIdx < 0 || selectedChoiceIdx >= choiceCount)
+            if (modifierOnlyCards)
+            {
+                int safeIdx = Mathf.Clamp(selectedModifierIdx, 0, currentOffer.modifierChoices.Count - 1);
+                selectedModifierIdx = safeIdx;
+                var selMod = currentOffer.modifierChoices[safeIdx];
+                var elem = selMod.id == "MOD-024" ? selectedAttunementElement : selMod.element;
+                var (mLabel, mDetail) = RewardGenerator.Describe(
+                    new RewardOption { kind = RewardKind.Modifier, id = selMod.id, element = elem },
+                    Run?.ModifierManager);
+
+                var topCol = new VisualElement { style = { flexDirection = FlexDirection.Column } };
+                topCol.Add(new UiLabel($"SELECTED MODIFIER · {mLabel.ToUpperInvariant()}")
+                {
+                    style = { fontSize = 14, color = Palette.Gold2, letterSpacing = 0.56f, marginBottom = 4 }
+                });
+                topCol.Add(new UiLabel(mDetail)
+                {
+                    style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                });
+                confirmHost.Add(topCol);
+
+                var btnRow = new VisualElement
+                {
+                    style = { flexDirection = FlexDirection.Row, justifyContent = Justify.FlexEnd, alignItems = UiAlign.Center }
+                };
+                if (selMod.id == "MOD-024")
+                {
+                    int cycleBtnIdx = menu.items.Count;
+                    btnRow.Add(MakeSlabActionButton($"Element: {selectedAttunementElement}", () =>
+                    {
+                        int curIdx = Array.IndexOf(ElementTypes.All, selectedAttunementElement);
+                        selectedAttunementElement = ElementTypes.All[(curIdx + 1) % ElementTypes.All.Length];
+                        Sfx.Play(Sound.Confirm);
+                        RebuildInteractive(focusIndex: cycleBtnIdx);
+                    }, marginRight: 8));
+                }
+                confirmFocusIdx = menu.items.Count;
+                btnRow.Add(MakePrimaryConfirmButton("Continue to map", () => Claim(-1, -1)));
+                confirmHost.Add(btnRow);
+            }
+            else if (selectedChoiceIdx < 0 || selectedChoiceIdx >= choiceCount)
             {
                 // State A: Nothing selected yet
                 var topRow = new VisualElement { style = { flexDirection = FlexDirection.Column } };
@@ -588,7 +675,7 @@ namespace Obscure
                         confirmHost.Add(heroRow);
 
                         if (hasModifierOffers)
-                            confirmHost.Add(BuildCompactModifierRow());
+                            confirmHost.Add(BuildCompactModifierRow(compact: true));
 
                         var btnRow = new VisualElement
                         {
@@ -669,17 +756,162 @@ namespace Obscure
             RebuildInteractive(focusConfirm: true);
         }
 
-        VisualElement BuildCompactModifierRow()
+        void BuildModifierOnlyCards(float cardHeight)
         {
-            var wrap = new VisualElement { style = { flexDirection = FlexDirection.Column, marginBottom = 4 } };
+            int modCount = Mathf.Min(3, currentOffer.modifierChoices.Count);
+            for (int i = 0; i < modCount; i++)
+            {
+                int mIdx = i;
+                var mOpt = currentOffer.modifierChoices[i];
+                if (mOpt.id == "MOD-024" && mOpt.element.IsValidElement() && selectedModifierIdx != mIdx)
+                    selectedAttunementElement = mOpt.element;
+
+                bool isSel = selectedModifierIdx == mIdx;
+                var elem = mOpt.id == "MOD-024" ? selectedAttunementElement : mOpt.element;
+                var resolvedOpt = new RewardOption { kind = RewardKind.Modifier, id = mOpt.id, element = elem };
+                var (mLabel, mDetail) = RewardGenerator.Describe(resolvedOpt, Run?.ModifierManager);
+                Database.DungeonModifiers.TryGetValue(mOpt.id, out var mDef);
+
+                var tpl = FigmaUi.InstantiateTemplate(isSel ? "Reward-Card-Selected" : "Reward-Card");
+                VisualElement cardRoot = tpl ?? new VisualElement();
+                var inner = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2" : "reward-card") ?? cardRoot;
+                cardRoot.style.width = 268;
+                cardRoot.style.height = cardHeight;
+                cardRoot.style.marginRight = i < modCount - 1 ? 16 : 0;
+                inner.style.width = 268;
+                inner.style.height = cardHeight;
+
+                string rarityText = mDef != null ? mDef.rarity.ToString().ToUpperInvariant() : "RUN BUFF";
+                Color rarityColor = mDef != null ? mDef.rarity switch
+                {
+                    ModifierRarity.Rare => Palette.Mp,
+                    ModifierRarity.Uncommon => Palette.Ok,
+                    _ => Palette.ArcaneViolet
+                } : Palette.ArcaneViolet;
+                string compareText = mOpt.id == "MOD-024"
+                    ? $"ELEMENT: {selectedAttunementElement.ToString().ToUpperInvariant()} · CLICK AGAIN TO CYCLE"
+                    : (mDef != null && mDef.IsOneShot
+                        ? "INSTANT EFFECT · APPLIED NOW"
+                        : (Run != null && Run.IsPrologue ? "ACTIVE UNTIL PROLOGUE ENDS" : "ACTIVE UNTIL DUNGEON EXIT"));
+
+                FigmaUi.SetInstanceText(cardRoot, "text-0", "MODIFIER");
+                FigmaUi.SetInstanceText(cardRoot, "text-1", rarityText);
+                FigmaUi.SetInstanceText(cardRoot, "text-2", mLabel);
+                FigmaUi.SetInstanceText(cardRoot, "text-3", mDetail);
+                FigmaUi.SetInstanceText(cardRoot, "text-4", compareText);
+                FigmaUi.SetInstanceText(cardRoot, "text-5", isSel ? "✓ SELECTED" : (i + 1).ToString());
+                FigmaUi.SetInstanceText(cardRoot, "text-6", "RUN ONLY");
+                if (isSel) FigmaUi.SetInstanceText(cardRoot, "text-7", "✓");
+
+                var rarityLbl = cardRoot.Q<UiLabel>("text-1");
+                if (rarityLbl != null) rarityLbl.style.color = rarityColor;
+                var titleLbl = cardRoot.Q<UiLabel>("text-2");
+                if (titleLbl != null)
+                {
+                    titleLbl.style.color = rarityColor;
+                    titleLbl.style.fontSize = 19;
+                    titleLbl.style.whiteSpace = WhiteSpace.Normal;
+                }
+                var detailLbl = cardRoot.Q<UiLabel>("text-3");
+                if (detailLbl != null) detailLbl.style.fontSize = 12;
+                var cmpLbl = cardRoot.Q<UiLabel>("text-4");
+                if (cmpLbl != null) cmpLbl.style.fontSize = 12;
+
+                var tagBox = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2__e-12" : "reward-card__e-12");
+                var tagLbl = cardRoot.Q<UiLabel>("text-6");
+                if (tagBox != null && tagLbl != null)
+                {
+                    tagBox.style.backgroundColor = Palette.Hex(0x2A160A);
+                    tagBox.style.borderTopColor = Palette.Ember1;
+                    tagBox.style.borderBottomColor = Palette.Ember1;
+                    tagBox.style.borderLeftColor = Palette.Ember1;
+                    tagBox.style.borderRightColor = Palette.Ember1;
+                    tagLbl.style.color = Palette.Ember1;
+                }
+
+                var well = cardRoot.Q<VisualElement>(className: isSel ? "reward-card-2__e-4" : "reward-card__e-4");
+                if (well != null)
+                {
+                    well.Clear();
+                    well.style.borderTopColor = rarityColor;
+                    well.style.borderBottomColor = rarityColor;
+                    well.style.borderLeftColor = rarityColor;
+                    well.style.borderRightColor = rarityColor;
+                    well.style.justifyContent = Justify.Center;
+                    well.style.alignItems = UiAlign.Center;
+
+                    var tex = IconArt.Reward("modifier");
+                    if (tex != null)
+                    {
+                        var img = new VisualElement { style = { width = 64, height = 64 } };
+                        FigmaUi.SetBackgroundContain(img, tex);
+                        well.Add(img);
+                    }
+                    else
+                    {
+                        var sym = new UiLabel("M")
+                        {
+                            style =
+                            {
+                                fontSize = 36, color = rarityColor,
+                                unityFontStyleAndWeight = FontStyle.Bold,
+                                unityTextAlign = TextAnchor.MiddleCenter
+                            }
+                        };
+                        well.Add(sym);
+                    }
+                }
+
+                cardsHost.Add(cardRoot);
+
+                int keepIdx = menu.items.Count;
+                var cardItem = menu.Add(inner, mLabel, () =>
+                {
+                    if (selectedModifierIdx == mIdx && mOpt.id == "MOD-024")
+                    {
+                        int curIdx = Array.IndexOf(ElementTypes.All, selectedAttunementElement);
+                        selectedAttunementElement = ElementTypes.All[(curIdx + 1) % ElementTypes.All.Length];
+                        Sfx.Play(Sound.Confirm);
+                        RebuildInteractive(focusIndex: keepIdx);
+                        return;
+                    }
+                    selectedModifierIdx = mIdx;
+                    Sfx.Play(Sound.Confirm);
+                    RebuildInteractive(focusConfirm: true);
+                }, tooltip: mDetail.ToUpperInvariant());
+                cardItem.visual = on =>
+                {
+                    if (isSel)
+                    {
+                        inner.style.backgroundColor = Palette.Hex(0x2B2210);
+                        var b = on ? Palette.Mist1 : Palette.Gold2;
+                        inner.style.borderTopColor = b; inner.style.borderBottomColor = b;
+                        inner.style.borderLeftColor = b; inner.style.borderRightColor = b;
+                    }
+                    else
+                    {
+                        inner.style.backgroundColor = on ? Palette.Hex(0x1E2640) : Palette.Ink2;
+                        var b = on ? Palette.Gold2 : Palette.Ink5;
+                        inner.style.borderTopColor = b; inner.style.borderBottomColor = b;
+                        inner.style.borderLeftColor = b; inner.style.borderRightColor = b;
+                    }
+                };
+                cardItem.visual(false);
+            }
+        }
+
+        VisualElement BuildCompactModifierRow(bool compact = false)
+        {
+            var wrap = new VisualElement { style = { flexDirection = FlexDirection.Column, marginBottom = compact ? 3 : 4 } };
             wrap.Add(new UiLabel("CHOOSE A MODIFIER (REQUIRED)")
             {
-                style = { fontSize = 10, color = Palette.Gold2, letterSpacing = 0.4f, marginBottom = 3 }
+                style = { fontSize = 10, color = Palette.Gold2, letterSpacing = 0.4f, marginBottom = compact ? 2 : 3 }
             });
-            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UiAlign.Center } };
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UiAlign.Stretch } };
             wrap.Add(row);
 
-            for (int i = 0; i < currentOffer.modifierChoices.Count && i < 3; i++)
+            int modCount = Mathf.Min(3, currentOffer.modifierChoices.Count);
+            for (int i = 0; i < modCount; i++)
             {
                 int mIdx = i;
                 var mOpt = currentOffer.modifierChoices[i];
@@ -697,8 +929,11 @@ namespace Obscure
                 {
                     style =
                     {
-                        width = 262, minHeight = 52, marginRight = i < 2 ? 8 : 0,
-                        paddingLeft = 8, paddingRight = 8, paddingTop = 4, paddingBottom = 4,
+                        flexGrow = 1, flexBasis = 0, minWidth = 0,
+                        minHeight = compact ? 44 : 52,
+                        marginRight = i < modCount - 1 ? 8 : 0,
+                        paddingLeft = 8, paddingRight = 8,
+                        paddingTop = compact ? 3 : 4, paddingBottom = compact ? 3 : 4,
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                         backgroundColor = isSel ? Palette.Hex(0x1E3328) : Palette.Ink2,
                         borderTopColor = isSel ? Palette.Ok : Palette.Ink5,
@@ -710,12 +945,12 @@ namespace Obscure
                 };
                 box.Add(new UiLabel((isSel ? "✓ " : "") + mLabel.ToUpperInvariant())
                 {
-                    style = { fontSize = 12, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.NoWrap, flexShrink = 0, overflow = Overflow.Hidden }
+                    style = { fontSize = compact ? 11 : 12, color = isSel ? Palette.Ok : Palette.Mist1, whiteSpace = WhiteSpace.NoWrap, flexShrink = 0, overflow = Overflow.Hidden }
                 });
                 // The effect itself, so the choice is informed (not only in the tooltip).
                 box.Add(new UiLabel(mDetail)
                 {
-                    style = { fontSize = 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
+                    style = { fontSize = compact ? 10 : 11, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal }
                 });
                 row.Add(box);
 

@@ -179,5 +179,41 @@ namespace Obscure.Tests
             Assert.IsTrue(target.Has(StatusId.Fear));
             Assert.IsTrue(run.Tutorial.FearScripted);
         }
+
+        [Test]
+        public void PrologueNonBossBattles_OfferNonUtilityModifiers_AndBossClearsThem()
+        {
+            var run = NewRun(seed: 11);
+            run.BeginPrologue();
+
+            // Node 0 & Node 1: non-boss Prologue fights offer 3 non-Utility modifiers
+            for (int node = 0; node < 2; node++)
+            {
+                run.Enter(run.Available.Single());
+                run.WinCombat();
+                var mods = run.PendingReward.modifierChoices;
+                Assert.AreEqual(3, mods.Count, $"Prologue node {node} must offer 3 modifiers");
+                foreach (var m in mods)
+                {
+                    Assert.AreNotEqual(ModifierCategory.Utility, Database.DungeonModifiers[m.id].category,
+                        $"Prologue node {node} must not offer gold/loot-only Utility modifier {m.id}");
+                }
+
+                int pickIdx = mods.FindIndex(m => !Database.DungeonModifiers[m.id].IsOneShot);
+                Assert.GreaterOrEqual(pickIdx, 0, $"Prologue node {node} should have a lasting modifier");
+                string pickedId = mods[pickIdx].id;
+                run.ClaimReward(-1, pickIdx);
+                Assert.IsTrue(run.ModifierManager.ActiveModifiers.Any(i => i.modifierId == pickedId),
+                    $"Prologue node {node} must grant chosen modifier {pickedId}");
+            }
+
+            // Node 2 (Aetherion): Prologue boss offers 0 modifiers and clears all Prologue modifiers on clear
+            run.Enter(run.Available.Single());
+            run.WinCombat();
+            CollectionAssert.IsEmpty(run.PendingReward.modifierChoices, "Prologue boss must not offer modifiers");
+            run.ClaimReward(-1);
+            Assert.IsFalse(run.IsPrologue);
+            Assert.AreEqual(0, run.ModifierManager.Count, "All Prologue modifiers must clear before entering the Hub");
+        }
     }
 }

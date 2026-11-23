@@ -373,17 +373,45 @@ namespace Obscure.Tests
             Assert.Greater(offer.gold, 0);
             CollectionAssert.AreEqual(new[] { RewardKind.Item, RewardKind.Equipment, RewardKind.Gold }, offer.choices.Select(c => c.kind),
                 "normal battles: a consumable, gear or gold");
-            CollectionAssert.IsEmpty(offer.modifierChoices, "modifiers come from elites, stage bosses and treasure, not every fight");
+            Assert.AreEqual(3, offer.modifierChoices.Count, "normal battles offer 3 modifiers");
+            int modIdx = offer.modifierChoices.FindIndex(m => !Database.DungeonModifiers[m.id].IsOneShot);
+            Assert.GreaterOrEqual(modIdx, 0, "expected at least one lasting modifier option");
+            string pickedModId = offer.modifierChoices[modIdx].id;
             int items = run.Items.Count;
 
-            run.ClaimReward(0);
+            run.ClaimReward(0, modIdx);
             Assert.AreEqual(offer.gold, run.Gold);
             Assert.AreEqual(items + 1, run.Items.Count);
+            Assert.IsTrue(run.ModifierManager.ActiveModifiers.Any(m => m.modifierId == pickedModId),
+                "claiming a normal battle reward with a modifier grants that modifier");
             Assert.Throws<InvalidOperationException>(() => run.ClaimReward(0), "claimed once");
             Assert.Throws<InvalidOperationException>(() => run.WinCombat(), "no second victory");
             Assert.AreEqual(offer.gold, run.Gold);
             Assert.AreEqual(1, run.Stats.battlesWon);
             Assert.AreEqual(1, run.Stats.nodesCompleted);
+        }
+
+        [Test]
+        public void NonFinalBossBattles_OfferThreeModifiers_AndFinalBossOffersNone()
+        {
+            // Normal & Elite nodes on a regular map
+            var run = LineRun(NodeType.Battle, NodeType.Elite, NodeType.Boss);
+            run.Enter(run.Map.Get("n0"));
+            run.WinCombat();
+            Assert.AreEqual(3, run.PendingReward.modifierChoices.Count, "Normal battle offers 3 modifiers");
+            run.ClaimReward(-1, 0);
+
+            run.Enter(run.Map.Get("n1"));
+            run.WinCombat();
+            Assert.AreEqual(3, run.PendingReward.modifierChoices.Count, "Elite battle offers 3 modifiers");
+            run.ClaimReward(-1, 0);
+
+            // Final boss (single-stage test map -> IsFinalStage is true)
+            run.Enter(run.Map.Get("n2"));
+            run.WinCombat();
+            CollectionAssert.IsEmpty(run.PendingReward.modifierChoices, "Final dungeon boss offers no modifiers");
+            run.ClaimReward(0);
+            Assert.AreEqual(0, run.ModifierManager.Count, "Modifiers clear on final boss clear");
         }
 
         [Test]

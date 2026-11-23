@@ -133,13 +133,14 @@ namespace Obscure
         // Already owned modifiers remain in the pool per Bab 15 §2 & §3.2 so they can be stacked or re-acquired,
         // but ones already at their stack cap (isMaxed) are skipped: a pick there would add nothing.
         public static List<RewardOption> GenerateModifierChoices(Random rng, int count = 3, bool includeCursed = false, ModifierCategory? categoryFilter = null,
-            Func<string, ElementType, bool> isMaxed = null)
+            Func<string, ElementType, bool> isMaxed = null, Func<DungeonModifierDef, bool> filter = null)
         {
             var rand = rng ?? new Random();
             var pool = Database.DungeonModifiers.Values
                 .Where(m => m.polarity != ModifierPolarity.Debuff)
                 .Where(m => includeCursed || m.polarity == ModifierPolarity.Buff)
                 .Where(m => !categoryFilter.HasValue || m.category == categoryFilter.Value)
+                .Where(m => filter == null || filter(m))
                 .ToList();
 
             var result = new List<RewardOption>();
