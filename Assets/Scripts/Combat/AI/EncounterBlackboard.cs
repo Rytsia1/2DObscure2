@@ -12,7 +12,11 @@ namespace Obscure
         public EnemyAttack move;
         public Combatant target;
         public bool charging;
+        public IntentCommitment commitment;
+        public bool executed;
         public float expectedDamage;
+        public int expectedBreak;
+        public StatusId[] plannedStatuses;
         public int planningRound;
         public int turnIndex;
         public bool hasHeavy;
@@ -41,6 +45,8 @@ namespace Obscure
 
         public readonly List<PublishedIntent> PlannedActions = new List<PublishedIntent>();
         public readonly Dictionary<Combatant, float> CommittedDamageByTarget = new Dictionary<Combatant, float>();
+        public readonly Dictionary<Combatant, int> CommittedBreakByTarget = new Dictionary<Combatant, int>();
+        public readonly Dictionary<Combatant, HashSet<StatusId>> PlannedStatusesByTarget = new Dictionary<Combatant, HashSet<StatusId>>();
         public readonly HashSet<Combatant> LethalReservations = new HashSet<Combatant>();
         public readonly Dictionary<Combatant, int> NormalSingleTargetCountByHero = new Dictionary<Combatant, int>();
         public readonly HashSet<Combatant> HeavyReservedTargets = new HashSet<Combatant>();
@@ -62,11 +68,14 @@ namespace Obscure
             CurrentRound = b.Round;
             PlannedActions.Clear();
             CommittedDamageByTarget.Clear();
+            CommittedBreakByTarget.Clear();
+            PlannedStatusesByTarget.Clear();
             LethalReservations.Clear();
             NormalSingleTargetCountByHero.Clear();
             HeavyReservedTargets.Clear();
             StunReservedTargets.Clear();
             ExpectedHealByEnemy.Clear();
+            Memory.BeginRound(b.Round);
             sw.Stop();
             LastUpdateMs = sw.Elapsed.TotalMilliseconds;
         }
@@ -76,18 +85,24 @@ namespace Obscure
             if (enemy == null) return;
             var sw = Stopwatch.StartNew();
 
-            // Replace any prior reservation for this enemy's current turn slot (e.g., on mid-round fallback).
-            int turnIdx = enemy.turnsTakenThisRound;
-            bool removed = PlannedActions.RemoveAll(p => p.enemy == enemy && p.turnIndex == turnIdx) > 0;
+            // Replace any prior unexecuted reservation for this enemy (round-start provisional or mid-round fallback/reeval).
+            // Already-executed entries from earlier turns this round (e.g. Zoroa turn A) stay recorded for Heavy/Stun/FocusCap.
+            bool removed = PlannedActions.RemoveAll(p => p.enemy == enemy && !p.executed) > 0;
             if (removed) RebuildAggregates(b);
 
             if (intent?.move != null)
             {
                 var m = intent.move;
                 bool appliesStun = m.apply != null && m.apply.Any(ap => ap.id == StatusId.Stun);
-                float dmg = (!intent.charging && m.hits > 0 && !m.allTargets && !m.self && !m.Heals && !m.Summons && intent.target != null)
+                float dmg = (!intent.charging && m.hits > 0 && !m.allTargets && !m.self && !m.SupportsAlly && !m.Summons && intent.target != null)
                     ? UtilityScorer.EstimateExpectedDamage(enemy, m, intent.target)
                     : 0f;
+                int expectedBreak = (!intent.charging && m.hits > 0 && !m.self && !m.SupportsAlly && !m.Summons)
+                    ? (Combatant.EnemyBaseBreakPower(enemy.enemy?.tier ?? Tier.Normal) + m.breakPower)
+                    : 0;
+                StatusId[] plannedStatuses = (!intent.charging && m.apply != null && m.apply.Length > 0)
+                    ? m.apply.Select(ap => ap.id).Distinct().ToArray()
+                    : null;
 
                 var pub = new PublishedIntent
                 {
@@ -95,9 +110,15 @@ namespace Obscure
                     move = m,
                     target = intent.target,
                     charging = intent.charging,
+                    commitment = intent.commitment,
+                    executed = false,
                     expectedDamage = dmg,
+                    expectedBreak = expectedBreak,
+                    plannedStatuses = plannedStatuses,
                     planningRound = b.Round,
-                    turnIndex = turnIdx,
+                    turnIndex = (b.Active == enemy && enemy.turnsTakenThisRound > 0)
+                        ? enemy.turnsTakenThisRound - 1
+                        : enemy.turnsTakenThisRound,
                     hasHeavy = m.HasHeavy,
                     appliesStun = appliesStun,
                 };
@@ -109,12 +130,35 @@ namespace Obscure
             LastUpdateMs += sw.Elapsed.TotalMilliseconds;
         }
 
-        public void ClearEnemy(Battle b, Combatant enemy)
+        // Clears this enemy's unexecuted provisional entry right before turn-arrival re-evaluation so it never blocks itself.
+        public void BeginReevaluation(Battle b, Combatant enemy) => ClearPendingForEnemy(b, enemy);
+
+        // Marks an enemy's current pending plan as executed after Battle.Perform: retires projected damage/heal/break/statuses
+        // (already reflected in live battlefield state) while preserving round-wide Heavy/Stun/FocusCap constraints.
+        public void MarkExecuted(Battle b, Combatant enemy)
         {
             if (enemy == null) return;
-            if (PlannedActions.RemoveAll(p => p.enemy == enemy) > 0)
+            bool changed = false;
+            for (int i = 0; i < PlannedActions.Count; i++)
+            {
+                if (PlannedActions[i].enemy == enemy && !PlannedActions[i].executed)
+                {
+                    PlannedActions[i].executed = true;
+                    changed = true;
+                }
+            }
+            if (changed) RebuildAggregates(b);
+        }
+
+        // Clears only unexecuted pending reservations for an enemy (e.g. on death, Break, Mind Control, Transform).
+        public void ClearPendingForEnemy(Battle b, Combatant enemy)
+        {
+            if (enemy == null) return;
+            if (PlannedActions.RemoveAll(p => p.enemy == enemy && !p.executed) > 0)
                 RebuildAggregates(b);
         }
+
+        public void ClearEnemy(Battle b, Combatant enemy) => ClearPendingForEnemy(b, enemy);
 
         public void ReplaceEnemy(Combatant oldEnemy, Combatant newEnemy)
         {
@@ -137,6 +181,12 @@ namespace Obscure
 
         public float CommittedDamage(Combatant hero) =>
             hero != null && CommittedDamageByTarget.TryGetValue(hero, out float d) ? d : 0f;
+
+        public int CommittedBreak(Combatant hero) =>
+            hero != null && CommittedBreakByTarget.TryGetValue(hero, out int brk) ? brk : 0;
+
+        public bool HasPlannedStatus(Combatant hero, StatusId status) =>
+            hero != null && PlannedStatusesByTarget.TryGetValue(hero, out var set) && set.Contains(status);
 
         public float ExpectedHeal(Combatant ally) =>
             ally != null && ExpectedHealByEnemy.TryGetValue(ally, out float h) ? h : 0f;
@@ -169,6 +219,8 @@ namespace Obscure
         void RebuildAggregates(Battle b)
         {
             CommittedDamageByTarget.Clear();
+            CommittedBreakByTarget.Clear();
+            PlannedStatusesByTarget.Clear();
             LethalReservations.Clear();
             NormalSingleTargetCountByHero.Clear();
             HeavyReservedTargets.Clear();
@@ -183,10 +235,13 @@ namespace Obscure
             var m = pub.move;
             if (m == null) return;
 
-            if (m.Heals && pub.target != null && pub.target.Alive)
+            if (m.SupportsAlly)
             {
-                float healAmt = (float)Math.Floor(pub.target.Stats.maxHp * m.healAlly);
-                ExpectedHealByEnemy[pub.target] = ExpectedHeal(pub.target) + healAmt;
+                if (!pub.executed && m.Heals && pub.target != null && pub.target.Alive)
+                {
+                    float healAmt = (float)Math.Floor(pub.target.Stats.maxHp * m.healAlly);
+                    ExpectedHealByEnemy[pub.target] = ExpectedHeal(pub.target) + healAmt;
+                }
                 return;
             }
 
@@ -198,10 +253,16 @@ namespace Obscure
                 {
                     var p = b.Party[i];
                     if (!p.Alive) continue;
-                    if (m.hits > 0)
+                    if (!pub.executed)
                     {
-                        float d = UtilityScorer.EstimateExpectedDamage(pub.enemy, m, p);
-                        AddCommittedDamage(p, d);
+                        if (m.hits > 0)
+                        {
+                            float d = UtilityScorer.EstimateExpectedDamage(pub.enemy, m, p);
+                            AddCommittedDamage(p, d);
+                        }
+                        if (pub.expectedBreak > 0)
+                            CommittedBreakByTarget[p] = CommittedBreak(p) + pub.expectedBreak;
+                        AddPlannedStatuses(p, pub.plannedStatuses);
                     }
                     if (pub.hasHeavy) HeavyReservedTargets.Add(p);
                     if (pub.appliesStun) StunReservedTargets.Add(p);
@@ -211,9 +272,15 @@ namespace Obscure
 
             if (pub.target != null && pub.target.IsPlayer && pub.target.Alive)
             {
-                if (pub.expectedDamage > 0f)
-                    AddCommittedDamage(pub.target, pub.expectedDamage);
-                if (pub.enemy.enemy != null && pub.enemy.enemy.aiTier.IsNormalTier() && m.hits > 0 && !m.self && !m.Heals && !m.Summons)
+                if (!pub.executed)
+                {
+                    if (pub.expectedDamage > 0f)
+                        AddCommittedDamage(pub.target, pub.expectedDamage);
+                    if (pub.expectedBreak > 0)
+                        CommittedBreakByTarget[pub.target] = CommittedBreak(pub.target) + pub.expectedBreak;
+                    AddPlannedStatuses(pub.target, pub.plannedStatuses);
+                }
+                if (pub.enemy.enemy != null && pub.enemy.enemy.aiTier.IsNormalTier() && m.hits > 0 && !m.self && !m.SupportsAlly && !m.Summons)
                     NormalSingleTargetCountByHero[pub.target] = NormalSingleTargetCount(pub.target) + 1;
                 if (pub.hasHeavy) HeavyReservedTargets.Add(pub.target);
                 if (pub.appliesStun) StunReservedTargets.Add(pub.target);
@@ -226,6 +293,18 @@ namespace Obscure
             CommittedDamageByTarget[hero] = total;
             if (total >= hero.unit.hp)
                 LethalReservations.Add(hero);
+        }
+
+        void AddPlannedStatuses(Combatant hero, StatusId[] statuses)
+        {
+            if (hero == null || statuses == null || statuses.Length == 0) return;
+            if (!PlannedStatusesByTarget.TryGetValue(hero, out var set))
+            {
+                set = new HashSet<StatusId>();
+                PlannedStatusesByTarget[hero] = set;
+            }
+            for (int i = 0; i < statuses.Length; i++)
+                set.Add(statuses[i]);
         }
     }
 }

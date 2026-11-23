@@ -362,7 +362,7 @@ namespace Obscure.Tests
                         if (mv.NeedsTelegraph)
                         {
                             res.dangerousActions++;
-                            if (planned != null || wasCharging) res.dangerousTelegraphed++;
+                            if ((planned != null && planned.IsCommitted) || wasCharging) res.dangerousTelegraphed++;
                         }
                         if (act.charging)
                         {
@@ -380,13 +380,14 @@ namespace Obscure.Tests
                             res.healTurns++;
                             if (healTargetHpFrac <= 0.70f && healDone > 0) res.usefulHealTurns++;
                         }
-                        if (!act.charging && !mv.allTargets && !mv.self && !mv.Heals && !mv.Summons && act.target != null && act.target.IsPlayer)
+                        if (!act.charging && !mv.allTargets && !mv.self && !mv.SupportsAlly && !mv.Summons && act.target != null && act.target.IsPlayer)
                         {
                             res.singleTargetAttacks++;
                             int sl = act.target.slot;
                             res.singleTargetByHeroSlot[sl] = (res.singleTargetByHeroSlot.TryGetValue(sl, out int cnt) ? cnt : 0) + 1;
                         }
                         bool nonWasted = act.charging || mv.Summons && spawned > 0 || mv.self || (mv.Heals && healDone > 0)
+                            || (mv.BuffsAlly && act.target != null && mv.buffAlly.Any(ap => act.target.Has(ap.id)))
                             || dmgDone > 0 || breakDone > 0 || statusCountBefore > statusesBefore;
                         if (!nonWasted) res.wastedEnemyActions++;
 

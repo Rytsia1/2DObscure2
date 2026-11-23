@@ -114,6 +114,10 @@ const ERIG = {
   crownless_duelist: { arm: { letters: "AhgsZ", minX: 12 }, style: "melee" },   // rapier lunge
   tombstone_colossus: { arm: { letters: "AaFm", minX: 15 }, style: "melee" },   // monument fist
   mourning_bell_wraith: { arm: { letters: "ah", minX: 14 }, style: "melee" },   // echo claw
+  // common supports
+  ossuary_acolyte: { arm: { letters: "AhcCgs", minX: 13 }, style: "melee" },    // censer swing
+  dirge_chanter: { style: "pounce" },                                          // mournful wail: the veiled head lunges
+  hollow_banneret: { arm: { letters: "bhwfyX", minX: 12 }, style: "melee" },    // banner pole jab
   zoroa_p1: { arm: { letters: "AhcLlG", minX: 30 }, style: "reap", glow: [R.cyan[3], R.cyan[1]] },
   zoroa_p2: { arm: { letters: "AhcLlG", minX: 30 }, style: "reap", glow: [P.hsl(352, 0.85, 0.68), P.hsl(352, 0.8, 0.45)] },
 };

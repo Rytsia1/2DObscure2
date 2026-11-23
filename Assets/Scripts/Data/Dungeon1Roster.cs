@@ -194,6 +194,31 @@ namespace Obscure
                 "A militia remnant still following its last order. Strikes in two steps.",
                 Move("Two-Step Slash", Element.Physical, 10, 10)), // Steady 350 ms, one Defensive QTE per hit
 
+            // ponytail: common support enemies are not in Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx; add them if they stick.
+            // Kits and stats: posture-B starting values (untested). Pass test: in its encounter, killing the support first ends the fight
+            // >= 1 round sooner than killing it last (200-seed sim). If it fails: more MP (casts), or lower the partner's HP.
+            D1Enemy("ossuary_acolyte", "Ossuary Acolyte", "Acolyte", "OAC", Tier.Normal, "Undead", "Healer",
+                new Stats(120, 30, 12, 6, 10, 14), 9, Art.Skeleton,
+                "A novice of the crypt chapel. Mends a wounded ally with bone-dust prayers.",
+                new EnemyAttack { name = "Bone Mending", hits = 0, power = 0f, healAlly = 0.08f, aiAllyHpBelow = 0.50f,
+                    mpCost = 14, cooldown = 3, aiPriority = 3 },
+                Move("Censer Swing", Element.Physical, 12)),
+
+            D1Enemy("dirge_chanter", "Dirge Chanter", "Chanter", "DCH", Tier.Normal, "Spirit", "Buffer",
+                new Stats(110, 40, 10, 5, 13, 16), 8, Art.Skeleton,
+                "A mourning spirit whose dirge drives its allies into a fury.",
+                new EnemyAttack { name = "War Dirge", hits = 0, power = 0f, mpCost = 12, cooldown = 3, aiPriority = 2,
+                    buffAlly = new[] { new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.20f } } },
+                new EnemyAttack { name = "Mournful Wail", element = Element.Shadow, hitDamage = new[] { 14 }, mpCost = 6, aiPriority = 1 },
+                BasicAttack(10)),
+
+            D1Enemy("hollow_banneret", "Hollow Banneret", "Banneret", "HBN", Tier.Normal, "Undead", "Buffer",
+                new Stats(150, 30, 15, 10, 8, 8), 7, Art.Skeleton,
+                "A standard-bearer of the fallen guard. Its banner hardens the line around it.",
+                new EnemyAttack { name = "Rally Banner", hits = 0, power = 0f, mpCost = 10, cooldown = 3, aiPriority = 2,
+                    buffAlly = new[] { new StatusApply { id = StatusId.DefenseUp, turns = 2, magnitude = 0.25f } } },
+                Move("Banner Pole", Element.Physical, 15)),
+
             D1Enemy("soul_reaper", "Soul Reaper", "Soul Reaper", "SRP", Tier.Elite, "Wraith", "Executioner",
                 new Stats(430, 130, 32, 13, 17, 29), 14, Art.CursedKnight,
                 "An elite soul harvester. Fast, with heavy physical and magical pressure.",
@@ -215,10 +240,19 @@ namespace Obscure
             // v1.9 FINAL: five random-pool Elites (Elite Design Lock sheet). Art: Resources/Enemies/<id>_* (Tools/PixelArt/enemies.js).
             D1Enemy("reliquary_confessor", "Reliquary Confessor", "Confessor", "RCF", Tier.Elite, "Undead", "Cleric",
                 new Stats(380, 150, 15, 11, 12, 30), 20, Art.CursedKnight,
-                "A former royal priest guarding a tainted relic. Mends its allies and hoards MP with Arcane Charge.",
-                new EnemyAttack { name = "Mending Litany", hits = 0, power = 0f, healAlly = 0.15f, aiAllyHpBelow = 0.65f,
+                "A former royal priest guarding a tainted relic. Mends and wards its allies, and hoards MP with Arcane Charge.",
+                // ponytail: heal 0.15 -> 0.20 and Reliquary Ward diverge from Felna_Dungeon_1_Enemy_Roster_Scaling_Turn_Order_v1_9_FINAL.xlsx.
+                // posture-B starting values (untested). Pass test: the median d1_e8 fight takes 4-6 rounds.
+                // If it fails: heal back to 0.15f first, keep the Ward.
+                new EnemyAttack { name = "Mending Litany", hits = 0, power = 0f, healAlly = 0.20f, aiAllyHpBelow = 0.65f,
                     mpCost = 24, cooldown = 3, aiPriority = 3 },
                 ArcaneCharge(priority: 2, useBelowMpFraction: 0.30f, unlessAllyHpBelow: 0.40f),
+                new EnemyAttack { name = "Reliquary Ward", hits = 0, power = 0f, mpCost = 18, cooldown = 3, aiPriority = 2,
+                    buffAlly = new[]
+                    {
+                        new StatusApply { id = StatusId.DefenseUp, turns = 2, magnitude = 0.30f },
+                        new StatusApply { id = StatusId.MagicDefenseUp, turns = 2, magnitude = 0.30f },
+                    } },
                 Move("Reliquary Staff", Element.Physical, 15)),
 
             D1Enemy("graveglass_arcanist", "Graveglass Arcanist", "Arcanist", "GGA", Tier.Elite, "Wraith", "Arcane Caster",
@@ -283,8 +317,9 @@ namespace Obscure
         };
 
         // Harvest Call summon pools: 80% D1 Normal enemies, 20% v1.9 random Elite pool (never stage bosses soul_reaper / royal_ossuary_knight).
+        // Common supports are left out: heals scale with the target's Max HP, so a summoned healer would mend Zoroa for ~190 HP a cast.
         public static readonly string[] SummonNormalPool =
-            Enemies.Where(e => e.tier == Tier.Normal).Select(e => e.id).ToArray();
+            Enemies.Where(e => e.tier == Tier.Normal && e.attacks.All(a => !a.SupportsAlly)).Select(e => e.id).ToArray();
         public static readonly string[] SummonElitePool =
         {
             "reliquary_confessor", "graveglass_arcanist", "crownless_duelist", "tombstone_colossus", "mourning_bell_wraith",
@@ -308,23 +343,26 @@ namespace Obscure
             // Confirmed targeting: Elites -> lowest current HP, Archer -> lowest DEF, everyone else random.
             Enemies.First(e => e.id == "gravebound_archer").targetRule = TargetRule.LowestDef;
 
-            // Spec §6.2 tactical personalities & Architecture §12 v1.1 intelligence tiers for all 15 D1 roster enemies (16 defs incl. Zoroa P2).
-            SetAi("hollow_squire", AiRole.Vanguard, AiTier.Normal);
-            SetAi("gravebound_archer", AiRole.RangedOpportunist, AiTier.Normal);
-            SetAi("cinder_wisp", AiRole.ElementalAttacker, AiTier.Normal);
-            SetAi("soulbound_hound", AiRole.Disruptor, AiTier.Normal);
-            SetAi("possessed_royal_guard", AiRole.Bruiser, AiTier.Normal);
-            SetAi("crypt_leech", AiRole.Attrition, AiTier.Normal);
-            SetAi("forgotten_militia", AiRole.ComboAttacker, AiTier.Normal);
-            SetAi("soul_reaper", AiRole.Executioner, AiTier.Miniboss);
-            SetAi("royal_ossuary_knight", AiRole.DefensivePunisher, AiTier.Miniboss);
-            SetAi("reliquary_confessor", AiRole.Support, AiTier.Elite);
-            SetAi("graveglass_arcanist", AiRole.ArcaneCaster, AiTier.Elite);
-            SetAi("crownless_duelist", AiRole.Skirmisher, AiTier.Elite);
-            SetAi("tombstone_colossus", AiRole.BreakBruiser, AiTier.Elite);
-            SetAi("mourning_bell_wraith", AiRole.AreaController, AiTier.Elite);
-            SetAi("zoroa_p1", AiRole.AdaptiveController, AiTier.Boss);
-            SetAi("zoroa_p2", AiRole.AdaptiveController, AiTier.Boss);
+            // Spec §6.2 tactical personalities, Architecture §12 v1.1 intelligence tiers, and Instinct Layer archetypes for all 15 D1 roster enemies (16 defs incl. Zoroa P2).
+            SetAi("hollow_squire", AiRole.Vanguard, AiTier.Normal, InstinctKind.Relentless);
+            SetAi("gravebound_archer", AiRole.RangedOpportunist, AiTier.Normal, InstinctKind.Territorial);
+            SetAi("cinder_wisp", AiRole.ElementalAttacker, AiTier.Normal, InstinctKind.Skittish);
+            SetAi("soulbound_hound", AiRole.Disruptor, AiTier.Normal, InstinctKind.Predator);
+            SetAi("possessed_royal_guard", AiRole.Bruiser, AiTier.Normal, InstinctKind.Guardian);
+            SetAi("crypt_leech", AiRole.Attrition, AiTier.Normal, InstinctKind.Predator);
+            SetAi("forgotten_militia", AiRole.ComboAttacker, AiTier.Normal, InstinctKind.Relentless);
+            SetAi("ossuary_acolyte", AiRole.Support, AiTier.Normal, InstinctKind.Guardian);
+            SetAi("dirge_chanter", AiRole.Support, AiTier.Normal, InstinctKind.Skittish);
+            SetAi("hollow_banneret", AiRole.Support, AiTier.Normal, InstinctKind.Guardian);
+            SetAi("soul_reaper", AiRole.Executioner, AiTier.Miniboss, InstinctKind.Predator);
+            SetAi("royal_ossuary_knight", AiRole.DefensivePunisher, AiTier.Miniboss, InstinctKind.Guardian);
+            SetAi("reliquary_confessor", AiRole.Support, AiTier.Elite, InstinctKind.Guardian);
+            SetAi("graveglass_arcanist", AiRole.ArcaneCaster, AiTier.Elite, InstinctKind.Territorial);
+            SetAi("crownless_duelist", AiRole.Skirmisher, AiTier.Elite, InstinctKind.Relentless);
+            SetAi("tombstone_colossus", AiRole.BreakBruiser, AiTier.Elite, InstinctKind.Territorial);
+            SetAi("mourning_bell_wraith", AiRole.AreaController, AiTier.Elite, InstinctKind.Territorial);
+            SetAi("zoroa_p1", AiRole.AdaptiveController, AiTier.Boss, InstinctKind.Territorial);
+            SetAi("zoroa_p2", AiRole.AdaptiveController, AiTier.Boss, InstinctKind.Territorial);
 
             // Authored QTE motifs (QTE Variation Spec Part D, Handoff §Example motifs)
             SetMotif("hollow_squire", "Rusty Cleave", new QteMotif
@@ -447,6 +485,21 @@ namespace Obscure
                 weak: new[] { Element.Fire, Element.Physical },
                 resist: new[] { Element.Dark },
                 statusResist: new Dictionary<StatusId, float> { [StatusId.Bleed] = -0.20f });
+
+            SetAnalysisProfile("ossuary_acolyte",
+                weak: new[] { Element.Dark },
+                resist: new[] { Element.Holy },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Silence] = -0.20f });
+
+            SetAnalysisProfile("dirge_chanter",
+                weak: new[] { Element.Physical, Element.Fire },
+                resist: new[] { Element.Dark },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Silence] = -0.20f });
+
+            SetAnalysisProfile("hollow_banneret",
+                weak: new[] { Element.Fire },
+                resist: new[] { Element.Physical },
+                statusResist: new Dictionary<StatusId, float> { [StatusId.Fear] = 0.25f });
 
             SetAnalysisProfile("soul_reaper",
                 weak: new[] { Element.Fire },
@@ -609,6 +662,7 @@ namespace Obscure
                 ai = AiKind.Priority,
                 aiRole = baseDef.aiRole,
                 aiTier = AiTier.Enhanced,
+                instinct = baseDef.instinct,
                 isEnhanced = true,
                 statMult = p.statMult,
                 targetRule = p.targetRule,
@@ -661,6 +715,7 @@ namespace Obscure
             drain = a.drain,
             restoreMp = a.restoreMp,
             healAlly = a.healAlly,
+            buffAlly = a.buffAlly != null ? a.buffAlly.Select(CloneStatusApply).ToArray() : null,
             summonCount = a.summonCount,
             breakPower = a.breakPower,
             aiPriority = a.aiPriority,
@@ -798,11 +853,12 @@ namespace Obscure
             return errors.Count == 0;
         }
 
-        static void SetAi(string id, AiRole role, AiTier tier)
+        static void SetAi(string id, AiRole role, AiTier tier, InstinctKind instinct)
         {
             var e = Enemies.First(x => x.id == id);
             e.aiRole = role;
             e.aiTier = tier;
+            e.instinct = instinct;
         }
 
         public static readonly EncounterDef[] Encounters =
@@ -832,6 +888,13 @@ namespace Obscure
                 enemies = new[] { "tombstone_colossus", "hollow_squire" }, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e12", name = "Mourning Bell Hall", tier = Tier.Elite, minFloor = 2, focus = "AoE / control pressure; telegraphed Funeral Chorus",
                 enemies = new[] { "mourning_bell_wraith", "soulbound_hound" }, music = MusicIds.Battle2 },
+            // ponytail: support encounters are not in the v1.9 workbook Encounter Plan.
+            new EncounterDef { id = "d1_e13", name = "Chapel of Bones", tier = Tier.Normal, minFloor = 1, focus = "Enemy healer; kill the Acolyte first",
+                enemies = new[] { "ossuary_acolyte", "possessed_royal_guard" } },
+            new EncounterDef { id = "d1_e14", name = "Dirge Hall", tier = Tier.Normal, minFloor = 2, focus = "Attack Up support on a multi-hit ally",
+                enemies = new[] { "dirge_chanter", "forgotten_militia", "hollow_squire" } },
+            new EncounterDef { id = "d1_e15", name = "Banner Line", tier = Tier.Normal, minFloor = 1, focus = "Defense Up support shielding the focused ally",
+                enemies = new[] { "hollow_banneret", "gravebound_archer" } },
             new EncounterDef { id = "d1_boss", name = "Zoroa", tier = Tier.Boss, focus = "Signature multi-hit, resources, Break timing, Phase 2 escalation",
                 enemies = new[] { "zoroa_p1" }, music = MusicIds.ZoroaP1 }, // Phase 2 replaces Phase 1; never spawned alongside it
         };

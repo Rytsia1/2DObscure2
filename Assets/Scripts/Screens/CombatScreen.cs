@@ -1529,9 +1529,11 @@ namespace Obscure
                 Hint($"{move.name.ToUpperInvariant()}: " + string.Join(", ", effects));
                 return null;
             }
-            if (move != null && move.Heals)
+            if (move != null && move.SupportsAlly)
             {
-                Hint($"{move.name.ToUpperInvariant()} > {a.target.name.ToUpperInvariant()}: RESTORES {move.healAlly * 100:0}% HP");
+                var effects = (move.buffAlly ?? Array.Empty<StatusApply>()).Select(ap => StatusInfo.Name(ap.id).ToUpperInvariant()).ToList();
+                if (move.Heals) effects.Insert(0, $"RESTORES {move.healAlly * 100:0}% HP");
+                Hint($"{move.name.ToUpperInvariant()} > {a.target.name.ToUpperInvariant()}: " + string.Join(", ", effects));
                 return null;
             }
             string who =move != null && move.allTargets ? "ALL" : a.target.name.ToUpperInvariant();

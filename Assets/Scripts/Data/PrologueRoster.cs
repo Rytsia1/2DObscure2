@@ -54,6 +54,10 @@ namespace Obscure
 
         static PrologueRoster()
         {
+            Enemies[0].instinct = InstinctKind.Predator;
+            Enemies[1].instinct = InstinctKind.Skittish;
+            Enemies[2].instinct = InstinctKind.Predator;
+            Enemies[3].instinct = InstinctKind.Guardian;
             Enemies[1].affinities = new Affinities { weak = new[] { Element.Physical }, resist = new[] { Element.Lightning } };
             Enemies[2].affinities = new Affinities { weak = new[] { Element.Holy, Element.Fire }, resist = new[] { Element.Shadow } };
             Enemies[3].phase2At = 0.5f;

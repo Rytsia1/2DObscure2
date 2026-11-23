@@ -23,6 +23,7 @@ namespace Obscure
         public float immediate;
         public float future;
         public float role;
+        public float instinct;
         public float synergy;
         public float objective;
         public float adaptation;
@@ -39,9 +40,9 @@ namespace Obscure
             if (!legal)
                 return $"[X]{moveName}@{targetSlot}:{rejectReason}";
             return string.Format(inv,
-                "{0}@{1}(p={2},mp={3},chg={4},f={5})={6:0.###}[b={7:0.###},im={8:0.###},fu={9:0.###},ro={10:0.###},sy={11:0.###},ob={12:0.###},ad={13:0.###},re={14:0.###},rp={15:0.###},rk={16:0.###},cl={17:0.###}]",
+                "{0}@{1}(p={2},mp={3},chg={4},f={5})={6:0.###}[b={7:0.###},im={8:0.###},fu={9:0.###},ro={10:0.###},in={11:0.###},sy={12:0.###},ob={13:0.###},ad={14:0.###},re={15:0.###},rp={16:0.###},rk={17:0.###},cl={18:0.###}]",
                 moveName, targetSlot, aiPriority, mpCost, charging ? 1 : 0, forced ? 1 : 0,
-                totalScore, baseScore, immediate, future, role, synergy, objective, adaptation,
+                totalScore, baseScore, immediate, future, role, instinct, synergy, objective, adaptation,
                 resource, repetition, risk, clampedModifier);
         }
     }
@@ -63,6 +64,9 @@ namespace Obscure
         public int chosenTargetSlot = -1;
         public bool charging;
         public bool telegraphed;
+        public IntentCommitment commitment;
+        public bool isReevaluation;
+        public bool reevalChangedDecision;
         public bool wasForced;
         public bool usedFallback;
         public bool adaptationChangedDecision;
@@ -75,6 +79,8 @@ namespace Obscure
         {
             var sb = new StringBuilder();
             sb.Append($"R{round}.T{turnIndex}:{enemyId}#{enemySlot}->{chosenMove ?? "NONE"}@{chosenTargetSlot}");
+            sb.Append(commitment == IntentCommitment.Committed ? "[COM]" : "[PRV]");
+            if (isReevaluation) sb.Append("[REV]");
             if (charging) sb.Append("[CHG]");
             if (telegraphed) sb.Append("[TEL]");
             if (wasForced) sb.Append("[FRC]");

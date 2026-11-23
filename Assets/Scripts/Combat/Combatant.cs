@@ -26,6 +26,9 @@ namespace Obscure
         public int phase = 1;   // boss phase
         public readonly List<StatusEffect> statuses = new List<StatusEffect>();
         public readonly Dictionary<string, int> cooldowns = new Dictionary<string, int>();
+        // Move keys whose cooldown ticked from 1 -> 0 during this turn's StartTurn; kept blocked during this turn's
+        // provisional re-evaluation so cooldown = N preserves its exact N-turn duration.
+        public readonly HashSet<string> cooldownsJustExpiredThisTurn = new HashSet<string>();
 
         // Enemy intent (Bab 10 §8.9, Bab 12 §6.4): planned at round start; a charged move is released on the next turn.
         public EnemyIntent Intent;
@@ -39,6 +42,10 @@ namespace Obscure
         public bool UsedHeavyThisRound;
         public bool IsSummon;
         public bool transformRolled; // On-Defeat Transformation: evaluated at most once per enemy instance (Transformation Spec §4)
+        // Observable per-battle targeting memory used by InstinctLayer & TacticalSynergy (never reads hidden info).
+        public Combatant LastAttacker;     // last living opponent who dealt damage to this combatant
+        public Combatant LastTargetedHero; // last living hero targeted by this enemy's single-target attack
+        public int LastDamagedRound;       // battle round when this combatant last took damage
         // Hidden Stage 2-3 Elite & Boss combat affixes (not exposed in Analysis or HUD).
         public readonly List<EnemyAffix> EnemyAffixes = new List<EnemyAffix>();
         public bool HasAffix(EnemyAffix affix) => EnemyAffixes.Contains(affix);
@@ -280,6 +287,9 @@ namespace Obscure
             Charge = null;
             JustReleasedCharge = false;
             guarding = false;
+            LastAttacker = null;
+            LastTargetedHero = null;
+            LastDamagedRound = 0;
             RecoverBreakGauge();
             if (unit != null)
             {
@@ -289,6 +299,7 @@ namespace Obscure
                 StatusController.ResistanceProfile.statsResistance = Math.Clamp(unit.Derived.statusResistance / 100f, 0f, 0.75f);
             }
             cooldowns.Clear();
+            cooldownsJustExpiredThisTurn.Clear();
             ResetMoveCooldowns();
         }
 

@@ -320,7 +320,7 @@ namespace Obscure.Tests
                 set.Add(sk.classId);
             }
 
-            Assert.AreEqual(16, Dungeon1Roster.Enemies.Length, "14 D1 enemies + 2 Zoroa phases");
+            Assert.AreEqual(19, Dungeon1Roster.Enemies.Length, "17 D1 enemies + 2 Zoroa phases");
 
             foreach (var e in Dungeon1Roster.Enemies.Concat(Dungeon1Roster.EnhancedVariants))
             {

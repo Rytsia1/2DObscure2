@@ -40,6 +40,7 @@ namespace Obscure.Tests
             "hollow_squire", "gravebound_archer", "cinder_wisp", "soulbound_hound", "possessed_royal_guard", "crypt_leech",
             "forgotten_militia", "soul_reaper", "royal_ossuary_knight", "zoroa_p1", "zoroa_p2",
             "reliquary_confessor", "graveglass_arcanist", "crownless_duelist", "tombstone_colossus", "mourning_bell_wraith",
+            "ossuary_acolyte", "dirge_chanter", "hollow_banneret",
         };
 
         // ---- enemy data ----
@@ -54,6 +55,9 @@ namespace Obscure.Tests
         [TestCase("possessed_royal_guard", Tier.Normal, 190, 30, 23, 12, 7, 9, 7, 100)]
         [TestCase("crypt_leech", Tier.Normal, 125, 55, 15, 5, 13, 7, 11, 100)]
         [TestCase("forgotten_militia", Tier.Normal, 135, 35, 16, 6, 8, 6, 12, 100)]
+        [TestCase("ossuary_acolyte", Tier.Normal, 120, 30, 12, 6, 14, 9, 10, 100)]
+        [TestCase("dirge_chanter", Tier.Normal, 110, 40, 10, 5, 16, 8, 13, 100)]
+        [TestCase("hollow_banneret", Tier.Normal, 150, 30, 15, 10, 8, 7, 8, 100)]
         [TestCase("soul_reaper", Tier.Elite, 430, 130, 32, 13, 29, 14, 17, 100)]
         [TestCase("royal_ossuary_knight", Tier.Elite, 520, 90, 36, 22, 18, 18, 9, 100)]
         [TestCase("reliquary_confessor", Tier.Elite, 380, 150, 15, 11, 30, 20, 12, 100)]
@@ -116,6 +120,13 @@ namespace Obscure.Tests
             yield return S("crypt_leech", "Vital Siphon", Element.Shadow, false, new[] { 15 }, 7, -1, false);
             yield return S("crypt_leech", "Basic Attack", Element.Physical, false, new[] { 15 }, 0, -1, false);
             yield return S("forgotten_militia", "Two-Step Slash", Element.Physical, false, new[] { 10, 10 }, 0, -1, false);
+            yield return S("ossuary_acolyte", "Bone Mending", Element.Physical, false, new int[0], 14, -1, false);
+            yield return S("ossuary_acolyte", "Censer Swing", Element.Physical, false, new[] { 12 }, 0, -1, false);
+            yield return S("dirge_chanter", "War Dirge", Element.Physical, false, new int[0], 12, -1, false);
+            yield return S("dirge_chanter", "Mournful Wail", Element.Shadow, false, new[] { 14 }, 6, -1, false);
+            yield return S("dirge_chanter", "Basic Attack", Element.Physical, false, new[] { 10 }, 0, -1, false);
+            yield return S("hollow_banneret", "Rally Banner", Element.Physical, false, new int[0], 10, -1, false);
+            yield return S("hollow_banneret", "Banner Pole", Element.Physical, false, new[] { 15 }, 0, -1, false);
             yield return S("soul_reaper", "Harvesting Arc", Element.Physical, false, new[] { 27 }, 0, -1, false);
             yield return S("soul_reaper", "Accelerating Rend", Element.Physical, false, new[] { 15, 15, 15, 15 }, 16, -1, false, StatusId.Bleed, 0.25f);
             yield return S("soul_reaper", "Soul Brand", Element.Shadow, false, new[] { 20 }, 20, -1, false, StatusId.Despair, 0.20f);
@@ -134,6 +145,7 @@ namespace Obscure.Tests
             yield return S("zoroa_p2", "Soulstorm", Element.Shadow, true, new[] { 24 }, 45, -1, true);
             yield return S("reliquary_confessor", "Reliquary Staff", Element.Physical, false, new[] { 15 }, 0, -1, false);
             yield return S("reliquary_confessor", "Mending Litany", Element.Physical, false, new int[0], 24, -1, false);
+            yield return S("reliquary_confessor", "Reliquary Ward", Element.Physical, false, new int[0], 18, -1, false);
             yield return S("graveglass_arcanist", "Glass Shard", Element.Physical, false, new[] { 12 }, 0, -1, false);
             yield return S("graveglass_arcanist", "Umbral Lance", Element.Shadow, false, new[] { 38 }, 22, -1, false);
             yield return S("crownless_duelist", "Crownless Cut", Element.Physical, false, new[] { 36 }, 0, -1, false);
@@ -158,7 +170,7 @@ namespace Obscure.Tests
             Assert.IsFalse(m.isHeavy, "no all-hits Heavy in the roster");
             Assert.AreEqual(telegraph, m.telegraph);
             Assert.IsFalse(m.self);
-            if (damage.Length == 0) Assert.IsTrue(m.StatusOnly || m.Heals || m.Summons);
+            if (damage.Length == 0) Assert.IsTrue(m.StatusOnly || m.SupportsAlly || m.Summons);
             else CollectionAssert.AreEqual(damage, m.hitDamage);
 
             // The coefficient maps the authored D1 damage onto the D1 ATK / MATK (scaled automatically by the tier stat multiplier).
@@ -1171,7 +1183,7 @@ namespace Obscure.Tests
             var archer = b.Enemies[1];
             AdvanceTo(b, c => c == conf);
             archer.unit.hp = (int)(archer.Stats.maxHp * 0.70f);
-            Assert.AreEqual("Reliquary Staff", PriorityBrain.Select(b, conf).move.name, "70% HP is not low enough");
+            Assert.AreEqual("Reliquary Ward", PriorityBrain.Select(b, conf).move.name, "70% HP is not low enough to heal; it wards instead");
 
             archer.unit.hp = (int)(archer.Stats.maxHp * 0.60f);
             var plan = PriorityBrain.Select(b, conf);
@@ -1183,7 +1195,7 @@ namespace Obscure.Tests
             Assert.IsNull(QteFactory.Defense(act, QteAssist.Standard), "healing has no Defensive QTE");
             int before = archer.unit.hp, mp = conf.unit.mp;
             b.Perform(act);
-            Assert.AreEqual(before + (int)Math.Floor(archer.Stats.maxHp * 0.15f), archer.unit.hp, "15% Max HP");
+            Assert.AreEqual(before + (int)Math.Floor(archer.Stats.maxHp * 0.20f), archer.unit.hp, "20% Max HP");
             Assert.AreEqual(mp - 24, conf.unit.mp);
             Assert.AreEqual(3, conf.Cooldown(Combatant.MoveKey(plan.move)));
         }
@@ -1197,7 +1209,96 @@ namespace Obscure.Tests
             conf.unit.mp = 20; // <= 30% Max MP, and too little for Mending Litany
             Assert.AreEqual("Arcane Charge", PriorityBrain.Select(b, conf).move.name);
             archer.unit.hp = (int)(archer.Stats.maxHp * 0.35f);
-            Assert.AreEqual("Reliquary Staff", PriorityBrain.Select(b, conf).move.name, "ally <= 40% HP blocks Arcane Charge");
+            Assert.AreEqual("Reliquary Ward", PriorityBrain.Select(b, conf).move.name, "ally <= 40% HP blocks Arcane Charge; 20 MP still affords the Ward");
+        }
+
+        // ---- support enemies (ally heal / ally buff) ----
+
+        [Test]
+        public void ConfessorWardGivesAnAllyBothDefenseBuffs()
+        {
+            var b = NewBattle(1, "reliquary_confessor", "gravebound_archer");
+            var conf = b.Enemies[0];
+            var archer = b.Enemies[1];
+            AdvanceTo(b, c => c == conf);
+            var plan = PriorityBrain.Select(b, conf);
+            Assert.AreEqual("Reliquary Ward", plan.move.name);
+            Assert.AreSame(archer, plan.target, "buffs an ally before itself");
+
+            var act = EnemyAI.Use(b, conf, plan.move, plan.target);
+            Assert.IsNull(b.Validate(act));
+            b.Perform(act);
+            Assert.IsTrue(archer.Has(StatusId.DefenseUp));
+            Assert.IsTrue(archer.Has(StatusId.MagicDefenseUp));
+            Assert.AreEqual(150 - 18, conf.unit.mp);
+        }
+
+        [Test]
+        public void RallyBannerBuffsTheAllyThePartyHitsMostAndNeverAHero()
+        {
+            var b = NewBattle(1, "hollow_banneret", "gravebound_archer", "hollow_squire");
+            var banner = b.Enemies[0];
+            var archer = b.Enemies[1];
+            var squire = b.Enemies[2];
+            AdvanceTo(b, c => c == banner);
+            b.Blackboard.Memory.GetOrCreateProfile(b.Party[0]).attackCountsByEnemy[archer] = 3;
+
+            var plan = PriorityBrain.Select(b, banner);
+            Assert.AreEqual("Rally Banner", plan.move.name);
+            Assert.AreSame(archer, plan.target, "the ally the party focuses");
+
+            var act = EnemyAI.Use(b, banner, plan.move, plan.target);
+            Assert.IsNull(b.Validate(act));
+            Assert.IsNull(QteFactory.Defense(act, QteAssist.Standard), "ally buffs have no Defensive QTE");
+            var partyHp = b.Party.Select(p => p.unit.hp).ToList();
+            b.Perform(act);
+            Assert.IsTrue(archer.Has(StatusId.DefenseUp));
+            Assert.IsFalse(squire.Has(StatusId.DefenseUp));
+            Assert.IsFalse(b.Party.Any(p => p.Has(StatusId.DefenseUp)), "never buffs a hero");
+            CollectionAssert.AreEqual(partyHp, b.Party.Select(p => p.unit.hp).ToList(), "no damage");
+            Assert.AreEqual(3, banner.Cooldown(Combatant.MoveKey(plan.move)));
+        }
+
+        [Test]
+        public void WarDirgeBuffsTheStrongestUnbuffedAllyAndAttacksOnceEveryoneIsBuffed()
+        {
+            var b = NewBattle(1, "dirge_chanter", "forgotten_militia", "hollow_squire");
+            var chanter = b.Enemies[0];
+            var militia = b.Enemies[1];
+            var squire = b.Enemies[2];
+            var plan = PriorityBrain.Select(b, chanter);
+            Assert.AreEqual("War Dirge", plan.move.name);
+            Assert.AreSame(squire, plan.target, "highest ATK ally (18 vs 16)");
+
+            foreach (var e in b.Enemies) e.AddStatus(StatusId.AttackUp, 2, 0.2f, chanter);
+            Assert.AreNotEqual("War Dirge", PriorityBrain.Select(b, chanter).move.name, "no fresh buff target");
+        }
+
+        [Test]
+        public void AcolyteHealsOnlyAtOrBelowHalfHp()
+        {
+            var b = NewBattle(1, "ossuary_acolyte", "possessed_royal_guard");
+            var aco = b.Enemies[0];
+            var guard = b.Enemies[1];
+            AdvanceTo(b, c => c == aco);
+            guard.unit.hp = (int)(guard.Stats.maxHp * 0.60f);
+            Assert.AreEqual("Censer Swing", PriorityBrain.Select(b, aco).move.name, "60% HP is not low enough");
+
+            guard.unit.hp = (int)(guard.Stats.maxHp * 0.45f);
+            var plan = PriorityBrain.Select(b, aco);
+            Assert.AreEqual("Bone Mending", plan.move.name);
+            Assert.AreSame(guard, plan.target);
+            int before = guard.unit.hp;
+            b.Perform(EnemyAI.Use(b, aco, plan.move, plan.target));
+            Assert.AreEqual(before + (int)Math.Floor(guard.Stats.maxHp * 0.08f), guard.unit.hp, "8% Max HP");
+        }
+
+        [Test]
+        public void CommonSupportsAreNeverSummonedByZoroa()
+        {
+            foreach (var id in new[] { "ossuary_acolyte", "dirge_chanter", "hollow_banneret" })
+                CollectionAssert.DoesNotContain(Dungeon1Roster.SummonNormalPool, id);
+            CollectionAssert.Contains(Dungeon1Roster.SummonNormalPool, "hollow_squire");
         }
 
         [Test]
@@ -1281,6 +1382,9 @@ namespace Obscure.Tests
                 ["d1_e10"] = (Tier.Elite, new[] { "crownless_duelist", "forgotten_militia" }),
                 ["d1_e11"] = (Tier.Elite, new[] { "tombstone_colossus", "hollow_squire" }),
                 ["d1_e12"] = (Tier.Elite, new[] { "mourning_bell_wraith", "soulbound_hound" }),
+                ["d1_e13"] = (Tier.Normal, new[] { "ossuary_acolyte", "possessed_royal_guard" }),
+                ["d1_e14"] = (Tier.Normal, new[] { "dirge_chanter", "forgotten_militia", "hollow_squire" }),
+                ["d1_e15"] = (Tier.Normal, new[] { "hollow_banneret", "gravebound_archer" }),
                 ["d1_boss"] = (Tier.Boss, new[] { "zoroa_p1" }),
             };
             CollectionAssert.AreEquivalent(expected.Keys, Database.Encounters.Keys);

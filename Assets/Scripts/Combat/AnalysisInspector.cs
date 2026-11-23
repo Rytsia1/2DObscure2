@@ -151,7 +151,7 @@ namespace Obscure
             string intent = "";
             if (enemy.Charge?.move != null)
                 intent = $"CHARGING: {enemy.Charge.move.name.ToUpperInvariant()}";
-            else if (enemy.Intent?.move != null)
+            else if (enemy.Intent?.move != null && enemy.Intent.IsCommitted)
                 intent = enemy.Intent.charging
                     ? $"WILL CHARGE: {enemy.Intent.move.name.ToUpperInvariant()}"
                     : enemy.Intent.move.name.ToUpperInvariant();

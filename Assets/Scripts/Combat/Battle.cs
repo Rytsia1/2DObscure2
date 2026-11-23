@@ -228,6 +228,7 @@ namespace Obscure
             {
                 c.turnsTakenThisRound = 0;
                 c.UsedHeavyThisRound = false;
+                c.cooldownsJustExpiredThisTurn.Clear();
             }
             queue.AddRange(TurnOrder.Build(All));
             Blackboard.BeginRound(this);
@@ -247,8 +248,13 @@ namespace Obscure
             if (c.wayfarerSpeedBuffTurns > 0)
                 c.wayfarerSpeedBuffTurns--;
 
+            c.cooldownsJustExpiredThisTurn.Clear();
             foreach (var id in c.cooldowns.Keys.ToList())
-                if (--c.cooldowns[id] <= 0) c.cooldowns.Remove(id);
+                if (--c.cooldowns[id] <= 0)
+                {
+                    c.cooldowns.Remove(id);
+                    c.cooldownsJustExpiredThisTurn.Add(id);
+                }
             if (c.CounterTurns > 0 && --c.CounterTurns == 0) Say($"{c.name}'s counter stance ends.");
 
             // Process DoTs and status lifecycle via StatusController (GDD Section 8, 10, 11, 12)
@@ -362,7 +368,7 @@ namespace Obscure
                 case ActionKind.Attack:
                     if (a.attack != null && a.actor.unit.mp < a.attack.mpCost) return "Not enough MP.";
                     if (a.attack != null && (a.attack.self || a.attack.Summons)) return null;
-                    if (a.attack != null && a.attack.Heals) return IsAlly(a.actor, a.target) ? null : "Invalid target.";
+                    if (a.attack != null && a.attack.SupportsAlly) return IsAlly(a.actor, a.target) ? null : "Invalid target.";
                     if (a.attack != null && a.attack.allTargets) return Opponents(a.actor).Any(c => c.Alive) ? null : "Invalid target.";
                     if (a.actor.IsMindControlled && a.target != null && a.target.Alive && a.target.side == a.actor.side) return null;
                     return IsFoe(a.actor, a.target) ? null : "Invalid target.";
@@ -472,7 +478,7 @@ namespace Obscure
                     if (a.charging)
                     {
                         if (move != null && move.HasHeavy) actor.UsedHeavyThisRound = true;
-                        actor.Charge = new EnemyIntent { move = move, target = a.target };
+                        actor.Charge = new EnemyIntent { move = move, target = a.target, commitment = IntentCommitment.Committed };
                         Say($"{actor.name} begins charging {move.name}{(move.allTargets ? "" : $" at {a.target.name}")}!");
                         break;
                     }
@@ -499,10 +505,11 @@ namespace Obscure
                         foreach (var ap in move.apply ?? Array.Empty<StatusApply>()) Apply(actor, ap, actor, 1f);
                         break;
                     }
-                    if (move != null && move.Heals)
+                    if (move != null && move.SupportsAlly)
                     {
                         Say($"{actor.name} uses {move.name} on {a.target.name}.");
-                        hits.Add(Heal(a.target, (int)Math.Floor(a.target.Stats.maxHp * move.healAlly)));
+                        if (move.Heals) hits.Add(Heal(a.target, (int)Math.Floor(a.target.Stats.maxHp * move.healAlly)));
+                        foreach (var ap in move.buffAlly ?? Array.Empty<StatusApply>()) Apply(a.target, ap, actor, 1f);
                         break;
                     }
                     var targets = move != null && move.allTargets ? Opponents(actor).Where(c => c.Alive).ToList() : new List<Combatant> { a.target };
@@ -655,6 +662,11 @@ namespace Obscure
                                 }
 
                                 var hit = Damage(t, skillDmg, note);
+                                if (actor != null && t != null && actor.side != t.side && hit.amount > 0)
+                                {
+                                    t.LastAttacker = actor;
+                                    t.LastDamagedRound = Round;
+                                }
                                 hit.critical = hitRes.anyComponentCriticalHit;
                                 hit.effect = eff;
                                 hit.element = compElem;
@@ -794,13 +806,24 @@ namespace Obscure
                     }
                     break;
             }
+            if (a.actor.IsEnemy && a.kind == ActionKind.Attack && a.attack != null && !a.charging
+                && !a.attack.allTargets && !a.attack.self && !a.attack.SupportsAlly && !a.attack.Summons
+                && a.target != null && a.target.IsPlayer)
+            {
+                a.actor.LastTargetedHero = a.target;
+            }
             if (a.kind != ActionKind.Guard)
                 Blackboard.Memory.ObserveAction(this, a, hits, statusAppliedDuringAction, Round);
+            if (a.actor.IsEnemy)
+            {
+                a.actor.cooldownsJustExpiredThisTurn.Clear();
+                Blackboard.MarkExecuted(this, a.actor);
+            }
             if (a.actor.turnsTakenThisRound == 1)
                 a.actor.StatusController.DecrementControlImmunities();
+            Active = null;
             if (a.actor.IsEnemy && a.actor.Alive && a.actor.turnsTakenThisRound < a.actor.TurnsPerRound)
                 EnemyAI.Plan(this, a.actor); // Plan turn B's intent at the end of turn A and show it right away
-            Active = null;
             return hits;
             }
             finally
@@ -839,6 +862,9 @@ namespace Obscure
                         UsedHeavyThisRound = first.UsedHeavyThisRound,
                         guarding = first.guarding,
                         stunTurns = first.stunTurns,
+                        LastAttacker = first.LastAttacker,
+                        LastTargetedHero = first.LastTargetedHero,
+                        LastDamagedRound = first.LastDamagedRound,
                     };
                     if (first.EnemyAffixes.Count > 0)
                     {
@@ -1180,6 +1206,11 @@ namespace Obscure
             }
 
             var hit = Damage(t, amount, note);
+            if (attacker != null && t != null && attacker.side != t.side && hit.amount > 0)
+            {
+                t.LastAttacker = attacker;
+                t.LastDamagedRound = Round;
+            }
             hit.effect = effect;
             hit.element = element;
             hit.concealedPing = codexEv.concealedPing;
@@ -1433,6 +1464,12 @@ namespace Obscure
             {
                 acted.Add(t); // a unit defeated this round never acts again in it, even if revived (Bab 10 §8.6)
                 t.turnsTakenThisRound = t.TurnsPerRound;
+                if (t.IsEnemy)
+                {
+                    t.Intent = null;
+                    t.Charge = null;
+                    Blackboard.ClearPendingForEnemy(this, t);
+                }
                 Say(t.IsEnemy ? $"{t.name} is destroyed." : $"{t.name} falls!");
                 // Relic System: Enemy Defeated (R013 Dirge-Eater's Fang, R022 Zoroa's Dull Crown) — skipped for summons
                 if (t.IsEnemy && !t.IsSummon)

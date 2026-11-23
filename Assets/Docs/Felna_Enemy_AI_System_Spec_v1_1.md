@@ -516,7 +516,11 @@ The enemy may use a legal fallback only when the original action is no longer ex
 
 If no legal action exists, the unit is skipped. No replacement turn is granted.
 
-**(v1.1)** A published intent is executed as published while it is still legal, and it is **never re-scored**, telegraphed or not.
+**(v1.2 Amendment — Committed Intent vs Provisional Action & Instinct Layer):**
+- Enemy plans are explicitly divided into **Committed Intents** (`Charge` prep/release, `Heavy`, `StatusOnly`, `Summons`, or any `NeedsTelegraph` move) and **Provisional Actions** (ordinary untelegraphed moves).
+- **Committed Intents** remain strictly locked at round preparation (Telegraph Lock): they are shown on the HUD and Analysis panel, executed as published while legal, and **never re-scored**.
+- **Provisional Actions** are published to the Shared Blackboard at round start for coordination, kept hidden from the HUD/Analysis panel, and **re-evaluated when the enemy's actual initiative turn arrives** — strictly restricted to non-`NeedsTelegraph` moves so enemies never spring an unannounced Heavy, Charge, StatusOnly, or Summon mid-round.
+- A separate **Instinct Behavior Layer** (`Predator`, `Relentless`, `Skittish`, `Territorial`, `Guardian`) evaluates creature-family impulses inside `UtilityClamp` (±15) using only observable combat state and existing skill kits.
 
 ### 7.4 Existing Telegraph Rules
 

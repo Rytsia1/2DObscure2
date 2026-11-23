@@ -56,6 +56,26 @@ namespace Obscure
         public readonly HashSet<Combatant> exploitedWeaknessEnemies = new HashSet<Combatant>();
         public readonly Dictionary<Element, int> elementUseCounts = new Dictionary<Element, int>();
 
+        // Observable context-sensitive action tracking (healing, spellcasting, counter stances, same-round activity).
+        public int healActionsUsed;
+        public int lastHealRound;
+        public Combatant lastHealedAlly;
+        public bool healedThisRound;
+        public int spellCastCount;
+        public int lastSpellCastRound;
+        public bool castSpellThisRound;
+        public int counterStanceCount;
+        public int lastCounterRound;
+        public int lastGuardedRound;
+        public int sameRoundDamageDealt;
+
+        public void BeginRoundReset()
+        {
+            healedThisRound = false;
+            castSpellThisRound = false;
+            sameRoundDamageDealt = 0;
+        }
+
         public HeroBehaviorProfile(Combatant hero)
         {
             this.hero = hero;
@@ -162,6 +182,15 @@ namespace Obscure
         public const float BreakSpecialistChargePenalty = 18f;
         public const float BurstTargetBonus = 3f;
 
+        // Context-sensitive behavioral punishment constants (posture-B starting values, untested; all bounded inside UtilityClamp = +/-15).
+        // Pass test: repeated healing/casting/guarding/countering draws readable counter-selection without hard immunity or spiking Normal deaths > baseline + 15%.
+        public const float AntiHealStatusBonus = 4.5f;
+        public const float AntiCasterStatusBonus = 4.5f;
+        public const float SameRoundHealerPressureBonus = 2.5f;
+        public const float CounterDisruptBonus = 3.0f;
+        public const float SameRoundGuardRiskPenalty = 3.0f;
+        public const float ActiveCounterRiskPenalty = 3.5f;
+
         public readonly Dictionary<Combatant, HeroBehaviorProfile> Profiles = new Dictionary<Combatant, HeroBehaviorProfile>();
 
         // Observed effectiveness only (Spec §5.6: enemies never peek at unseen affinities).
@@ -230,11 +259,18 @@ namespace Obscure
 
         // ---- Observe-only event hooks (called from Battle.cs; zero rule changes) ----
 
+        public void BeginRound(int round)
+        {
+            foreach (var prof in Profiles.Values)
+                prof.BeginRoundReset();
+        }
+
         public void ObserveGuard(Combatant actor, int round)
         {
             if (actor == null || !actor.IsPlayer) return;
             var sw = Stopwatch.StartNew();
             var prof = GetOrCreateProfile(actor);
+            prof.lastGuardedRound = round;
             prof.AddObservation(round, BehaviorCategory.Defensive, 1f);
             sw.Stop();
             LastMemoryUpdateMs = sw.Elapsed.TotalMilliseconds;
@@ -281,6 +317,13 @@ namespace Obscure
             if (a.kind == ActionKind.Item)
             {
                 // Items are observed strictly as actions performed, never reading inventory counts (Spec §5.6).
+                if (a.item != null && (a.item.heal > 0 || a.item.healPercent > 0f || a.item.isRevive))
+                {
+                    prof.healActionsUsed++;
+                    prof.lastHealRound = round;
+                    prof.healedThisRound = true;
+                    prof.lastHealedAlly = a.target;
+                }
                 prof.AddObservation(round, BehaviorCategory.SupportDependent, 1f);
                 return;
             }
@@ -288,8 +331,27 @@ namespace Obscure
             if (a.kind == ActionKind.Skill && a.skill != null)
             {
                 var sk = a.skill;
+                if (sk.mpCost > 0 || sk.kind == SkillKind.Magic || sk.kind == SkillKind.Heal || sk.kind == SkillKind.Support)
+                {
+                    prof.spellCastCount++;
+                    prof.lastSpellCastRound = round;
+                    prof.castSpellThisRound = true;
+                }
+                if (sk.counterMultiplier > 0f)
+                {
+                    prof.counterStanceCount++;
+                    prof.lastCounterRound = round;
+                    prof.AddObservation(round, BehaviorCategory.Defensive, 1f);
+                }
                 if (sk.kind == SkillKind.Heal || sk.kind == SkillKind.Support)
                 {
+                    if (sk.kind == SkillKind.Heal)
+                    {
+                        prof.healActionsUsed++;
+                        prof.lastHealRound = round;
+                        prof.healedThisRound = true;
+                        prof.lastHealedAlly = a.target;
+                    }
                     prof.AddObservation(round, BehaviorCategory.SupportDependent, 1f);
                     return;
                 }
@@ -329,6 +391,7 @@ namespace Obscure
                     }
                 }
                 prof.totalDamageDealt += dmg;
+                prof.sameRoundDamageDealt += dmg;
 
                 // Focus Fire tracking: targeting the same enemy builds confidence; switching to a different living enemy contradicts.
                 Combatant tgtEnemy = (a.target != null && a.target.IsEnemy) ? a.target : primaryEnemyHit;
@@ -362,7 +425,7 @@ namespace Obscure
         void ObserveEnemyAction(BattleAction a, List<Hit> hits, bool statusAppliedThisAction)
         {
             var mv = a.attack;
-            if (mv == null || a.charging || mv.self || mv.Heals || mv.Summons) return;
+            if (mv == null || a.charging || mv.self || mv.SupportsAlly || mv.Summons) return;
 
             int totalDmg = 0;
             int totalBreak = 0;

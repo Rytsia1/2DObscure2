@@ -46,6 +46,10 @@ const E = {
   stone: P.hueRamp(5, { hue: 190, sat: 0.07, shift: 30, light: [0.12, 0.6] }),  // weathered grave stone
   bronze: P.hueRamp(5, { hue: 30, sat: 0.36, shift: 30, light: [0.1, 0.46] }), // old bell bronze
   shroud: P.hueRamp(5, { hue: 210, sat: 0.12, shift: 25, light: [0.1, 0.46] }), // grey grave shroud
+  // common supports
+  novice: P.hueRamp(5, { hue: 32, sat: 0.16, shift: 30, light: [0.1, 0.44] }),  // brown sackcloth habit
+  dirge: P.hueRamp(5, { hue: 250, sat: 0.16, shift: 25, light: [0.1, 0.5] }),   // pale mourning veil
+  ghost: P.hueRamp(4, { hue: 205, sat: 0.12, shift: 25, light: [0.36, 0.76] }), // spirit face and hands
 };
 const GLASS = [P.hsl(178, 0.5, 0.5), P.hsl(322, 0.45, 0.48), P.hsl(40, 0.7, 0.55)]; // stained-glass panes
 const MOSS = P.hsl(95, 0.28, 0.3), VERDIGRIS = P.hsl(165, 0.28, 0.38);
@@ -344,6 +348,60 @@ const ENEMIES = {
     head: "YBbkSecvz",
     // verdigris patches and a crack running down the bell
     after: (m) => over(over(m, "v", [[7, 5], [8, 5], [7, 6], [13, 8]]), "z", [[11, 6], [10, 7], [10, 8], [11, 9]]),
+  },
+
+  // ---- common supports ----
+
+  // hooded skeleton novice in a sackcloth habit, a rope cord at the waist, swinging a smoking censer on a chain
+  ossuary_acolyte: {
+    map: [
+      "......................", "......................", "......................", ".......HHHH...........",
+      "......HHHHHH..........", ".....HHHkkkkH.........", ".....HHkSSSSk.........", ".....HHkSkkeS.........",
+      ".....HHkSSkSS.........", ".....HHHkSkSk.........", "....HHHHHkkkH.........", "...VVVVVVVVVVAA.......",
+      "...VVVVVVVVVAAAh......", "...VVVVVVVVVV..hc.....", "...VVVVVVVVVV....c....", "...VVVVrrrVVV....c....",
+      "...VVVVVrVVVV...CCC...", "...VVVVVrVVVV..CCCCC..", "..VVVVVVVVVVV..CgCgC..", "..VVVVVVVVVVVV..CCC...",
+      "..VVVVVVVVVVVV........", "..VVVVVVVVVVVVV.......", "..VVV.VVVVV.VVVV......", "...V...VVV...VV.......",
+    ],
+    parts: { H: [E.novice, 0.05, 2.5], S: [E.bone, 0.05, 2], V: [E.novice, 0, 3], A: [E.novice, -0.05, 1.5], h: [E.bone, 0, 1],
+      r: [R.leather, 0, 1], C: [E.bronze, 0.1, 1.5] },
+    fixed: { k: VOID, e: EYE, c: E.iron[2], g: E.fire[2], s: E.shroud[3] },
+    groundFrom: 20, head: "HSke",
+    // incense smoke curling up beside the chain
+    after: (m) => over(m, "s", [[19, 15], [20, 14], [20, 13], [19, 12], [19, 11]], true),
+  },
+
+  // floating mourning spirit: a pale veiled face wailing a dirge, rings of sound spreading from its mouth,
+  // hands clasped at the chest, the veil trailing into tatters where legs should be
+  dirge_chanter: {
+    map: [
+      "......................", "......................", "........VVVV..........", ".......VVVVVV.........",
+      "......VVVVVVVV........", "......VVVFFFFV........", ".....VVVFkFFeF........", ".....VVVFFFFFF........",
+      ".....VVVFFkkFF........", ".....VVVFFkkF.........", "....VVVVVVFFV.........", "...CCCCCCCCCChh.......",
+      "...CCCCCCCCChhh.......", "...CCCCCCCCCC.........", "..CCCCCCCCCCC.........", "..CCCCCCCCCCC.........",
+      "..CCCCCCCCCCCC........", "...CCCCCCCCCC.........", "...CCC.CCCC.CC........", "....CC..CCC..C........",
+      "....C....CC...........", "..........C...........", "......................", "......................",
+    ],
+    parts: { V: [E.dirge, 0.15, 2.5], C: [E.dirge, 0.05, 3], F: [E.ghost, 0.05, 2], h: [E.ghost, 0, 1] },
+    fixed: { k: VOID, e: EYE, n: P.hsl(275, 0.45, 0.62) },
+    headTo: 11, head: "VFken",
+    after: (m) => over(m, "n", [[15, 7], [16, 8], [15, 9], [17, 5], [18, 6], [18, 7], [18, 8], [18, 9], [17, 10]], true),
+  },
+
+  // skeleton standard-bearer in a kettle helm, holding a tall banner pole whose torn royal flag bears a gold mark
+  hollow_banneret: {
+    map: [
+      "...............X......", "...............wffffff", "...............wffffff", ".......iiii....wfffyff",
+      "......iiiiii...wffyyyf", "......SSSSSS...wfffyff", "......SkkSkeS..wffffff", "......SSSSkSS..wfffff.",
+      "......SkSkSkS..wff.ff.", ".......kkkkkk..wf..f..", ".......SkSkS...w......", "....BBBBBBBBbbhw......",
+      "...BBBvvvvBB..hw......", "...BBBBBBBBB...w......", "...BBBvvvvBB...w......", "....BBBBBBB....w......",
+      ".....rjjjjr....w......", "....rrPPPPPr...w......", "....r.LL..LLr..w......", "......LL..LL...w......",
+      "......LL...LL..w......", "......LL...LL..w......", ".....FFF...FFF.w......", ".....FFFF..FFFFw......",
+    ],
+    parts: { i: [E.iron, 0.05, 2], S: [E.bone, 0.1, 2.5], B: [E.bone, 0, 2], b: [E.bone, -0.05, 1], h: [E.bone, 0, 1],
+      j: [E.bone, -0.15, 1], P: [E.bone, -0.05, 1.5], L: [E.bone, -0.1, 1], F: [E.bone, -0.2, 1.5], r: [E.rag, 0, 1],
+      w: [WOOD, -0.05, 1], f: [E.royal, 0.15, 2] },
+    fixed: { k: VOID, v: VOID, e: EYE, X: E.iron[3], y: R.gold[2] },
+    ground: "LF", head: "iSke",
   },
 };
 

@@ -54,7 +54,7 @@ namespace Obscure.Tests
         [Test]
         public void Stage1b_AllFifteenRosterEnemiesHaveAssignedRoleAndTier()
         {
-            Assert.AreEqual(16, Dungeon1Roster.Enemies.Length, "15 roster enemies (Zoroa has P1 + P2)");
+            Assert.AreEqual(19, Dungeon1Roster.Enemies.Length, "18 roster enemies (Zoroa has P1 + P2)");
             var expected = new Dictionary<string, (AiRole role, AiTier tier)>
             {
                 ["hollow_squire"] = (AiRole.Vanguard, AiTier.Normal),
@@ -71,6 +71,9 @@ namespace Obscure.Tests
                 ["crownless_duelist"] = (AiRole.Skirmisher, AiTier.Elite),
                 ["tombstone_colossus"] = (AiRole.BreakBruiser, AiTier.Elite),
                 ["mourning_bell_wraith"] = (AiRole.AreaController, AiTier.Elite),
+                ["ossuary_acolyte"] = (AiRole.Support, AiTier.Normal),
+                ["dirge_chanter"] = (AiRole.Support, AiTier.Normal),
+                ["hollow_banneret"] = (AiRole.Support, AiTier.Normal),
                 ["zoroa_p1"] = (AiRole.AdaptiveController, AiTier.Boss),
                 ["zoroa_p2"] = (AiRole.AdaptiveController, AiTier.Boss),
             };
@@ -229,29 +232,350 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void Stage2_PublishedIntentIsNeverRescoredOnExecution()
+        public void Stage2_CommittedIntentIsNeverRescoredOnExecution()
         {
-            var b = new Battle(DefaultParty(), new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(9));
-            var c = b.NextTurn();
-            // Advance until it is Hollow Squire's turn
-            while (c != null && !c.IsEnemy)
+            var b = new Battle(DefaultParty(), new[] { Database.Enemies["royal_ossuary_knight"] }, new List<string>(), new Random(9));
+            var knight = b.Enemies[0];
+            knight.cooldowns.Clear(); // make Graveward Charge (telegraphed Heavy) available on Round 1
+
+            var c = b.NextTurn(); // StartRound plans Committed Graveward Charge
+            Assert.IsNotNull(knight.Intent);
+            Assert.IsTrue(knight.Intent.IsCommitted, "Graveward Charge must be classified as Committed");
+            Assert.AreEqual("Graveward Charge", knight.Intent.move.name);
+
+            // Advance until it is Royal Ossuary Knight's turn
+            while (c != null && c != knight)
             {
                 b.Perform(BattleAction.Guard(c));
                 c = b.NextTurn();
             }
-            Assert.IsNotNull(c);
-            var published = c.Intent;
-            Assert.IsNotNull(published);
+            Assert.AreEqual(knight, c);
+            var published = knight.Intent;
 
-            // Change hero HP dramatically before execution to tempt a re-score — Decide MUST execute the published intent without re-scoring!
+            // Change another hero's HP dramatically before execution to tempt a re-score — Committed intent MUST stay locked!
             var otherHero = b.Party.First(p => p != published.target);
             otherHero.unit.hp = 1;
             int traceCountBefore = b.AiTrace.Entries.Count;
 
-            var act = EnemyAI.Choose(b, c);
-            Assert.AreEqual(published.move, act.attack, "Published move must execute unchanged");
-            Assert.AreEqual(published.target, act.target, "Published target must execute unchanged while alive");
-            Assert.AreEqual(traceCountBefore, b.AiTrace.Entries.Count, "Decide must not re-score a legal published intent");
+            var act = EnemyAI.Choose(b, knight);
+            Assert.AreEqual(published.move, act.attack, "Committed move must execute unchanged");
+            Assert.AreEqual(published.target, act.target, "Committed target must execute unchanged while alive");
+            Assert.IsTrue(act.charging, "Committed charge preparation must remain charging");
+            Assert.AreEqual(traceCountBefore, b.AiTrace.Entries.Count, "Decide must NEVER re-score a legal Committed intent");
+        }
+
+        [Test]
+        public void ProvisionalActionReevaluatesOnTurnArrival_SupportHealsMidRoundBurst()
+        {
+            var b = new Battle(DefaultParty(level: 6), new[]
+            {
+                Database.Enemies["reliquary_confessor"],
+                Database.Enemies["hollow_squire"],
+            }, new List<string>(), new Random(31));
+
+            var confessor = b.Enemies[0];
+            var squire = b.Enemies[1];
+
+            // Round start: both enemies are at full HP, so Confessor plans a provisional non-heal action.
+            var c = b.NextTurn();
+            Assert.IsNotNull(confessor.Intent);
+            Assert.AreEqual(IntentCommitment.Provisional, confessor.Intent.commitment);
+            Assert.AreNotEqual("Mending Litany", confessor.Intent.move.name);
+            Assert.IsNull(EnemyAI.IntentText(confessor), "Provisional action must never show HUD telegraph");
+
+            // Faster heroes act before Confessor and burst Squire down to 30% HP mid-round!
+            while (c != null && c != confessor)
+            {
+                if (c.IsPlayer) b.Perform(BattleAction.Guard(c));
+                else b.Perform(EnemyAI.Choose(b, c));
+                c = b.NextTurn();
+            }
+            Assert.AreEqual(confessor, c);
+            squire.unit.hp = Math.Max(1, (int)(squire.Stats.maxHp * 0.30f));
+
+            var act = EnemyAI.Choose(b, confessor);
+            Assert.IsNotNull(act);
+            Assert.AreEqual("Mending Litany", act.attack.name, "Support must react same-round and heal ally burst to 30% HP");
+            Assert.AreEqual(squire, act.target, "Support must heal the wounded Squire");
+            Assert.IsTrue(b.AiTrace.Entries.Last().isReevaluation, "Trace must record turn-arrival re-evaluation");
+            Assert.IsTrue(b.AiTrace.Entries.Last().reevalChangedDecision, "Trace must record that re-evaluation changed the decision");
+        }
+
+        [Test]
+        public void ProvisionalActionReevaluatesOnTurnArrival_ExecutionerFinishesNewlyWoundedHero()
+        {
+            var party = Enumerable.Range(0, 2).Select(_ =>
+                BalanceSimulation.MakeHero(("human", "fighter", "guard"), BalanceSimulation.Build.Recommended, 6, BalanceSimulation.Gear.D1WeaponArmor)
+            ).ToList();
+            party[0].hp = 100;
+            party[1].hp = 120;
+
+            var b = new Battle(party, new[] { Database.Enemies["soul_reaper"] }, new List<string>(), new Random(33));
+            var reaper = b.Enemies[0];
+            // Ensure hero 0 acts faster or advance to reaper's turn
+            var c = b.NextTurn();
+            Assert.AreEqual(IntentCommitment.Provisional, reaper.Intent.commitment);
+            Assert.AreEqual(b.Party[0], reaper.Intent.target, "At round start, hero 0 has lower HP");
+
+            while (c != null && c != reaper)
+            {
+                b.Perform(BattleAction.Guard(c));
+                c = b.NextTurn();
+            }
+            // Mid-round: hero 1 gets wounded to 20 HP!
+            b.Party[1].unit.hp = 20;
+
+            var act = EnemyAI.Choose(b, reaper);
+            Assert.AreEqual(b.Party[1], act.target, "Executioner must re-evaluate provisional turn and pivot to newly wounded hero");
+        }
+
+        [Test]
+        public void ProvisionalActionReevaluatesOnTurnArrival_AvoidsMidRoundGuardAndProvenReflect()
+        {
+            // Part A: Hero 0 Guards earlier in the same round -> slower Hollow Squire pivots to unguarded Hero 1.
+            var partyA = Enumerable.Range(0, 2).Select(_ =>
+                BalanceSimulation.MakeHero(("human", "fighter", "guard"), BalanceSimulation.Build.Recommended, 5, BalanceSimulation.Gear.D1WeaponArmor)
+            ).ToList();
+            var bA = new Battle(partyA, new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(41));
+            var squire = bA.Enemies[0];
+            // Ensure both heroes are faster than Hollow Squire (SPD 9) so Hero 0 Guards earlier in the same round.
+            bA.Party[0].unit.stats.spd = 25;
+            bA.Party[1].unit.stats.spd = 20;
+
+            var c = bA.NextTurn();
+            Assert.AreEqual(bA.Party[0], squire.Intent.target, "At round start, slot 0 wins tie-break");
+            while (c != null && c != squire)
+            {
+                if (c == bA.Party[0]) bA.Perform(BattleAction.Guard(c));
+                else bA.Perform(BattleAction.Attack(c, squire));
+                c = bA.NextTurn();
+            }
+            // Clear LastAttacker so we isolate Guard avoidance cleanly
+            squire.LastAttacker = null;
+            Assert.IsTrue(bA.Party[0].guarding);
+            Assert.IsFalse(bA.Party[1].guarding);
+
+            var actA = EnemyAI.Choose(bA, squire);
+            Assert.AreEqual(bA.Party[1], actA.target, "Untelegraphed Squire should pivot away from a hero who Guarded earlier this round");
+
+            // Part B: Hero 0 proves Fire Reflect earlier in the same round -> slower Cinder Wisp pivots to Hero 1 same round!
+            var reflectHero = new CharacterDef
+            {
+                id = "refl_hero", name = "Mirra", role = "Knight", raceId = "human", classId = "fighter", backgroundId = "guard",
+                affinities = new Affinities { reflect = new[] { Element.Fire } },
+            };
+            var plainHero = new CharacterDef
+            {
+                id = "plain_hero", name = "Bram", role = "Knight", raceId = "human", classId = "fighter", backgroundId = "guard",
+                affinities = Affinities.None,
+            };
+            var bB = new Battle(new[] { new Unit(reflectHero), new Unit(plainHero) },
+                new[] { Database.Enemies["cinder_wisp"], Database.Enemies["cinder_wisp"] }, new List<string>(), new Random(42));
+            var wispA = bB.Enemies[0];
+            var wispB = bB.Enemies[1];
+
+            c = bB.NextTurn();
+            Assert.AreEqual(bB.Party[0], wispA.Intent.target);
+            Assert.AreEqual(bB.Party[0], wispB.Intent.target);
+
+            while (c != null && c != wispB)
+            {
+                if (c.IsPlayer) bB.Perform(BattleAction.Guard(c));
+                else bB.Perform(EnemyAI.Choose(bB, c)); // wispA fires Ember Bolt into Mirra -> Fire Reflect observed same round!
+                c = bB.NextTurn();
+            }
+            Assert.AreEqual(wispB, c);
+            Assert.AreEqual(Effectiveness.Reflect, bB.Blackboard.Memory.GetSeenEffectiveness(bB.Party[0], Element.Fire));
+
+            var actB = EnemyAI.Choose(bB, wispB);
+            Assert.AreEqual(bB.Party[1], actB.target, "Slower Cinder Wisp must avoid hero who proved Fire Reflect earlier this same round");
+        }
+
+        [Test]
+        public void ProvisionalReevaluationNeverSpringsUnannouncedTelegraph()
+        {
+            var b = new Battle(DefaultParty(level: 6), new[] { Database.Enemies["royal_ossuary_knight"] }, new List<string>(), new Random(51));
+            var knight = b.Enemies[0];
+
+            // Round 1: Graveward Charge is on initialCooldown = 1, so round-start plan is provisional Ossuary Slam.
+            var c = b.NextTurn();
+            Assert.AreEqual(IntentCommitment.Provisional, knight.Intent.commitment);
+            Assert.AreEqual("Ossuary Slam", knight.Intent.move.name);
+
+            while (c != null && c != knight)
+            {
+                b.Perform(BattleAction.Guard(c));
+                c = b.NextTurn();
+            }
+
+            // Even if Graveward Charge becomes off-cooldown mid-round, provisional re-evaluation MUST NOT spring it unannounced!
+            knight.cooldowns.Clear();
+            var act = EnemyAI.Choose(b, knight);
+            Assert.IsFalse(act.attack.NeedsTelegraph, "Provisional re-evaluation must never select a NeedsTelegraph move mid-round");
+            Assert.AreEqual("Ossuary Slam", act.attack.name);
+        }
+
+        [Test]
+        public void AnalysisInspectorHidesProvisionalAndShowsCommittedOnly()
+        {
+            var b = new Battle(DefaultParty(level: 6), new[]
+            {
+                Database.Enemies["hollow_squire"],
+                Database.Enemies["royal_ossuary_knight"],
+            }, new List<string>(), new Random(55));
+            var squire = b.Enemies[0];
+            var knight = b.Enemies[1];
+            knight.cooldowns.Clear();
+
+            b.NextTurn(); // StartRound plans both
+
+            var squireView = AnalysisInspector.BuildEnemyView(b, squire);
+            Assert.AreEqual("", squireView.telegraphedIntent, "Analysis panel must not leak Provisional untelegraphed actions");
+
+            var knightView = AnalysisInspector.BuildEnemyView(b, knight);
+            StringAssert.Contains("GRAVEWARD CHARGE", knightView.telegraphedIntent, "Analysis panel must display Committed telegraphed intents");
+        }
+
+        [Test]
+        public void InstinctLayer_EachArchetypeProducesConsistentRecognizableBehavior()
+        {
+            List<Unit> TwoEqualHeroes() => Enumerable.Range(0, 2).Select(_ =>
+                BalanceSimulation.MakeHero(("human", "fighter", "guard"), BalanceSimulation.Build.Recommended, 5, BalanceSimulation.Gear.D1WeaponArmor)
+            ).ToList();
+
+            // 1. Relentless (Hollow Squire): fixates on LastTargetedHero over equal slot 0.
+            var bRel = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(61));
+            var squire = bRel.Enemies[0];
+            squire.LastTargetedHero = bRel.Party[1];
+            var relIntent = PriorityBrain.Select(bRel, squire);
+            Assert.AreEqual(bRel.Party[1], relIntent.target, "Relentless undead must keep pursuing its LastTargetedHero");
+
+            // 2. Territorial (Custom Random-rule territorial enemy): retaliates against LastAttacker.
+            var terrDef = new EnemyDef
+            {
+                id = "test_terr", name = "Territorial", shortName = "Territorial", tag = "TER",
+                tier = Tier.Normal, ai = AiKind.Priority, aiRole = AiRole.Vanguard, aiTier = AiTier.Normal,
+                instinct = InstinctKind.Territorial, targetRule = TargetRule.Random,
+                stats = new Stats(150, 30, 18, 8, 10, 8),
+                attacks = new[] { new EnemyAttack { name = "Strike", element = Element.Physical, hitDamage = new[] { 18 }, power = 1f, hits = 1, aiPriority = 1 } },
+            };
+            var bTer = new Battle(TwoEqualHeroes(), new[] { terrDef }, new List<string>(), new Random(62));
+            bTer.NextTurn();
+            bTer.Enemies[0].LastAttacker = bTer.Party[1];
+            bTer.Enemies[0].LastDamagedRound = bTer.Round;
+            var terIntent = PriorityBrain.Select(bTer, bTer.Enemies[0]);
+            Assert.AreEqual(bTer.Party[1], terIntent.target, "Territorial creature must retaliate against the intruder who just struck it");
+
+            // 3. Skittish (Cinder Wisp): when wounded below 55%, recoils from LastAttacker and targets the other hero.
+            var bSki = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["cinder_wisp"] }, new List<string>(), new Random(63));
+            var wisp = bSki.Enemies[0];
+            wisp.unit.hp = (int)(wisp.Stats.maxHp * 0.40f);
+            wisp.LastAttacker = bSki.Party[0];
+            var skiIntent = PriorityBrain.Select(bSki, wisp);
+            Assert.AreEqual(bSki.Party[1], skiIntent.target, "Wounded Skittish creature recoils from its attacker within its existing kit");
+
+            // 4. Guardian (Possessed Royal Guard): steps up to pressure hero who struck an endangered ally.
+            var bGrd = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["possessed_royal_guard"], Database.Enemies["hollow_squire"] }, new List<string>(), new Random(64));
+            bGrd.NextTurn();
+            var guard = bGrd.Enemies[0];
+            var ally = bGrd.Enemies[1];
+            ally.unit.hp = (int)(ally.Stats.maxHp * 0.40f);
+            ally.LastAttacker = bGrd.Party[1];
+            ally.LastDamagedRound = bGrd.Round;
+            var grdIntent = PriorityBrain.Select(bGrd, guard);
+            Assert.AreEqual(bGrd.Party[1], grdIntent.target, "Guardian instinctively pressures the hero attacking its endangered ally");
+
+            // 5. Predator (Crypt Leech): hungers for Vital Siphon when wounded and lunges at wounded prey.
+            var bPrd = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["crypt_leech"] }, new List<string>(), new Random(65));
+            var leech = bPrd.Enemies[0];
+            leech.unit.hp = (int)(leech.Stats.maxHp * 0.45f);
+            bPrd.Party[1].unit.hp = (int)(bPrd.Party[1].Stats.maxHp * 0.45f);
+            var prdIntent = PriorityBrain.Select(bPrd, leech);
+            Assert.AreEqual("Vital Siphon", prdIntent.move.name, "Wounded Predator leech prefers its life-draining attack");
+            Assert.AreEqual(bPrd.Party[1], prdIntent.target, "Predator senses and lunges at wounded prey");
+        }
+
+        [Test]
+        public void ContextSensitivePunishment_AntiHealAntiCastAndCounterAwareness()
+        {
+            List<Unit> TwoEqualHeroes() => Enumerable.Range(0, 2).Select(_ =>
+                BalanceSimulation.MakeHero(("human", "fighter", "guard"), BalanceSimulation.Build.Recommended, 6, BalanceSimulation.Gear.D1WeaponArmor)
+            ).ToList();
+
+            // 1. Recognized SupportDependent healer draws Zoroa's Soulbind (Silence) over slot 0 and logs anti-heal read.
+            var bHeal = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["zoroa_p1"] }, new List<string>(), new Random(71));
+            var zoroa = bHeal.Enemies[0];
+            var healer = bHeal.Party[1];
+            var prof = bHeal.Blackboard.Memory.GetOrCreateProfile(healer);
+            prof.AddObservation(1, BehaviorCategory.SupportDependent, 1f);
+            prof.AddObservation(1, BehaviorCategory.SupportDependent, 1f);
+            prof.AddObservation(1, BehaviorCategory.SupportDependent, 1f);
+            var healIntent = PriorityBrain.Select(bHeal, zoroa);
+            Assert.AreEqual("Soulbind", healIntent.move.name);
+            Assert.AreEqual(healer, healIntent.target, "Recognized healer must draw Silence disruption");
+
+            // 2. Active Counter stance causes untelegraphed attacker to pivot away to non-countering hero.
+            var bCnt = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(72));
+            bCnt.Party[0].CounterTurns = 1;
+            var cntIntent = PriorityBrain.Select(bCnt, bCnt.Enemies[0]);
+            Assert.AreEqual(bCnt.Party[1], cntIntent.target, "Enemy must avoid feeding direct strikes into an observable Counter stance");
+        }
+
+        [Test]
+        public void TacticalCoordination_SynergyFollowUpSleepProtectionNonOverlapAndExecutionRetirement()
+        {
+            List<Unit> TwoEqualHeroes() => Enumerable.Range(0, 2).Select(_ =>
+                BalanceSimulation.MakeHero(("human", "fighter", "guard"), BalanceSimulation.Build.Recommended, 5, BalanceSimulation.Gear.D1WeaponArmor)
+            ).ToList();
+
+            // 1. Curse follow-up synergy: attacker exploits Curse (+25% dmg taken) on hero 1 over uncursed hero 0.
+            var bCurse = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(81));
+            bCurse.Party[1].AddStatus(StatusId.Curse, 2, 0.25f, bCurse.Enemies[0]);
+            var curseIntent = PriorityBrain.Select(bCurse, bCurse.Enemies[0]);
+            Assert.AreEqual(bCurse.Party[1], curseIntent.target, "Derived Curse synergy must draw damaging follow-up onto cursed hero");
+
+            // 2. Sleep protection: attacker avoids waking sleeping hero 0 when awake hero 1 exists.
+            var bSleep = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(82));
+            bSleep.Party[0].AddStatus(StatusId.Sleep, 2, 1f, bSleep.Enemies[0]);
+            var sleepIntent = PriorityBrain.Select(bSleep, bSleep.Enemies[0]);
+            Assert.AreEqual(bSleep.Party[1], sleepIntent.target, "Direct-damage attack must not wake a sleeping hero when awake targets exist");
+
+            // 3. Status non-overlap: two Soulbound Hounds spread Soul Snarl (Fear) across different heroes.
+            var bSpread = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["soulbound_hound"], Database.Enemies["soulbound_hound"] }, new List<string>(), new Random(83));
+            bSpread.NextTurn();
+            Assert.AreEqual("Soul Snarl", bSpread.Enemies[0].Intent.move.name);
+            Assert.AreEqual("Soul Snarl", bSpread.Enemies[1].Intent.move.name);
+            Assert.AreNotEqual(bSpread.Enemies[0].Intent.target, bSpread.Enemies[1].Intent.target,
+                "Coordinated Disruptors should spread non-stacking Fear onto different targets instead of overlapping");
+
+            // 4. Blackboard.MarkExecuted retires pending CommittedDamage so slower allies see live HP cleanly.
+            var bExec = new Battle(TwoEqualHeroes(), new[] { Database.Enemies["hollow_squire"], Database.Enemies["hollow_squire"] }, new List<string>(), new Random(84));
+            bExec.Party[0].unit.hp = 10;
+            bExec.NextTurn();
+            Assert.IsTrue(bExec.Blackboard.IsLethalReserved(bExec.Party[0]), "Pending damage covers hero 0 before execution");
+            bExec.Blackboard.MarkExecuted(bExec, bExec.Enemies[0]);
+            Assert.AreEqual(0f, bExec.Blackboard.CommittedDamage(bExec.Party[0]), 0.001f,
+                "Executed enemy's projected damage must be retired so it is not double-counted against live HP");
+        }
+
+        [Test]
+        public void RosterInstinctsAssignedAndZeroRngPreservedOnProvisionalReeval()
+        {
+            foreach (var def in Dungeon1Roster.Enemies.Concat(Dungeon1Roster.EnhancedVariants).Concat(PrologueRoster.Enemies))
+            {
+                Assert.AreNotEqual(InstinctKind.None, def.instinct, $"{def.id} must have an assigned InstinctKind");
+
+                var rng = new CountingRandom(321);
+                var b = new Battle(DefaultParty(), new[] { def }, new List<string>(), rng);
+                var enemy = b.Enemies[0];
+                rng.Calls = 0;
+
+                EnemyAI.Plan(b, enemy);
+                var act = EnemyAI.Choose(b, enemy); // triggers provisional re-evaluation for untelegraphed moves!
+
+                Assert.IsNotNull(act, $"{def.id} produced a legal action");
+                Assert.AreEqual(0, rng.Calls, $"{def.id}: neither round planning nor provisional re-evaluation may call Battle.Rng");
+            }
         }
 
         [Test]

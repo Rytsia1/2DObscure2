@@ -32,59 +32,116 @@ namespace Obscure
         }
     }
 
-    // Roster enemies: deterministic, data-configured policy. The highest-priority move that is off cooldown, affordable,
-    // has a legal target and respects the one-Heavy-per-round rule is chosen (EnemyAttack.aiPriority / cooldown / minTargets).
-    // Charged moves spend one turn charging and release on the next; Broken cancels the charge (Combatant.ApplyBreakDamage).
+    // Roster enemies: deterministic, data-configured policy.
+    // Committed Intents (Charge, Heavy, StatusOnly, Summons, NeedsTelegraph) are locked at round preparation (Telegraph Lock).
+    // Provisional Actions (ordinary untelegraphed moves) are published for coordination at round start and re-evaluated on turn arrival
+    // strictly over non-NeedsTelegraph moves so telegraphs stay 100% honest while enemies react to mid-round state.
     public class PriorityBrain : IEnemyBrain
     {
         public BattleAction Decide(Battle b, Combatant self)
         {
+            // 1. Pending Charge release — always Committed (Attack Commitment / Telegraph Lock).
             if (self.Charge != null)
             {
                 var t = self.Charge.target;
                 if (t != null && !t.Alive) t = NextInPartyOrder(b, t); // telegraphed target fell: deterministic redirect (Bab 12 §6.4)
                 return t == null && !self.Charge.move.allTargets ? null : EnemyAI.Use(b, self, self.Charge.move, t);
             }
+
             var plan = self.Intent;
-            // Telegraph lock (Spec §7.3 v1.1): a published intent is executed as published while still legal and NEVER re-scored.
-            // If a telegraphed single-target move's target fell before execution, redirect deterministically in party order without swapping skills.
-            if (plan != null && plan.target != null && !plan.target.Alive && plan.move.NeedsTelegraph && !plan.move.Heals
-                && self.unit.mp >= plan.move.mpCost && self.Cooldown(Combatant.MoveKey(plan.move)) == 0
-                && !(plan.move.telegraph && self.JustReleasedCharge))
+
+            // 2. Committed Intent (Charge prep, Heavy, StatusOnly, Summon, or any NeedsTelegraph move):
+            // Telegraph Lock — execute as published while legal and NEVER re-score.
+            if (plan != null && plan.IsCommitted)
             {
-                var redirect = NextInPartyOrder(b, plan.target);
-                if (redirect != null)
+                bool moveLegal = self.unit.mp >= plan.move.mpCost
+                    && self.Cooldown(Combatant.MoveKey(plan.move)) == 0
+                    && !(plan.move.telegraph && self.JustReleasedCharge);
+
+                if (moveLegal && plan.target != null && !plan.target.Alive && !plan.move.SupportsAlly)
                 {
-                    plan = new EnemyIntent { move = plan.move, target = redirect, charging = plan.charging };
-                    return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
+                    var redirect = NextInPartyOrder(b, plan.target);
+                    if (redirect != null)
+                    {
+                        plan = new EnemyIntent
+                        {
+                            move = plan.move,
+                            target = redirect,
+                            charging = plan.charging,
+                            commitment = IntentCommitment.Committed,
+                        };
+                        return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
+                    }
                 }
-            }
-            if (plan == null || (plan.target != null && !plan.target.Alive) || self.unit.mp < plan.move.mpCost || self.Cooldown(Combatant.MoveKey(plan.move)) > 0
-                || (plan.move.telegraph && self.JustReleasedCharge))
-            {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
-                plan = Select(b, self, out var fbTrace); // planned action became invalid or unaffordable
-                sw.Stop();
+
+                if (moveLegal && (plan.target == null || plan.target.Alive))
+                    return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
+
+                // Committed intent became genuinely illegal: fall back to a legal action (preferring untelegraphed first).
+                b.Blackboard?.BeginReevaluation(b, self);
+                var fbSw = System.Diagnostics.Stopwatch.StartNew();
+                plan = Select(b, self, out var fbTrace, allowTelegraph: false) ?? Select(b, self, out fbTrace, allowTelegraph: true);
+                fbSw.Stop();
+                self.Intent = plan;
+                b.Blackboard?.Publish(b, self, plan);
                 if (fbTrace != null)
                 {
                     fbTrace.usedFallback = true;
-                    fbTrace.decisionMs = sw.Elapsed.TotalMilliseconds;
+                    fbTrace.decisionMs = fbSw.Elapsed.TotalMilliseconds;
                     b.AiTrace?.Record(fbTrace);
                 }
+                if (plan == null) return null;
+                return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
             }
-            if (plan == null) return null;
-            return plan.charging ? BattleAction.Charge(self, plan.move, plan.target) : EnemyAI.Use(b, self, plan.move, plan.target);
+
+            // 3. Provisional Action (ordinary untelegraphed move, or no round-start plan):
+            // Re-evaluate live battlefield on turn arrival, strictly restricted to non-NeedsTelegraph moves
+            // so enemies never spring an unannounced Heavy, Charge, StatusOnly, or Summon mid-round.
+            b.Blackboard?.BeginReevaluation(b, self);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var fresh = Select(b, self, out var reevalTrace, allowTelegraph: false);
+            bool usedFallback = false;
+            if (fresh == null)
+            {
+                if (plan != null && (plan.target == null || plan.target.Alive)
+                    && self.unit.mp >= plan.move.mpCost && self.Cooldown(Combatant.MoveKey(plan.move)) == 0
+                    && !(plan.move.telegraph && self.JustReleasedCharge))
+                {
+                    fresh = plan;
+                }
+                else
+                {
+                    fresh = Select(b, self, out reevalTrace, allowTelegraph: true);
+                    usedFallback = true;
+                }
+            }
+            sw.Stop();
+            self.Intent = fresh;
+            b.Blackboard?.Publish(b, self, fresh);
+            if (reevalTrace != null)
+            {
+                reevalTrace.isReevaluation = true;
+                reevalTrace.usedFallback = usedFallback;
+                reevalTrace.reevalChangedDecision = plan == null || fresh == null || plan.move != fresh.move || plan.target != fresh.target;
+                reevalTrace.decisionMs = sw.Elapsed.TotalMilliseconds;
+                b.AiTrace?.Record(reevalTrace);
+            }
+            if (fresh == null) return null;
+            return fresh.charging ? BattleAction.Charge(self, fresh.move, fresh.target) : EnemyAI.Use(b, self, fresh.move, fresh.target);
         }
 
-        public static EnemyIntent Select(Battle b, Combatant self) => Select(b, self, out _);
+        public static EnemyIntent Select(Battle b, Combatant self, bool allowTelegraph = true) => Select(b, self, out _, allowTelegraph);
 
-        public static EnemyIntent Select(Battle b, Combatant self, out AiDecisionTrace trace)
+        public static EnemyIntent Select(Battle b, Combatant self, out AiDecisionTrace trace, bool allowTelegraph = true)
         {
+            int traceTurnIdx = (b.Active == self && self.turnsTakenThisRound > 0)
+                ? self.turnsTakenThisRound - 1
+                : self.turnsTakenThisRound;
             trace = (b.AiTrace != null && b.AiTrace.Enabled && self.enemy != null)
                 ? new AiDecisionTrace
                 {
                     round = b.Round,
-                    turnIndex = self.turnsTakenThisRound,
+                    turnIndex = traceTurnIdx,
                     enemyId = self.enemy.id,
                     enemyName = self.name,
                     enemySlot = self.slot,
@@ -104,7 +161,7 @@ namespace Obscure
             for (int i = 0; i < moves.Count; i++)
             {
                 var m = moves[i];
-                if (IsLegal(b, self, m, ctx, out string reject))
+                if (IsLegal(b, self, m, ctx, out string reject, allowTelegraph))
                 {
                     legal.Add((m, i));
                 }
@@ -140,16 +197,24 @@ namespace Obscure
                 return null;
             }
 
-            var intent = new EnemyIntent { move = best.move, target = best.target, charging = best.charging };
+            var intent = new EnemyIntent
+            {
+                move = best.move,
+                target = best.target,
+                charging = best.charging,
+                commitment = EnemyIntent.Classify(best.move, best.charging),
+            };
             string pickReason = best.move.Summons ? "utility_summon"
-                : best.move.Heals ? "utility_heal"
+                : best.move.SupportsAlly ? (best.move.Heals ? "utility_heal" : "utility_buff")
                 : best.move.self ? "utility_self"
                 : best.move.allTargets ? "utility_aoe"
                 : "utility_single";
             if (trace != null) trace.adaptationChangedDecision = best.adaptationShifted;
-            // Readable Adaptation (Spec §5.7, Arch §11.5): log a one-line "read" the first time an adaptation response changes a decision.
+            // Readable Adaptation & Instincts (Spec §5.7, Arch §11.5): log a one-line "read" the first time a response shifts a decision.
             if (best.adaptationShifted && !string.IsNullOrEmpty(best.readKey))
                 b.Blackboard?.Memory?.TryLogRead(b, best.readKey, best.readText);
+            else if (best.instinctShifted && !string.IsNullOrEmpty(best.instinctReadKey))
+                b.Blackboard?.Memory?.TryLogRead(b, best.instinctReadKey, best.instinctReadText);
             return RecordChoice(trace, intent, pickReason, wasForced: false);
         }
 
@@ -157,6 +222,7 @@ namespace Obscure
         {
             var foes = b.Opponents(self).Where(c => c.Alive).ToList();
             bool heavyTaken = self.UsedHeavyThisRound
+                || (b.Blackboard != null && b.Blackboard.HeavyReservedTargets.Count > 0)
                 || b.Enemies.Any(e => e != self && e.Alive && (e.UsedHeavyThisRound || (e.Intent?.move.HasHeavy ?? false) || (e.Charge?.move.HasHeavy ?? false)));
             int livingSummons = b.Enemies.Count(e => e.Alive && e.IsSummon);
             var hurt = b.Allies(self).Where(c => c.Alive)
@@ -173,11 +239,20 @@ namespace Obscure
             };
         }
 
+        public static bool HealReady(EnemyAttack m, AiPlanContext ctx) =>
+            m != null && m.Heals && ctx != null && ctx.hurtAlly != null && ctx.hurtAllyFrac <= m.aiAllyHpBelow;
+
         // Mandatory hard gates (Spec §3.2): every move must pass all applicable gates before entering UtilityScorer.
-        public static bool IsLegal(Battle b, Combatant self, EnemyAttack m, AiPlanContext ctx, out string rejectReason)
+        public static bool IsLegal(Battle b, Combatant self, EnemyAttack m, AiPlanContext ctx, out string rejectReason, bool allowTelegraph = true)
         {
             rejectReason = null;
-            if (self.Cooldown(Combatant.MoveKey(m)) > 0) { rejectReason = "cooldown"; return false; }
+            if (!allowTelegraph && m.NeedsTelegraph) { rejectReason = "provisional_no_telegraph"; return false; }
+            string moveKey = Combatant.MoveKey(m);
+            if (self.Cooldown(moveKey) > 0 || (!allowTelegraph && self.cooldownsJustExpiredThisTurn.Contains(moveKey)))
+            {
+                rejectReason = "cooldown";
+                return false;
+            }
             if (self.unit.mp < m.mpCost) { rejectReason = "mp"; return false; }
             if (m.telegraph && self.JustReleasedCharge) { rejectReason = "charge_gap"; return false; } // ponytail: bool = gap of 1; counter if ChargeGapTurns > 1
             if (m.Summons)
@@ -187,9 +262,15 @@ namespace Obscure
             }
             if (m.aiMpBelow > 0f && self.unit.mp >= self.Stats.maxMp * m.aiMpBelow) { rejectReason = "mp_above_threshold"; return false; }
             if (m.aiUnlessAllyHpBelow > 0f && ctx.hurtAllyFrac <= m.aiUnlessAllyHpBelow) { rejectReason = "ally_critical_block"; return false; }
-            if (m.Heals)
+            if (m.SupportsAlly)
             {
-                if (ctx.hurtAlly == null || ctx.hurtAllyFrac > m.aiAllyHpBelow) { rejectReason = "heal_threshold"; return false; }
+                bool healOk = HealReady(m, ctx);
+                bool buffOk = m.BuffsAlly && UtilityScorer.SupportTarget(b, self, m) != null;
+                if (!healOk && !buffOk)
+                {
+                    rejectReason = m.Heals ? "heal_threshold" : "no_buff_target";
+                    return false;
+                }
                 return true;
             }
             if (m.HasHeavy && ctx.heavyTaken) { rejectReason = "heavy_taken"; return false; }
@@ -231,25 +312,25 @@ namespace Obscure
             if (self.Charge != null)
             {
                 reason = "forced_charge_release";
-                return new EnemyIntent { move = self.Charge.move, target = self.Charge.target };
+                return new EnemyIntent { move = self.Charge.move, target = self.Charge.target, commitment = IntentCommitment.Committed };
             }
             int topPriority = legal.Max(x => x.move.aiPriority);
             foreach (var (m, _) in legal.OrderByDescending(x => x.move.aiPriority).ThenBy(x => x.dataIndex))
             {
-                if (m.Heals && ctx.hurtAlly != null && ctx.hurtAllyFrac <= m.aiAllyHpBelow)
+                if (HealReady(m, ctx))
                 {
                     reason = "forced_heal";
-                    return new EnemyIntent { move = m, target = ctx.hurtAlly };
+                    return new EnemyIntent { move = m, target = ctx.hurtAlly, commitment = EnemyIntent.Classify(m, false) };
                 }
                 if (m.aiMpBelow > 0f && self.unit.mp < self.Stats.maxMp * m.aiMpBelow)
                 {
                     reason = "forced_mp_restore";
-                    return new EnemyIntent { move = m };
+                    return new EnemyIntent { move = m, commitment = EnemyIntent.Classify(m, false) };
                 }
                 if (m.Summons && ctx.livingSummons < m.summonCount && m.aiPriority >= topPriority)
                 {
                     reason = "forced_summon";
-                    return new EnemyIntent { move = m };
+                    return new EnemyIntent { move = m, commitment = IntentCommitment.Committed };
                 }
             }
             return null;
@@ -264,6 +345,7 @@ namespace Obscure
                 trace.chosenTargetSlot = intent.target?.slot ?? -1;
                 trace.charging = intent.charging;
                 trace.telegraphed = intent.move.NeedsTelegraph;
+                trace.commitment = intent.commitment;
                 trace.wasForced = wasForced;
                 trace.reason = reason;
                 if (wasForced)

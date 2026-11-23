@@ -306,7 +306,7 @@ namespace Obscure
             if (actor.IsEnemy && actor.enemy?.attacks != null && actor.enemy.attacks.Length > 0)
             {
                 var legalMoves = EnemyAI.Moves(actor)
-                    .Where(m => !m.self && !m.Heals && !m.Summons && !m.allTargets && !m.telegraph
+                    .Where(m => !m.self && !m.SupportsAlly && !m.Summons && !m.allTargets && !m.telegraph
                         && actor.unit.mp >= m.mpCost
                         && actor.Cooldown(Combatant.MoveKey(m)) == 0)
                     .ToList();
@@ -338,7 +338,7 @@ namespace Obscure
                     && original.target.Alive
                     && original.target.side == original.actor.side
                     && (original.attack == null
-                        || (!original.attack.allTargets && !original.attack.self && !original.attack.Heals && !original.attack.Summons));
+                        || (!original.attack.allTargets && !original.attack.self && !original.attack.SupportsAlly && !original.attack.Summons));
                 if (alreadyFriendlyStrike)
                     return false;
 

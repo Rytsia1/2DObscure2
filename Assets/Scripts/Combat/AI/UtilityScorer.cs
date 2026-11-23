@@ -26,6 +26,7 @@ namespace Obscure
         public float immediate;
         public float future;
         public float role;
+        public float instinct;
         public float synergy;
         public float objective;
         public float adaptation;
@@ -36,10 +37,14 @@ namespace Obscure
         public float clampedModifier;
         public float totalScore;
         public float noAdaptTotalScore;
+        public float noInstinctTotalScore;
         public int repetitionCount;
         public bool adaptationShifted;
+        public bool instinctShifted;
         public string readKey;
         public string readText;
+        public string instinctReadKey;
+        public string instinctReadText;
     }
 
     // Hybrid Utility AI scorer (Spec §3.3, Architecture §8.4, §8.5).
@@ -63,6 +68,33 @@ namespace Obscure
         public const float ImmediateHealScale = 8f;
         public const float ImmediateSummonPerSlot = 4.5f;
         public const float ResourceCostWeight = 3f;
+
+        // posture-B starting value (untested), per fresh ally buff.
+        // Pass test: on turns with no heal needed, a common support buffs on 40-70% of turns (200-seed sim).
+        // If it fails: too passive -> 4f; buffs every single turn -> 2f.
+        public const float ImmediateBuffValue = 3f;
+
+        // Ally-buff target (deterministic): allies lacking at least one of the move's buffs, others before the caster.
+        // Attack Up -> highest observable offense; defensive buffs -> the ally the party has hit most, else lowest HP fraction.
+        public static Combatant SupportTarget(Battle b, Combatant self, EnemyAttack move)
+        {
+            if (b == null || move == null || !move.BuffsAlly) return null;
+            var pool = b.Allies(self).Where(c => c.Alive && move.buffAlly.Any(ap => !c.Has(ap.id))).ToList();
+            if (pool.Count == 0) return null;
+            var others = pool.Where(c => c != self).ToList();
+            if (others.Count > 0) pool = others;
+
+            if (move.buffAlly[0].id == StatusId.AttackUp)
+                return pool.OrderByDescending(c => Math.Max(c.Atk, c.Magic)).ThenBy(c => c.slot).First();
+
+            var mem = b.Blackboard?.Memory;
+            int HitCount(Combatant c) => mem == null ? 0
+                : mem.Profiles.Values.Sum(p => p.attackCountsByEnemy.TryGetValue(c, out int n) ? n : 0);
+            int maxHits = pool.Max(HitCount);
+            if (maxHits > 0)
+                return pool.Where(c => HitCount(c) == maxHits).OrderBy(c => c.slot).First();
+            return pool.OrderBy(c => (float)c.unit.hp / Math.Max(1, c.Stats.maxHp)).ThenBy(c => c.slot).First();
+        }
 
         // Expected mean damage (no variance, no crit, zero Rng calls, observable info only — Spec §5.6).
         // Unknown affinities are treated as Neutral (1.0x) until observed via combat events.
@@ -91,7 +123,7 @@ namespace Obscure
         {
             var pool = ctx.foes;
             // Fey Step (Elf): untelegraphed single-target attacks skip Phased heroes when non-phased targets exist.
-            if (!move.allTargets && !move.Heals && !move.self)
+            if (!move.allTargets && !move.SupportsAlly && !move.self)
             {
                 var nonPhased = pool.Where(f => !f.IsPhased).ToList();
                 if (nonPhased.Count > 0) pool = nonPhased;
@@ -181,17 +213,21 @@ namespace Obscure
 
             ScoredCandidate best = null;
             ScoredCandidate bestNoAdapt = null;
+            ScoredCandidate bestNoInstinct = null;
             for (int i = 0; i < legalMoves.Count; i++)
             {
                 var (m, dataIdx) = legalMoves[i];
 
-                if (m.self || m.Summons || m.allTargets || m.Heals)
+                if (m.self || m.Summons || m.allTargets || m.SupportsAlly)
                 {
-                    var tgt = m.Heals ? ctx.hurtAlly : null;
+                    var tgt = PriorityBrain.HealReady(m, ctx) ? ctx.hurtAlly
+                        : m.BuffsAlly ? SupportTarget(b, self, m)
+                        : m.Heals ? ctx.hurtAlly : null;
                     var cand = ScoreCandidate(b, self, m, dataIdx, tgt, profile, ctx, topThreat, lowestDef);
                     RecordCandidate(trace, cand);
                     if (best == null || IsBetter(cand, best)) best = cand;
                     if (bestNoAdapt == null || IsBetterNoAdapt(cand, bestNoAdapt)) bestNoAdapt = cand;
+                    if (bestNoInstinct == null || IsBetterNoInstinct(cand, bestNoInstinct)) bestNoInstinct = cand;
                     continue;
                 }
 
@@ -202,6 +238,7 @@ namespace Obscure
                     RecordCandidate(trace, cand);
                     if (best == null || IsBetter(cand, best)) best = cand;
                     if (bestNoAdapt == null || IsBetterNoAdapt(cand, bestNoAdapt)) bestNoAdapt = cand;
+                    if (bestNoInstinct == null || IsBetterNoInstinct(cand, bestNoInstinct)) bestNoInstinct = cand;
                 }
             }
 
@@ -216,6 +253,15 @@ namespace Obscure
                     best.readText = bestNoAdapt.readText;
                 }
             }
+            if (best != null && bestNoInstinct != null && (best.move != bestNoInstinct.move || best.target != bestNoInstinct.target))
+            {
+                best.instinctShifted = true;
+                if (string.IsNullOrEmpty(best.instinctReadKey) && !string.IsNullOrEmpty(bestNoInstinct.instinctReadKey))
+                {
+                    best.instinctReadKey = bestNoInstinct.instinctReadKey;
+                    best.instinctReadText = bestNoInstinct.instinctReadText;
+                }
+            }
             return best;
         }
 
@@ -225,7 +271,7 @@ namespace Obscure
             var mem = b?.Blackboard?.Memory;
             float baseScore = m.aiPriority * 10f;
             // Stage 6 (Analysis System): enemies avoid an element a hero has been SHOWN (in encounter memory) to Drain or Reflect.
-            if (mem != null && m.hits > 0 && !m.self && !m.Heals && !m.Summons)
+            if (mem != null && m.hits > 0 && !m.self && !m.SupportsAlly && !m.Summons)
             {
                 if (m.allTargets)
                 {
@@ -247,16 +293,19 @@ namespace Obscure
             float immediate = EvaluateImmediate(b, self, m, target, ctx, out expectedDmg);
             float future = 0f;
             float role = EvaluateRoleBonus(self, m, target, profile, ctx, topThreat, lowestDef);
-            float synergy = 0f;
+            float instinct = InstinctLayer.Evaluate(b, self, m, target, profile, ctx, topThreat, out string instKey, out string instText);
+            float synergy = TacticalSynergy.Evaluate(b, self, m, target, profile, ctx, expectedDmg);
             float objective = 0f;
             float adaptation = EvaluateAdaptation(b, self, m, target, profile, ctx, out string readKey, out string readText);
             float resource = EvaluateResourceCost(self, m);
             int streak = mem != null ? mem.GetIneffectiveStreak(self, m.name, target?.slot ?? -1) : 0;
             float repetition = streak * EncounterTacticalMemory.RepetitionPenaltyPerStreak;
-            float risk = EvaluateRisk(b, self, m, target);
+            float risk = EvaluateRisk(b, self, m, target, ctx);
 
-            float rawNoAdapt = immediate + future + role + synergy + objective - resource - repetition - risk;
+            float rawNoAdapt = immediate + future + role + instinct + synergy + objective - resource - repetition - risk;
             float clampedNoAdapt = Math.Clamp(rawNoAdapt, -UtilityClamp, UtilityClamp);
+            float rawNoInstinct = immediate + future + role + synergy + objective + adaptation - resource - repetition - risk;
+            float clampedNoInstinct = Math.Clamp(rawNoInstinct, -UtilityClamp, UtilityClamp);
             float raw = rawNoAdapt + adaptation;
             float clamped = Math.Clamp(raw, -UtilityClamp, UtilityClamp);
 
@@ -265,12 +314,13 @@ namespace Obscure
                 move = m,
                 dataIndex = dataIndex,
                 target = target,
-                charging = m.telegraph && !m.self && !m.Heals && !m.Summons,
+                charging = m.telegraph && !m.self && !m.SupportsAlly && !m.Summons,
                 expectedDamage = expectedDmg,
                 baseScore = baseScore,
                 immediate = immediate,
                 future = future,
                 role = role,
+                instinct = instinct,
                 synergy = synergy,
                 objective = objective,
                 adaptation = adaptation,
@@ -281,9 +331,12 @@ namespace Obscure
                 clampedModifier = clamped,
                 totalScore = baseScore + clamped,
                 noAdaptTotalScore = baseScore + clampedNoAdapt,
+                noInstinctTotalScore = baseScore + clampedNoInstinct,
                 repetitionCount = streak,
                 readKey = readKey,
                 readText = readText,
+                instinctReadKey = instKey,
+                instinctReadText = instText,
             };
         }
 
@@ -317,7 +370,7 @@ namespace Obscure
             }
 
             // 5. Break Specialist / repeated charge interrupts: delay starting a charge unless own Break gauge >= ChargeShieldGate.
-            if (m.telegraph && !m.self && !m.Heals && !m.Summons && self.HasBreakGauge)
+            if (m.telegraph && !m.self && !m.SupportsAlly && !m.Summons && self.HasBreakGauge)
             {
                 bool breakThreat = mem.ChargeInterruptCount >= 2;
                 if (!breakThreat)
@@ -358,7 +411,7 @@ namespace Obscure
             }
 
             // Single-target hero-directed adaptation responses (1, 2, 3, 4b, 6).
-            if (target != null && target.IsPlayer && !m.allTargets && !m.self && !m.Heals && !m.Summons)
+            if (target != null && target.IsPlayer && !m.allTargets && !m.self && !m.SupportsAlly && !m.Summons)
             {
                 var prof = mem.GetProfile(target);
                 if (prof != null)
@@ -393,21 +446,50 @@ namespace Obscure
                         }
                     }
 
-                    // 3. Support Dependent hero X -> +Target on X (Disruptor / Executioner count double).
+                    // 3. Support Dependent hero X -> +Target on X (Disruptor / Executioner count double) + anti-heal disruption.
                     if (prof.IsRecognized(BehaviorCategory.SupportDependent, round, profile))
                     {
                         float mult = (profile.role == AiRole.Disruptor || profile.role == AiRole.Executioner) ? 2f : 1f;
                         Add(EncounterTacticalMemory.SupportDependentBonus * mult,
                             $"support_dep:{target.slot}",
                             $"They mark the healer, {target.name}.");
+                        if (HasAnyStatus(m, StatusId.Silence, StatusId.Despair, StatusId.Curse))
+                        {
+                            Add(EncounterTacticalMemory.AntiHealStatusBonus,
+                                $"anti_heal:{target.slot}",
+                                $"They sense {target.name}'s mending and move to cut it off.");
+                        }
+                    }
+                    else if (prof.healedThisRound && (profile.role == AiRole.Disruptor || profile.role == AiRole.Executioner || profile.tier >= AiTier.Elite))
+                    {
+                        if (HasAnyStatus(m, StatusId.Silence, StatusId.Despair, StatusId.Curse))
+                        {
+                            Add(EncounterTacticalMemory.AntiHealStatusBonus * 0.75f,
+                                $"anti_heal:{target.slot}",
+                                $"They sense {target.name}'s mending and move to cut it off.");
+                        }
+                        else if (m.hits > 0)
+                        {
+                            Add(EncounterTacticalMemory.SameRoundHealerPressureBonus,
+                                $"same_round_heal:{target.slot}",
+                                $"They react to {target.name}'s healing.");
+                        }
                     }
 
-                    // 4b. Elemental Specialist hero X exploiting a weakness -> Attackers pressure X.
-                    if (prof.IsRecognized(BehaviorCategory.ElementalSpecialist, round, profile) && prof.exploitedWeaknessEnemies.Count > 0)
+                    // 4b. Elemental Specialist / repeated spellcaster X -> Attackers pressure X; disruptors silence/fear/despair X.
+                    bool recognizedElem = prof.IsRecognized(BehaviorCategory.ElementalSpecialist, round, profile);
+                    if (recognizedElem && prof.exploitedWeaknessEnemies.Count > 0)
                     {
                         Add(EncounterTacticalMemory.ElementalSpecialistTargetBonus,
                             $"elem_spec:{target.slot}",
                             $"They shield what burns — {target.name} draws their ire.");
+                    }
+                    if ((recognizedElem || (prof.spellCastCount >= 2 && prof.castSpellThisRound))
+                        && HasAnyStatus(m, StatusId.Silence, StatusId.Despair, StatusId.Fear))
+                    {
+                        Add(EncounterTacticalMemory.AntiCasterStatusBonus,
+                            $"anti_cast:{target.slot}",
+                            $"They read {target.name}'s spellcraft and move to disrupt it.");
                     }
 
                     // 6. Burst hero X -> prioritize pressuring X and bracing against burst output.
@@ -417,6 +499,15 @@ namespace Obscure
                             $"burst:{target.slot}",
                             $"They brace against {target.name}.");
                     }
+
+                    // 7. Repeated Counter-Stance hero X -> favor status disruption over walking into direct physical counters.
+                    if (prof.counterStanceCount >= 2 && target.CounterTurns > 0
+                        && HasAnyStatus(m, StatusId.Silence, StatusId.Fear, StatusId.Despair, StatusId.Stun))
+                    {
+                        Add(EncounterTacticalMemory.CounterDisruptBonus,
+                            $"counter_read:{target.slot}",
+                            $"They watch {target.name}'s counter stance carefully.");
+                    }
                 }
             }
 
@@ -425,15 +516,32 @@ namespace Obscure
             return total;
         }
 
-        static float EvaluateRisk(Battle b, Combatant self, EnemyAttack m, Combatant target)
+        static bool HasAnyStatus(EnemyAttack m, params StatusId[] ids)
+        {
+            if (m?.apply == null || m.apply.Length == 0 || ids == null) return false;
+            for (int i = 0; i < m.apply.Length; i++)
+                for (int j = 0; j < ids.Length; j++)
+                    if (m.apply[i].id == ids[j]) return true;
+            return false;
+        }
+
+        static float EvaluateRisk(Battle b, Combatant self, EnemyAttack m, Combatant target, AiPlanContext ctx)
         {
             float risk = 0f;
             var bb = b?.Blackboard;
-            if (bb != null && target != null && target.IsPlayer && !m.allTargets && !m.self && !m.Heals && !m.Summons)
+            if (target != null && target.IsPlayer && !m.allTargets && !m.self && !m.SupportsAlly && !m.Summons)
             {
                 // Lethal reservation (Spec §4.3, Arch §7.3): penalize overcommitting damage onto a hero already covered by earlier planners.
-                if (bb.IsLethalReserved(target))
+                if (bb != null && bb.IsLethalReserved(target))
                     risk += EncounterBlackboard.LethalReservationPenalty;
+
+                // Same-round observable Guard awareness: untelegraphed non-Heavy damage pivots away from a guarding hero when open targets exist.
+                if (target.guarding && m.hits > 0 && !m.HasHeavy && ctx != null && ctx.foes.Any(f => !f.guarding))
+                    risk += EncounterTacticalMemory.SameRoundGuardRiskPenalty;
+
+                // Observable active Counter stance awareness: avoid feeding free counter hits when non-countering targets exist.
+                if (target.CounterTurns > 0 && m.hits > 0 && ctx != null && ctx.foes.Any(f => f.CounterTurns <= 0))
+                    risk += EncounterTacticalMemory.ActiveCounterRiskPenalty;
             }
             return risk;
         }
@@ -443,8 +551,14 @@ namespace Obscure
             expectedDmg = 0f;
             if (m.Summons)
                 return Math.Max(0, m.summonCount - ctx.livingSummons) * ImmediateSummonPerSlot;
-            if (m.Heals)
-                return target != null ? (1f - (float)target.unit.hp / Math.Max(1, target.Stats.maxHp)) * ImmediateHealScale : 0f;
+            if (m.SupportsAlly)
+            {
+                if (target == null) return 0f;
+                float support = m.Heals ? (1f - (float)target.unit.hp / Math.Max(1, target.Stats.maxHp)) * ImmediateHealScale : 0f;
+                foreach (var ap in m.buffAlly ?? Array.Empty<StatusApply>())
+                    if (!target.Has(ap.id)) support += ImmediateBuffValue;
+                return support;
+            }
             if (m.self)
             {
                 if (m.restoreMp > 0f)
@@ -511,7 +625,8 @@ namespace Obscure
             switch (profile.role)
             {
                 case AiRole.Support:
-                    if (m.Heals) return AiProfile.SupportHealWeight;
+                    if (PriorityBrain.HealReady(m, ctx)) return AiProfile.SupportHealWeight;
+                    if (m.BuffsAlly) return AiProfile.SupportBuffWeight;
                     return 0f;
                 case AiRole.Executioner:
                     if (target != null && m.hits > 0)
@@ -632,6 +747,19 @@ namespace Obscure
             return slotA < slotB;
         }
 
+        static bool IsBetterNoInstinct(ScoredCandidate a, ScoredCandidate b)
+        {
+            const float eps = 0.0001f;
+            if (Math.Abs(a.noInstinctTotalScore - b.noInstinctTotalScore) > eps) return a.noInstinctTotalScore > b.noInstinctTotalScore;
+            if (a.move.aiPriority != b.move.aiPriority) return a.move.aiPriority > b.move.aiPriority;
+            if (a.move.mpCost != b.move.mpCost) return a.move.mpCost < b.move.mpCost;
+            if (a.repetitionCount != b.repetitionCount) return a.repetitionCount < b.repetitionCount;
+            if (a.dataIndex != b.dataIndex) return a.dataIndex < b.dataIndex;
+            int slotA = a.target?.slot ?? -1;
+            int slotB = b.target?.slot ?? -1;
+            return slotA < slotB;
+        }
+
         static void RecordCandidate(AiDecisionTrace trace, ScoredCandidate cand)
         {
             if (trace == null || cand == null) return;
@@ -649,6 +777,7 @@ namespace Obscure
                 immediate = cand.immediate,
                 future = cand.future,
                 role = cand.role,
+                instinct = cand.instinct,
                 synergy = cand.synergy,
                 objective = cand.objective,
                 adaptation = cand.adaptation,

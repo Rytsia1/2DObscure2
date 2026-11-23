@@ -11,12 +11,27 @@ namespace Obscure
         BattleAction Decide(Battle battle, Combatant self);
     }
 
+    // Separates player-communicated commitments from non-binding provisional plans.
+    public enum IntentCommitment
+    {
+        Provisional = 0, // Ordinary untelegraphed move: published for coordination, re-evaluated on turn arrival
+        Committed = 1,   // Charge / Heavy / StatusOnly / Summon / NeedsTelegraph: locked at round preparation
+    }
+
     // What an enemy plans to do this round. charging = this turn only charges (no damage); the release follows next turn.
     public class EnemyIntent
     {
         public EnemyAttack move;
         public Combatant target; // null for area / self moves
         public bool charging;
+        public IntentCommitment commitment;
+
+        public bool IsCommitted => commitment == IntentCommitment.Committed || charging || (move != null && move.NeedsTelegraph);
+
+        public static IntentCommitment Classify(EnemyAttack move, bool charging, bool isChargeRelease = false) =>
+            (isChargeRelease || charging || (move != null && move.NeedsTelegraph))
+                ? IntentCommitment.Committed
+                : IntentCommitment.Provisional;
     }
 
     public static class EnemyAI
@@ -51,7 +66,12 @@ namespace Obscure
             AiDecisionTrace trace = null;
             if (self.Charge != null)
             {
-                self.Intent = new EnemyIntent { move = self.Charge.move, target = self.Charge.target };
+                self.Intent = new EnemyIntent
+                {
+                    move = self.Charge.move,
+                    target = self.Charge.target,
+                    commitment = IntentCommitment.Committed,
+                };
                 if (b.AiTrace != null && b.AiTrace.Enabled)
                 {
                     trace = new AiDecisionTrace
@@ -67,6 +87,7 @@ namespace Obscure
                         chosenTargetSlot = self.Intent.target?.slot ?? -1,
                         charging = false,
                         telegraphed = self.Intent.move.NeedsTelegraph,
+                        commitment = IntentCommitment.Committed,
                         wasForced = true,
                         reason = "charge_release",
                     };
@@ -108,7 +129,7 @@ namespace Obscure
         public static BattleAction Use(Battle b, Combatant self, EnemyAttack move, Combatant target = null)
         {
             if (move.self || move.allTargets || move.Summons) return BattleAction.Strike(self, move, null);
-            if (move.Heals) return BattleAction.Strike(self, move, target ?? self); // ally support: no Interpose
+            if (move.SupportsAlly) return BattleAction.Strike(self, move, target ?? self); // ally support: no Interpose
             return BattleAction.Strike(self, move, b.Intercept(target ?? RandomTarget(b, self)));
         }
 
@@ -124,7 +145,7 @@ namespace Obscure
         public static string IntentText(Combatant c)
         {
             var i = c.Intent ?? c.Charge;
-            if (i == null || !i.move.NeedsTelegraph) return null;
+            if (i == null || !i.move.NeedsTelegraph || (c.Charge == null && !i.IsCommitted)) return null;
             var m = i.move;
             if (m.Summons) return $"{m.name}: SUMMONS".ToUpperInvariant();
             string stage = c.Intent == null ? "CHARGED" : c.Charge != null ? "RELEASE" : i.charging ? "CHARGING" : m.StatusOnly ? "STATUS" : "HEAVY";

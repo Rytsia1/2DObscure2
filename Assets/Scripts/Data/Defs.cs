@@ -98,6 +98,17 @@ namespace Obscure
 
     public enum AiTier { Normal, Enhanced, Elite, Miniboss, Boss }
 
+    // Creature-family behavioral instinct evaluated by InstinctLayer (distinct from deliberate tactical scoring).
+    public enum InstinctKind
+    {
+        None = 0,
+        Predator = 1,    // Hunts wounded/debuffed prey; grows more aggressive when wounded (incl. parasitic hunger)
+        Relentless = 2,  // Fixates on its last targeted hero until fallen
+        Skittish = 3,    // Self-preserving when wounded/threatened; favors deterrence/self/drain and avoids retaliators
+        Territorial = 4, // Retaliates against whoever just struck it; punishes grouped intruders
+        Guardian = 5,    // Protects endangered allies via healing or pressuring whoever attacks them
+    }
+
     public static class AiTierExt
     {
         // For every Normal-tier restriction (incl. FocusCapNormal), Enhanced counts as Normal (Variant Spec §7.5 v1.1).
@@ -218,6 +229,7 @@ namespace Obscure
         public TargetRule targetRule;  // Priority AI: who single-target moves aim at
         public AiRole aiRole = AiRole.Vanguard; // Spec §6.2 tactical personality
         public AiTier aiTier = AiTier.Normal;   // Architecture §12 v1.1 intelligence capability tier
+        public InstinctKind instinct = InstinctKind.None; // Instinct Behavior Layer archetype
         public string baseEnemyId;     // Enhanced Common Variant: id of the base common enemy definition (Variant Spec §3.1)
         public string enhancedVariant; // On-Defeat Transformation: id of the "<base>_enhanced" variant definition
         public float transformChance;  // On-Defeat Transformation: independent roll chance [0, 1] when HP reaches 0
@@ -255,6 +267,7 @@ namespace Obscure
         public float drain;           // heals the user for this fraction of the final damage dealt
         public float restoreMp;       // self skill: restores this fraction of Max MP, capped at Max MP (Arcane Charge = 0.5)
         public float healAlly;        // > 0: support skill healing one ally (incl. self) for this fraction of its Max HP; no damage, no QTE
+        public StatusApply[] buffAlly; // support skill: statuses applied to one ally (incl. self); no damage, no QTE, no resist roll
         public int summonCount;       // > 0: summons up to this many living summon allies (Harvest Call = 2); no damage, no QTE
         public int breakPower;        // flat Break Power dealt to each target hit, on top of the normal hit break (Gravefall = 30)
 
@@ -272,8 +285,11 @@ namespace Obscure
         public int aiBreakGateRound;
         public QteMotif motif;        // optional authored QTE motif (QTE Variation Spec Part D); null = established random generator
 
-        public bool StatusOnly => hits == 0 && !self && !Heals && !Summons;
+        public bool StatusOnly => hits == 0 && !self && !SupportsAlly && !Summons;
         public bool Heals => healAlly > 0f;
+        public bool BuffsAlly => buffAlly != null && buffAlly.Length > 0;
+        // Targets one ally (heal and/or buff) instead of a foe.
+        public bool SupportsAlly => Heals || BuffsAlly;
         public bool Summons => summonCount > 0;
         // MP is consumed only by Skills: a Basic Attack is a free, untelegraphed damaging move, always affordable.
         public bool IsBasicAttack => mpCost == 0 && !self && hits > 0 && !telegraph && !Summons;
