@@ -39,6 +39,9 @@ namespace Obscure
         public bool UsedHeavyThisRound;
         public bool IsSummon;
         public bool transformRolled; // On-Defeat Transformation: evaluated at most once per enemy instance (Transformation Spec §4)
+        // Hidden Stage 2-3 Elite & Boss combat affixes (not exposed in Analysis or HUD).
+        public readonly List<EnemyAffix> EnemyAffixes = new List<EnemyAffix>();
+        public bool HasAffix(EnemyAffix affix) => EnemyAffixes.Contains(affix);
         // Double-turn support (Zoroa rework): SecondTurnSpeedFactor is a posture-B starting value (untested).
         // Pass test: at least 2 of 4 heroes act between Zoroa's A and B turns in a typical party.
         // If it fails: too few -> 0.4; turns feel disconnected -> 0.6.
@@ -241,11 +244,11 @@ namespace Obscure
 
         // Boss HP bar depleted: the same combatant continues as the next phase with a fresh bar and MP pool.
         // Statuses, stun and queue position are kept; planned/charged actions belong to the old phase and are dropped.
-        public void AdvanceToPhase(EnemyDef next, int dungeonNumber)
+        public void AdvanceToPhase(EnemyDef next, int dungeonNumber, int stage = 1)
         {
             bool wasBroken = IsBroken;
             enemy = next;
-            unit = new Unit(next, dungeonNumber);
+            unit = new Unit(next, dungeonNumber, stage);
             AffinityProfile = next?.affinityProfile != null
                 ? next.affinityProfile.Clone()
                 : EnemyAffinityProfile.FromLegacyAffinities(unit?.affinities);
@@ -255,6 +258,7 @@ namespace Obscure
             JustReleasedCharge = false;
             MaxBreakGauge = Math.Max(0, next.maxBreakGauge);
             BreakResistance = Math.Max(0, next.breakResistance + Math.Max(0, unit.Mod(Ability.VIT)));
+            EnemyAffixSystem.ApplyInitialModifiers(this, resetCurrentBreakGauge: false);
             if (wasBroken && next.bossBreakRecoverOnPhase2) RecoverBreakGauge();
             else CurrentBreakGauge = Math.Min(CurrentBreakGauge, MaxBreakGauge);
             var carriedCooldowns = new Dictionary<string, int>(cooldowns);
@@ -793,6 +797,8 @@ namespace Obscure
         {
             gaugeReduced = 0;
             if (!Alive || !HasBreakGauge || IsBroken || rawBreakPower <= 0) return false;
+
+            EnemyAffixSystem.ModifyBreakPower(source, ref rawBreakPower);
 
             if (IronResolveActive)
                 rawBreakPower = Math.Max(1, (int)Math.Round(rawBreakPower * 0.5f)); // Dwarf Iron Resolve: Break Power received -50%

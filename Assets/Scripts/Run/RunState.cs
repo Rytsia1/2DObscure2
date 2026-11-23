@@ -164,7 +164,7 @@ namespace Obscure
             RecalculateStats(fillResources: true);
         }
 
-        public Unit(EnemyDef d, int dungeonNumber = 1)
+        public Unit(EnemyDef d, int dungeonNumber = 1, int stage = 1)
         {
             id = d.id;
             name = d.name;
@@ -188,6 +188,17 @@ namespace Obscure
                     ScaleVariantStat(stats.spd, vm.Spd),
                     ScaleVariantStat(stats.mag, vm.Matk));
                 mDef = ScaleVariantStat(mDef, vm.Mdef);
+            }
+            var (stageHpMult, stageAtkMult, stageBreakBonus) = EnemyAffixSystem.GetStageMultipliers(stage);
+            if (stage > 1)
+            {
+                stats = new Stats(
+                    ScaleVariantStat(stats.maxHp, stageHpMult),
+                    stats.maxMp,
+                    ScaleVariantStat(stats.atk, stageAtkMult),
+                    stats.def,
+                    stats.spd,
+                    stats.mag > 0 ? ScaleVariantStat(stats.mag, stageAtkMult) : 0);
             }
             var mods = abilities.AbilityModifiers;
             Derived = new DerivedStats
@@ -215,8 +226,8 @@ namespace Obscure
                 qteTimingBonus = 0,
                 qteStability = 0,
                 counterPower = 10,
-                physicalBreakPower = Combatant.EnemyBaseBreakPower(d.tier) + mods.str * 2,
-                magicBreakPower = Combatant.EnemyBaseBreakPower(d.tier) + mods.intel * 2,
+                physicalBreakPower = Combatant.EnemyBaseBreakPower(d.tier) + stageBreakBonus + mods.str * 2,
+                magicBreakPower = Combatant.EnemyBaseBreakPower(d.tier) + stageBreakBonus + mods.intel * 2,
             };
             hp = stats.maxHp;
             mp = stats.maxMp;

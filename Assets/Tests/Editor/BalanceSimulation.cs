@@ -218,7 +218,8 @@ namespace Obscure.Tests
         }
 
         public static Result Fight(string encounterId, int level, Build build, Execution ex, int seed, Gear gear = Gear.Starter,
-            Policy policy = Policy.Tactical, BattleRecord recordOut = null, bool collectSignatures = false, bool allowTransforms = true)
+            Policy policy = Policy.Tactical, BattleRecord recordOut = null, bool collectSignatures = false, bool allowTransforms = true,
+            int stage = 1, IReadOnlyList<(string modId, ElementType elem)> modifiers = null)
         {
             var party = PartyPlan.Select(p => MakeHero(p, build, level, gear)).ToList();
             var enc = Database.Encounters[encounterId];
@@ -234,7 +235,26 @@ namespace Obscure.Tests
                 recordOut.initialItems.Clear(); recordOut.initialItems.AddRange(rec.initialItems);
                 recordOut.steps.Clear();
             }
-            var b = new Battle(party, enemyDefs, new List<string>(), new Random(battleSeed));
+            RunState simRun = null;
+            if (stage > 1 || (modifiers != null && modifiers.Count > 0))
+            {
+                var stubMap = new MapDef
+                {
+                    name = "Sim",
+                    act = 1,
+                    stage = Math.Max(1, stage),
+                    totalStages = Math.Max(3, stage),
+                    nodes = new[] { new NodeDef { id = "s0", type = NodeType.Battle, floor = 0, next = Array.Empty<string>() } }
+                };
+                simRun = new RunState(stubMap, PartyPlan.Select(p => Def(p, build)), battleSeed);
+                if (modifiers != null)
+                {
+                    var modRng = new Random(battleSeed);
+                    foreach (var (modId, elem) in modifiers)
+                        simRun.ModifierManager.AddModifier(modId, simRun, elem, modRng);
+                }
+            }
+            var b = new Battle(party, enemyDefs, new List<string>(), new Random(battleSeed), simRun);
             if (!allowTransforms)
             {
                 foreach (var e in b.Enemies) e.transformRolled = true;
@@ -741,5 +761,106 @@ namespace Obscure.Tests
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllText(path, sb.ToString());
             TestContext.WriteLine(sb.ToString());
-        }    }
+        }
+
+        // ---- Modifier-loadout & Stage 2-3 escalation benchmarks ----
+
+        // Realistic accumulated combat modifier stacks along a Dungeon 1 path (when every non-final battle offers 3 modifiers).
+        public static readonly (string modId, ElementType elem)[] Stage2ModifierLoadout =
+        {
+            ("MOD-001", ElementType.None), ("MOD-001", ElementType.None), // Battle Focus x2 (+10% Phys)
+            ("MOD-002", ElementType.None), ("MOD-002", ElementType.None), // Arcane Current x2 (+10% Elem)
+            ("MOD-003", ElementType.None),                                // Piercing Insight x1 (-5% Phys DEF)
+            ("MOD-006", ElementType.None), ("MOD-006", ElementType.None), // Inspiring Formation x2 (-10% DR)
+            ("MOD-007", ElementType.None),                                // Vital Spark x1 (+10% Heal)
+            ("MOD-008", ElementType.None),                                // Mana Well x1 (-5% MP)
+            ("MOD-013", ElementType.None),                                // Iron Guard x1 (-8% DR)
+        };
+
+        public static readonly (string modId, ElementType elem)[] Stage3BossModifierLoadout =
+        {
+            ("MOD-001", ElementType.None), ("MOD-001", ElementType.None), ("MOD-001", ElementType.None), // Battle Focus x3 (+15% Phys)
+            ("MOD-002", ElementType.None), ("MOD-002", ElementType.None), ("MOD-002", ElementType.None), // Arcane Current x3 (+15% Elem)
+            ("MOD-003", ElementType.None), ("MOD-003", ElementType.None),                                // Piercing Insight x2 (-10% Phys DEF)
+            ("MOD-006", ElementType.None), ("MOD-006", ElementType.None),                                // Inspiring Formation x2
+            ("MOD-007", ElementType.None), ("MOD-007", ElementType.None),                                // Vital Spark x2 (+20% Heal)
+            ("MOD-008", ElementType.None), ("MOD-008", ElementType.None),                                // Mana Well x2 (-10% MP)
+            ("MOD-013", ElementType.None),                                                               // Iron Guard x1 (total DR ~17%)
+            ("MOD-022", ElementType.None),                                                               // Marked Prey x1 (+10% vs Broken)
+        };
+
+        [Test]
+        public void ZoroaWithStage3ModifiersAndEscalation_RemainsTactical()
+        {
+            const int seeds = 40;
+            const int level = 12;
+            var good = Enumerable.Range(1, seeds)
+                .Select(s => Fight("d1_boss", level, Build.Recommended, Executions[1], s, Gear.D1FullSet, stage: 3, modifiers: Stage3BossModifierLoadout))
+                .ToList();
+            var poor = Enumerable.Range(1, seeds)
+                .Select(s => Fight("d1_boss", level, Build.Recommended, Executions[3], s, Gear.D1FullSet, stage: 3, modifiers: Stage3BossModifierLoadout))
+                .ToList();
+
+            double goodWin = 100.0 * good.Count(r => r.won) / seeds;
+            double goodRounds = good.Average(r => r.rounds);
+            double goodDeaths = good.Average(r => r.partyDeaths);
+            double poorDeaths = poor.Average(r => r.partyDeaths);
+
+            TestContext.WriteLine($"Zoroa Stage 3 + {Stage3BossModifierLoadout.Length} mods (L{level}, D1FullSet, {seeds} seeds):");
+            TestContext.WriteLine($"  All Good: win={goodWin:0}%, avgRounds={goodRounds:0.0}, avgDeaths={goodDeaths:0.00}");
+            TestContext.WriteLine($"  All Poor: win={100.0 * poor.Count(r => r.won) / seeds:0}%, avgRounds={poor.Average(r => r.rounds):0.0}, avgDeaths={poorDeaths:0.00}");
+
+            Assert.GreaterOrEqual(goodRounds, 8.0, "Stage 3 Zoroa must not fold into a trivial burst stomp");
+            Assert.Greater(poorDeaths, goodDeaths, "Sloppy QTEs must still be punished even with 16 active modifiers");
+        }
+
+        [Test, Explicit("Modifier & Stage 2-3 escalation benchmark (50 seeds/row): run via -testFilter")]
+        public void ModifierBalanceReport()
+        {
+            const int seeds = 50;
+            var inv = CultureInfo.InvariantCulture;
+            var sb = new StringBuilder();
+            sb.AppendLine($"# Modifier & Stage Escalation Balance Report ({DateTime.Now:yyyy-MM-dd}, {seeds} seeds/row)");
+            sb.AppendLine();
+            sb.AppendLine($"Stage 2 Mult: HP x{EnemyAffixSystem.Stage2HpMult}, ATK x{EnemyAffixSystem.Stage2AtkMult}, Break +{EnemyAffixSystem.Stage2BreakPowerBonus} (Elites: 1 hidden affix)");
+            sb.AppendLine($"Stage 3 Mult: HP x{EnemyAffixSystem.Stage3HpMult}, ATK x{EnemyAffixSystem.Stage3AtkMult}, Break +{EnemyAffixSystem.Stage3BreakPowerBonus} (Elites: 1, Boss: 2 hidden affixes)");
+            sb.AppendLine();
+            sb.AppendLine("| Scenario | Enc | Lv | Gear | Stage | Mods | QTE | Win% | Avg Rnds | Avg Deaths | HP Left (wins) |");
+            sb.AppendLine("|---|---|---:|---|---:|---:|---|---:|---:|---:|---:|");
+
+            var scenarios = new (string name, string enc, int lv, Gear gear, int stage, (string, ElementType)[] mods)[]
+            {
+                ("Baseline (no mods)", "d1_e8", 7, Gear.D1WeaponArmor, 1, null),
+                ("S2 Elite unscaled + mods", "d1_e8", 7, Gear.D1WeaponArmor, 1, Stage2ModifierLoadout),
+                ("S2 Elite SCALED + mods", "d1_e8", 7, Gear.D1WeaponArmor, 2, Stage2ModifierLoadout),
+                ("Baseline (no mods)", "d1_e7", 9, Gear.D1WeaponArmor, 1, null),
+                ("S2 Boss unscaled + mods", "d1_e7", 9, Gear.D1WeaponArmor, 1, Stage2ModifierLoadout),
+                ("S2 Boss SCALED + mods", "d1_e7", 9, Gear.D1WeaponArmor, 2, Stage2ModifierLoadout),
+                ("Baseline (no mods)", "d1_boss", 12, Gear.D1FullSet, 1, null),
+                ("S3 Zoroa unscaled + mods", "d1_boss", 12, Gear.D1FullSet, 1, Stage3BossModifierLoadout),
+                ("S3 Zoroa SCALED + mods", "d1_boss", 12, Gear.D1FullSet, 3, Stage3BossModifierLoadout),
+            };
+
+            var scripts = new[] { Executions[1], Executions[2], Executions[3] }; // All Good, Typical, All Poor
+            foreach (var sc in scenarios)
+            foreach (var ex in scripts)
+            {
+                var rs = Enumerable.Range(1, seeds)
+                    .Select(s => Fight(sc.enc, sc.lv, Build.Recommended, ex, s, sc.gear, stage: sc.stage, modifiers: sc.mods))
+                    .ToList();
+                var wins = rs.Where(r => r.won).ToList();
+                double hpLeft = wins.Count > 0 ? wins.Average(r => r.hpLeft) * 100.0 : 0.0;
+                sb.AppendLine(string.Format(inv,
+                    "| {0} | {1} | {2} | {3} | {4} | {5} | {6} | {7:0.0} | {8:0.0} | {9:0.00} | {10:0}% |",
+                    sc.name, sc.enc, sc.lv, sc.gear, sc.stage, sc.mods?.Length ?? 0, ex.name,
+                    100.0 * wins.Count / seeds, rs.Average(r => r.rounds), rs.Average(r => r.partyDeaths), hpLeft));
+            }
+
+            string path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "ModifierBalanceSim.md"));
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, sb.ToString());
+            if (TestContext.CurrentContext != null)
+                TestContext.WriteLine(sb.ToString());
+        }
+    }
 }

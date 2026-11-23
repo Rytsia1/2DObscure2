@@ -29,6 +29,7 @@ namespace Obscure
 
         public int Round { get; private set; }
         public readonly int Dungeon; // drives enemy stat scaling (Bab 10 §7)
+        public readonly int Stage;   // drives Stage 2-3 enemy escalation & hidden affixes (1 in Prologue / Stage 1)
         public RunState run;
         public bool partyHasAttackedInBattle;
         public bool IsInspiringLeaderActive(Side side)
@@ -48,11 +49,20 @@ namespace Obscure
             this.run = run;
             var defs = enemies.ToList();
             int dungeonNum = Dungeon = run != null ? (run.Map != null ? run.Map.act : run.Act) : 1;
+            int stageNum = Stage = (run != null && !run.IsPrologue) ? Math.Max(1, run.Stage) : 1;
+            int affixSeed = run != null ? run.DungeonSeed : 1;
             Enemies = defs.Select((d, i) =>
             {
                 bool dup = defs.Count(x => x == d) > 1;
                 char letter = (char)('A' + defs.Take(i).Count(x => x == d));
-                return new Combatant(new Unit(d, dungeonNum), Side.Enemy, i, dup ? $"{d.shortName} {letter}" : d.shortName, dup ? d.tag + letter : d.tag, d);
+                var c = new Combatant(new Unit(d, dungeonNum, stageNum), Side.Enemy, i, dup ? $"{d.shortName} {letter}" : d.shortName, dup ? d.tag + letter : d.tag, d);
+                var affixes = EnemyAffixSystem.RollAffixes(d, stageNum, i, affixSeed, isSummon: false);
+                if (affixes.Count > 0)
+                {
+                    c.EnemyAffixes.AddRange(affixes);
+                    EnemyAffixSystem.ApplyInitialModifiers(c, resetCurrentBreakGauge: true);
+                }
+                return c;
             }).ToList();
             var usedTags = new HashSet<string>(Enemies.Select(e => e.tag));
             Party = party.Select((u, i) => new Combatant(u, Side.Party, i, u.name, UniqueTag(u.name, usedTags)) { run = run }).ToList();
@@ -232,6 +242,7 @@ namespace Obscure
             bool wasHitSinceLastTurn = c.tookDamageSinceLastTurn;
             c.tookDamageSinceLastTurn = false;
             run?.RelicManager?.OnTurnStart(c);
+            EnemyAffixSystem.OnTurnStart(c);
             c.ResetTurnBackgroundPerks();
             if (c.wayfarerSpeedBuffTurns > 0)
                 c.wayfarerSpeedBuffTurns--;
@@ -802,7 +813,7 @@ namespace Obscure
         public void Summon(Combatant summoner, EnemyDef def)
         {
             if (def == null) return;
-            var u = new Unit(def, Dungeon);
+            var u = new Unit(def, Dungeon, Stage);
             int scaledHp = Math.Max(1, (int)Math.Round(u.stats.maxHp * Dungeon1Roster.SummonHpMult));
             u.stats = new Stats(scaledHp, u.stats.maxMp, u.stats.atk, u.stats.def, u.stats.spd, u.stats.mag);
             u.hp = scaledHp;
@@ -820,6 +831,7 @@ namespace Obscure
                     {
                         IsSummon = first.IsSummon,
                         turnsTakenThisRound = first.turnsTakenThisRound,
+                        MaxBreakGauge = first.MaxBreakGauge,
                         CurrentBreakGauge = first.CurrentBreakGauge,
                         Intent = first.Intent,
                         Charge = first.Charge,
@@ -828,6 +840,11 @@ namespace Obscure
                         guarding = first.guarding,
                         stunTurns = first.stunTurns,
                     };
+                    if (first.EnemyAffixes.Count > 0)
+                    {
+                        renamed.EnemyAffixes.AddRange(first.EnemyAffixes);
+                        EnemyAffixSystem.ApplyInitialModifiers(renamed, resetCurrentBreakGauge: false);
+                    }
                     foreach (var st in first.statuses) renamed.statuses.Add(st);
                     foreach (var cd in first.cooldowns) renamed.cooldowns[cd.Key] = cd.Value;
                     Enemies[idx] = renamed;
@@ -1123,6 +1140,12 @@ namespace Obscure
                 }
             }
 
+            // Hidden Stage 2-3 Enemy Affixes (Relentless on enemy attacks; Fortified on legacy Deal path).
+            if (attacker != null && attacker.IsEnemy)
+                EnemyAffixSystem.ModifyDamageDealt(attacker, ref amount);
+            if (t != null && t.IsEnemy)
+                EnemyAffixSystem.ModifyDamageReceivedLegacy(t, ref amount);
+
             // Curse: +25% All Damage Taken BEFORE Defensive QTE (GDD Bab 11 & Bab 12 §5.1)
             if (t?.StatusController != null)
             {
@@ -1310,7 +1333,7 @@ namespace Obscure
                 var oldPhaseDef = t.enemy;
                 string text = t.enemy.phase2Text;
                 BossPhaseTransitioning?.Invoke(t);
-                t.AdvanceToPhase(next, Dungeon);
+                t.AdvanceToPhase(next, Dungeon, Stage);
                 Codex.CarryOverPhaseKnowledge(oldPhaseDef, next);
                 BossJustShiftedAffinities = true;
                 Say(text ?? $"{t.name} enters phase {t.phase}!");
@@ -1326,7 +1349,7 @@ namespace Obscure
                 if (Rng.NextDouble() < t.enemy.transformChance)
                 {
                     string baseName = t.enemy.name;
-                    t.AdvanceToPhase(variant, Dungeon);
+                    t.AdvanceToPhase(variant, Dungeon, Stage);
                     t.ResetForTransform();
                     Blackboard.ClearEnemy(this, t);
                     Say($"The {baseName} refuses to fall. It rises, Enhanced!");
