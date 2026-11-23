@@ -79,6 +79,15 @@ namespace Obscure
         bool Unlocked(Node n) => n.passive ? CurrentHero.skillLoadout.UnlockedPassiveSkills.Contains(n.id) : CurrentHero.skillLoadout.UnlockedActiveSkills.Contains(n.id);
         bool Available(Node n) => !Unlocked(n) && CurrentHero.skillLoadout.CanUnlockSkill(n.id, CurrentHero.level, CurrentHero.classDef, out _);
 
+        int EquippedSlotIndex(string id, bool passive)
+        {
+            if (string.IsNullOrEmpty(id)) return -1;
+            var slots = passive ? CurrentHero.skillLoadout.PassiveSlots : CurrentHero.skillLoadout.ActiveSlots;
+            for (int i = 0; i < slots.Length; i++)
+                if (slots[i] == id) return i;
+            return -1;
+        }
+
         void SwitchHero(int delta)
         {
             if (party == null || party.Count == 0) return;
@@ -235,7 +244,7 @@ namespace Obscure
 
             var topBar = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 0 } };
             var hdr = FigmaUi.CreateSectionHeader($"{hero.classDef?.name ?? "Class"} skill tree", 806f);
-            hdr.Add(new UiLabel("□ ACTIVE   ○ PASSIVE") { style = { position = Position.Absolute, right = 0, top = 4, fontSize = 13, color = Palette.Mist2 } });
+            hdr.Add(new UiLabel("□ ACTIVE   ○ PASSIVE   ✓ EQUIPPED") { style = { position = Position.Absolute, right = 0, top = 4, fontSize = 13, color = Palette.Mist2 } });
             topBar.Add(hdr);
             host.Add(topBar);
 
@@ -315,30 +324,78 @@ namespace Obscure
 
             foreach (var n in nodes) SpawnSkillNode(canvas, n);
 
-            // Bottom Loadout strip
-            var strip = new VisualElement { style = { height = 48, borderTopWidth = 2, borderTopColor = Palette.Ink4, flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            // Bottom Loadout strip — icon-only sockets for Active (square) and Passive (circle) skills
+            var strip = new VisualElement();
+            strip.AddToClassList("uitk-loadout-strip");
             var lo = hero.skillLoadout;
-            strip.Add(new UiLabel("LOADOUT") { style = { fontSize = 13, color = Palette.Mist3, marginRight = 18 } });
-            strip.Add(new UiLabel($"ACTIVE {lo.ActiveSlots.Count(s => !string.IsNullOrEmpty(s))}/3") { style = { fontSize = 13, color = Palette.Mist2, marginRight = 10 } });
+
+            var loadoutHdr = new UiLabel("LOADOUT");
+            loadoutHdr.AddToClassList("uitk-loadout-heading");
+            strip.Add(loadoutHdr);
+
+            var activeLbl = new UiLabel($"ACTIVE {lo.ActiveSlots.Count(s => !string.IsNullOrEmpty(s))}/{SkillLoadout.ActiveSlotCount}");
+            activeLbl.AddToClassList("uitk-loadout-group-lbl");
+            strip.Add(activeLbl);
+
             for (int i = 0; i < SkillLoadout.ActiveSlotCount; i++)
-            {
-                string id = lo.ActiveSlots[i];
-                var tag = FigmaUi.InstantiateTemplate("Tag-Gold");
-                if (tag != null)
-                {
-                    FigmaUi.SetInstanceText(tag, "text-0", string.IsNullOrEmpty(id) ? "--" : Initials(NameOf(id, false)));
-                    tag.style.marginRight = 6;
-                    if (string.IsNullOrEmpty(id)) tag.style.opacity = 0.45f;
-                    strip.Add(tag);
-                }
-            }
-            string passText = string.Join(" ", Enumerable.Range(0, SkillLoadout.PassiveSlotCount).Select(i =>
-            {
-                string id = lo.PassiveSlots[i];
-                return string.IsNullOrEmpty(id) ? "◇" : $"◆{Initials(NameOf(id, true))}";
-            }));
-            strip.Add(new UiLabel($"PASSIVE {lo.PassiveSlots.Count(s => !string.IsNullOrEmpty(s))}/3   {passText}") { style = { fontSize = 14, color = Palette.Mist2, marginLeft = 20 } });
+                strip.Add(CreateLoadoutSlot(lo.ActiveSlots[i], i, passive: false));
+
+            var passiveLbl = new UiLabel($"PASSIVE {lo.PassiveSlots.Count(s => !string.IsNullOrEmpty(s))}/{SkillLoadout.PassiveSlotCount}");
+            passiveLbl.AddToClassList("uitk-loadout-group-lbl");
+            passiveLbl.AddToClassList("uitk-loadout-group-lbl-passive");
+            strip.Add(passiveLbl);
+
+            for (int i = 0; i < SkillLoadout.PassiveSlotCount; i++)
+                strip.Add(CreateLoadoutSlot(lo.PassiveSlots[i], i, passive: true));
+
             host.Add(strip);
+        }
+
+        VisualElement CreateLoadoutSlot(string skillId, int slotIndex, bool passive)
+        {
+            bool filled = !string.IsNullOrEmpty(skillId);
+            bool isSelected = filled && skillId == selectedSkillId && isSelectedPassive == passive;
+
+            var slot = new VisualElement { pickingMode = filled ? PickingMode.Position : PickingMode.Ignore };
+            slot.AddToClassList("uitk-loadout-slot");
+            if (passive) slot.AddToClassList("uitk-loadout-slot-passive");
+            if (filled) slot.AddToClassList("uitk-loadout-slot-filled");
+            if (isSelected) slot.AddToClassList("uitk-loadout-slot-selected");
+
+            if (filled)
+            {
+                var tex = IconArt.SkillOrPassive(skillId, passive);
+                if (tex != null)
+                {
+                    IconArt.Overlay(slot, tex, 2);
+                }
+                else
+                {
+                    var fallback = new UiLabel(Initials(NameOf(skillId, passive)));
+                    fallback.AddToClassList("uitk-loadout-slot-empty-num");
+                    fallback.style.opacity = 1f;
+                    fallback.style.color = Palette.Gold1;
+                    slot.Add(fallback);
+                }
+
+                string capturedId = skillId;
+                slot.RegisterCallback<ClickEvent>(_ =>
+                {
+                    selectedSkillId = capturedId;
+                    isSelectedPassive = passive;
+                    confirmRespecActive = false;
+                    feedback = null;
+                    Sfx.Play(Sound.Move);
+                    Rebuild();
+                });
+            }
+            else
+            {
+                var num = new UiLabel((slotIndex + 1).ToString()) { pickingMode = PickingMode.Ignore };
+                num.AddToClassList("uitk-loadout-slot-empty-num");
+                slot.Add(num);
+            }
+            return slot;
         }
 
         void SpawnSkillNode(VisualElement canvas, Node n)
@@ -362,6 +419,15 @@ namespace Obscure
             var nodeIcon = IconArt.SkillOrPassive(n.id, n.passive);
             FigmaUi.SetInstanceText(el, "text-0", nodeIcon != null ? "" : Initials(NameOf(n.id, n.passive)));
             IconArt.Overlay(el, nodeIcon, 3, learned || avail ? 1f : 0.45f);
+            el.style.overflow = Overflow.Visible;
+
+            int eqSlot = EquippedSlotIndex(n.id, n.passive);
+            if (eqSlot >= 0)
+            {
+                var eqBadge = new UiLabel($"✓{eqSlot + 1}") { pickingMode = PickingMode.Ignore };
+                eqBadge.AddToClassList("uitk-skill-equipped-badge");
+                el.Add(eqBadge);
+            }
             canvas.Add(el);
 
             if (learned)
@@ -418,6 +484,14 @@ namespace Obscure
             var tagRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 10 } };
             var tType = FigmaUi.InstantiateTemplate("Tag-Cls"); if (tType != null) { FigmaUi.SetInstanceText(tType, "text-0", isSelectedPassive ? "PASSIVE" : "ACTIVE"); tType.style.marginRight = 6; tagRow.Add(tType); }
             var tTier = FigmaUi.InstantiateTemplate("Tag-Cls"); if (tTier != null) { FigmaUi.SetInstanceText(tTier, "text-0", $"TIER {tier}"); tTier.style.marginRight = 6; tagRow.Add(tTier); }
+            int selectedEqSlot = EquippedSlotIndex(selectedSkillId, isSelectedPassive);
+            if (selectedEqSlot >= 0)
+            {
+                var eqPill = new UiLabel($"✓ EQUIPPED · SLOT {selectedEqSlot + 1}");
+                eqPill.AddToClassList("uitk-badge-ok");
+                eqPill.style.marginRight = 6;
+                tagRow.Add(eqPill);
+            }
             if (a != null)
             {
                 string code = Palette.ElementCode(a.element);
@@ -487,13 +561,16 @@ namespace Obscure
             if (learned)
             {
                 var eqRow = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 8, flexShrink = 0 } };
-                eqRow.Add(new UiLabel(equipped ? "EQUIPPED" : "EQUIP TO") { style = { fontSize = 12, color = Palette.Mist3, width = 92 } });
+                eqRow.Add(new UiLabel(selectedEqSlot >= 0 ? $"✓ SLOT {selectedEqSlot + 1}" : "EQUIP TO")
+                {
+                    style = { fontSize = 12, color = selectedEqSlot >= 0 ? Palette.Ok : Palette.Mist3, width = 92 }
+                });
                 var slotArr = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots;
                 for (int i = 0; i < 3; i++)
                 {
                     int slot = i;
                     bool inThisSlot = slot < slotArr.Length && slotArr[slot] == selectedSkillId;
-                    var sBtn = FigmaUi.CreateCompactButton((i + 1).ToString(), 52f, inThisSlot ? "button-primary" : "button-slab");
+                    var sBtn = FigmaUi.CreateCompactButton(inThisSlot ? $"✓{i + 1}" : (i + 1).ToString(), 52f, inThisSlot ? "button-primary" : "button-slab");
                     sBtn.style.marginRight = 8;
                     eqRow.Add(sBtn);
                     FigmaUi.ApplyDefaultFocusVisual(menu.Add(sBtn, $"Slot {i + 1}", () => Equip(slot), selected: inThisSlot));
@@ -528,7 +605,17 @@ namespace Obscure
         void Say(string text, bool bad, Sound okSound = Sound.SkillUnlock) { feedback = text; feedbackBad = bad; Sfx.Play(bad ? Sound.Deny : okSound); Rebuild(); }
         void Learn() { var h = CurrentHero; if (h.skillLoadout.TryUnlockSkill(selectedSkillId, h.level, h.classDef, out string e)) Say($"LEARNED {NameOf(selectedSkillId, isSelectedPassive)}.", false); else Say(e ?? "CANNOT LEARN.", true); }
         void Upgrade() { var h = CurrentHero; if (h.skillLoadout.TryUpgradeRank(selectedSkillId, out string e)) Say($"UPGRADED TO RANK {h.skillLoadout.GetRank(selectedSkillId)}.", false); else Say(e ?? "CANNOT UPGRADE.", true); }
-        void Equip(int slot) { var lo = CurrentHero.skillLoadout; bool ok = isSelectedPassive ? lo.TryEquipPassive(slot, selectedSkillId, out var e) : lo.TryEquipActive(slot, selectedSkillId, out e); Say(ok ? $"EQUIPPED IN SLOT {slot + 1}." : e ?? "FAILED.", !ok, Sound.Equip); }
+        void Equip(int slot)
+        {
+            if (EquippedSlotIndex(selectedSkillId, isSelectedPassive) == slot)
+            {
+                Say($"ALREADY EQUIPPED IN SLOT {slot + 1}.", false, Sound.Move);
+                return;
+            }
+            var lo = CurrentHero.skillLoadout;
+            bool ok = isSelectedPassive ? lo.TryEquipPassive(slot, selectedSkillId, out var e) : lo.TryEquipActive(slot, selectedSkillId, out e);
+            Say(ok ? $"EQUIPPED IN SLOT {slot + 1}." : e ?? "FAILED.", !ok, Sound.Equip);
+        }
         void Unequip() { var lo = CurrentHero.skillLoadout; var s = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots; for (int i = 0; i < s.Length; i++) if (s[i] == selectedSkillId) s[i] = null; Say("SKILL UNEQUIPPED.", false, Sound.Equip); }
         void Respec() { if (!confirmRespecActive) { confirmRespecActive = true; Say("PRESS RESPEC AGAIN TO REFUND ALL SP.", false, Sound.ModalOpen); return; } CurrentHero.skillLoadout.Respec(CurrentHero.classDef, CurrentHero.level); confirmRespecActive = false; selectedSkillId = null; Say("ALL SP REFUNDED AND THE TREE RESET.", false); }
     }

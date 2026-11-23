@@ -2331,3 +2331,96 @@ Button,
     -unity-text-align: middle-center;
     -unity-font-definition: url("project://database/Assets/UI/Fonts/FelnaGothicFont.asset");
 }
+
+/* ==========================================================================
+   Skill Tree / Training Ground — Icon Loadout Slots & Equipped Indicators
+   ========================================================================== */
+
+.uitk-loadout-strip {
+    height: 52px;
+    border-top-width: 2px;
+    border-top-color: var(--border-line);
+    flex-direction: row;
+    align-items: center;
+    padding-top: 4px;
+    flex-shrink: 0;
+}
+
+.uitk-loadout-heading {
+    font-size: 13px;
+    letter-spacing: 0.52px;
+    color: var(--text-muted);
+    margin-right: 16px;
+    white-space: nowrap;
+}
+
+.uitk-loadout-group-lbl {
+    font-size: 13px;
+    letter-spacing: 0.48px;
+    color: var(--text-body);
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+.uitk-loadout-group-lbl-passive {
+    margin-left: 22px;
+}
+
+.uitk-loadout-slot {
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
+    background-color: var(--bg-void);
+    border-width: 2px;
+    border-color: var(--border-line);
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.uitk-loadout-slot-passive {
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.uitk-loadout-slot-filled {
+    background-color: var(--bg-raised);
+    border-color: var(--border-accent);
+}
+
+.mouse-active .uitk-loadout-slot-filled:hover {
+    background-color: #2A344D;
+    border-color: #FFF4D2;
+}
+
+.uitk-loadout-slot-selected {
+    background-color: #382D14;
+    border-color: #FFF4D2;
+}
+
+.uitk-loadout-slot-empty-num {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.55;
+    -unity-text-align: middle-center;
+}
+
+.uitk-skill-equipped-badge {
+    position: absolute;
+    right: -6px;
+    top: -6px;
+    padding-top: 1px;
+    padding-right: 4px;
+    padding-bottom: 1px;
+    padding-left: 4px;
+    background-color: rgba(10, 28, 18, 0.96);
+    border-width: 1px;
+    border-color: var(--status-ok);
+    color: var(--status-ok);
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    -unity-text-align: middle-center;
+}
