@@ -22,6 +22,9 @@ namespace Obscure
         public const float StatusOverlapPenalty = 4.0f;
         public const float WakeSleepPenalty = 5.0f;
         public const float SupportProtectionBonus = 2.5f;
+        public const float OffensiveBuffSynergyBonus = 2.0f;
+        public const float DefensiveWardSynergyBonus = 2.5f;
+        public const float AllyBuffOverlapPenalty = 4.0f;
 
         public static float Evaluate(Battle b, Combatant self, EnemyAttack m, Combatant target,
             AiProfile profile, AiPlanContext ctx, float expectedDmg)
@@ -31,6 +34,34 @@ namespace Obscure
             if (bb == null) return 0f;
 
             float total = 0f;
+
+            // Ally-support coordination & synergy (War Dirge, Rally Banner, Reliquary Ward, heals).
+            if (m.SupportsAlly && target != null && target.IsEnemy && target.Alive)
+            {
+                if (m.BuffsAlly)
+                {
+                    bool anyPlannedOverlap = false;
+                    bool grantsAtk = false;
+                    bool grantsDef = false;
+                    for (int i = 0; i < m.buffAlly.Length; i++)
+                    {
+                        var id = m.buffAlly[i].id;
+                        if (bb.HasPlannedAllyBuff(target, id, self)) anyPlannedOverlap = true;
+                        if (id == StatusId.AttackUp) grantsAtk = true;
+                        if (id == StatusId.DefenseUp || id == StatusId.MagicDefenseUp) grantsDef = true;
+                    }
+                    if (anyPlannedOverlap)
+                        total -= AllyBuffOverlapPenalty;
+                    else
+                    {
+                        if (grantsAtk && !target.IsBroken && !target.CannotReact && target.turnsTakenThisRound < target.TurnsPerRound)
+                            total += OffensiveBuffSynergyBonus;
+                        if (grantsDef && (target.IsCharging || target.LastDamagedRound == b.Round))
+                            total += DefensiveWardSynergyBonus;
+                    }
+                }
+                return Math.Clamp(total, -SynergyClamp, SynergyClamp);
+            }
 
             // Single-target hero-directed coordination & synergy.
             if (target != null && target.IsPlayer && !m.allTargets && !m.self && !m.SupportsAlly && !m.Summons)

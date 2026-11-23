@@ -132,17 +132,39 @@ namespace Obscure
         }
 
         // Evaluates whether a chosen (move, target) aligns with the enemy's tactical role identity (for Spec §17 / Handoff Stage 1b gate).
-        public static bool IsRoleAligned(Combatant self, EnemyAttack move, Combatant target, IReadOnlyList<Combatant> foes, Combatant hurtAlly)
+        public static bool IsRoleAligned(Combatant self, EnemyAttack move, Combatant target, IReadOnlyList<Combatant> foes, Combatant hurtAlly,
+            IReadOnlyList<Combatant> allies = null)
         {
             if (self?.enemy == null || move == null) return false;
             switch (self.enemy.aiRole)
             {
                 case AiRole.Support:
                     if (move.SupportsAlly || move.restoreMp > 0f) return true;
-                    // If no support move is ready/affordable (e.g. Mending Litany on 3-round cooldown), attacking is role-aligned fallback.
-                    bool supportReady = self.enemy.attacks != null && Array.Exists(self.enemy.attacks,
-                        a => a.SupportsAlly && self.Cooldown(Combatant.MoveKey(a)) == 0 && self.unit.mp >= a.mpCost);
-                    return !supportReady || hurtAlly == null || (float)hurtAlly.unit.hp / Math.Max(1, hurtAlly.Stats.maxHp) > 0.65f;
+                    // Attacking is a role-aligned fallback when no heal meets its own HP threshold and no ally buff has an unbuffed target.
+                    if (self.enemy.attacks == null) return true;
+                    float hurtFrac = hurtAlly != null ? (float)hurtAlly.unit.hp / Math.Max(1, hurtAlly.Stats.maxHp) : 1f;
+                    foreach (var a in self.enemy.attacks)
+                    {
+                        if (!a.SupportsAlly || self.Cooldown(Combatant.MoveKey(a)) > 0 || self.unit.mp < a.mpCost) continue;
+                        if (a.Heals && hurtAlly != null && hurtFrac <= a.aiAllyHpBelow)
+                            return false;
+                        if (a.BuffsAlly)
+                        {
+                            bool anyUnbuffed = false;
+                            if (allies != null && allies.Count > 0)
+                            {
+                                for (int i = 0; i < allies.Count; i++)
+                                    if (allies[i].Alive && Array.Exists(a.buffAlly, ap => !allies[i].Has(ap.id))) { anyUnbuffed = true; break; }
+                            }
+                            else
+                            {
+                                anyUnbuffed = (hurtAlly != null && hurtAlly.Alive && Array.Exists(a.buffAlly, ap => !hurtAlly.Has(ap.id)))
+                                    || Array.Exists(a.buffAlly, ap => !self.Has(ap.id));
+                            }
+                            if (anyUnbuffed) return false;
+                        }
+                    }
+                    return true;
                 case AiRole.Executioner:
                     if (move.restoreMp > 0f) return true;
                     if (target == null || foes == null || foes.Count == 0) return true;

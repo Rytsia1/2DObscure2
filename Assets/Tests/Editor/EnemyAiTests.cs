@@ -579,6 +579,161 @@ namespace Obscure.Tests
         }
 
         [Test]
+        public void NewSupports_OssuaryAcolyteReevaluatesProvisionalToHealMidRoundBurst()
+        {
+            var b = new Battle(DefaultParty(level: 5), new[]
+            {
+                Database.Enemies["ossuary_acolyte"],
+                Database.Enemies["possessed_royal_guard"],
+            }, new List<string>(), new Random(91));
+            var acolyte = b.Enemies[0];
+            var guard = b.Enemies[1];
+            foreach (var p in b.Party) p.unit.stats.spd = 25;
+
+            // Round start: Guard is at 100% HP (> 50% Bone Mending threshold) -> Acolyte provisionally plans Censer Swing.
+            var c = b.NextTurn();
+            Assert.AreEqual(IntentCommitment.Provisional, acolyte.Intent.commitment);
+            Assert.AreEqual("Censer Swing", acolyte.Intent.move.name);
+            Assert.IsNull(EnemyAI.IntentText(acolyte));
+            Assert.AreEqual("", AnalysisInspector.BuildEnemyView(b, acolyte).telegraphedIntent);
+
+            while (c != null && c != acolyte)
+            {
+                b.Perform(BattleAction.Guard(c));
+                c = b.NextTurn();
+            }
+            Assert.AreEqual(acolyte, c);
+
+            // Faster heroes burst Guard down to 45% HP mid-round -> Acolyte reacts same-round with Bone Mending!
+            guard.unit.hp = Math.Max(1, (int)(guard.Stats.maxHp * 0.45f));
+            var act = EnemyAI.Choose(b, acolyte);
+            Assert.AreEqual("Bone Mending", act.attack.name, "Ossuary Acolyte must re-evaluate provisional turn and heal Guard same-round");
+            Assert.AreEqual(guard, act.target);
+        }
+
+        [Test]
+        public void NewSupports_HollowBanneretPivotsRallyBannerToMidRoundFocusedAlly()
+        {
+            var b = new Battle(DefaultParty(level: 5), new[]
+            {
+                Database.Enemies["hollow_banneret"],
+                Database.Enemies["gravebound_archer"],
+                Database.Enemies["hollow_squire"],
+            }, new List<string>(), new Random(92));
+            var banneret = b.Enemies[0];
+            var archer = b.Enemies[1];
+            var squire = b.Enemies[2];
+            b.Party[0].unit.stats.spd = 25;
+
+            // Round start: nobody hit yet -> Banneret provisionally plans Rally Banner on slot 1 (Archer).
+            var c = b.NextTurn();
+            Assert.AreEqual(IntentCommitment.Provisional, banneret.Intent.commitment);
+            Assert.AreEqual("Rally Banner", banneret.Intent.move.name);
+            Assert.AreEqual(archer, banneret.Intent.target);
+
+            // Mid-round: faster hero focuses Hollow Squire!
+            while (c != null && c != banneret)
+            {
+                if (c == b.Party[0]) b.Perform(BattleAction.Attack(c, squire));
+                else if (c.IsPlayer) b.Perform(BattleAction.Guard(c));
+                else b.Perform(EnemyAI.Choose(b, c));
+                c = b.NextTurn();
+            }
+            Assert.AreEqual(banneret, c);
+
+            var act = EnemyAI.Choose(b, banneret);
+            Assert.AreEqual("Rally Banner", act.attack.name);
+            Assert.AreEqual(squire, act.target, "Hollow Banneret must re-evaluate provisional Rally Banner onto the ally focused mid-round");
+        }
+
+        [Test]
+        public void NewSupports_DirgeChanterSkipsBrokenAllyForWarDirgeAndUsesGuardianInstinct()
+        {
+            var party = Enumerable.Range(0, 2).Select(_ =>
+                BalanceSimulation.MakeHero(("human", "fighter", "guard"), BalanceSimulation.Build.Recommended, 5, BalanceSimulation.Gear.D1WeaponArmor)
+            ).ToList();
+            var b = new Battle(party, new[]
+            {
+                Database.Enemies["dirge_chanter"],
+                Database.Enemies["forgotten_militia"],
+                Database.Enemies["hollow_squire"],
+            }, new List<string>(), new Random(93));
+            var chanter = b.Enemies[0];
+            var militia = b.Enemies[1];
+            var squire = b.Enemies[2];
+            Assert.AreEqual(InstinctKind.Guardian, chanter.enemy.instinct);
+
+            // Break Hollow Squire (higher ATK 18 vs Militia 16) -> Dirge Chanter must buff active Militia instead of Broken Squire!
+            squire.AddStatus(StatusId.Broken, 1, 1f, b.Party[0]);
+            var dirgePlan = PriorityBrain.Select(b, chanter);
+            Assert.AreEqual("War Dirge", dirgePlan.move.name);
+            Assert.AreEqual(militia, dirgePlan.target, "War Dirge must skip Broken ally and buff an active attacker");
+
+            // When War Dirge is unavailable and an ally is endangered and struck by Hero 1, Guardian Chanter pressures Hero 1.
+            chanter.cooldowns[Combatant.MoveKey(chanter.enemy.attacks[0])] = 3;
+            b.NextTurn();
+            militia.unit.hp = (int)(militia.Stats.maxHp * 0.40f);
+            militia.LastAttacker = b.Party[1];
+            militia.LastDamagedRound = b.Round;
+            var guardPlan = PriorityBrain.Select(b, chanter);
+            Assert.AreEqual(b.Party[1], guardPlan.target, "Guardian Dirge Chanter steps up to pressure hero attacking its endangered ally");
+        }
+
+        [Test]
+        public void NewSupports_BlackboardPreventsDuplicateAllyBuffsAcrossTwoSupports()
+        {
+            var b = new Battle(DefaultParty(level: 6), new[]
+            {
+                Database.Enemies["reliquary_confessor"],
+                Database.Enemies["hollow_banneret"],
+                Database.Enemies["gravebound_archer"],
+                Database.Enemies["hollow_squire"],
+            }, new List<string>(), new Random(94));
+
+            b.NextTurn(); // StartRound plans both Supports in Group 0
+            var conf = b.Enemies[0];
+            var banneret = b.Enemies[1];
+
+            Assert.AreEqual("Reliquary Ward", conf.Intent.move.name);
+            Assert.AreEqual("Rally Banner", banneret.Intent.move.name);
+            Assert.AreNotEqual(conf.Intent.target, banneret.Intent.target,
+                "Two defensive Supports must coordinate via Blackboard PlannedAllyBuffsByEnemy and never double-buff the same ally");
+            Assert.IsTrue(b.Blackboard.HasPlannedAllyBuff(conf.Intent.target, StatusId.DefenseUp));
+            Assert.IsTrue(b.Blackboard.HasPlannedAllyBuff(banneret.Intent.target, StatusId.DefenseUp));
+        }
+
+        [Test]
+        public void NewSupports_RoleAlignmentMatchesAcolyteThresholdAndFullBuffState()
+        {
+            var b = new Battle(DefaultParty(level: 5), new[]
+            {
+                Database.Enemies["ossuary_acolyte"],
+                Database.Enemies["hollow_banneret"],
+                Database.Enemies["possessed_royal_guard"],
+            }, new List<string>(), new Random(95));
+            var acolyte = b.Enemies[0];
+            var banneret = b.Enemies[1];
+            var guard = b.Enemies[2];
+            var foes = b.Party.Where(p => p.Alive).ToList();
+            var allies = b.Enemies.Where(e => e.Alive).ToList();
+
+            // Guard at 55% HP: above Ossuary Acolyte's 50% Bone Mending threshold -> Censer Swing is role-aligned!
+            guard.unit.hp = (int)(guard.Stats.maxHp * 0.55f);
+            Assert.IsTrue(AiProfile.IsRoleAligned(acolyte, acolyte.enemy.attacks[1], foes[0], foes, guard, allies),
+                "Acolyte attacking when hurt ally is above Bone Mending's 50% threshold must be role-aligned");
+
+            // Guard at 45% HP: within Bone Mending threshold -> skipping Bone Mending is NOT role-aligned.
+            guard.unit.hp = (int)(guard.Stats.maxHp * 0.45f);
+            Assert.IsFalse(AiProfile.IsRoleAligned(acolyte, acolyte.enemy.attacks[1], foes[0], foes, guard, allies),
+                "Acolyte skipping a ready legal Bone Mending must be flagged as misaligned");
+
+            // All enemies already hold DefenseUp -> Banneret attacking with Banner Pole is role-aligned!
+            foreach (var e in allies) e.AddStatus(StatusId.DefenseUp, 2, 0.25f, banneret);
+            Assert.IsTrue(AiProfile.IsRoleAligned(banneret, banneret.enemy.attacks[1], foes[0], foes, guard, allies),
+                "Buffer attacking when every ally already has its buff must be role-aligned");
+        }
+
+        [Test]
         public void Stage3_ConfidenceMathMatchesArchitectureAndOneActionNeverRecognizes()
         {
             var b = new Battle(DefaultParty(), new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(1));

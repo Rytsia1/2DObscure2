@@ -209,11 +209,18 @@ namespace Obscure
             if (m.SupportsAlly && target != null && target.Alive)
             {
                 float allyHpFrac = (float)target.unit.hp / Math.Max(1, target.Stats.maxHp);
+                bool defensiveBuff = m.BuffsAlly && HasDefensiveBuff(m);
                 if (allyHpFrac <= GuardianEndangeredAllyHpFrac)
                 {
                     add(GuardianHealBonus,
                         $"instinct_guardian_heal:{self.enemy?.id}",
                         $"{self.name} rushes to protect {target.name}!");
+                }
+                else if (defensiveBuff && (target.LastDamagedRound == b.Round || target.IsCharging))
+                {
+                    add(GuardianHealBonus * 0.7f,
+                        $"instinct_guardian_ward:{self.enemy?.id}",
+                        $"{self.name} bolsters {target.name}'s guard!");
                 }
                 return;
             }
@@ -244,7 +251,7 @@ namespace Obscure
 
         static bool IsSelfPreservingOrDeterring(Combatant self, EnemyAttack m, Combatant target)
         {
-            if (m.self || m.drain > 0f || (m.Heals && target == self)) return true;
+            if (m.self || m.drain > 0f || (m.Heals && target == self) || (m.BuffsAlly && target == self && HasDefensiveBuff(m))) return true;
             if (m.apply != null && m.apply.Length > 0)
             {
                 for (int i = 0; i < m.apply.Length; i++)
@@ -254,6 +261,18 @@ namespace Obscure
                         || st == StatusId.Sleep || st == StatusId.Confusion || st == StatusId.Despair)
                         return true;
                 }
+            }
+            return false;
+        }
+
+        static bool HasDefensiveBuff(EnemyAttack m)
+        {
+            if (m?.buffAlly == null) return false;
+            for (int i = 0; i < m.buffAlly.Length; i++)
+            {
+                var id = m.buffAlly[i].id;
+                if (id == StatusId.DefenseUp || id == StatusId.MagicDefenseUp || id == StatusId.Evasion)
+                    return true;
             }
             return false;
         }

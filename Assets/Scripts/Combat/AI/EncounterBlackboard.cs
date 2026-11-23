@@ -52,6 +52,7 @@ namespace Obscure
         public readonly HashSet<Combatant> HeavyReservedTargets = new HashSet<Combatant>();
         public readonly HashSet<Combatant> StunReservedTargets = new HashSet<Combatant>();
         public readonly Dictionary<Combatant, float> ExpectedHealByEnemy = new Dictionary<Combatant, float>();
+        public readonly Dictionary<Combatant, HashSet<StatusId>> PlannedAllyBuffsByEnemy = new Dictionary<Combatant, HashSet<StatusId>>();
 
         // Fixed planning order (Spec §4.5, Architecture §13.2): Support -> Controller -> other roles, slot ties.
         // Independent of initiative / Speed buffs.
@@ -75,6 +76,7 @@ namespace Obscure
             HeavyReservedTargets.Clear();
             StunReservedTargets.Clear();
             ExpectedHealByEnemy.Clear();
+            PlannedAllyBuffsByEnemy.Clear();
             Memory.BeginRound(b.Round);
             sw.Stop();
             LastUpdateMs = sw.Elapsed.TotalMilliseconds;
@@ -173,6 +175,11 @@ namespace Obscure
                 ExpectedHealByEnemy.Remove(oldEnemy);
                 ExpectedHealByEnemy[newEnemy] = h;
             }
+            if (PlannedAllyBuffsByEnemy.TryGetValue(oldEnemy, out var buffs))
+            {
+                PlannedAllyBuffsByEnemy.Remove(oldEnemy);
+                PlannedAllyBuffsByEnemy[newEnemy] = buffs;
+            }
             Memory.ReplaceEnemy(oldEnemy, newEnemy);
         }
 
@@ -190,6 +197,21 @@ namespace Obscure
 
         public float ExpectedHeal(Combatant ally) =>
             ally != null && ExpectedHealByEnemy.TryGetValue(ally, out float h) ? h : 0f;
+
+        public bool HasPlannedAllyBuff(Combatant ally, StatusId status, Combatant excludeEnemy = null)
+        {
+            if (ally == null) return false;
+            if (excludeEnemy == null)
+                return PlannedAllyBuffsByEnemy.TryGetValue(ally, out var set) && set.Contains(status);
+            for (int i = 0; i < PlannedActions.Count; i++)
+            {
+                var p = PlannedActions[i];
+                if (p.executed || p.enemy == excludeEnemy || p.target != ally || p.move == null || !p.move.BuffsAlly) continue;
+                for (int j = 0; j < p.move.buffAlly.Length; j++)
+                    if (p.move.buffAlly[j].id == status) return true;
+            }
+            return false;
+        }
 
         public bool IsLethalReserved(Combatant hero) => hero != null && LethalReservations.Contains(hero);
 
@@ -226,6 +248,7 @@ namespace Obscure
             HeavyReservedTargets.Clear();
             StunReservedTargets.Clear();
             ExpectedHealByEnemy.Clear();
+            PlannedAllyBuffsByEnemy.Clear();
             for (int i = 0; i < PlannedActions.Count; i++)
                 ApplyAggregate(b, PlannedActions[i]);
         }
@@ -237,10 +260,23 @@ namespace Obscure
 
             if (m.SupportsAlly)
             {
-                if (!pub.executed && m.Heals && pub.target != null && pub.target.Alive)
+                if (!pub.executed && pub.target != null && pub.target.Alive)
                 {
-                    float healAmt = (float)Math.Floor(pub.target.Stats.maxHp * m.healAlly);
-                    ExpectedHealByEnemy[pub.target] = ExpectedHeal(pub.target) + healAmt;
+                    if (m.Heals)
+                    {
+                        float healAmt = (float)Math.Floor(pub.target.Stats.maxHp * m.healAlly);
+                        ExpectedHealByEnemy[pub.target] = ExpectedHeal(pub.target) + healAmt;
+                    }
+                    if (m.BuffsAlly)
+                    {
+                        if (!PlannedAllyBuffsByEnemy.TryGetValue(pub.target, out var buffSet))
+                        {
+                            buffSet = new HashSet<StatusId>();
+                            PlannedAllyBuffsByEnemy[pub.target] = buffSet;
+                        }
+                        for (int i = 0; i < m.buffAlly.Length; i++)
+                            buffSet.Add(m.buffAlly[i].id);
+                    }
                 }
                 return;
             }

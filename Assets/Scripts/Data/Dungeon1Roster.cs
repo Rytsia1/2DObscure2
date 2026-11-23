@@ -352,7 +352,7 @@ namespace Obscure
             SetAi("crypt_leech", AiRole.Attrition, AiTier.Normal, InstinctKind.Predator);
             SetAi("forgotten_militia", AiRole.ComboAttacker, AiTier.Normal, InstinctKind.Relentless);
             SetAi("ossuary_acolyte", AiRole.Support, AiTier.Normal, InstinctKind.Guardian);
-            SetAi("dirge_chanter", AiRole.Support, AiTier.Normal, InstinctKind.Skittish);
+            SetAi("dirge_chanter", AiRole.Support, AiTier.Normal, InstinctKind.Guardian);
             SetAi("hollow_banneret", AiRole.Support, AiTier.Normal, InstinctKind.Guardian);
             SetAi("soul_reaper", AiRole.Executioner, AiTier.Miniboss, InstinctKind.Predator);
             SetAi("royal_ossuary_knight", AiRole.DefensivePunisher, AiTier.Miniboss, InstinctKind.Guardian);

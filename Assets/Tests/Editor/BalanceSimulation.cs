@@ -355,9 +355,10 @@ namespace Obscure.Tests
                     if (mv != null)
                     {
                         var livingFoes = b.Party.Where(p => p.Alive).ToList();
-                        var hurtAlly = b.Enemies.Where(e => e.Alive).OrderBy(e => (float)e.unit.hp / Math.Max(1, e.Stats.maxHp)).FirstOrDefault();
+                        var livingAllies = b.Enemies.Where(e => e.Alive).ToList();
+                        var hurtAlly = livingAllies.OrderBy(e => (float)e.unit.hp / Math.Max(1, e.Stats.maxHp)).FirstOrDefault();
                         res.totalRoleDecisions++;
-                        if (AiProfile.IsRoleAligned(c, mv, act.target, livingFoes, hurtAlly))
+                        if (AiProfile.IsRoleAligned(c, mv, act.target, livingFoes, hurtAlly, livingAllies))
                             res.roleAlignedDecisions++;
                         if (mv.NeedsTelegraph)
                         {

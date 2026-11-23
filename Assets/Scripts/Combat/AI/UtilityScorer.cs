@@ -74,26 +74,52 @@ namespace Obscure
         // If it fails: too passive -> 4f; buffs every single turn -> 2f.
         public const float ImmediateBuffValue = 3f;
 
-        // Ally-buff target (deterministic): allies lacking at least one of the move's buffs, others before the caster.
-        // Attack Up -> highest observable offense; defensive buffs -> the ally the party has hit most, else lowest HP fraction.
+        // Ally-buff target (deterministic): allies lacking at least one of the move's buffs (preferring buffs not already planned
+        // on the Shared Blackboard by another Support), others before the caster.
+        // Attack Up -> highest observable offense among allies able to act; defensive buffs -> most-hit ally, else Charging / exposed / lowest HP%.
         public static Combatant SupportTarget(Battle b, Combatant self, EnemyAttack move)
         {
             if (b == null || move == null || !move.BuffsAlly) return null;
+            var bb = b.Blackboard;
             var pool = b.Allies(self).Where(c => c.Alive && move.buffAlly.Any(ap => !c.Has(ap.id))).ToList();
             if (pool.Count == 0) return null;
+            if (bb != null)
+            {
+                var unscheduled = pool.Where(c => move.buffAlly.Any(ap => !c.Has(ap.id) && !bb.HasPlannedAllyBuff(c, ap.id, self))).ToList();
+                if (unscheduled.Count > 0) pool = unscheduled;
+            }
             var others = pool.Where(c => c != self).ToList();
             if (others.Count > 0) pool = others;
 
             if (move.buffAlly[0].id == StatusId.AttackUp)
+            {
+                var active = pool.Where(c => !c.IsBroken && !c.CannotReact).ToList();
+                if (active.Count > 0) pool = active;
                 return pool.OrderByDescending(c => Math.Max(c.Atk, c.Magic)).ThenBy(c => c.slot).First();
+            }
 
-            var mem = b.Blackboard?.Memory;
+            var mem = bb?.Memory;
             int HitCount(Combatant c) => mem == null ? 0
                 : mem.Profiles.Values.Sum(p => p.attackCountsByEnemy.TryGetValue(c, out int n) ? n : 0);
             int maxHits = pool.Max(HitCount);
             if (maxHits > 0)
                 return pool.Where(c => HitCount(c) == maxHits).OrderBy(c => c.slot).First();
-            return pool.OrderBy(c => (float)c.unit.hp / Math.Max(1, c.Stats.maxHp)).ThenBy(c => c.slot).First();
+
+            var profile = AiProfile.For(self.enemy);
+            bool IsExposedToElem(Combatant c) => mem != null && b.Party.Any(p =>
+            {
+                if (!p.Alive) return false;
+                var prof = mem.GetProfile(p);
+                return prof != null && prof.IsRecognized(BehaviorCategory.ElementalSpecialist, b.Round, profile)
+                    && prof.exploitedWeaknessEnemies.Contains(c);
+            });
+
+            return pool
+                .OrderByDescending(c => c.IsCharging ? 1 : 0)
+                .ThenByDescending(c => IsExposedToElem(c) ? 1 : 0)
+                .ThenBy(c => (float)c.unit.hp / Math.Max(1, c.Stats.maxHp))
+                .ThenBy(c => c.slot)
+                .First();
         }
 
         // Expected mean damage (no variance, no crit, zero Rng calls, observable info only — Spec §5.6).
@@ -393,8 +419,9 @@ namespace Obscure
                 }
             }
 
-            // 4a. Elemental Specialist exploiting an enemy weakness -> Support boosts heal on the exposed ally.
-            if (m.Heals && target != null && profile.role == AiRole.Support)
+            // 4a. Elemental Specialist exploiting an enemy weakness -> Support boosts heal or defensive ward on the exposed ally.
+            bool isDefensiveWard = m.BuffsAlly && m.buffAlly.Any(ap => ap.id == StatusId.DefenseUp || ap.id == StatusId.MagicDefenseUp);
+            if ((m.Heals || isDefensiveWard) && target != null && profile.role == AiRole.Support)
             {
                 foreach (var p in ctx.foes)
                 {
@@ -554,9 +581,11 @@ namespace Obscure
             if (m.SupportsAlly)
             {
                 if (target == null) return 0f;
+                var bb = b?.Blackboard;
                 float support = m.Heals ? (1f - (float)target.unit.hp / Math.Max(1, target.Stats.maxHp)) * ImmediateHealScale : 0f;
                 foreach (var ap in m.buffAlly ?? Array.Empty<StatusApply>())
-                    if (!target.Has(ap.id)) support += ImmediateBuffValue;
+                    if (!target.Has(ap.id) && (bb == null || !bb.HasPlannedAllyBuff(target, ap.id, self)))
+                        support += ImmediateBuffValue;
                 return support;
             }
             if (m.self)
