@@ -126,12 +126,13 @@ Prinsip utama yang dikunci (`FINAL (Locked — Approved)`):
   - **Support Skill Power (`SUP_PWR`)** (`+1.5%` per `WIS Mod`, mendukung `CHA`)
 
 ### 3.6 Charisma (`CHA`) — Commanding, Disruptive & Inspiring Presence
-- **Identitas Utama:** Kepemimpinan medan tempur, penguatan buff rekan, pelemahan mental/debuff musuh, daya dukung skill komando, dan inspirasi perisai pelindung.
+- **Identitas Utama:** Kepemimpinan medan tempur, penguatan buff rekan, pelemahan mental/debuff musuh, daya dukung skill komando, dan inspirasi perisai pelindung, serta interaksi sosial/komando dalam Exploration Event melalui sistem D20 Attribute Check (`FELNA-SYS-EVT-D20-001`).
 - **Primary Derived Stats (`w_1`):**
   - **Buff Effectiveness (`BUFF_EFF`)** (`+4.0%` per `CHA Mod`)
   - **Debuff Effectiveness (`DEBUFF_EFF`)** (`+3.5%` per `CHA Mod`)
   - **Support Skill Power (`SUP_PWR`)** (`+3.0%` per `CHA Mod`)
-  - **Social Check Value (`SOCIAL`)** (`10 + CHA Mod + Social Bonuses` vs Event DC)
+- **Exploration Event Check (`FINAL — FELNA-SYS-EVT-D20-001`):**
+  - **D20 Attribute Check (`STR / DEX / VIT / INT / WIS / CHA`):** Menggantikan formula pasif lama (`10 + CHA Mod + Social Bonuses`) dengan sistem seragam `Check Result = D20 Roll + Party Highest Attribute Modifier` (hanya dari anggota party yang hidup/aktif `HP > 0`) vs Event `Difficulty Class (DC)`.
 - **Secondary Derived Stats (`w_2`):**
   - **Shield Power (`SHD_PWR`)** (`+1.5% Base Shield` per `CHA Mod`, mendukung `WIS`)
 

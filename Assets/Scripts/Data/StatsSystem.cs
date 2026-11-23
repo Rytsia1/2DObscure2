@@ -1543,6 +1543,34 @@ namespace Obscure
             return FloorInt(cfg.chaSupportPowerPerMod * chaModifier + cfg.wisSupportPowerPerMod * wisModifier);
         }
 
+        // D20 Attribute Check Evaluation (FELNA-SYS-EVT-D20-001):
+        // Check Result = D20 Roll + Party Highest Attribute Modifier.
+        // Natural 20 always yields Critical Success; Natural 1 always yields Critical Failure;
+        // Natural 2-19 compares Check Result against Difficulty Class (DC).
+        public static AttributeCheckResultCategory EvaluateD20AttributeCheck(
+            int d20Roll,
+            int partyHighestModifier,
+            int difficultyClass,
+            out int checkResult)
+        {
+            checkResult = d20Roll + partyHighestModifier;
+            if (d20Roll >= 20) return AttributeCheckResultCategory.CriticalSuccess;
+            if (d20Roll <= 1) return AttributeCheckResultCategory.CriticalFailure;
+            return checkResult >= difficultyClass
+                ? AttributeCheckResultCategory.Success
+                : AttributeCheckResultCategory.Failure;
+        }
+
+        public static string FormatAttributeCheckCategory(AttributeCheckResultCategory category) => category switch
+        {
+            AttributeCheckResultCategory.CriticalSuccess => "CRITICAL SUCCESS",
+            AttributeCheckResultCategory.Success => "SUCCESS",
+            AttributeCheckResultCategory.Failure => "FAILURE",
+            AttributeCheckResultCategory.CriticalFailure => "CRITICAL FAILURE",
+            _ => "FAILURE"
+        };
+
+        // Legacy passive social formula superseded by D20 Attribute Check System (FELNA-SYS-EVT-D20-001).
         public static int CalculateSocialCheckValue(int chaModifier, int socialBonus = 0) =>
             10 + chaModifier + socialBonus;
 

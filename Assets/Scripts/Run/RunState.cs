@@ -755,6 +755,26 @@ namespace Obscure
             public float effectScale;
         }
 
+        public struct AttributeCheckRollSummary
+        {
+            public Ability ability;
+            public int difficultyClass;
+            public int d20Roll;
+            public int partyHighestModifier;
+            public int checkResult;
+            public AttributeCheckResultCategory category;
+
+            public bool IsNatural20 => d20Roll == 20;
+            public bool IsNatural1 => d20Roll == 1;
+
+            public string FormatBanner()
+            {
+                string natTag = IsNatural20 ? " (NATURAL 20)" : IsNatural1 ? " (NATURAL 1)" : "";
+                string catLabel = StatCalculator.FormatAttributeCheckCategory(category);
+                return $"[{ability} CHECK · DC {difficultyClass} · D20: {d20Roll}{natTag} + MOD {AbilityScores.FormatMod(partyHighestModifier)} = {checkResult} · {catLabel}]";
+            }
+        }
+
         public RunStatus Status { get; private set; } = RunStatus.Active;
         public NodeDef Current { get; private set; }
         public RewardOffer PendingReward { get; private set; }
@@ -765,6 +785,8 @@ namespace Obscure
         public readonly Dictionary<int, RewardOption> EventCurseModifiers = new Dictionary<int, RewardOption>();
         public readonly Dictionary<int, RewardOption> EventRiskFailModifiers = new Dictionary<int, RewardOption>();
         public readonly Dictionary<int, bool> EventChoiceRiskFailed = new Dictionary<int, bool>();
+        public readonly Dictionary<int, int> EventChoiceD20Rolls = new Dictionary<int, int>();
+        public AttributeCheckRollSummary? LastAttributeCheckResult { get; private set; }
 
         // Once-per-dungeon Racial Utility quotas (GDD Bab 6 §5 & §10.1; reset on next dungeon)
         public int HumanAdaptabilityUsesRemaining { get; private set; } = 1;
@@ -907,6 +929,8 @@ namespace Obscure
                 EventCurseModifiers.Clear();
                 EventRiskFailModifiers.Clear();
                 EventChoiceRiskFailed.Clear();
+                EventChoiceD20Rolls.Clear();
+                LastAttributeCheckResult = null;
                 if (CurrentEvent.choices != null)
                 {
                     for (int i = 0; i < CurrentEvent.choices.Length; i++)
@@ -938,6 +962,10 @@ namespace Obscure
                         if (ch.riskChancePercent > 0)
                         {
                             EventChoiceRiskFailed[i] = NodeRng(n, 30 + i).Next(100) < ch.riskChancePercent;
+                        }
+                        if (ch.isAttributeCheck)
+                        {
+                            EventChoiceD20Rolls[i] = NodeRng(n, 40 + i).Next(1, 21);
                         }
                     }
                 }
@@ -998,11 +1026,7 @@ namespace Obscure
                 }
             }
 
-            if (!isFinalBoss)
-            {
-                foreach (var u in Party) if (!u.Alive) u.hp = 1; // regular & stage-boss battle rise
-            }
-            // For Final Boss victory, fallen heroes remain dead and must be revived at Temple in Hub (GDD Section 6.3)
+            // Fallen heroes remain dead (HP == 0) after battle and must be revived with a Revive Item or at the Hub Temple (GDD Bab 16 §5-§6 & OD-03).
             float heal = Relics.Sum(id => Database.Relics[id].victoryHeal);
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));
 
@@ -1502,21 +1526,21 @@ namespace Obscure
                 }
             }
 
-            if (c.relic && RelicManager.IsFull)
+            if (c.MayGrantRelic && RelicManager.IsFull)
             {
                 status.isBlocked = true;
                 status.blockedReason = "Relic capacity full (5/5)";
                 return status;
             }
 
-            if (c.relic && EventRelic == null)
+            if (c.MayGrantRelic && EventRelic == null)
             {
                 status.isBlocked = true;
                 status.blockedReason = "Nothing left to gain";
                 return status;
             }
 
-            if ((c.randomEquipment || !string.IsNullOrEmpty(c.equipmentId)) && Inventory != null && Inventory.IsEquipmentFull)
+            if (c.MayGrantEquipment && Inventory != null && Inventory.IsEquipmentFull)
             {
                 status.isBlocked = true;
                 status.blockedReason = "Equipment inventory full";
@@ -1524,6 +1548,34 @@ namespace Obscure
             }
 
             return status;
+        }
+
+        // Returns the highest Attribute Modifier for the requested Ability across all active/living party members (u.Alive).
+        public int GetPartyHighestAttributeModifier(Ability ability)
+        {
+            if (Party == null || Party.Count == 0) return 0;
+            var living = Party.Where(u => u != null && u.Alive).ToList();
+            if (living.Count == 0) living = Party.Where(u => u != null).ToList();
+            return living.Count == 0 ? 0 : living.Max(u => u.Mod(ability));
+        }
+
+        // Deterministic D20 roll (1..20) for an event choice, or an explicit override for unit testing.
+        public int GetEventChoiceD20Roll(int index)
+        {
+            if (EventChoiceD20Rolls.TryGetValue(index, out int preRolled) && preRolled >= 1 && preRolled <= 20)
+                return preRolled;
+            if (Current != null)
+            {
+                int rolled = NodeRng(Current, 40 + index).Next(1, 21);
+                EventChoiceD20Rolls[index] = rolled;
+                return rolled;
+            }
+            return Rng != null ? Rng.Next(1, 21) : 10;
+        }
+
+        public void SetEventChoiceD20RollOverride(int index, int d20Roll)
+        {
+            EventChoiceD20Rolls[index] = Math.Clamp(d20Roll, 1, 20);
         }
 
         // Null when the choice can be taken, otherwise why not.
@@ -1552,7 +1604,9 @@ namespace Obscure
             var status = EvaluateEventChoice(e, c);
             if (status.isBlocked) throw new InvalidOperationException(status.blockedReason);
 
+            NodeDef eventNode = Current;
             CurrentEvent = null;
+            LastAttributeCheckResult = null;
             if (status.usesAdaptabilityBorrow)
                 HumanAdaptabilityUsesRemaining = Math.Max(0, HumanAdaptabilityUsesRemaining - 1);
 
@@ -1564,6 +1618,11 @@ namespace Obscure
                 ConsumeEventItem(c.requiredItem);
             if (!string.IsNullOrEmpty(c.requiredMaterialId))
                 Inventory?.RemoveMaterial(c.requiredMaterialId, Math.Max(1, c.requiredMaterialAmount));
+
+            if (c.isAttributeCheck)
+            {
+                return ResolveAttributeCheckEventChoice(e, c, index, eventNode);
+            }
 
             bool riskFailed = EventChoiceRiskFailed.TryGetValue(index, out var rf) && rf;
             bool grantSuccessRewards = !riskFailed || c.riskGrantsRewardOnFail;
@@ -1693,6 +1752,142 @@ namespace Obscure
             return outcomeText;
         }
 
+        string ResolveAttributeCheckEventChoice(EventDef e, EventChoice c, int index, NodeDef eventNode)
+        {
+            int d20 = GetEventChoiceD20Roll(index);
+            int highestMod = GetPartyHighestAttributeModifier(c.checkAbility);
+            var category = StatCalculator.EvaluateD20AttributeCheck(d20, highestMod, c.difficultyClass, out int checkResult);
+
+            var summary = new AttributeCheckRollSummary
+            {
+                ability = c.checkAbility,
+                difficultyClass = c.difficultyClass,
+                d20Roll = d20,
+                partyHighestModifier = highestMod,
+                checkResult = checkResult,
+                category = category
+            };
+            LastAttributeCheckResult = summary;
+
+            var tierDef = c.GetOutcomeForCategory(category);
+            var notes = new List<string> { summary.FormatBanner() };
+
+            if (tierDef != null)
+            {
+                if (tierDef.gold > 0)
+                {
+                    int before = Gold;
+                    AddGold(tierDef.gold);
+                    notes.Add($"Gained {Gold - before} spoils.");
+                }
+
+                int healPct = tierDef.healPercent;
+                int mpPct = tierDef.mpRestorePercent;
+                int directHurtPct = tierDef.hurtPercent;
+                int rawHazardPct = tierDef.hazardDamagePercent;
+
+                string trapNegatedNote = null;
+                if (rawHazardPct > 0 && c.isTrapChoice && RelicManager != null && RelicManager.TryNegateMinorChestTrap(out var negatedMsg))
+                {
+                    rawHazardPct = 0;
+                    trapNegatedNote = negatedMsg;
+                }
+
+                float hazardFactor = (rawHazardPct > 0 && HasHalflingHazardReduction) ? 0.5f : 1f;
+                if (rawHazardPct > 0 && HasHalflingHazardReduction)
+                    notes.Add("[Halfling Small and Nimble: -50% hazard damage]");
+                if (trapNegatedNote != null)
+                    notes.Add(trapNegatedNote);
+
+                foreach (var u in Party.Where(u => u.Alive))
+                {
+                    if (healPct > 0) u.Heal(u.stats.maxHp * healPct / 100);
+                    if (mpPct > 0) u.RestoreMp(Math.Max(1, u.stats.maxMp * mpPct / 100));
+                    if (directHurtPct > 0) u.hp = Math.Max(1, u.hp - u.stats.maxHp * directHurtPct / 100);
+                    if (rawHazardPct > 0)
+                    {
+                        int dmg = Math.Max(1, (int)Math.Round(u.stats.maxHp * (rawHazardPct / 100f) * hazardFactor));
+                        u.hp = Math.Max(1, u.hp - dmg);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(tierDef.item))
+                {
+                    bool added = TryAddConsumable(tierDef.item);
+                    if (Database.Items.TryGetValue(tierDef.item, out var itemDef))
+                        notes.Add(added ? $"Gained {itemDef.name}." : $"No room for another {itemDef.name} (carry limit {itemDef.maxStack}).");
+                }
+
+                if (!string.IsNullOrEmpty(tierDef.materialId))
+                {
+                    int matAmt = Math.Max(1, tierDef.materialAmount);
+                    if (e.HasTag(EventTags.Mineral) && HasRace("dwarf"))
+                    {
+                        matAmt += 1;
+                        notes.Add("[Dwarf Stonecraft: +1 upgrade material]");
+                    }
+                    Inventory?.AddMaterial(tierDef.materialId, matAmt);
+                    string matName = Database.Materials.TryGetValue(tierDef.materialId, out var matDef) ? matDef.name : tierDef.materialId;
+                    notes.Add($"Gained {matAmt}x {matName}.");
+                }
+
+                if (tierDef.randomEquipment || !string.IsNullOrEmpty(tierDef.equipmentId))
+                {
+                    string eqId = !string.IsNullOrEmpty(tierDef.equipmentId) ? tierDef.equipmentId : EventEquipment;
+                    if (!string.IsNullOrEmpty(eqId) && Database.Equipment.TryGetValue(eqId, out var eqDef))
+                    {
+                        var inst = EquipmentLootGenerator.CreateInstance(eqDef, eqDef.rarity, eqDef.equipmentLevel, Rng);
+                        if (Inventory == null || Inventory.TryAddEquipment(inst, out _))
+                            notes.Add($"Gained {eqDef.name}.");
+                    }
+                }
+
+                if (tierDef.relic && !string.IsNullOrEmpty(EventRelic))
+                {
+                    AddRelic(EventRelic);
+                    notes.Add($"Gained {Database.Relics[EventRelic].name}.");
+                }
+
+                if (tierDef.battleBuff != null)
+                {
+                    BattleBuffs.Add(tierDef.battleBuff);
+                }
+
+                if (!string.IsNullOrEmpty(tierDef.modifierId) && Database.DungeonModifiers.TryGetValue(tierDef.modifierId, out var mdef))
+                {
+                    var elem = tierDef.modifierElement;
+                    if (!elem.IsValidElement() && mdef.isElementSpecific)
+                    {
+                        var modRng = eventNode != null ? NodeRng(eventNode, 50 + index) : (Rng ?? new Random(Seed));
+                        elem = ElementTypes.All[modRng.Next(ElementTypes.All.Length)];
+                    }
+                    ModifierManager.AddModifier(tierDef.modifierId, this, elem, Rng);
+                    string modName = mdef.isElementSpecific && elem.IsValidElement()
+                        ? $"{mdef.displayName} ({elem})"
+                        : mdef.displayName;
+                    notes.Add($"Gained Modifier: {modName}.");
+                }
+
+                if (!string.IsNullOrEmpty(tierDef.curseModifierId) && Database.DungeonModifiers.TryGetValue(tierDef.curseModifierId, out var cdef))
+                {
+                    var celem = cdef.isElementSpecific
+                        ? ElementTypes.All[(eventNode != null ? NodeRng(eventNode, 60 + index) : (Rng ?? new Random(Seed))).Next(ElementTypes.All.Length)]
+                        : ElementType.None;
+                    ModifierManager.AddModifier(tierDef.curseModifierId, this, celem, Rng);
+                    notes.Add($"Afflicted: {cdef.displayName}.");
+                }
+
+                if (!string.IsNullOrEmpty(tierDef.bonusInfoText))
+                    notes.Add(tierDef.bonusInfoText);
+            }
+
+            Complete();
+            string baseOutcome = tierDef != null && !string.IsNullOrEmpty(tierDef.outcome) ? tierDef.outcome : (c.outcome ?? "");
+            return string.IsNullOrEmpty(baseOutcome)
+                ? string.Join(" ", notes)
+                : $"{baseOutcome} {string.Join(" ", notes)}";
+        }
+
         // ---- node completion ----
 
         void Complete()
@@ -1735,6 +1930,8 @@ namespace Obscure
             EventCurseModifiers.Clear();
             EventRiskFailModifiers.Clear();
             EventChoiceRiskFailed.Clear();
+            EventChoiceD20Rolls.Clear();
+            LastAttributeCheckResult = null;
             return true;
         }
 
@@ -1766,6 +1963,8 @@ namespace Obscure
             EventCurseModifiers.Clear();
             EventRiskFailModifiers.Clear();
             EventChoiceRiskFailed.Clear();
+            EventChoiceD20Rolls.Clear();
+            LastAttributeCheckResult = null;
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
             ResetDungeonUtilityCharges();

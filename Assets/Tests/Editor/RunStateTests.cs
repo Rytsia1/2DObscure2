@@ -705,7 +705,7 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void FallenRiseAndEmberHeartHealsAfterVictory()
+        public void FallenRemainDeadAndEmberHeartHealsLivingAfterVictory()
         {
             var run = LineRun(NodeType.Battle, NodeType.Boss);
             PinLevels(run);
@@ -714,7 +714,8 @@ namespace Obscure.Tests
             run.Party[0].hp = 50;
             run.Enter(run.Map.Get("n0"));
             run.WinCombat();
-            Assert.AreEqual(1 + (int)Math.Round(run.Party[2].stats.maxHp * 0.08f), run.Party[2].hp);
+            Assert.AreEqual(0, run.Party[2].hp, "fallen heroes remain at 0 HP after dungeon battle until revived");
+            Assert.IsFalse(run.Party[2].Alive);
             Assert.AreEqual(50 + (int)Math.Round(run.Party[0].stats.maxHp * 0.08f), run.Party[0].hp);
         }
 
@@ -800,7 +801,8 @@ namespace Obscure.Tests
             Assert.AreEqual(0, offer.expGained[1]);
             Assert.AreEqual(0, run.Party[1].exp);
             Assert.AreEqual(0, offer.levelsGained[1], "a fallen hero gains nothing");
-            Assert.IsTrue(run.Party[1].Alive, "fallen heroes still rise at 1 HP after a normal battle");
+            Assert.IsFalse(run.Party[1].Alive, "fallen heroes remain dead (0 HP) after a dungeon battle until revived");
+            Assert.AreEqual(0, run.Party[1].hp);
         }
 
         [Test]

@@ -335,11 +335,12 @@ namespace Obscure
         }
 
         // Net is shown only when the return is guaranteed; on a risky choice it would spoil the hidden risk, so cost alone.
-        static bool GoldBackGuaranteed(EventChoice c) => c.riskChancePercent <= 0 || c.riskGrantsRewardOnFail;
+        static bool GoldBackGuaranteed(EventChoice c) => !c.isAttributeCheck && (c.riskChancePercent <= 0 || c.riskGrantsRewardOnFail);
 
         static string DetermineCardTag(EventChoice c, RunState.EventChoiceStatus status, int goldBack)
         {
             if (status.isBlocked) return status.blockedReason.ToUpperInvariant();
+            if (c.isAttributeCheck) return $"{c.checkAbility} CHECK · DC {c.difficultyClass}";
             if (status.usesAdaptabilityBorrow) return "ADAPTABILITY 75%";
             if (c.isImprovise) return "HUMAN · IMPROVISE";
             if (!string.IsNullOrEmpty(c.requiredRace)) return c.requiredRace.ToUpperInvariant();
@@ -357,9 +358,15 @@ namespace Obscure
 
         // Only upfront costs/requirements are shown before choosing; outputs stay hidden until chosen. Exception: a guaranteed
         // gold return on a paid choice is folded into the cost, so the card matches what the purse actually loses.
-        static string ChoiceCostSubtitle(EventChoice c, int goldBack)
+        // For D20 Attribute Checks (FELNA-SYS-EVT-D20-001), the Attribute, DC, Party Highest Attribute Modifier, and D20 Roll info are visible upfront.
+        string ChoiceCostSubtitle(EventChoice c, int goldBack)
         {
             var parts = new List<string>();
+            if (c.isAttributeCheck)
+            {
+                int highestMod = Run != null ? Run.GetPartyHighestAttributeModifier(c.checkAbility) : 0;
+                parts.Add($"D20 ROLL · DC {c.difficultyClass} · PARTY HIGHEST {c.checkAbility} MOD: {AbilityScores.FormatMod(highestMod)}");
+            }
             if (c.goldCost > 0)
                 parts.Add(goldBack > 0 && GoldBackGuaranteed(c)
                     ? $"COST: {c.goldCost} SPOILS · RETURNS {goldBack} (NET {goldBack - c.goldCost:+0;-0;0})"
@@ -414,6 +421,48 @@ namespace Obscure
             hdr.style.width = Length.Percent(100);
             hdr.style.marginBottom = 12;
             box.Add(hdr);
+
+            if (Run?.LastAttributeCheckResult != null)
+            {
+                var check = Run.LastAttributeCheckResult.Value;
+                var checkBox = new VisualElement { name = "AttributeCheckResultBox" };
+                checkBox.style.paddingLeft = 12;
+                checkBox.style.paddingRight = 12;
+                checkBox.style.paddingTop = 8;
+                checkBox.style.paddingBottom = 8;
+                checkBox.style.marginBottom = 12;
+                checkBox.style.backgroundColor = Palette.Ink2;
+                checkBox.style.borderLeftWidth = 4;
+                checkBox.style.borderLeftColor = (check.category == AttributeCheckResultCategory.CriticalSuccess || check.category == AttributeCheckResultCategory.Success)
+                    ? Palette.Gold2
+                    : Palette.Err;
+
+                string natNote = check.IsNatural20 ? " (NATURAL 20)" : check.IsNatural1 ? " (NATURAL 1)" : "";
+                string catLabel = StatCalculator.FormatAttributeCheckCategory(check.category);
+
+                var checkTitle = new UiLabel($"{check.ability} ATTRIBUTE CHECK · TARGET DC {check.difficultyClass}");
+                checkTitle.style.fontSize = 13;
+                checkTitle.style.color = Palette.Mist2;
+                checkTitle.style.marginBottom = 3;
+                checkBox.Add(checkTitle);
+
+                var checkRollLbl = new UiLabel(
+                    $"D20 ROLL: {check.d20Roll}{natNote}  +  PARTY HIGHEST {check.ability} MOD: {AbilityScores.FormatMod(check.partyHighestModifier)}  =  TOTAL: {check.checkResult}");
+                checkRollLbl.style.fontSize = 14;
+                checkRollLbl.style.color = Palette.Mist1;
+                checkRollLbl.style.marginBottom = 4;
+                checkRollLbl.style.whiteSpace = WhiteSpace.Normal;
+                checkBox.Add(checkRollLbl);
+
+                var checkResLbl = new UiLabel($"RESULT: {catLabel}");
+                checkResLbl.style.fontSize = 15;
+                checkResLbl.style.color = (check.category == AttributeCheckResultCategory.CriticalSuccess || check.category == AttributeCheckResultCategory.Success)
+                    ? Palette.Gold1
+                    : Palette.Err;
+                checkBox.Add(checkResLbl);
+
+                box.Add(checkBox);
+            }
 
             var txt = new UiLabel(outcome.ToUpperInvariant());
             txt.style.whiteSpace = WhiteSpace.Normal;

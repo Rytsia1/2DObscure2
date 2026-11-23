@@ -512,6 +512,35 @@ namespace Obscure
         public const string Aquatic = "aquatic";
     }
 
+    public enum AttributeCheckResultCategory
+    {
+        CriticalFailure = 0,
+        Failure = 1,
+        Success = 2,
+        CriticalSuccess = 3
+    }
+
+    public class AttributeCheckOutcomeDef
+    {
+        public string outcome;
+        public int gold;
+        public int healPercent;
+        public int mpRestorePercent;
+        public int hurtPercent;
+        public int hazardDamagePercent;
+        public string item;
+        public string materialId;
+        public int materialAmount;
+        public string equipmentId;
+        public bool randomEquipment;
+        public bool relic;
+        public StatusApply battleBuff;
+        public string modifierId;
+        public ElementType modifierElement = ElementType.None;
+        public string curseModifierId;
+        public string bonusInfoText;
+    }
+
     public class EventChoice
     {
         public string label, outcome;
@@ -551,7 +580,41 @@ namespace Obscure
         public bool riskGrantsRewardOnFail;
         public string bonusInfoText;
 
+        // D20 Attribute Check System (FELNA-SYS-EVT-D20-001)
+        public bool isAttributeCheck;
+        public Ability checkAbility;
+        public int difficultyClass;
+        public AttributeCheckOutcomeDef criticalSuccessOutcome;
+        public AttributeCheckOutcomeDef successOutcome;
+        public AttributeCheckOutcomeDef failureOutcome;
+        public AttributeCheckOutcomeDef criticalFailureOutcome;
+
         public bool IsRacialOption => !string.IsNullOrEmpty(requiredRace) && !isImprovise;
+
+        public AttributeCheckOutcomeDef GetOutcomeForCategory(AttributeCheckResultCategory category) => category switch
+        {
+            AttributeCheckResultCategory.CriticalSuccess => criticalSuccessOutcome ?? successOutcome,
+            AttributeCheckResultCategory.Success => successOutcome,
+            AttributeCheckResultCategory.Failure => failureOutcome,
+            AttributeCheckResultCategory.CriticalFailure => criticalFailureOutcome ?? failureOutcome,
+            _ => failureOutcome
+        };
+
+        public bool MayGrantRelic =>
+            relic ||
+            (isAttributeCheck && (
+                (criticalSuccessOutcome != null && criticalSuccessOutcome.relic) ||
+                (successOutcome != null && successOutcome.relic) ||
+                (failureOutcome != null && failureOutcome.relic) ||
+                (criticalFailureOutcome != null && criticalFailureOutcome.relic)));
+
+        public bool MayGrantEquipment =>
+            randomEquipment || !string.IsNullOrEmpty(equipmentId) ||
+            (isAttributeCheck && (
+                (criticalSuccessOutcome != null && (criticalSuccessOutcome.randomEquipment || !string.IsNullOrEmpty(criticalSuccessOutcome.equipmentId))) ||
+                (successOutcome != null && (successOutcome.randomEquipment || !string.IsNullOrEmpty(successOutcome.equipmentId))) ||
+                (failureOutcome != null && (failureOutcome.randomEquipment || !string.IsNullOrEmpty(failureOutcome.equipmentId))) ||
+                (criticalFailureOutcome != null && (criticalFailureOutcome.randomEquipment || !string.IsNullOrEmpty(criticalFailureOutcome.equipmentId)))));
     }
 
     public class EventDef

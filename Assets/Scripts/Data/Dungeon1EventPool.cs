@@ -43,6 +43,37 @@ namespace Obscure
                     },
                     new EventChoice
                     {
+                        label = "Attune your spirit to the nameless prayers",
+                        isAttributeCheck = true,
+                        checkAbility = Ability.WIS,
+                        difficultyClass = 12,
+                        criticalSuccessOutcome = new AttributeCheckOutcomeDef
+                        {
+                            healPercent = 25,
+                            mpRestorePercent = 15,
+                            modifierId = "MOD-007",
+                            outcome = "Your serene insight separates pure devotion from lingering dread, bathing the party in restorative grace."
+                        },
+                        successOutcome = new AttributeCheckOutcomeDef
+                        {
+                            healPercent = 15,
+                            modifierId = "MOD-002",
+                            outcome = "You steady your focus and draw a calm spiritual current from the weathered altar."
+                        },
+                        failureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hurtPercent = 10,
+                            outcome = "The altar's sorrowful echoes resist your focus and sting the party's spirit."
+                        },
+                        criticalFailureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hurtPercent = 15,
+                            curseModifierId = "MOD-018",
+                            outcome = "A wave of nameless grief overwhelms your concentration, bruising body and shattering focus."
+                        }
+                    },
+                    new EventChoice
+                    {
                         label = "Channel sacred radiance",
                         requiredRace = "liichtian",
                         healPercent = 25,
@@ -188,6 +219,40 @@ namespace Obscure
                     },
                     new EventChoice
                     {
+                        label = "Command the sentry's respect by royal mandate",
+                        isAttributeCheck = true,
+                        checkAbility = Ability.CHA,
+                        difficultyClass = 12,
+                        criticalSuccessOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 35,
+                            item = "CON002",
+                            materialId = "MAT001",
+                            materialAmount = 1,
+                            modifierId = "MOD-006",
+                            bonusInfoText = "The sentry salutes and marks every safe patrol route ahead.",
+                            outcome = "Your commanding presence rekindles the sentry's ancient oath—it salutes and surrenders its finest supplies."
+                        },
+                        successOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 25,
+                            item = "CON011",
+                            outcome = "Convinced by your authority, the sentry lowers its halberd and shares spare rations."
+                        },
+                        failureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hurtPercent = 10,
+                            outcome = "Unmoved by your words, the sentry drives you back with a warning blow of its halberd shaft."
+                        },
+                        criticalFailureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hurtPercent = 18,
+                            curseModifierId = "MOD-019",
+                            outcome = "The sentry deems your claim an insult to the fallen crown and strikes a withering blow before you disengage."
+                        }
+                    },
+                    new EventChoice
+                    {
                         label = "Intimidate the sentry",
                         requiredRace = "dragonborn",
                         gold = 30,
@@ -297,6 +362,41 @@ namespace Obscure
                     },
                     new EventChoice
                     {
+                        label = "Pick the warded lockplate and unhook the needle spring",
+                        isAttributeCheck = true,
+                        checkAbility = Ability.DEX,
+                        difficultyClass = 13,
+                        isTrapChoice = true,
+                        criticalSuccessOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 65,
+                            materialId = "MAT001",
+                            materialAmount = 2,
+                            item = "draught",
+                            outcome = "Nimble fingers unhook the needle spring intact, yielding the royal hoard and spare parts."
+                        },
+                        successOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 65,
+                            materialId = "MAT001",
+                            materialAmount = 1,
+                            outcome = "You slip the tumbler cleanly before the dart spring can snap."
+                        },
+                        failureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 50,
+                            hazardDamagePercent = 14,
+                            outcome = "The lock gives way just as a needle dart grazes your hands, though you still claim most of the coin."
+                        },
+                        criticalFailureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hazardDamagePercent = 22,
+                            curseModifierId = "MOD-018",
+                            outcome = "Your tool snaps inside the warded latch, triggering the full dart volley and jamming the chest shut."
+                        }
+                    },
+                    new EventChoice
+                    {
                         label = "Detect and disarm the chest trap",
                         requiredRace = "elf",
                         gold = 65,
@@ -380,6 +480,40 @@ namespace Obscure
                         hurtPercent = 10,
                         randomEquipment = true,
                         outcome = "Bruised and winded, the party heaves the stone slab aside long enough to claim a weapon."
+                    },
+                    new EventChoice
+                    {
+                        label = "Heave the jammed stone doors open by raw force",
+                        isAttributeCheck = true,
+                        checkAbility = Ability.STR,
+                        difficultyClass = 13,
+                        criticalSuccessOutcome = new AttributeCheckOutcomeDef
+                        {
+                            randomEquipment = true,
+                            materialId = "MAT001",
+                            materialAmount = 2,
+                            gold = 25,
+                            outcome = "Overwhelming might rips the rusted bar free from the masonry, exposing the entire armory cache."
+                        },
+                        successOutcome = new AttributeCheckOutcomeDef
+                        {
+                            randomEquipment = true,
+                            materialId = "MAT001",
+                            materialAmount = 1,
+                            outcome = "With coordinated leverage, you force the heavy stone slab open without injury."
+                        },
+                        failureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hurtPercent = 10,
+                            randomEquipment = true,
+                            outcome = "The stone door slips back against your shoulders, bruising the party as you snatch one weapon from the gap."
+                        },
+                        criticalFailureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hurtPercent = 18,
+                            curseModifierId = "MOD-020",
+                            outcome = "The upper stone lintel collapses under the strain, battering the party and sealing the armory shut."
+                        }
                     },
                     new EventChoice
                     {
@@ -517,6 +651,43 @@ namespace Obscure
                         materialId = "MAT002",
                         materialAmount = 1,
                         outcome = "Dampened wraps filter the worst of the cinders, letting you cross and collect Soul Ash safely."
+                    },
+                    new EventChoice
+                    {
+                        label = "Endure the searing cinders and march through the center",
+                        isAttributeCheck = true,
+                        checkAbility = Ability.VIT,
+                        difficultyClass = 12,
+                        criticalSuccessOutcome = new AttributeCheckOutcomeDef
+                        {
+                            materialId = "MAT002",
+                            materialAmount = 1,
+                            gold = 35,
+                            modifierId = "MOD-006",
+                            outcome = "Unflinching endurance carries you straight through the ash storm, hardening the party's resolve."
+                        },
+                        successOutcome = new AttributeCheckOutcomeDef
+                        {
+                            materialId = "MAT002",
+                            materialAmount = 1,
+                            gold = 25,
+                            outcome = "You steady your breathing against the hot cinders and claim the supplies at the courtyard's heart."
+                        },
+                        failureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hazardDamagePercent = 12,
+                            materialId = "MAT002",
+                            materialAmount = 1,
+                            gold = 20,
+                            outcome = "Choking ash sears your lungs as you push through to grab the Soul Ash."
+                        },
+                        criticalFailureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hazardDamagePercent = 20,
+                            curseModifierId = "MOD-020",
+                            gold = 10,
+                            outcome = "Blinding cinders overwhelm the party's stamina, leaving everyone scorched and heavy-footed."
+                        }
                     },
                     new EventChoice
                     {
@@ -683,6 +854,39 @@ namespace Obscure
                         materialId = "MAT001",
                         materialAmount = 1,
                         outcome = "Brute leverage cracks the locking pin, granting access to the chamber beyond."
+                    },
+                    new EventChoice
+                    {
+                        label = "Decipher the astronomical inscriptions to align the seals",
+                        isAttributeCheck = true,
+                        checkAbility = Ability.INT,
+                        difficultyClass = 13,
+                        criticalSuccessOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 60,
+                            materialId = "MAT002",
+                            materialAmount = 1,
+                            modifierId = "MOD-004",
+                            outcome = "You decode both the primary seal sequence and a hidden arcane compartment behind the lintel."
+                        },
+                        successOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 45,
+                            modifierId = "MOD-004",
+                            outcome = "Your deduction aligns all three royal rings without triggering the stone counterweights."
+                        },
+                        failureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            gold = 35,
+                            hazardDamagePercent = 10,
+                            outcome = "A miscalculated ring rotation snaps a stone bolt across the party before the chamber yields."
+                        },
+                        criticalFailureOutcome = new AttributeCheckOutcomeDef
+                        {
+                            hazardDamagePercent = 16,
+                            curseModifierId = "MOD-021",
+                            outcome = "The mis-set seals lock tight and discharge an arcane ward that drains the party's mana stability."
+                        }
                     },
                     new EventChoice
                     {

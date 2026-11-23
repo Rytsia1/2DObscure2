@@ -1466,6 +1466,30 @@ Contoh event:
 }
 ```
 
+#### 10.3 Attribute Check: D20 System Integration (`FINAL — FELNA-SYS-EVT-D20-001`)
+
+> Spesifikasi lengkap: `Assets/Docs/FELNA_Attribute_Check_D20_Spec_v1.0.md`.
+
+**Attribute Check** adalah mekanik dalam Exploration Event yang memungkinkan pemain menggunakan salah satu dari enam Ability Scores (**STR**, **DEX**, **VIT**, **INT**, **WIS**, **CHA**) untuk menghadapi tantangan melalui satu kali lemparan **D20**, menggantikan formula pasif lama (`10 + CHA Mod + Social Bonuses`).
+
+1. **Party Highest Attribute Modifier (Hanya Anggota Aktif/Hidup):**
+   - Ketika pemain memilih Attribute Check, sistem secara otomatis mengambil **Attribute Modifier tertinggi dari seluruh anggota party yang masih hidup/aktif (`HP > 0`)** berdasarkan Attribute yang diminta oleh event:
+     $$\text{PartyHighestMod}(A) = \max_{u \in \text{Party}, \, u.\text{Alive}} \left( \left\lfloor \frac{\text{Score}_u(A) - 10}{2} \right\rfloor \right)$$
+   - Hanya satu modifier tertinggi yang digunakan; modifier tidak dijumlahkan, tidak dirata-ratakan, dan pemain tidak perlu memilih karakter secara manual.
+   - **Persistensi Kematian Karakter di Dungeon:** Karakter yang mati (`HP == 0`) saat battle **tidak** dikembalikan ke `1 HP` setelah battle selesai (baik pada battle Normal, Elite, Stage Miniboss, maupun Final Boss). Karakter tersebut tetap mati sampai di-revive menggunakan *Revive Item* (*Phoenix Plume*) atau di Hub Temple (Bab 16 §5–§6), dan selama mati tidak dihitung dalam `Party Highest Attribute Modifier`.
+2. **Rumus D20 Roll & Difficulty Class (DC):**
+   - $\text{Check Result} = \text{D20 Roll} + \text{Party Highest Attribute Modifier}$
+   - **DC** selalu ditampilkan kepada pemain sebelum Attribute Check dipilih, bersama nama Attribute yang diuji, nilai `Party Highest Attribute Modifier`, dan indikator `D20 Roll`.
+3. **Empat Kategori Hasil:**
+   - **Critical Success (`Natural 20`):** Selalu menghasilkan keberhasilan terbaik dan bonus tambahan, tanpa memperhatikan DC atau Modifier.
+   - **Success (`Natural 2–19` dan `Check Result >= DC`):** Tantangan berhasil diselesaikan dengan reward normal event.
+   - **Failure (`Natural 2–19` dan `Check Result < DC`):** Tantangan gagal diselesaikan dan pemain menerima konsekuensi normal event.
+   - **Critical Failure (`Natural 1`):** Selalu menghasilkan kegagalan kritis dengan konsekuensi lebih berat daripada Failure biasa, tanpa memperhatikan DC atau Modifier.
+4. **Hubungan dengan Racial Utility & Alternative Solutions:**
+   - Attribute Check ditambahkan sebagai pilihan tambahan di samping *Racial Utility* dan *Alternative Solutions*, selalu terbuka untuk dipilih berapa pun modifier party, serta tidak mengaktifkan atau menggantikan pilihan aksi Racial Utility.
+   - Efek mitigasi pasif berbasis tag seperti **Halfling `Small and Nimble` (`-50% hazard damage`)** dan **Relic `R014 Pallbearer's Gloves`** tetap berlaku mengurangi *hazard/trap damage* saat Attribute Check mengalami `Failure` atau `Critical Failure`.
+   - Rekomendasi baseline rentang DC (`RECOMMENDED`): Easy `DC 8–10`, Moderate `DC 11–13`, Hard `DC 14–16`, Very Hard `DC 17–19`.
+
 ### 11. Character Creation Integration
 
 1. Race selection menampilkan seluruh race yang tersedia.
@@ -8508,6 +8532,7 @@ Present narrative events and player decisions.
 ##### Behavior
 - Choices should use concise, action-oriented wording.
 - Show requirements before the player commits.
+- For **D20 Attribute Check** choices (`FELNA-SYS-EVT-D20-001`), display the tested **Attribute**, **Difficulty Class (DC)**, **Party Highest Attribute Modifier** (from living party members), and **D20 Roll** indicator on the choice card before the player selects it. After the roll is executed, display the natural **D20 Roll**, **Party Highest Attribute Modifier**, **Total Check Result**, final category (**Critical Success**, **Success**, **Failure**, or **Critical Failure**), and the resulting reward or consequence in the Outcome panel.
 - If an outcome is uncertain by design, do not falsely present it as guaranteed.
 - Disable choices that cannot currently be selected and explain why.
 
@@ -9078,6 +9103,8 @@ SFX dibutuhkan untuk UI, node, skill casting, physical/elemental impact, status,
 | Enhanced Common Variant, Transformation Spec & Handoff | v1.1 (Shipped) | Bab 10 §18, Bab 12 §6.2 | `AiTier.Enhanced`, Accelerando `≥ 310 ms`, 3 pilot keluarga & `10%` On-Defeat Transformation |
 
 ## Lampiran B — Riwayat Sinkronisasi November 2026
+
+- **Attribute Check: D20 System Integration v1.0 (23 November 2026):** `FELNA_Attribute_Check_D20_Spec_v1.0.md` (`FELNA-SYS-EVT-D20-001`) diintegrasikan ke GDD dan codebase C# (`Defs.cs`, `StatsSystem.cs`, `RunState.cs`, `Dungeon1EventPool.cs`, `EventScreen.cs`): menggantikan formula pasif lama (`10 + CHA Mod + Social Bonuses`) dengan sistem `Check Result = D20 Roll + Party Highest Attribute Modifier` untuk seluruh 6 Ability Scores (`STR`, `DEX`, `VIT`, `INT`, `WIS`, `CHA`); hanya menghitung anggota party yang aktif/hidup (`HP > 0`) dan menghapus auto-rise `1 HP` pasca-battle dungeon sehingga karakter yang mati tetap mati sampai di-revive dengan *Revive Item* atau di Hub Temple; menerapkan 4 kategori hasil (`Critical Success [Nat 20]`, `Success [>= DC]`, `Failure [< DC]`, `Critical Failure [Nat 1]`); mempertahankan koeksistensi dengan *Racial Utility*, *Alternative Solutions*, serta mitigasi pasif *Halfling Small and Nimble* (`-50% hazard damage`) dan *Relic R014 Pallbearer's Gloves*; serta menambahkan opsi D20 Attribute Check untuk keenam atribut pada event Dungeon 1.
 
 - **Attribute-Driven Derived Stats Integration v2.0 (23 November 2026):** `FELNA_Attribute_Progression_Derived_Stats_Spec_v1.0.md` (v2.0 — `FELNA-SYS-ATTR-002`) dikunci sebagai keputusan final: Point Buy 27 pts, +2 AP pada Skill Tier Unlock milestones Lv 4/7/10/13...[28], Hybrid Modifier `floor((Score-10)/2)`, serta integrasi penuh 6 Ability Scores ke seluruh Derived Stats melalui Primary (`w_1`) & Secondary (`w_2`) Attribute Modifiers (Shield Power `WIS/CHA`, DR `VIT/STR`, Status Res `VIT/WIS`, Stagger Res `VIT/STR`, Phys Def `STR/VIT`, Mag Def `INT/WIS`, Block Power `STR/VIT`, Physical Crit `DEX/STR` tanpa Elemental Crit, Armor Pen `STR/DEX`, Magic Pen `INT/WIS`, Counter Power `DEX/STR`, Universal Break Power `STR/DEX`, Initiative & Action Speed `DEX/INT`, QTE Stability `DEX/WIS`, Buff Eff `CHA/WIS`, Debuff Eff `CHA/INT`, Support Skill Power `CHA/WIS`). Level Cap aktif dipertahankan di 15 untuk fase saat ini dengan jadwal AP siap untuk ekspansi Level 30.
 

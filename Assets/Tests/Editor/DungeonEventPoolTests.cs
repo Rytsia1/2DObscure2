@@ -451,6 +451,11 @@ namespace Obscure.Tests
                 Assert.IsFalse(joined.Contains("RISK"), "Risk spoiler must be hidden before selection: " + joined);
                 Assert.IsFalse(joined.Contains("NOTHING HAPPENS"), "No-op outcome spoiler must be hidden before selection: " + joined);
 
+                // D20 Attribute Check pre-roll requirements (Attribute, DC, Party Highest Modifier, D20 Roll info) MUST be visible before selection
+                StringAssert.Contains("WIS CHECK · DC 12", joined);
+                StringAssert.Contains("D20 ROLL", joined);
+                StringAssert.Contains("PARTY HIGHEST WIS MOD:", joined);
+
                 screen.Close();
             }
             finally
@@ -459,6 +464,221 @@ namespace Obscure.Tests
                 UnityEngine.Object.DestroyImmediate(hostGo);
                 UnityEngine.Object.DestroyImmediate(gameGo);
             }
+        }
+
+        [Test]
+        public void PartyHighestAttributeModifier_UsesHighestLivingMemberOnly_AndExcludesDeadMembers()
+        {
+            var run = RunWithRaces("human", "elf", "dwarf", "halfling");
+            // Configure distinct STR scores: Character A (+1), Character B (+3), Character C (+0), Character D (+2)
+            run.Party[0].abilities.baseScores = AbilityScores.Uniform(10).With(Ability.STR, 12);
+            run.Party[0].abilities.racialModifiers = AbilityScores.Zero;
+            run.Party[0].RecalculateStats(fillResources: true);
+
+            run.Party[1].abilities.baseScores = AbilityScores.Uniform(10).With(Ability.STR, 16);
+            run.Party[1].abilities.racialModifiers = AbilityScores.Zero;
+            run.Party[1].RecalculateStats(fillResources: true);
+
+            run.Party[2].abilities.baseScores = AbilityScores.Uniform(10).With(Ability.STR, 10);
+            run.Party[2].abilities.racialModifiers = AbilityScores.Zero;
+            run.Party[2].RecalculateStats(fillResources: true);
+
+            run.Party[3].abilities.baseScores = AbilityScores.Uniform(10).With(Ability.STR, 14);
+            run.Party[3].abilities.racialModifiers = AbilityScores.Zero;
+            run.Party[3].RecalculateStats(fillResources: true);
+
+            Assert.AreEqual(1, run.Party[0].Mod(Ability.STR));
+            Assert.AreEqual(3, run.Party[1].Mod(Ability.STR));
+            Assert.AreEqual(0, run.Party[2].Mod(Ability.STR));
+            Assert.AreEqual(2, run.Party[3].Mod(Ability.STR));
+
+            // All alive -> Party Highest STR Modifier is +3 (neither summed to +6 nor averaged)
+            Assert.AreEqual(3, run.GetPartyHighestAttributeModifier(Ability.STR));
+
+            // Character B (+3) dies in battle and stays at 0 HP -> Party Highest STR Modifier drops to Character D (+2)
+            run.Party[1].hp = 0;
+            Assert.IsFalse(run.Party[1].Alive);
+            Assert.AreEqual(2, run.GetPartyHighestAttributeModifier(Ability.STR));
+
+            // Character D (+2) also dies -> drops to Character A (+1)
+            run.Party[3].hp = 0;
+            Assert.AreEqual(1, run.GetPartyHighestAttributeModifier(Ability.STR));
+        }
+
+        [Test]
+        public void D20AttributeCheck_EvaluationRules_MatchPromptExamplesAndNaturalOverrides()
+        {
+            // Prompt §2.D worked example: DC = 15, Party Highest STR Modifier = +3
+            Assert.AreEqual(
+                AttributeCheckResultCategory.CriticalFailure,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 1, partyHighestModifier: 3, difficultyClass: 15, out int r1));
+            Assert.AreEqual(4, r1);
+
+            Assert.AreEqual(
+                AttributeCheckResultCategory.Failure,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 5, partyHighestModifier: 3, difficultyClass: 15, out int r5));
+            Assert.AreEqual(8, r5);
+
+            Assert.AreEqual(
+                AttributeCheckResultCategory.Success,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 12, partyHighestModifier: 3, difficultyClass: 15, out int r12));
+            Assert.AreEqual(15, r12);
+
+            Assert.AreEqual(
+                AttributeCheckResultCategory.Success,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 19, partyHighestModifier: 3, difficultyClass: 15, out int r19));
+            Assert.AreEqual(22, r19);
+
+            Assert.AreEqual(
+                AttributeCheckResultCategory.CriticalSuccess,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 20, partyHighestModifier: 3, difficultyClass: 15, out int r20));
+            Assert.AreEqual(23, r20);
+
+            // Natural 20 always Critical Success even if 20 + Mod < DC
+            Assert.AreEqual(
+                AttributeCheckResultCategory.CriticalSuccess,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 20, partyHighestModifier: -1, difficultyClass: 25, out int rNat20Low));
+            Assert.AreEqual(19, rNat20Low);
+
+            // Natural 1 always Critical Failure even if 1 + Mod >= DC
+            Assert.AreEqual(
+                AttributeCheckResultCategory.CriticalFailure,
+                StatCalculator.EvaluateD20AttributeCheck(d20Roll: 1, partyHighestModifier: 10, difficultyClass: 5, out int rNat1High));
+            Assert.AreEqual(11, rNat1High);
+        }
+
+        [Test]
+        public void D20AttributeCheck_AllSixAttributesExistInDungeon1_AndExecuteFourDistinctOutcomeTiers()
+        {
+            var d1 = Database.Events.Values.Where(e => e.dungeonAct == 1).ToList();
+            var checkChoices = d1.SelectMany(e => e.choices.Where(c => c.isAttributeCheck).Select(c => (ev: e, choice: c))).ToList();
+            Assert.GreaterOrEqual(checkChoices.Count, 6, "Dungeon 1 should feature D20 Attribute Checks across all 6 attributes.");
+
+            foreach (var ab in AbilityScores.AllAbilities)
+            {
+                Assert.IsTrue(checkChoices.Any(x => x.choice.checkAbility == ab), $"Missing D20 Attribute Check for {ab}");
+            }
+
+            // Test all 4 outcome tiers on D1_EVT_008 (STR Check, DC 13) with Party Highest STR Mod = +3
+            int FindStrCheckIndex(RunState r) => Array.FindIndex(r.CurrentEvent.choices, c => c.isAttributeCheck && c.checkAbility == Ability.STR);
+
+            RunState SetupArmoryWithStrMod3()
+            {
+                var r = AtD1Event("D1_EVT_008", gold: 0, "human", "elf", "dwarf", "halfling");
+                r.Party[0].abilities.baseScores = AbilityScores.Uniform(10).With(Ability.STR, 16);
+                r.Party[0].abilities.racialModifiers = AbilityScores.Zero;
+                r.Party[0].RecalculateStats(fillResources: true);
+                return r;
+            }
+
+            // 1. Critical Success (Natural 20): +1 equipment, +2 MAT001, +25 spoils
+            var critSuccRun = SetupArmoryWithStrMod3();
+            int strIdx = FindStrCheckIndex(critSuccRun);
+            Assert.GreaterOrEqual(strIdx, 0);
+            critSuccRun.SetEventChoiceD20RollOverride(strIdx, 20);
+            string csOut = critSuccRun.ChooseEvent(strIdx);
+            Assert.IsNotNull(critSuccRun.LastAttributeCheckResult);
+            Assert.AreEqual(AttributeCheckResultCategory.CriticalSuccess, critSuccRun.LastAttributeCheckResult.Value.category);
+            Assert.AreEqual(23, critSuccRun.LastAttributeCheckResult.Value.checkResult);
+            Assert.AreEqual(1, critSuccRun.Inventory.equipment.Count);
+            Assert.AreEqual(2, critSuccRun.Inventory.GetMaterialCount("MAT001"));
+            Assert.AreEqual(25, critSuccRun.Gold);
+            StringAssert.Contains("CRITICAL SUCCESS", csOut);
+
+            // 2. Success (Roll 10 + 3 = 13 >= DC 13): +1 equipment, +1 MAT001, 0 gold, no HP lost
+            var succRun = SetupArmoryWithStrMod3();
+            int hpBeforeSucc = succRun.Party[0].hp;
+            succRun.SetEventChoiceD20RollOverride(strIdx, 10);
+            string sOut = succRun.ChooseEvent(strIdx);
+            Assert.AreEqual(AttributeCheckResultCategory.Success, succRun.LastAttributeCheckResult.Value.category);
+            Assert.AreEqual(13, succRun.LastAttributeCheckResult.Value.checkResult);
+            Assert.AreEqual(1, succRun.Inventory.equipment.Count);
+            Assert.AreEqual(1, succRun.Inventory.GetMaterialCount("MAT001"));
+            Assert.AreEqual(0, succRun.Gold);
+            Assert.AreEqual(hpBeforeSucc, succRun.Party[0].hp);
+            StringAssert.Contains("SUCCESS", sOut);
+
+            // 3. Failure (Roll 5 + 3 = 8 < DC 13): 10% hurt, +1 equipment
+            var failRun = SetupArmoryWithStrMod3();
+            int maxHpFail = failRun.Party[0].stats.maxHp;
+            failRun.SetEventChoiceD20RollOverride(strIdx, 5);
+            string fOut = failRun.ChooseEvent(strIdx);
+            Assert.AreEqual(AttributeCheckResultCategory.Failure, failRun.LastAttributeCheckResult.Value.category);
+            Assert.AreEqual(8, failRun.LastAttributeCheckResult.Value.checkResult);
+            Assert.AreEqual(maxHpFail - maxHpFail * 10 / 100, failRun.Party[0].hp);
+            Assert.AreEqual(1, failRun.Inventory.equipment.Count);
+            StringAssert.Contains("FAILURE", fOut);
+
+            // 4. Critical Failure (Natural 1): 18% hurt, MOD-020 Heavy Steps curse, 0 equipment
+            var critFailRun = SetupArmoryWithStrMod3();
+            int maxHpCritFail = critFailRun.Party[0].stats.maxHp;
+            critFailRun.SetEventChoiceD20RollOverride(strIdx, 1);
+            string cfOut = critFailRun.ChooseEvent(strIdx);
+            Assert.AreEqual(AttributeCheckResultCategory.CriticalFailure, critFailRun.LastAttributeCheckResult.Value.category);
+            Assert.AreEqual(4, critFailRun.LastAttributeCheckResult.Value.checkResult);
+            Assert.AreEqual(maxHpCritFail - maxHpCritFail * 18 / 100, critFailRun.Party[0].hp);
+            Assert.AreEqual(0, critFailRun.Inventory.equipment.Count);
+            Assert.AreEqual(1, critFailRun.ModifierManager.GetEffectiveStackCount("MOD-020"));
+            StringAssert.Contains("CRITICAL FAILURE", cfOut);
+        }
+
+        [Test]
+        public void D20AttributeCheck_FailureHazardDamage_RespectsHalflingSmallAndNimble_AndPallbearersGlovesR014()
+        {
+            // D1_EVT_006 DEX Check (DC 13, isTrapChoice = true) deals 14% hazard damage on Failure
+            var noHalf = AtD1Event("D1_EVT_006", gold: 0, "human");
+            int dexIdx = Array.FindIndex(noHalf.CurrentEvent.choices, c => c.isAttributeCheck && c.checkAbility == Ability.DEX);
+            Assert.GreaterOrEqual(dexIdx, 0);
+            noHalf.SetEventChoiceD20RollOverride(dexIdx, 3); // Failure
+            int maxHp0 = noHalf.Party[0].stats.maxHp;
+            noHalf.ChooseEvent(dexIdx);
+            Assert.AreEqual(maxHp0 - (int)Math.Round(maxHp0 * 0.14f), noHalf.Party[0].hp);
+
+            // With Halfling in party -> 50% hazard damage reduction (14% -> 7%)
+            var withHalf = AtD1Event("D1_EVT_006", gold: 0, "halfling");
+            withHalf.SetEventChoiceD20RollOverride(dexIdx, 3); // Failure
+            int maxHp1 = withHalf.Party[0].stats.maxHp;
+            string halfOut = withHalf.ChooseEvent(dexIdx);
+            Assert.AreEqual(maxHp1 - (int)Math.Round(maxHp1 * 0.07f), withHalf.Party[0].hp);
+            StringAssert.Contains("Small and Nimble", halfOut);
+
+            // With Relic R014 Pallbearer's Gloves -> trap hazard damage completely negated on first trap choice
+            var withR014 = AtD1Event("D1_EVT_006", gold: 0, "human");
+            withR014.AddRelic("R014");
+            withR014.SetEventChoiceD20RollOverride(dexIdx, 1); // Critical Failure (22% hazard damage)
+            int maxHp2 = withR014.Party[0].stats.maxHp;
+            string r014Out = withR014.ChooseEvent(dexIdx);
+            Assert.AreEqual(maxHp2, withR014.Party[0].hp, "R014 negates minor chest trap hazard damage even on D20 Critical Failure.");
+            StringAssert.Contains("Pallbearer's Gloves", r014Out);
+        }
+
+        [Test]
+        public void D20AttributeCheck_NeverLocksOnNegativeModifier_AndRacialAndAlternativeOptionsStayIndependent()
+        {
+            // Party has all 8s (Modifier -1) and no Elf/Dwarf/Liichtian/Dragonborn
+            var run = AtD1Event("D1_EVT_006", gold: 50, "human");
+            foreach (var u in run.Party)
+            {
+                u.abilities.baseScores = AbilityScores.Uniform(8);
+                u.abilities.racialModifiers = AbilityScores.Zero;
+                u.RecalculateStats(fillResources: true);
+            }
+            Assert.AreEqual(-1, run.GetPartyHighestAttributeModifier(Ability.DEX));
+
+            int dexIdx = Array.FindIndex(run.CurrentEvent.choices, c => c.isAttributeCheck && c.checkAbility == Ability.DEX);
+            int altGoldIdx = Array.FindIndex(run.CurrentEvent.choices, c => c.goldCost == 20);
+            int elfIdx = Array.FindIndex(run.CurrentEvent.choices, c => c.requiredRace == "elf");
+
+            // Attribute Check is not blocked despite -1 modifier, and does not borrow Human Adaptability
+            var dexStatus = run.GetEventChoiceStatus(dexIdx);
+            Assert.IsTrue(dexStatus.isVisible);
+            Assert.IsFalse(dexStatus.isBlocked, "Attribute Check must never lock due to low modifier.");
+            Assert.IsFalse(dexStatus.usesAdaptabilityBorrow, "Attribute Check must not use Human Adaptability borrow.");
+
+            // Alternative solution (20 spoils) and Racial option (via Adaptability) remain independently selectable
+            Assert.IsFalse(run.GetEventChoiceStatus(altGoldIdx).isBlocked);
+            Assert.IsFalse(run.GetEventChoiceStatus(elfIdx).isBlocked);
+            Assert.IsTrue(run.GetEventChoiceStatus(elfIdx).usesAdaptabilityBorrow);
         }
     }
 }
