@@ -48,7 +48,7 @@ namespace Obscure
             var screen = UiRoot.Q<VisualElement>(className: "_21b-combat-victory-confirm-reward-v2") ?? UiRoot;
 
             if ((currentOffer.modifierChoices?.Count ?? 0) > 0)
-                PrologueBanner.TryAttachPrologue(UiRoot, "DUNGEON MODIFIER: Temporary passive boost for this run only (unlike permanent Relics). Pick 1 or Skip.");
+                PrologueBanner.TryAttachPrologue(UiRoot, "DUNGEON MODIFIER: Temporary passive boost for this run only (unlike permanent Relics). Pick 1 below or Continue.", top: 530f, left: 20f, width: 370f);
 
             // Header title + top gold tags
             var titleLbl = UiRoot.Q<UiLabel>(className: "victory-vars-2");
@@ -348,7 +348,7 @@ namespace Obscure
 
             int choiceCount = Mathf.Min(3, currentOffer.choices.Count);
             bool hasModifierOffers = currentOffer.modifierChoices != null && currentOffer.modifierChoices.Count > 0;
-            bool modifierOnlyCards = choiceCount == 0 && hasModifierOffers;
+            bool modifierOnlyCards = false; // Keep Modifiers in the bottom row (matching Dungeon 1 layout) even when no Relic/Item cards are offered.
             bool isEquipmentSelected = selectedChoiceIdx >= 0 && selectedChoiceIdx < choiceCount &&
                 currentOffer.choices[selectedChoiceIdx].kind == RewardKind.Equipment &&
                 Database.Equipment.ContainsKey(currentOffer.choices[selectedChoiceIdx].id);
@@ -558,7 +558,9 @@ namespace Obscure
                 var topRow = new VisualElement { style = { flexDirection = FlexDirection.Column } };
                 var prompt = new UiLabel(choiceCount > 0
                     ? "SELECT A REWARD CARD ABOVE TO PREVIEW & CONFIRM"
-                    : "NO PRIZE AVAILABLE — COLLECT YOUR SPOILS AND CONTINUE")
+                    : hasModifierOffers
+                        ? "NO RELIC / ITEM PRIZE — PICK A MODIFIER BELOW AND CONTINUE"
+                        : "NO PRIZE AVAILABLE — COLLECT YOUR SPOILS AND CONTINUE")
                 {
                     style = { fontSize = 13, color = Palette.Gold2, letterSpacing = 0.5f, marginBottom = 6 }
                 };
@@ -586,7 +588,7 @@ namespace Obscure
                 if (choiceCount == 0)
                 {
                     confirmFocusIdx = menu.items.Count;
-                    btnRow.Add(MakePrimaryConfirmButton(skipLabel, () => Claim(-1, -1)));
+                    btnRow.Add(MakePrimaryConfirmButton(skipLabel, () => Claim(-1, hasModifierOffers ? selectedModifierIdx : -1)));
                 }
                 else
                 {

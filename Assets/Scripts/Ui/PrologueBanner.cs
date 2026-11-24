@@ -5,30 +5,69 @@ using UiLabel = UnityEngine.UIElements.Label;
 namespace Obscure
 {
     /// <summary>
-    /// Compact non-blocking [TUTORIAL] banner for non-combat Prologue screens and the first Hub arrival.
+    /// Compact non-blocking [TUTORIAL] banner and step indicator for Prologue screens and the first Hub arrival.
     /// </summary>
     public static class PrologueBanner
     {
-        public static bool ShouldShowPrologue =>
-            (Game.I?.Run?.IsPrologue ?? false) && !(Game.I?.Settings?.prologueCleared ?? false);
+        public static bool ShouldShowPrologue => Game.I?.Run?.IsPrologue ?? false;
 
-        public static void TryAttachPrologue(VisualElement root, string text, float top = 56f)
+        public static string StepLabel()
         {
-            if (ShouldShowPrologue) Attach(root, text, top);
+            var run = Game.I?.Run;
+            if (run == null || !run.IsPrologue || run.Map?.nodes == null) return "TUTORIAL";
+            int total = run.Map.nodes.Length;
+            int step = Mathf.Clamp(run.Cleared.Count + 1, 1, total);
+            return $"TUTORIAL · STEP {step}/{total}";
         }
 
-        public static VisualElement Attach(VisualElement root, string text, float top = 56f)
+        public static void TryAttachPrologue(VisualElement root, string text, float top = 56f, float left = 140f, float width = 1000f)
         {
-            if (root == null || string.IsNullOrEmpty(text)) return null;
-            var banner = new UiLabel("[TUTORIAL] " + text.ToUpperInvariant())
+            if (!ShouldShowPrologue) return;
+            AttachStepBadge(root);
+            Attach(root, text, top, left, width);
+        }
+
+        public static VisualElement AttachStepBadge(VisualElement root, string customLabel = null)
+        {
+            if (root == null) return null;
+            var badge = new UiLabel(customLabel ?? StepLabel())
             {
                 pickingMode = PickingMode.Ignore,
                 style =
                 {
                     position = Position.Absolute,
-                    left = 140,
+                    right = 16,
+                    top = 12,
+                    paddingLeft = 10,
+                    paddingRight = 10,
+                    paddingTop = 4,
+                    paddingBottom = 4,
+                    fontSize = 12,
+                    color = Palette.Ink0,
+                    backgroundColor = Palette.Gold1,
+                    borderTopLeftRadius = 4,
+                    borderTopRightRadius = 4,
+                    borderBottomLeftRadius = 4,
+                    borderBottomRightRadius = 4,
+                    unityFontStyleAndWeight = FontStyle.Bold,
+                },
+            };
+            root.Add(badge);
+            return badge;
+        }
+
+        public static VisualElement Attach(VisualElement root, string text, float top = 56f, float left = 140f, float width = 1000f)
+        {
+            if (root == null || string.IsNullOrEmpty(text)) return null;
+            var banner = new UiLabel(text.ToUpperInvariant())
+            {
+                pickingMode = PickingMode.Ignore,
+                style =
+                {
+                    position = Position.Absolute,
+                    left = left,
                     top = top,
-                    width = 1000,
+                    width = width,
                     paddingLeft = 14,
                     paddingRight = 14,
                     paddingTop = 6,

@@ -191,7 +191,7 @@ namespace Obscure
 
             var btnEl = FigmaUi.CreateButton("BEGIN PROLOGUE", "button-primary", 280f);
             footer.Add(btnEl);
-            bool canSkip = Game?.Settings != null && Game.Settings.prologueCleared;
+            bool canSkip = false; // Prologue is the mandatory tutorial stage and cannot be skipped.
             var skipEl = canSkip ? FigmaUi.CreateButton("SKIP PROLOGUE", "button-slab", 280f) : null;
             if (skipEl != null)
             {
