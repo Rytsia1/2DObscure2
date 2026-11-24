@@ -77,6 +77,14 @@ MonoBehaviour:
     fadeIn: -1
     fadeOut: -1
     lowPassCutoff: 22000
+  - id: aetherion
+    clip: {fileID: 8300000, guid: e5b8a26f34c741b5fa6c28e35d71b005, type: 3}
+    category: 3
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
   - id: ironclad_oath
     clip: {fileID: 8300000, guid: a1f4c82b90e34d71b62e84a91f3d7c01, type: 3}
     category: 4

@@ -13,8 +13,10 @@ namespace Obscure
         public const string MainMenu = "main_menu", Map = "map", Battle1 = "battle_1", Battle2 = "battle_2", Battle3 = "battle_3";
         public const string Hub = "hub";
         public const string ZoroaP1 = "zoroa_p1", ZoroaP2 = "zoroa_p2";
+        public const string Aetherion = "aetherion";
         public const string RequiemTheHarvester = ZoroaP1;
         public const string TheSoulReaping = ZoroaP2;
+        public const string ThroneOfTheForsaken = Aetherion;
         public const string AHavenAtTheWorldsEnd = Hub;
         public const string IroncladOath = "ironclad_oath";
         public const string TheBellAtMidnight = "the_bell_at_midnight";

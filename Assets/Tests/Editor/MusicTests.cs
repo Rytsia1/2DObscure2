@@ -31,6 +31,7 @@ namespace Obscure.Tests
                 (MusicIds.Hub, "A Haven at the World's End", MusicCategory.Exploration),
                 (MusicIds.ZoroaP1, "Requiem The Harvester", MusicCategory.Boss),
                 (MusicIds.ZoroaP2, "The Soul Reaping", MusicCategory.Boss),
+                (MusicIds.Aetherion, "Throne_of_the_Forsaken", MusicCategory.Boss),
                 (MusicIds.IroncladOath, "Ironclad_Oath", MusicCategory.Elite),
                 (MusicIds.TheBellAtMidnight, "The_Bell_at_Midnight", MusicCategory.Elite),
                 (MusicIds.TheFallenSovereignsRite, "The_Fallen_Sovereign_s_Rite", MusicCategory.Elite),
@@ -63,9 +64,10 @@ namespace Obscure.Tests
                 Assert.AreNotEqual(MusicIds.Battle2, pick, $"{eliteEncounterId} must no longer use Battle2");
             }
             Assert.AreEqual(MusicIds.ZoroaP1, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng));
+            Assert.AreEqual(MusicIds.Aetherion, lib.BattleMusicFor(Database.Encounter("tut_boss"), rng), "Aetherion uses Throne_of_the_Forsaken");
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(null, rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(new EncounterDef { music = "no_such_track" }, rng), "unknown id falls back");
-            foreach (var e in Database.Encounters.Values.Where(e => e.music != null))
+            foreach (var e in Database.Encounters.Values.Concat(PrologueRoster.Encounters).Where(e => e.music != null))
                 Assert.IsNotNull(lib.Get(e.music), $"{e.id} names a track the library lacks");
         }
 

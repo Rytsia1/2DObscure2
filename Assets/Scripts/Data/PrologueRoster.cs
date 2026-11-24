@@ -49,7 +49,7 @@ namespace Obscure
             new EncounterDef { id = "tut_n2", name = "Mixed Encounter", tier = Tier.Normal, focus = "Elemental damage; status effect; target priority",
                 enemies = new[] { "ossuary_acolyte", "veil_stalker" } },
             new EncounterDef { id = "tut_boss", name = "Aetherion", tier = Tier.Boss, focus = "Break Gauge; telegraph; Heavy; Defensive QTE; resources",
-                enemies = new[] { "aetherion" } },
+                enemies = new[] { "aetherion" }, music = MusicIds.Aetherion },
         };
 
         static PrologueRoster()

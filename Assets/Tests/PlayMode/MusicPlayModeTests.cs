@@ -123,6 +123,7 @@ namespace Obscure.Tests
             var battleAndEliteIds = new[]
             {
                 MusicIds.Battle1, MusicIds.Battle2, MusicIds.Battle3,
+                MusicIds.Aetherion,
                 MusicIds.IroncladOath, MusicIds.TheBellAtMidnight,
                 MusicIds.TheFallenSovereignsRite, MusicIds.TombOfTheUnbroken,
             };
@@ -168,6 +169,34 @@ namespace Obscure.Tests
             Assert.AreEqual(MusicIds.Map, Music.CurrentId);
             yield return Until(() => !Music.Fading);
             Assert.AreSame(Library.Get(MusicIds.Map).clip, Music.Source.clip);
+
+            Game.I.EndRun();
+            yield return Until(() => Game.I.State == GameState.MainMenu && !Controls.Locked);
+            yield return Until(() => !Music.Fading);
+        }
+
+        [UnityTest]
+        public IEnumerator AetherionBossCombatPlaysThroneOfTheForsaken()
+        {
+            var run = new RunState(MapGenerator.Generate(11, act: 1, stage: 1), Database.Party.Select(id => Database.Characters[id]), 11);
+            run.BeginPrologue();
+            // Advance through p0 (Battle), p_event (Event), and p1 (Battle) to reach p2 (Aetherion Boss)
+            while (run.Available.Single().encounter != "tut_boss")
+            {
+                var n = run.Available.Single();
+                run.Enter(n);
+                if (n.type == NodeType.Event) run.ChooseEvent(0);
+                else { run.WinCombat(); run.ClaimReward(-1); }
+            }
+            typeof(Game).GetProperty(nameof(Game.Run)).SetValue(Game.I, run);
+            run.Enter(run.Available.Single());
+
+            yield return GoTo(GameState.Combat);
+            Assert.AreEqual(MusicIds.Aetherion, Music.CurrentId, "Aetherion boss battle must play Throne_of_the_Forsaken");
+            yield return Until(() => !Music.Fading);
+            Assert.AreSame(Library.Get(MusicIds.Aetherion).clip, Music.Source.clip);
+            Assert.IsTrue(Music.Source.isPlaying);
+            Assert.IsTrue(Music.Source.loop);
 
             Game.I.EndRun();
             yield return Until(() => Game.I.State == GameState.MainMenu && !Controls.Locked);
