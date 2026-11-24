@@ -635,8 +635,8 @@ namespace Obscure.Tests
 
             var fallen = AtEvent("fallen");
             fallen.ChooseEvent(0);
-            Assert.AreEqual(25, fallen.Gold);
-            Assert.AreEqual(25, fallen.Stats.goldEarned);
+            Assert.AreEqual(RunConfig.ScaleEventGold(25), fallen.Gold);
+            Assert.AreEqual(RunConfig.ScaleEventGold(25), fallen.Stats.goldEarned);
 
             foreach (var e in Database.Events.Values)
                 Assert.IsNull(AtEvent(e.id).EventBlocked(e.choices.Last()), $"{e.id}: the last choice is always open");
@@ -966,6 +966,52 @@ namespace Obscure.Tests
             {
                 PersistenceCommitHandler.SetActiveCommittedSnapshot(prevSnap);
             }
+        }
+
+        [Test]
+        public void GoldEconomy_ScaledBattleEliteStageBossFinalBossTreasureAndEventRewards()
+        {
+            Assert.AreEqual((45, 83), RunConfig.BattleGold);
+            Assert.AreEqual((135, 190), RunConfig.EliteGold);
+            Assert.AreEqual((180, 250), RunConfig.StageBossGold);
+            Assert.AreEqual((120, 210), RunConfig.TreasureGold);
+            Assert.AreEqual(700, RunConfig.BossGold);
+            Assert.AreEqual(2, RunConfig.EventGoldMultiplier);
+
+            var rng = new Random(123);
+            for (int i = 0; i < 40; i++)
+            {
+                var normal = RewardGenerator.ForBattle(Tier.Normal, rng, Array.Empty<string>());
+                Assert.That(normal.gold, Is.InRange(45, 83));
+                var extraSpoils = normal.choices.Single(c => c.kind == RewardKind.Gold);
+                Assert.That(extraSpoils.amount, Is.InRange(45, 83));
+
+                var elite = RewardGenerator.ForBattle(Tier.Elite, rng, Array.Empty<string>(), isStageBoss: false);
+                Assert.That(elite.gold, Is.InRange(135, 190));
+
+                var stageBoss = RewardGenerator.ForBattle(Tier.Elite, rng, Array.Empty<string>(), isStageBoss: true);
+                Assert.That(stageBoss.gold, Is.InRange(180, 250));
+
+                var boss = RewardGenerator.ForBattle(Tier.Boss, rng, Array.Empty<string>());
+                Assert.AreEqual(700, boss.gold);
+
+                var treasure = RewardGenerator.ForTreasure(rng, Array.Empty<string>());
+                Assert.That(treasure.gold, Is.InRange(120, 210));
+            }
+
+            // End-to-end RunState check: Stage 1 Mini-Boss uses StageBossGold (180-250), Stage 3 Final Boss uses BossGold (700)
+            var d1 = NewRun(MapGenerator.Generate(61, act: 1, stage: 1), seed: 61);
+            var s1Boss = d1.Map.nodes.Single(n => n.type == NodeType.Boss);
+            typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(d1, s1Boss);
+            d1.WinCombat();
+            Assert.That(d1.PendingReward.gold, Is.InRange(180, 250), "Stage 1 mini-boss awards StageBossGold");
+            d1.ClaimReward(-1);
+
+            Assert.IsTrue(d1.AdvanceToNextStage()); // Stage 2 -> Stage 3
+            var finalBoss = d1.Map.nodes.Single(n => n.type == NodeType.Boss);
+            typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(d1, finalBoss);
+            d1.WinCombat();
+            Assert.AreEqual(700, d1.PendingReward.gold, "Final dungeon boss awards BossGold");
         }
     }
 }

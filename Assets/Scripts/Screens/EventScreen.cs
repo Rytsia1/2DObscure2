@@ -253,7 +253,7 @@ namespace Obscure
             {
                 var entry = visible[vIdx];
                 int index = entry.index;
-                int goldBack = entry.choice.goldCost > 0 ? (Run?.PreviewEventGold(index) ?? entry.choice.gold) : 0;
+                int goldBack = entry.choice.goldCost > 0 ? (Run?.PreviewEventGold(index) ?? RunConfig.ScaleEventGold(entry.choice.gold)) : 0;
                 AddChoiceCard(vIdx + 1, entry.choice, entry.status, goldBack, compact, () => Choose(index));
             }
         }

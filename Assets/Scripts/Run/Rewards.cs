@@ -8,12 +8,13 @@ namespace Obscure
     public static class RunConfig
     {
         public const float RestRecover = 0.5f;            // Recover restores this share of missing HP and MP
-        // Gold. Target (design decision 2026-11-20): clearing Dungeon 1 pays for about one full-party Temple Recovery
-        // (4 x 300), so after each dungeon the player chooses between healing everyone and buying gear.
-        // Old values (10-18 / 30-42 / 20-35 / 100) gave about 385 gold per Dungeon 1 path (BalanceSimulation.ExpPacingReport,
-        // 200 maps, 2026-11-20); these are roughly 3x. Starting values: re-measure with the report after changes to maps or prices.
-        public static readonly (int min, int max) BattleGold = (30, 55), EliteGold = (90, 125), TreasureGold = (60, 105);
-        public const int BossGold = 350;
+        // Gold. Tuned so players can fund Temple recovery, Hub upgrades, and Dungeon Shop decisions comfortably:
+        // Battle 1.5x (45-83), Regular Elite 1.5x (135-190), Stage Mini-Boss 2x (180-250),
+        // Treasure 2x (120-210), Final Boss 2x (700), and Event gold rewards 2x (goldCost unchanged).
+        public static readonly (int min, int max) BattleGold = (45, 83), EliteGold = (135, 190), StageBossGold = (180, 250), TreasureGold = (120, 210);
+        public const int BossGold = 700;
+        public const int EventGoldMultiplier = 2;
+        public static int ScaleEventGold(int baseGold) => baseGold > 0 ? baseGold * EventGoldMultiplier : 0;
         public const int RelicFallbackGold = 90;           // when every relic is owned
 
         // Retry budget per expedition (GDD failure model C): a wipe or abandon spends one; a wipe with none left ends the expedition.
@@ -36,7 +37,7 @@ namespace Obscure
     {
         static readonly string[] CommonItems = { "draught", "draught", "ether" };
 
-        public static RewardOffer ForBattle(Tier tier, Random rng, ICollection<string> ownedRelics, int act = 1)
+        public static RewardOffer ForBattle(Tier tier, Random rng, ICollection<string> ownedRelics, int act = 1, bool isStageBoss = false)
         {
             switch (tier)
             {
@@ -70,7 +71,8 @@ namespace Obscure
                 case Tier.Elite:
                     return new RewardOffer
                     {
-                        title = "Elite Vanquished", text = "Its oath is broken. Claim a prize.", gold = Roll(RunConfig.EliteGold, rng),
+                        title = "Elite Vanquished", text = "Its oath is broken. Claim a prize.",
+                        gold = Roll(isStageBoss ? RunConfig.StageBossGold : RunConfig.EliteGold, rng),
                         choices = { Relic(rng, ownedRelics), Upgrade(rng), new RewardOption { kind = RewardKind.Item, id = "elixir" } },
                     };
                 default:

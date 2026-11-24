@@ -5702,7 +5702,7 @@ namespace Obscure
                 id = "fallen", title = "Fallen Adventurer", text = "A skeleton in rotted leathers still clutches its pack.",
                 choices = new[]
                 {
-                    new EventChoice { label = "Take the coin purse", gold = 25, outcome = "25 gold. They won't need it." },
+                    new EventChoice { label = "Take the coin purse", gold = 25, outcome = "A heavy coin purse. They won't need it." },
                     new EventChoice { label = "Take the vial", item = "ether", outcome = "An Ether, still sealed." },
                 },
             },

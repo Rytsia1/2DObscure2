@@ -119,13 +119,14 @@ namespace Obscure.Tests
         [Test]
         public void GoldCostChoice_ChargesListedCost_AndReportsGoldReward()
         {
-            // Soulglass Reliquary "Stabilize": costs 35, pays back 15 -> net -20 must be explained in the outcome.
+            // Soulglass Reliquary "Stabilize": costs 35, pays back ScaleEventGold(15) = 30 -> net -5 must be explained in the outcome.
             var run = AtD1Event("D1_EVT_007", gold: 603);
             int idx = Array.FindIndex(run.CurrentEvent.choices, c => c.goldCost == 35);
-            Assert.AreEqual(15, run.PreviewEventGold(idx), "card preview matches what ChooseEvent pays");
+            int expectedBack = RunConfig.ScaleEventGold(15);
+            Assert.AreEqual(expectedBack, run.PreviewEventGold(idx), "card preview matches what ChooseEvent pays");
             string outcome = run.ChooseEvent(idx);
-            Assert.AreEqual(603 - 35 + 15, run.Gold);
-            StringAssert.Contains("Gained 15 spoils.", outcome);
+            Assert.AreEqual(603 - 35 + expectedBack, run.Gold);
+            StringAssert.Contains($"Gained {expectedBack} spoils.", outcome);
         }
 
         [Test]
@@ -143,7 +144,7 @@ namespace Obscure.Tests
 
             string outcome = run.ChooseEvent(elfIdx);
             Assert.AreEqual(0, run.HumanAdaptabilityUsesRemaining);
-            Assert.AreEqual((int)Math.Round(65 * 0.75f), run.Gold);
+            Assert.AreEqual((int)Math.Round(RunConfig.ScaleEventGold(65) * 0.75f), run.Gold);
             Assert.AreEqual(2, run.Inventory.GetMaterialCount("MAT001")); // round(2 * 0.75) = 2
             StringAssert.Contains("Adaptability", outcome);
 
@@ -169,7 +170,7 @@ namespace Obscure.Tests
             Assert.IsFalse(impStatus.usesAdaptabilityBorrow);
             cacheRun.ChooseEvent(impIdx);
             Assert.AreEqual(1, cacheRun.HumanAdaptabilityUsesRemaining, "Improvise must not consume Adaptability borrow quota.");
-            Assert.AreEqual(30, cacheRun.Gold);
+            Assert.AreEqual(RunConfig.ScaleEventGold(30), cacheRun.Gold);
             Assert.AreEqual(1, cacheRun.Inventory.GetConsumableCount("CON002"));
 
             // Non-human party cannot see or use Improvise
@@ -186,7 +187,7 @@ namespace Obscure.Tests
             int elfIdx = Array.FindIndex(treasury.CurrentEvent.choices, c => c.requiredRace == "elf");
             treasury.ChooseEvent(elfIdx);
             Assert.AreEqual(hpBefore, treasury.Party[0].hp, "Elf Detect avoids trap damage completely.");
-            Assert.AreEqual(65, treasury.Gold);
+            Assert.AreEqual(RunConfig.ScaleEventGold(65), treasury.Gold);
 
             var ashfall = AtD1Event("D1_EVT_011", gold: 0, "elf");
             int ashHpBefore = ashfall.Party[0].hp;
@@ -291,7 +292,7 @@ namespace Obscure.Tests
             var sentry = AtD1Event("D1_EVT_004", gold: 0, "dragonborn");
             int intimIdx = Array.FindIndex(sentry.CurrentEvent.choices, c => c.requiredRace == "dragonborn");
             sentry.ChooseEvent(intimIdx);
-            Assert.AreEqual(30, sentry.Gold);
+            Assert.AreEqual(RunConfig.ScaleEventGold(30), sentry.Gold);
             Assert.AreEqual(1, sentry.Inventory.GetConsumableCount("CON002"));
 
             // Ash Collector (npc; shop) does NOT auto-discount gold prices, uses Intimidate instead
@@ -582,7 +583,7 @@ namespace Obscure.Tests
             Assert.AreEqual(23, critSuccRun.LastAttributeCheckResult.Value.checkResult);
             Assert.AreEqual(1, critSuccRun.Inventory.equipment.Count);
             Assert.AreEqual(2, critSuccRun.Inventory.GetMaterialCount("MAT001"));
-            Assert.AreEqual(25, critSuccRun.Gold);
+            Assert.AreEqual(RunConfig.ScaleEventGold(25), critSuccRun.Gold);
             StringAssert.Contains("CRITICAL SUCCESS", csOut);
 
             // 2. Success (Roll 10 + 3 = 13 >= DC 13): +1 equipment, +1 MAT001, 0 gold, no HP lost

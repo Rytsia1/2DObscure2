@@ -597,7 +597,9 @@ namespace Obscure.Tests
                         var tier = Database.Encounters[node.encounter].tier;
                         if (expBefore != null && !expBefore.ContainsKey(node.encounter)) expBefore[node.encounter] = exp;
                         exp += RunConfig.ExpFor(tier);
-                        gold += tier == Tier.Boss ? RunConfig.BossGold : Mid(tier == Tier.Elite ? RunConfig.EliteGold : RunConfig.BattleGold);
+                        bool isStageBoss = node.type == NodeType.Boss && !map.IsFinalStage;
+                        gold += tier == Tier.Boss ? RunConfig.BossGold
+                            : Mid(isStageBoss ? RunConfig.StageBossGold : tier == Tier.Elite ? RunConfig.EliteGold : RunConfig.BattleGold);
                     }
                     else if (node.type == NodeType.Treasure) gold += Mid(RunConfig.TreasureGold);
                     options = node.next.Select(map.Get).ToList();
@@ -670,7 +672,8 @@ namespace Obscure.Tests
 
             sb.AppendLine();
             sb.AppendLine($"## Gold (fights and treasure only). Battle {RunConfig.BattleGold.min}-{RunConfig.BattleGold.max}, " +
-                          $"Elite {RunConfig.EliteGold.min}-{RunConfig.EliteGold.max}, Treasure {RunConfig.TreasureGold.min}-{RunConfig.TreasureGold.max}, Boss {RunConfig.BossGold}");
+                          $"Elite {RunConfig.EliteGold.min}-{RunConfig.EliteGold.max}, StageBoss {RunConfig.StageBossGold.min}-{RunConfig.StageBossGold.max}, " +
+                          $"Treasure {RunConfig.TreasureGold.min}-{RunConfig.TreasureGold.max}, Boss {RunConfig.BossGold}");
             sb.AppendLine();
             sb.AppendLine($"For scale: full-party Temple Recovery {4 * HubEconomy.TempleRecoveryCost}, one Revive {HubEconomy.TempleReviveCost}, starting gold {PersistenceCommitHandler.StarterGold}.");
             sb.AppendLine();

@@ -1032,7 +1032,7 @@ namespace Obscure
             if (heal > 0) foreach (var u in Party) u.Heal((int)Math.Round(u.stats.maxHp * heal));
 
             int fortuneBonus = ModifierManager.ConsumeBattleVictoryBonusGold();
-            PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics, Act);
+            PendingReward = RewardGenerator.ForBattle(enc.tier, NodeRng(Current), Relics, Act, isStageBoss: isStageBoss);
             // Upgrade offers are keyed to the preset heroes (knight/rogue/...). Point any that match nobody in this party at a
             // real hero, so the card names who gets it instead of silently falling back to the first hero.
             var upgradeRng = NodeRng(Current, 5);
@@ -1594,7 +1594,7 @@ namespace Obscure
         {
             var c = CurrentEvent?.choices?[index];
             if (c == null || c.gold <= 0) return 0;
-            int g = ScaleEffect(c.gold, EvaluateEventChoice(CurrentEvent, c).effectScale);
+            int g = ScaleEffect(RunConfig.ScaleEventGold(c.gold), EvaluateEventChoice(CurrentEvent, c).effectScale);
             ModifierManager.ModifyGoldReward(ref g);
             RelicManager.ModifyGoldReward(ref g);
             return g;
@@ -1637,7 +1637,7 @@ namespace Obscure
             if (status.usesAdaptabilityBorrow)
                 notes.Add("[Human Adaptability: 75% effect]");
 
-            int goldGain = grantSuccessRewards ? ScalePositive(c.gold) : 0;
+            int goldGain = grantSuccessRewards ? ScalePositive(RunConfig.ScaleEventGold(c.gold)) : 0;
             if (goldGain > 0)
             {
                 int before = Gold;
@@ -1780,10 +1780,11 @@ namespace Obscure
 
             if (tierDef != null)
             {
-                if (tierDef.gold > 0)
+                int tierGold = RunConfig.ScaleEventGold(tierDef.gold);
+                if (tierGold > 0)
                 {
                     int before = Gold;
-                    AddGold(tierDef.gold);
+                    AddGold(tierGold);
                     notes.Add($"Gained {Gold - before} spoils.");
                 }
 
