@@ -455,5 +455,46 @@ namespace Obscure.Tests
             Assert.AreEqual(1, obeliskRun.ModifierManager.Count);
             StringAssert.Contains("Gained Modifier", obOutcome);
         }
+
+        [Test]
+        public void Lifecycle_StageCheckpointReturnToHub_ClearsModifiersAndEventBuffsWhileContinueKeepsThem()
+        {
+            var prevSnap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+            try
+            {
+                var run = NewRun(MapGenerator.Generate(71, act: 1, stage: 1), seed: 71);
+                run.AddRelic("R001");
+                run.ModifierManager.AddModifier("MOD-001", run);
+                run.ModifierManager.AddModifier("MOD-002", run);
+                run.BattleBuffs.Add(new StatusApply { id = StatusId.DefenseUp, turns = 2, magnitude = 0.2f });
+
+                // Continuing directly past Stage 1 mini-boss keeps all modifiers & event buffs into Stage 2.
+                var s1Boss = run.Map.nodes.Single(n => n.type == NodeType.Boss);
+                typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(run, s1Boss);
+                run.WinCombat();
+                run.ClaimReward(-1, modifierChoice: 0);
+
+                Assert.AreEqual(2, run.Stage);
+                Assert.GreaterOrEqual(run.ModifierManager.Count, 2, "Continuing to Stage 2 preserves modifiers");
+                Assert.AreEqual(1, run.BattleBuffs.Count, "Continuing to Stage 2 preserves event battle buffs");
+
+                // Choosing Return to Hub at the stage checkpoint clears all temporary modifiers & event buffs.
+                run.ReturnToHubAtStageCheckpoint();
+                Assert.AreEqual(0, run.ModifierManager.Count, "Returning to Hub clears all Dungeon Modifiers (GDD Bab 15)");
+                Assert.AreEqual(0, run.BattleBuffs.Count, "Returning to Hub clears Event Battle Buffs");
+                CollectionAssert.Contains(run.Relics, "R001", "Permanent Relics survive Hub return");
+
+                // Re-entering at Stage 2 begins with 0 modifiers and 0 event buffs.
+                run.BeginDungeonAttempt(1, 7102, 2);
+                Assert.AreEqual(2, run.Stage);
+                Assert.AreEqual(0, run.ModifierManager.Count);
+                Assert.AreEqual(0, run.BattleBuffs.Count);
+                CollectionAssert.Contains(run.Relics, "R001");
+            }
+            finally
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(prevSnap);
+            }
+        }
     }
 }

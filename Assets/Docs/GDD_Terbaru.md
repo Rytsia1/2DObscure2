@@ -7106,6 +7106,7 @@ Dungeon Modifier adalah efek sementara berbasis run yang diperoleh dari node di 
 | Modifier diperoleh | Menjadi stack baru, atau langsung diterapkan jika bersifat sekali pakai |
 | Selama layer berlangsung | Aktif sesuai durasinya; durasi berkurang sesuai satuan modifier (battle, reward, atau sekali pakai) |
 | Boss battle | Modifier yang masih aktif tetap berlaku |
+| Kembali ke Hub setelah Mini Boss (Stage Checkpoint) | Opsional pasca layar reward Mini Boss; semua modifier (dan Event Battle Buffs) dihapus saat keluar dungeon dan tidak terbawa saat masuk kembali ke Stage berikutnya. Relic permanen tetap bertahan |
 | Dungeon clear | Semua modifier dihapus setelah layar reward boss, termasuk yang durasinya masih tersisa |
 | Run failure | Semua modifier hilang bersama run |
 | Save dan load di tengah layer | Stack, sisa durasi, dan status trigger tersimpan di run state |
@@ -7206,6 +7207,7 @@ MOD-004 dan MOD-005 di draft bernama Steady Hand dan Quick Reflex. Keduanya diga
 - Tooltip menampilkan total efek saat ini, cap, dan daftar stack beserta durasinya.
 - Debuff dan drawback memakai bingkai yang berbeda dari buff, dengan pembeda bentuk dan tidak hanya warna.
 - Layar reward boss mengingatkan bahwa semua modifier akan hilang. Relic tidak hilang.
+- Layar transisi `Stage Cleared` setelah mengalahkan Mini Boss stage menampilkan perbandingan jelas antara **Continue to Stage X** (mempertahankan modifier, Event Effects, dan Spoils) vs **Return to Hub** (mengamankan progres & Spoils 1:1 dengan Stage Checkpoint, tetapi menghapus seluruh modifier aktif & Event Effects) disertai modal konfirmasi.
 
 ## Bab 16 — Shop, Fasilitas Hub, dan Run Economy
 
@@ -7272,6 +7274,8 @@ The Hub contains six distinct facilities. Hub purchases and services use the per
 - The transfer is 1:1; there is no fee, loss, or conversion deduction.
 
 - The character party may return to the Hub with one or more characters dead; their status remains dead until revived.
+
+- **Optional Mini-Boss Extraction (Stage Checkpoint):** After defeating a non-final Stage Mini-Boss and claiming its rewards, the party may optionally return to the Hub without spending a Retry. All acquired progression (EXP, Levels, SP, Equipment, Relics, Consumables, Materials) is committed, remaining Spoils transfer 1:1 to Hub Gold, and the next dungeon entry resumes at `Stage + 1` (fresh map, floor 0). However, **all active Dungeon Modifiers and Event Battle Buffs are cleared** upon leaving/re-entering the dungeon (Bab 15 §3.1), Hub Shop limited stock does **not** restock until full Dungeon Clear (Final Boss defeat), and once-per-dungeon Racial Utility charges reset on re-entry from the Hub.
 
 #### 4.3 Failed Run
 

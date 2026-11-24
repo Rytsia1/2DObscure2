@@ -49,7 +49,9 @@ namespace Obscure
                 bool isLost = meta.expeditionLost;
                 if (placeLbl != null)
                 {
-                    placeLbl.text = isCorrupted ? "CORRUPTED" : isLost ? "EXPEDITION LOST" : $"ACT {meta.committedAct} · {meta.committedDungeonName}".ToUpperInvariant();
+                    int stage = meta.GetNormalizedNextStage();
+                    string stageTag = stage > 1 ? $" · STAGE {stage}" : "";
+                    placeLbl.text = isCorrupted ? "CORRUPTED" : isLost ? "EXPEDITION LOST" : $"ACT {meta.committedAct} · {meta.committedDungeonName}{stageTag}".ToUpperInvariant();
                     placeLbl.style.color = (isCorrupted || isLost) ? Palette.Err : Palette.Ok;
                 }
                 if (partyLbl != null)
@@ -345,7 +347,11 @@ namespace Obscure
             else
             {
                 if (detailBodyLbl != null)
-                    detailBodyLbl.text = $"Campaign: {meta.committedDungeonName}\nParty: {meta.partySummary}\nGold: {meta.hubGold:#,##0}";
+                {
+                    int stage = meta.GetNormalizedNextStage();
+                    string stageTag = stage > 1 ? $" (Stage {stage})" : "";
+                    detailBodyLbl.text = $"Campaign: {meta.committedDungeonName}{stageTag}\nParty: {meta.partySummary}\nGold: {meta.hubGold:#,##0}";
+                }
                 AddAction("LOAD CAMPAIGN", "button-primary", OnLoadClicked);
                 AddAction("BACK", "button-slab", () => Game?.Go(returnState));
             }

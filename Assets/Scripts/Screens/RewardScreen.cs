@@ -1191,6 +1191,7 @@ namespace Obscure
                 : null;
             int prevEquipCount = Run?.Inventory?.equipment?.Count ?? 0;
             bool endsPrologue = Run.IsPrologue && Run.Current?.type == NodeType.Boss;
+            bool clearedStageBoss = isStageBossReward;
 
             // The chosen element only applies to Elemental Attunement; other element modifiers keep their rolled element.
             var mods = Run.PendingReward?.modifierChoices;
@@ -1235,6 +1236,10 @@ namespace Obscure
                 PersistenceCommitHandler.CommitDungeonClear(Run);
                 SaveManager.AutoSave(out _);
                 Game.Go(Run.Act >= 8 ? GameState.Victory : GameState.DungeonClear);
+            }
+            else if (clearedStageBoss)
+            {
+                Game.Go(GameState.StageClear);
             }
             else
             {

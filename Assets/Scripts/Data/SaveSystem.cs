@@ -31,6 +31,8 @@ namespace Obscure
         public string lastSavedAtIso;
         public long lastSavedTicks;
         public int committedAct = 1;
+        public int nextDungeonAct = 1;
+        public int nextDungeonStage = 1;
         public string committedDungeonName = "Geistwald";
         public string partySummary = "4 Heroes";
         public int partyAverageLevel = 1;
@@ -39,6 +41,13 @@ namespace Obscure
         public bool isOccupied = false;
         public int retriesLeft = RunConfig.RetriesPerExpedition;
         public bool expeditionLost;
+
+        public int GetNormalizedNextStage()
+        {
+            int targetAct = Math.Clamp(nextDungeonAct > 0 ? nextDungeonAct : committedAct, 1, 8);
+            int maxStages = MapGenerator.GetStageCount(targetAct);
+            return Math.Clamp(nextDungeonStage <= 0 ? 1 : nextDungeonStage, 1, maxStages);
+        }
 
         public static string FormatSlotName(SaveSlotId slot) => slot switch
         {
@@ -77,8 +86,16 @@ namespace Obscure
         public int seed = 1;
         public int committedAct = 1;
         public int nextDungeonAct = 1;
+        public int nextDungeonStage = 1;
         public int hubGold = 0;
         public float playtimeSeconds = 0f;
+
+        public int NormalizedNextStage()
+        {
+            int targetAct = Math.Clamp(nextDungeonAct > 0 ? nextDungeonAct : committedAct, 1, 8);
+            int maxStages = MapGenerator.GetStageCount(targetAct);
+            return Math.Clamp(nextDungeonStage <= 0 ? 1 : nextDungeonStage, 1, maxStages);
+        }
 
         // Retry budget. Saves written before this field existed load with a full budget.
         public int retriesLeft = RunConfig.RetriesPerExpedition;
@@ -347,12 +364,17 @@ namespace Obscure
                 ? activeCommittedSnapshot.committedAct
                 : run.Act;
 
+            int nextStage = activeCommittedSnapshot != null
+                ? activeCommittedSnapshot.NormalizedNextStage()
+                : 1;
+
             return new CampaignSaveData
             {
                 hasConfirmedParty = true,
                 seed = run.Seed,
                 committedAct = comAct,
                 nextDungeonAct = nextAct,
+                nextDungeonStage = nextStage,
                 hubGold = run.HubGold,
                 retriesLeft = run.RetriesLeft,
                 expeditionLost = run.ExpeditionLost,
@@ -385,6 +407,7 @@ namespace Obscure
                 seed = seed,
                 committedAct = 1,
                 nextDungeonAct = 1,
+                nextDungeonStage = 1,
                 hubGold = starterGold,
                 playtimeSeconds = 0f,
                 party = confirmedParty.Select(c => SavedCharacterData.FromCharacterDef(c)).ToArray(),
@@ -414,6 +437,23 @@ namespace Obscure
             activeCommittedSnapshot = CreateCommittedSnapshot(run);
             activeCommittedSnapshot.committedAct = run.Act;
             activeCommittedSnapshot.nextDungeonAct = Math.Min(8, run.Act + 1);
+            activeCommittedSnapshot.nextDungeonStage = 1;
+        }
+
+        // Commits progress and records a Stage Checkpoint when the party voluntarily extracts to the Hub
+        // after defeating a Stage Mini-Boss. Clears temporary dungeon modifiers & event buffs, transfers
+        // Spoils 1:1 to Hub Gold, spends 0 retries, and does NOT restock the Hub Shop.
+        public static void CommitStageCheckpoint(RunState run)
+        {
+            if (run == null) return;
+            run.ModifierManager?.ClearAll();
+            run.BattleBuffs?.Clear();
+            run.TransferRunGoldToHub();
+
+            activeCommittedSnapshot = CreateCommittedSnapshot(run);
+            activeCommittedSnapshot.committedAct = run.Act;
+            activeCommittedSnapshot.nextDungeonAct = run.Act;
+            activeCommittedSnapshot.nextDungeonStage = Math.Clamp(run.Stage, 1, run.TotalStages);
         }
 
         // Persists only the Codex into the active committed snapshot (called at the end of every battle,
@@ -625,6 +665,8 @@ namespace Obscure
                 lastSavedAtIso = now.ToString("yyyy-MM-dd HH:mm"),
                 lastSavedTicks = now.Ticks,
                 committedAct = campaignData.committedAct,
+                nextDungeonAct = campaignData.nextDungeonAct,
+                nextDungeonStage = campaignData.NormalizedNextStage(),
                 committedDungeonName = SaveSlotMetadata.GetDungeonName(campaignData.committedAct),
                 partySummary = partyDesc,
                 partyAverageLevel = avgLevel,
@@ -699,7 +741,8 @@ namespace Obscure
             var roster = new CharacterRoster(startWithEmptyParty: true);
             roster.CommitConfirmedParty(partyDefs);
 
-            var run = new RunState(MapGenerator.Generate(camp.seed, camp.committedAct), partyDefs, camp.seed);
+            int loadStage = camp.committedAct == camp.nextDungeonAct ? camp.NormalizedNextStage() : 1;
+            var run = new RunState(MapGenerator.Generate(camp.seed, camp.committedAct, loadStage), partyDefs, camp.seed);
             run.RestoreFromCampaignSave(camp);
 
             if (Game.I != null)

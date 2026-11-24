@@ -238,9 +238,12 @@ namespace Obscure
             if (nextNote != null)
             {
                 int retries = Run?.RetriesLeft ?? 0;
+                var snap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+                int checkpointStage = snap != null && snap.nextDungeonAct == act ? snap.NormalizedNextStage() : 1;
+                string checkpointSuffix = checkpointStage > 1 ? $" (STAGE {checkpointStage})" : "";
                 nextNote.text = lost
                     ? "NO RETRIES WERE LEFT. THE EXPEDITION IS LOST — START A NEW GAME."
-                    : $"DUNGEON {act} IS YOUR NEXT DUNGEON AGAIN · {retries} {(retries == 1 ? "RETRY" : "RETRIES")} LEFT";
+                    : $"DUNGEON {act}{checkpointSuffix} IS YOUR NEXT DUNGEON AGAIN · {retries} {(retries == 1 ? "RETRY" : "RETRIES")} LEFT";
                 nextNote.style.color = lost ? Palette.HpLow : Palette.Mist2;
             }
 

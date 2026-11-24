@@ -475,6 +475,50 @@ namespace Obscure.Tests
             Assert.GreaterOrEqual(idx, 0);
             Assert.AreEqual(2, loaded.skillRankValues[idx]);
         }
+
+        [Test]
+        public void StageCheckpoint_SaveAndLoad_PreservesNextDungeonStageAndBackwardCompatibleDefault()
+        {
+            // 1. Legacy/default CampaignSaveData with nextDungeonStage == 0 normalizes safely to Stage 1
+            var legacy = new CampaignSaveData { committedAct = 1, nextDungeonAct = 1, nextDungeonStage = 0 };
+            Assert.AreEqual(1, legacy.NormalizedNextStage());
+
+            // 2. Commit Stage 2 checkpoint, write to Slot1 while in Hub, and reload
+            var host = new GameObject("StageCheckpointSaveHost");
+            try
+            {
+                var game = host.AddComponent<Game>();
+                Game.SetInstance(game);
+                var run = CreateTestRun(seed: 777, act: 1);
+                run.Gold = 180;
+                Assert.IsTrue(run.AdvanceToNextStage());
+                Assert.AreEqual(2, run.Stage);
+                run.ReturnToHubAtStageCheckpoint();
+
+                var roster = new CharacterRoster(startWithEmptyParty: true);
+                roster.CommitConfirmedParty(CreateTestParty());
+                game.ApplyLoadedCampaign(roster, run);
+                game.Go(GameState.Hub);
+
+                Assert.IsTrue(SaveManager.Save(SaveSlotId.Slot1, out string saveErr), saveErr);
+                var meta = SaveManager.GetSlotMetadata(SaveSlotId.Slot1);
+                Assert.IsTrue(meta.isOccupied);
+                Assert.AreEqual(1, meta.committedAct);
+                Assert.AreEqual(2, meta.GetNormalizedNextStage(), "Save slot metadata must record Stage 2 checkpoint");
+
+                // Clear in-memory snapshot and reload from Slot1
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(null);
+                Assert.IsTrue(SaveManager.Load(SaveSlotId.Slot1, out string loadErr), loadErr);
+                Assert.AreEqual(2, PersistenceCommitHandler.ActiveCommittedSnapshot.NormalizedNextStage());
+                Assert.AreEqual(2, game.Run.Stage, "Loaded run must reflect Stage 2 checkpoint");
+                Assert.AreEqual(180, game.Run.HubGold);
+            }
+            finally
+            {
+                Game.SetInstance(null);
+                UnityEngine.Object.DestroyImmediate(host);
+            }
+        }
     }
 
     [TestFixture]

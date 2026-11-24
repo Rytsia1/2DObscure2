@@ -197,6 +197,7 @@ namespace Obscure.Tests
                         yield return WinBattle();
                         break;
                     case GameState.Reward: rewardFocus = Focus; yield return TapAndSettle(Key.Enter); break; // first prize
+                    case GameState.StageClear: yield return TapAndSettle(Key.Enter); break; // primary: Continue to next stage
                     case GameState.Rest:                                                  // recover, continue
                         yield return TapAndSettle(Key.Enter);
                         yield return TapAndSettle(Key.Enter);
@@ -689,6 +690,75 @@ namespace Obscure.Tests
             {
                 Game.I.Settings.prologueCleared = prevCleared;
             }
+        }
+
+        [UnityTest]
+        public IEnumerator StageBossDefeat_OptionalReturnToHub_ClearsModifiersAndResumesAtNextStage()
+        {
+            yield return Begin();
+            yield return StartRunOnMap();
+            Assert.AreEqual(1, Run.Act);
+            Assert.AreEqual(1, Run.Stage);
+
+            int retriesBefore = Run.RetriesLeft;
+            int hubGoldBefore = Run.HubGold;
+            Run.Gold = 75;
+            Run.ModifierManager.AddModifier("MOD-001", Run);
+            Run.BattleBuffs.Add(new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.25f });
+
+            // Jump to Stage 1 Mini-Boss (d1_e6), defeat it, and claim reward -> lands on StageClearScreen
+            var stageBoss = Run.Map.nodes.First(n => n.type == NodeType.Boss);
+            typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(Run, stageBoss);
+            Game.I.Go(GameState.Combat);
+            yield return Settle();
+            yield return WinBattle();
+            Assert.AreEqual(GameState.Reward, State);
+
+            int expectedSpoilsAfterReward = Run.Gold + Run.PendingReward.gold;
+            var lasting = Run.PendingReward.modifierChoices.First(m => !Database.DungeonModifiers[m.id].IsOneShot);
+            var (modLabel, _) = RewardGenerator.Describe(
+                new RewardOption { kind = RewardKind.Modifier, id = lasting.id, element = lasting.element }, Run.ModifierManager);
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == modLabel), false, true);
+            yield return Tap(Key.Enter);
+            yield return null;
+
+            UitkMenu.ActiveMenu.Focus(UitkMenu.ActiveMenu.items.First(it => it.text == "Skip prize"), false, true);
+            yield return TapAndSettle(Key.Enter);
+
+            Assert.AreEqual(GameState.StageClear, State, "Defeating a stage mini-boss must open StageClearScreen");
+            Assert.AreEqual(2, Run.Stage);
+            Assert.Greater(Run.ModifierManager.Count, 0, "Modifiers stay active on StageClearScreen if player chooses to continue");
+            Assert.AreEqual("Continue to Stage 2", Focus, "Continue to Stage 2 should be the default focused option");
+
+            // Choose "Return to Hub" -> confirm modal -> arrive at Hub
+            var returnItem = UitkMenu.ActiveMenu.items.First(it => it.text == "Return to Hub");
+            UitkMenu.ActiveMenu.Focus(returnItem, false, true);
+            yield return Tap(Key.Enter);
+            yield return null;
+
+            var confirmItem = UitkMenu.ActiveMenu.items.First(it => it.text == "RETURN TO HUB");
+            UitkMenu.ActiveMenu.Focus(confirmItem, false, true);
+            yield return TapAndSettle(Key.Enter);
+
+            Assert.AreEqual(GameState.Hub, State);
+            Assert.AreEqual(0, Run.ModifierManager.Count, "Returning to Hub must clear all Dungeon Modifiers");
+            Assert.AreEqual(0, Run.BattleBuffs.Count, "Returning to Hub must clear all Event Battle Buffs");
+            Assert.AreEqual(0, Run.Gold, "Spoils transferred to Hub Gold");
+            Assert.GreaterOrEqual(Run.HubGold, hubGoldBefore + expectedSpoilsAfterReward, "Spoils converted 1:1 into Hub Gold");
+            Assert.AreEqual(retriesBefore, Run.RetriesLeft, "Optional mini-boss Hub return spends 0 retries");
+            Assert.AreEqual(2, PersistenceCommitHandler.ActiveCommittedSnapshot.NormalizedNextStage());
+            Assert.AreEqual(2, SaveManager.GetSlotMetadata(SaveSlotId.AutoSave).GetNormalizedNextStage(), "Hub arrival must auto-save Stage 2 checkpoint");
+
+            // Re-enter Dungeon from Hub (Dungeon Entrance is focused by default) -> starts at Stage 2 with 0 modifiers & 0 spoils
+            Assert.AreEqual("Dungeon Entrance", Focus);
+            yield return TapAndSettle(Key.Enter);
+
+            Assert.AreEqual(GameState.Map, State);
+            Assert.AreEqual(1, Run.Act);
+            Assert.AreEqual(2, Run.Stage, "Re-entering dungeon must resume at Stage 2 checkpoint");
+            Assert.AreEqual(0, Run.ModifierManager.Count, "Re-entering dungeon must start with 0 Dungeon Modifiers");
+            Assert.AreEqual(0, Run.BattleBuffs.Count, "Re-entering dungeon must start with 0 Event Battle Buffs");
+            Assert.AreEqual(0, Run.Gold, "Re-entering dungeon must start with 0 Spoils");
         }
     }
 }

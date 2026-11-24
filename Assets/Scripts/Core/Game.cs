@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 
 namespace Obscure
 {
-    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load, Party, HubShop, Armory, Blacksmith, Temple, MagicShop, DungeonClear, PrologueClear }
+    public enum GameState { MainMenu, Settings, CharacterCreation, CharacterStatus, OpeningSequence, Map, Combat, Reward, Rest, Event, GameOver, Victory, Inventory, Equipment, Skills, Shop, Hub, Talents, Save, Load, Party, HubShop, Armory, Blacksmith, Temple, MagicShop, DungeonClear, StageClear, PrologueClear }
 
     // A full-screen state. Builds its own objects under Root; destroyed on exit.
     public abstract class GameScreen
@@ -350,6 +350,7 @@ namespace Obscure
             GameState.Temple => new TempleScreen(),
             GameState.MagicShop => new MagicShopScreen(),
             GameState.DungeonClear => new DungeonClearScreen(),
+            GameState.StageClear => new StageClearScreen(),
             GameState.PrologueClear => new PrologueClearScreen(),
             // Create runs after State is already Load, so the screen we came from is PreviousState.
             GameState.Load => new LoadScreen(Game.I != null && Game.I.PreviousState == GameState.Hub ? GameState.Hub : GameState.MainMenu),

@@ -24,7 +24,8 @@ namespace Obscure
                 SaveManager.AutoSave(out _);
             }
             else if (Run != null && (Game?.PreviousState == GameState.Map || Game?.PreviousState == GameState.CharacterCreation
-                || Game?.PreviousState == GameState.OpeningSequence || Game?.PreviousState == GameState.PrologueClear))
+                || Game?.PreviousState == GameState.OpeningSequence || Game?.PreviousState == GameState.PrologueClear
+                || Game?.PreviousState == GameState.StageClear || Game?.PreviousState == GameState.DungeonClear))
             {
                 SaveManager.AutoSave(out _);
             }
@@ -135,6 +136,8 @@ namespace Obscure
             }
 
             int act = PersistenceCommitHandler.ActiveCommittedSnapshot?.nextDungeonAct ?? Run?.Act ?? 1;
+            int totalStages = MapGenerator.GetStageCount(act);
+            int targetStage = ResolveTargetStage(act);
             var gate = FigmaUi.FindInstanceWithText(UiRoot, "text-1", "Dungeon Entrance");
             var enterTag = FigmaUi.FindInstanceWithText(UiRoot, "text-0", "ENTER");
             if (gate != null)
@@ -146,6 +149,8 @@ namespace Obscure
                 var gateInner = gate.childCount > 0 ? gate[0] : gate;
                 if (enterTag != null)
                 {
+                    if (targetStage > 1 && totalStages > 1)
+                        FigmaUi.SetInstanceText(enterTag, "text-0", $"STAGE {targetStage}/{totalStages}");
                     var enterTc = enterTag.GetFirstAncestorOfType<TemplateContainer>() ?? enterTag;
                     enterTc.RemoveFromHierarchy();
                     enterTc.pickingMode = PickingMode.Ignore;
@@ -156,8 +161,21 @@ namespace Obscure
                     gateInner.Add(enterTc);
                 }
                 int retries = Run?.RetriesLeft ?? RunConfig.RetriesPerExpedition;
-                string tip = act > 8 ? "ALL EIGHT LAYERS ARE CLEAR."
-                    : $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH NO SPOILS.\nRETRIES LEFT: {retries}. A WIPE OR ABANDON SPENDS ONE.";
+                string tip;
+                if (act > 8)
+                {
+                    tip = "ALL EIGHT LAYERS ARE CLEAR.";
+                }
+                else if (targetStage > 1 && totalStages > 1)
+                {
+                    string stageName = MapGenerator.GetDungeonPlan(act).GetStage(targetStage)?.stageName;
+                    string stageSuffix = !string.IsNullOrEmpty(stageName) ? $" ({stageName.ToUpperInvariant()})" : "";
+                    tip = $"RESUME DUNGEON {act} OF 8 · STAGE {targetStage} OF {totalStages}{stageSuffix}.\nSTARTS WITH NO SPOILS AND NO MODIFIERS.\nRETRIES LEFT: {retries}. A WIPE OR ABANDON SPENDS ONE.";
+                }
+                else
+                {
+                    tip = $"BEGIN DUNGEON {act} OF 8. A NEW RUN STARTS WITH NO SPOILS.\nRETRIES LEFT: {retries}. A WIPE OR ABANDON SPENDS ONE.";
+                }
                 var gateItem = menu.Add(gate, "Dungeon Entrance", OnEmbarkClicked, tooltip: tip);
                 menu.Focus(gateItem, false, true);
             }
@@ -329,8 +347,17 @@ namespace Obscure
                 return;
             }
 
-            Run.BeginDungeonAttempt(targetAct, System.Environment.TickCount);
+            int targetStage = ResolveTargetStage(targetAct);
+            Run.BeginDungeonAttempt(targetAct, System.Environment.TickCount, targetStage);
             Game?.Go(GameState.Map);
+        }
+
+        int ResolveTargetStage(int targetAct)
+        {
+            var snap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+            if (snap != null)
+                return snap.nextDungeonAct == targetAct ? snap.NormalizedNextStage() : 1;
+            return Run != null && Run.Act == targetAct ? Math.Clamp(Run.Stage, 1, MapGenerator.GetStageCount(targetAct)) : 1;
         }
 
         void OnTitleClicked()

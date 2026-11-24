@@ -1109,8 +1109,12 @@ namespace Obscure
             ModifierManager.ClearAll();
             ResetDungeonUtilityCharges();
             PersistenceCommitHandler.RollbackUncommitted(this);
-            if (Map != null && Map.stage != 1)
-                Map = MapGenerator.Generate(DungeonSeed, Act, 1);
+            int checkpointStage = PersistenceCommitHandler.ActiveCommittedSnapshot != null
+                && PersistenceCommitHandler.ActiveCommittedSnapshot.nextDungeonAct == Act
+                ? PersistenceCommitHandler.ActiveCommittedSnapshot.NormalizedNextStage()
+                : 1;
+            if (Map != null && Map.stage != checkpointStage)
+                Map = MapGenerator.Generate(DungeonSeed, Act, checkpointStage);
             Status = RunStatus.Active;
         }
 
@@ -1937,15 +1941,36 @@ namespace Obscure
             return true;
         }
 
+        public bool CanReturnToHubAtStageCheckpoint =>
+            Status == RunStatus.Active && !IsPrologue && Stage > 1 && Current == null && Cleared.Count == 0;
+
+        // Optional Hub extraction after clearing a Stage Mini-Boss (Stage 1 -> 2, Stage 2 -> 3, etc.).
+        // Commits party progression & Spoils (1:1 to Hub Gold), records the next stage as checkpoint,
+        // clears all Dungeon Modifiers and Event Battle Buffs, spends 0 retries, and does not restock Hub Shop.
+        public int ReturnToHubAtStageCheckpoint()
+        {
+            if (!CanReturnToHubAtStageCheckpoint)
+                throw new InvalidOperationException("Cannot extract to Hub: not at a stage checkpoint.");
+
+            int transferredSpoils = Gold;
+            ModifierManager.ClearAll();
+            BattleBuffs.Clear();
+            ResetDungeonUtilityCharges();
+            PersistenceCommitHandler.CommitStageCheckpoint(this);
+            return transferredSpoils;
+        }
+
         // Every entry into a dungeon from the Hub is a new attempt with its own seed: the map, node rewards,
         // event risk rolls, dungeon shop and combat rolls all re-roll, so a retry after a wipe or abandon
         // (or reloading a Hub save) is a fresh dungeon, not a replay of a known one.
-        public void BeginDungeonAttempt(int act, int dungeonSeed)
+        public void BeginDungeonAttempt(int act, int dungeonSeed, int stage = 1)
         {
+            int safeAct = Math.Clamp(act, 1, 8);
+            int safeStage = Math.Clamp(stage, 1, MapGenerator.GetStageCount(safeAct));
             DungeonSeed = dungeonSeed;
             Rng = new Random(dungeonSeed);
             Gold = 0; // a new run starts with 0 Run Gold; Hub Gold stays in the Hub
-            RestartCurrentDungeon(MapGenerator.Generate(dungeonSeed, act, 1));
+            RestartCurrentDungeon(MapGenerator.Generate(dungeonSeed, safeAct, safeStage));
         }
 
         // Resets the current dungeon run cleanly back to Stage 1 floor 0.
@@ -2133,8 +2158,9 @@ namespace Obscure
             PendingReward = null;
             BattleBuffs.Clear();
             ModifierManager.ClearAll();
-            if (Map != null && Map.stage != 1)
-                Map = MapGenerator.Generate(DungeonSeed, Act, 1);
+            int targetStage = data.committedAct == data.nextDungeonAct ? data.NormalizedNextStage() : 1;
+            if (Map != null && Map.stage != targetStage)
+                Map = MapGenerator.Generate(DungeonSeed, Act, targetStage);
 
             Relics.Clear();
             RelicManager.ClearAll();

@@ -815,5 +815,157 @@ namespace Obscure.Tests
             int baseExp = RunConfig.BattleExp; // a local, so the bonus is computed at runtime in float like RelicManager does
             Assert.AreEqual(baseExp + (int)Math.Round(baseExp * 0.15f), run.PendingReward.expGained[0], "EXP x 1.15, bonus rounded");
         }
+
+        // ---- Optional Return to Hub after Mini-Boss (Stage Checkpoint) ----
+
+        [Test]
+        public void StageCheckpoint_ReturnToHub_CommitsProgressConvertsSpoilsClearsModifiersAndDoesNotSpendRetryOrRestockShop()
+        {
+            var prevSnap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+            try
+            {
+                var run = NewRun(MapGenerator.Generate(31, act: 1, stage: 1), seed: 31);
+                run.HubGold = 500;
+                Assert.IsTrue(HubEconomy.TryBuyHubConsumable(run, "draught", 2, out _), "Buy 2 Draughts before dungeon");
+                int expectedHubStock = HubEconomy.HubStockLeft(run, "draught");
+                Assert.AreEqual(HubEconomy.HubRestock["draught"] - 2, expectedHubStock);
+
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(PersistenceCommitHandler.CreateCommittedSnapshot(run));
+                run.BeginDungeonAttempt(1, 3101, 1);
+
+                // Acquire run progress, modifiers, event battle buff, and spend a racial utility charge
+                run.Gold = 140;
+                run.Party[0].LevelUp();
+                run.AddRelic("R001");
+                run.ModifierManager.AddModifier("MOD-001", run);
+                run.ModifierManager.AddModifier("MOD-006", run);
+                run.BattleBuffs.Add(new StatusApply { id = StatusId.AttackUp, turns = 2, magnitude = 0.2f });
+
+                Assert.IsFalse(run.CanReturnToHubAtStageCheckpoint, "Cannot extract at Stage 1 before clearing a stage mini-boss");
+
+                // Clear Stage 1 mini-boss -> advances to Stage 2
+                var s1Boss = run.Map.nodes.Single(n => n.type == NodeType.Boss);
+                typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(run, s1Boss);
+                run.WinCombat();
+                run.ClaimReward(-1, modifierChoice: 0);
+
+                Assert.AreEqual(2, run.Stage);
+                Assert.IsTrue(run.CanReturnToHubAtStageCheckpoint);
+                Assert.Greater(run.ModifierManager.Count, 0, "Modifiers remain active while choosing on StageClear");
+                int spoilsBeforeExtract = run.Gold;
+                int hubGoldBeforeExtract = run.HubGold;
+
+                int moved = run.ReturnToHubAtStageCheckpoint();
+
+                Assert.AreEqual(spoilsBeforeExtract, moved);
+                Assert.AreEqual(0, run.Gold, "Spoils transferred out of run pocket");
+                Assert.AreEqual(hubGoldBeforeExtract + spoilsBeforeExtract, run.HubGold, "Spoils converted 1:1 to Hub Gold");
+                Assert.AreEqual(0, run.ModifierManager.Count, "All dungeon modifiers cleared on Hub return");
+                Assert.AreEqual(0, run.BattleBuffs.Count, "All event battle buffs cleared on Hub return");
+                Assert.AreEqual(RunConfig.RetriesPerExpedition, run.RetriesLeft, "Stage checkpoint extraction spends 0 retries");
+                Assert.AreEqual(expectedHubStock, HubEconomy.HubStockLeft(run, "draught"), "Hub Shop does NOT restock on mini-boss extraction");
+                CollectionAssert.Contains(run.Relics, "R001", "Permanent relics are kept");
+
+                var committed = PersistenceCommitHandler.ActiveCommittedSnapshot;
+                Assert.IsNotNull(committed);
+                Assert.AreEqual(1, committed.committedAct);
+                Assert.AreEqual(1, committed.nextDungeonAct);
+                Assert.AreEqual(2, committed.NormalizedNextStage());
+                Assert.AreEqual(run.Party[0].level, committed.party[0].level);
+
+                // Re-enter dungeon from Hub -> starts at Stage 2, Floor 0, 0 Spoils, 0 Modifiers, fresh utilities
+                run.BeginDungeonAttempt(1, 3102, committed.NormalizedNextStage());
+                Assert.AreEqual(1, run.Act);
+                Assert.AreEqual(2, run.Stage);
+                Assert.IsNull(run.Current);
+                Assert.IsEmpty(run.Cleared);
+                Assert.AreEqual(0, run.Gold);
+                Assert.AreEqual(0, run.ModifierManager.Count);
+                Assert.AreEqual(0, run.BattleBuffs.Count);
+                Assert.AreEqual(1, run.HumanAdaptabilityUsesRemaining);
+                Assert.AreEqual(1, run.HalflingSneakUsesRemaining);
+                Assert.AreEqual(1, run.DragonbornShopDiscountUsesRemaining);
+                Assert.AreEqual(1, run.ElfWeaknessRevealUsesRemaining);
+            }
+            finally
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(prevSnap);
+            }
+        }
+
+        [Test]
+        public void StageCheckpoint_AbandonInStage2Or3_RollsBackToStage2CheckpointAndSpendsOneRetry()
+        {
+            var prevSnap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+            try
+            {
+                var run = NewRun(MapGenerator.Generate(45, act: 1, stage: 1), seed: 45);
+                run.HubGold = 400;
+                run.Gold = 100;
+                Assert.IsTrue(run.AdvanceToNextStage());
+                Assert.AreEqual(2, run.Stage);
+                run.ReturnToHubAtStageCheckpoint();
+                Assert.AreEqual(500, run.HubGold);
+
+                // Re-enter at Stage 2, advance to Stage 3 with uncommitted spoils/modifiers, then abandon
+                run.BeginDungeonAttempt(1, 4502, 2);
+                run.Gold = 85;
+                run.ModifierManager.AddModifier("MOD-001", run);
+                Assert.IsTrue(run.AdvanceToNextStage());
+                Assert.AreEqual(3, run.Stage);
+
+                run.AbandonExpedition();
+
+                Assert.AreEqual(RunConfig.RetriesPerExpedition - 1, run.RetriesLeft, "Abandon spends 1 retry");
+                Assert.AreEqual(0, run.Gold, "Uncommitted spoils lost");
+                Assert.AreEqual(500, run.HubGold, "Committed Hub Gold preserved");
+                Assert.AreEqual(0, run.ModifierManager.Count, "Uncommitted modifiers cleared");
+                Assert.AreEqual(2, run.Stage, "Rollback returns to committed Stage 2 checkpoint");
+                Assert.AreEqual(2, run.Map.stage);
+            }
+            finally
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(prevSnap);
+            }
+        }
+
+        [Test]
+        public void StageCheckpoint_FullDungeonClear_ResetsNextDungeonStageToOneAndRestocksHubShop()
+        {
+            var prevSnap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+            try
+            {
+                var run = NewRun(MapGenerator.Generate(55, act: 1, stage: 1), seed: 55);
+                run.HubGold = 500;
+                Assert.IsTrue(HubEconomy.TryBuyHubConsumable(run, "draught", 3, out _));
+                Assert.IsTrue(run.AdvanceToNextStage());
+                Assert.IsTrue(run.AdvanceToNextStage());
+                Assert.AreEqual(3, run.Stage);
+                run.ReturnToHubAtStageCheckpoint();
+                Assert.AreEqual(3, PersistenceCommitHandler.ActiveCommittedSnapshot.NormalizedNextStage());
+                Assert.AreEqual(HubEconomy.HubRestock["draught"] - 3, HubEconomy.HubStockLeft(run, "draught"));
+
+                // Re-enter at Stage 3 and clear the Final Boss (Zoroa)
+                run.BeginDungeonAttempt(1, 5503, 3);
+                run.Gold = 200;
+                run.ModifierManager.AddModifier("MOD-002", run);
+                var finalBoss = run.Map.nodes.Single(n => n.type == NodeType.Boss);
+                typeof(RunState).GetProperty(nameof(RunState.Current)).SetValue(run, finalBoss);
+                run.WinCombat();
+                run.ClaimReward(0);
+                Assert.IsTrue(run.Won);
+
+                PersistenceCommitHandler.CommitDungeonClear(run);
+                var snap = PersistenceCommitHandler.ActiveCommittedSnapshot;
+                Assert.AreEqual(2, snap.nextDungeonAct, "Advances to Dungeon 2");
+                Assert.AreEqual(1, snap.NormalizedNextStage(), "Next dungeon resets stage checkpoint back to Stage 1");
+                Assert.AreEqual(HubEconomy.HubRestock["draught"], HubEconomy.HubStockLeft(run, "draught"), "Hub Shop restocks on full Dungeon Clear");
+                Assert.AreEqual(0, run.ModifierManager.Count);
+            }
+            finally
+            {
+                PersistenceCommitHandler.SetActiveCommittedSnapshot(prevSnap);
+            }
+        }
     }
 }
