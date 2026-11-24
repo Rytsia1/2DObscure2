@@ -8,6 +8,13 @@ namespace Obscure.Tests
     {
         static MusicLibrary Library => Resources.Load<MusicLibrary>(MusicLibrary.ResourcePath);
         static readonly string[] BattleIds = { MusicIds.Battle1, MusicIds.Battle2, MusicIds.Battle3 };
+        static readonly string[] EliteIds =
+        {
+            MusicIds.IroncladOath,
+            MusicIds.TheBellAtMidnight,
+            MusicIds.TheFallenSovereignsRite,
+            MusicIds.TombOfTheUnbroken,
+        };
 
         [Test]
         public void LibraryMapsTheProjectTracks()
@@ -24,6 +31,10 @@ namespace Obscure.Tests
                 (MusicIds.Hub, "A Haven at the World's End", MusicCategory.Exploration),
                 (MusicIds.ZoroaP1, "Requiem The Harvester", MusicCategory.Boss),
                 (MusicIds.ZoroaP2, "The Soul Reaping", MusicCategory.Boss),
+                (MusicIds.IroncladOath, "Ironclad_Oath", MusicCategory.Elite),
+                (MusicIds.TheBellAtMidnight, "The_Bell_at_Midnight", MusicCategory.Elite),
+                (MusicIds.TheFallenSovereignsRite, "The_Fallen_Sovereign_s_Rite", MusicCategory.Elite),
+                (MusicIds.TombOfTheUnbroken, "Tomb_of_the_Unbroken", MusicCategory.Elite),
             };
             foreach (var (id, file, category) in expected)
             {
@@ -45,13 +56,72 @@ namespace Obscure.Tests
             Assert.AreEqual(MusicIds.Battle1, lib.defaultBattleMusic);
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["d1_e1"], rng), "no theme: default");
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(Database.Encounters["d1_e5"], rng));
-            Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["d1_e6"], rng));
-            Assert.AreEqual(MusicIds.Battle2, lib.BattleMusicFor(Database.Encounters["d1_e7"], rng));
+            foreach (var eliteEncounterId in new[] { "d1_e6", "d1_e7", "d1_e8", "d1_e9", "d1_e10", "d1_e11", "d1_e12" })
+            {
+                var pick = lib.BattleMusicFor(Database.Encounters[eliteEncounterId], rng);
+                CollectionAssert.Contains(EliteIds, pick, $"{eliteEncounterId} should use one of the 4 Elite/Miniboss tracks");
+                Assert.AreNotEqual(MusicIds.Battle2, pick, $"{eliteEncounterId} must no longer use Battle2");
+            }
             Assert.AreEqual(MusicIds.ZoroaP1, lib.BattleMusicFor(Database.Encounters["d1_boss"], rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(null, rng));
             Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(new EncounterDef { music = "no_such_track" }, rng), "unknown id falls back");
             foreach (var e in Database.Encounters.Values.Where(e => e.music != null))
                 Assert.IsNotNull(lib.Get(e.music), $"{e.id} names a track the library lacks");
+        }
+
+        [Test]
+        public void EliteAndMinibossBattlesPickRandomlyAmongTheFourEliteTracks()
+        {
+            var lib = Library;
+            var rng = new System.Random(42);
+
+            foreach (var encounterId in new[] { "d1_e6", "d1_e7", "d1_e8", "d1_e12" })
+            {
+                var picks = Enumerable.Range(0, 200)
+                    .Select(_ => lib.BattleMusicFor(Database.Encounters[encounterId], rng))
+                    .Distinct()
+                    .ToArray();
+                CollectionAssert.AreEquivalent(EliteIds, picks, $"{encounterId} should draw randomly across all 4 Elite/Miniboss tracks");
+            }
+        }
+
+        [Test]
+        public void EliteDetectionInspectsEnemyRosterAndProtectsBossAndNormalBattles()
+        {
+            var lib = Library;
+            var rng = new System.Random(7);
+
+            // Normal-tier encounter containing an Elite or Miniboss enemy still picks from the 4 Elite tracks
+            var mixedWithElite = new EncounterDef { id = "custom_mixed_elite", tier = Tier.Normal, enemies = new[] { "hollow_squire", "crownless_duelist" } };
+            CollectionAssert.Contains(EliteIds, lib.BattleMusicFor(mixedWithElite, rng));
+
+            var mixedWithMiniboss = new EncounterDef { id = "custom_mixed_miniboss", tier = Tier.Normal, enemies = new[] { "hollow_squire" } };
+            CollectionAssert.Contains(EliteIds, lib.BattleMusicFor(mixedWithMiniboss, new[] { "hollow_squire", "soul_reaper" }, rng));
+
+            // Enhanced Common variants remain Normal tier, not Elite
+            var enhancedOnly = new EncounterDef { id = "custom_enhanced", tier = Tier.Normal, enemies = new[] { "hollow_squire_enhanced" } };
+            Assert.IsFalse(MusicLibrary.IsEliteOrMinibossBattle(enhancedOnly));
+            Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(enhancedOnly, rng));
+
+            // Boss encounters keep Boss behavior even if an Elite enemy is present
+            Assert.IsFalse(MusicLibrary.IsEliteOrMinibossBattle(Database.Encounters["d1_boss"], new[] { "zoroa_p1", "reliquary_confessor" }));
+            Assert.AreEqual(MusicIds.ZoroaP1, lib.BattleMusicFor(Database.Encounters["d1_boss"], new[] { "zoroa_p1", "reliquary_confessor" }, rng));
+            var bossWithoutExplicitMusic = new EncounterDef { id = "custom_boss", tier = Tier.Boss, enemies = new[] { "aetherion", "reliquary_confessor" } };
+            Assert.IsFalse(MusicLibrary.IsEliteOrMinibossBattle(bossWithoutExplicitMusic));
+            Assert.AreEqual(MusicIds.Battle1, lib.BattleMusicFor(bossWithoutExplicitMusic, rng));
+
+            // Explicit encounter.music still overrides the Elite pool
+            var explicitElite = new EncounterDef { id = "custom_explicit_elite", tier = Tier.Elite, enemies = new[] { "soul_reaper" }, music = MusicIds.ZoroaP1 };
+            Assert.AreEqual(MusicIds.ZoroaP1, lib.BattleMusicFor(explicitElite, rng));
+
+            // Graceful fallback when library has no Elite tracks
+            var clone = Object.Instantiate(lib);
+            try
+            {
+                clone.tracks = clone.tracks.Where(t => t.category != MusicCategory.Elite).ToArray();
+                Assert.AreEqual(MusicIds.Battle1, clone.BattleMusicFor(Database.Encounters["d1_e6"], rng));
+            }
+            finally { Object.DestroyImmediate(clone); }
         }
 
         [Test]

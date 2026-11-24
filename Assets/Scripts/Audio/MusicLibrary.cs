@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 // All background music in one asset (Resources/MusicLibrary). Gameplay asks for music by id, never by clip.
 namespace Obscure
 {
-    public enum MusicCategory { Menu, Battle, Exploration, Boss }
+    public enum MusicCategory { Menu, Battle, Exploration, Boss, Elite }
 
     public static class MusicIds
     {
@@ -15,6 +16,10 @@ namespace Obscure
         public const string RequiemTheHarvester = ZoroaP1;
         public const string TheSoulReaping = ZoroaP2;
         public const string AHavenAtTheWorldsEnd = Hub;
+        public const string IroncladOath = "ironclad_oath";
+        public const string TheBellAtMidnight = "the_bell_at_midnight";
+        public const string TheFallenSovereignsRite = "the_fallen_sovereigns_rite";
+        public const string TombOfTheUnbroken = "tomb_of_the_unbroken";
     }
 
     [Serializable]
@@ -55,14 +60,39 @@ namespace Obscure
         public float FadeOut(MusicTrack t) => t.fadeOut >= 0 ? t.fadeOut : fadeOut;
         public float Cutoff(MusicTrack t) => t != null && t.lowPassCutoff >= 1000f ? t.lowPassCutoff : 22000f;
 
-        // The encounter's own theme if it has one, else a random battle theme (when enabled), else the default.
-        public string BattleMusicFor(EncounterDef encounter, System.Random rng)
+        public static bool IsEliteOrMinibossBattle(EncounterDef encounter, IEnumerable<string> enemyIds = null)
+        {
+            if (encounter != null && encounter.tier == Tier.Boss) return false;
+            if (encounter != null && encounter.tier == Tier.Elite) return true;
+
+            var ids = enemyIds ?? encounter?.enemies;
+            if (ids == null) return false;
+            foreach (var enemyId in ids)
+            {
+                if (string.IsNullOrEmpty(enemyId) || !Database.Enemies.TryGetValue(enemyId, out var def)) continue;
+                if (def.tier == Tier.Elite || def.aiTier == AiTier.Elite || def.aiTier == AiTier.Miniboss)
+                    return true;
+            }
+            return false;
+        }
+
+        // The encounter's own theme if it has one, else a random Elite/Miniboss track when fighting an Elite or Miniboss,
+        // else a random battle theme (when enabled), else the default.
+        public string BattleMusicFor(EncounterDef encounter, System.Random rng) =>
+            BattleMusicFor(encounter, encounter?.enemies, rng);
+
+        public string BattleMusicFor(EncounterDef encounter, IEnumerable<string> enemyIds, System.Random rng)
         {
             if (Get(encounter?.music) != null) return encounter.music;
+            if (IsEliteOrMinibossBattle(encounter, enemyIds))
+            {
+                var elite = tracks.Where(t => t.category == MusicCategory.Elite && t.clip != null).ToArray();
+                if (elite.Length > 0) return elite[(rng ?? new System.Random()).Next(elite.Length)].id;
+            }
             if (randomBattleMusic)
             {
                 var battle = tracks.Where(t => t.category == MusicCategory.Battle && t.clip != null).ToArray();
-                if (battle.Length > 0) return battle[rng.Next(battle.Length)].id;
+                if (battle.Length > 0) return battle[(rng ?? new System.Random()).Next(battle.Length)].id;
             }
             return defaultBattleMusic;
         }
@@ -76,7 +106,7 @@ namespace Obscure
             GameState.Party or GameState.HubShop or GameState.Armory or GameState.Blacksmith or GameState.Temple or GameState.MagicShop => null, // hub services keep the hub track
             GameState.CharacterCreation => creationMusic,
             GameState.OpeningSequence => "",
-            GameState.Combat => BattleMusicFor(run?.CurrentEncounter, rng),
+            GameState.Combat => BattleMusicFor(run?.CurrentEncounter, run?.CurrentEnemies, rng),
             _ => explorationMusic,
         };
     }

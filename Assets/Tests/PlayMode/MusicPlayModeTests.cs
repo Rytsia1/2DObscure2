@@ -120,7 +120,13 @@ namespace Obscure.Tests
         [UnityTest]
         public IEnumerator EachBattleThemePlaysAndLoops()
         {
-            foreach (var id in new[] { MusicIds.Battle1, MusicIds.Battle2, MusicIds.Battle3 })
+            var battleAndEliteIds = new[]
+            {
+                MusicIds.Battle1, MusicIds.Battle2, MusicIds.Battle3,
+                MusicIds.IroncladOath, MusicIds.TheBellAtMidnight,
+                MusicIds.TheFallenSovereignsRite, MusicIds.TombOfTheUnbroken,
+            };
+            foreach (var id in battleAndEliteIds)
             {
                 Music.Play(id);
                 Assert.AreEqual(id, Music.CurrentId);
@@ -131,6 +137,40 @@ namespace Obscure.Tests
                 Assert.AreEqual(1f, Music.Source.volume, 1e-4f, id);
             }
             Music.Play(MusicIds.MainMenu);
+            yield return Until(() => !Music.Fading);
+        }
+
+        [UnityTest]
+        public IEnumerator EliteAndMinibossCombatPlaysOneOfTheFourEliteThemes()
+        {
+            var eliteIds = new[]
+            {
+                MusicIds.IroncladOath, MusicIds.TheBellAtMidnight,
+                MusicIds.TheFallenSovereignsRite, MusicIds.TombOfTheUnbroken,
+            };
+            var run = new RunState(MapGenerator.Generate(11, act: 1, stage: 2), Database.Party.Select(id => Database.Characters[id]), 11);
+            typeof(Game).GetProperty(nameof(Game.Run)).SetValue(Game.I, run);
+            var node = run.Available.First(n => n.IsCombat);
+            node.type = NodeType.Elite;
+            node.encounter = "d1_e6"; // Stage 1 Miniboss: Soul Reaper
+            node.enemies = Database.Encounters["d1_e6"].enemies;
+            run.Enter(node);
+
+            yield return GoTo(GameState.Combat);
+            CollectionAssert.Contains(eliteIds, Music.CurrentId, "miniboss battle must play one of the 4 Elite/Miniboss tracks");
+            var chosenId = Music.CurrentId;
+            yield return Until(() => !Music.Fading);
+            Assert.AreSame(Library.Get(chosenId).clip, Music.Source.clip);
+            Assert.IsTrue(Music.Source.isPlaying);
+            Assert.IsTrue(Music.Source.loop);
+
+            yield return GoTo(GameState.Map);
+            Assert.AreEqual(MusicIds.Map, Music.CurrentId);
+            yield return Until(() => !Music.Fading);
+            Assert.AreSame(Library.Get(MusicIds.Map).clip, Music.Source.clip);
+
+            Game.I.EndRun();
+            yield return Until(() => Game.I.State == GameState.MainMenu && !Controls.Locked);
             yield return Until(() => !Music.Fading);
         }
 

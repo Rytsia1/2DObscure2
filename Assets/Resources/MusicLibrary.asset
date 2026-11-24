@@ -77,6 +77,38 @@ MonoBehaviour:
     fadeIn: -1
     fadeOut: -1
     lowPassCutoff: 22000
+  - id: ironclad_oath
+    clip: {fileID: 8300000, guid: a1f4c82b90e34d71b62e84a91f3d7c01, type: 3}
+    category: 4
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
+  - id: the_bell_at_midnight
+    clip: {fileID: 8300000, guid: b2e5d93c01f44e82c73f95b02a4e8d02, type: 3}
+    category: 4
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
+  - id: the_fallen_sovereigns_rite
+    clip: {fileID: 8300000, guid: c3d6e04d12a54f93d84a06c13b5f9e03, type: 3}
+    category: 4
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
+  - id: tomb_of_the_unbroken
+    clip: {fileID: 8300000, guid: d4c7f15e23b640a4e95b17d24c60af04, type: 3}
+    category: 4
+    loop: 1
+    volume: 1
+    fadeIn: -1
+    fadeOut: -1
+    lowPassCutoff: 22000
   menuMusic: main_menu
   hubMusic: hub
   creationMusic: main_menu
