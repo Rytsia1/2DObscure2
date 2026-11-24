@@ -973,6 +973,7 @@ namespace Obscure
         }
 
         public EncounterDef CurrentEncounter => Current?.encounter == null ? null : Database.Encounter(Current.encounter);
+        public string[] CurrentEnemies => Current?.enemies ?? CurrentEncounter?.enemies;
 
         bool Pending(NodeType type) => Status == RunStatus.Active && Current != null && Current.type == type && !Cleared.Contains(Current.id);
 

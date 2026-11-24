@@ -238,6 +238,7 @@ namespace Obscure
         // Number of full turns per round (posture-B starting value, untested: Zoroa P1 = 2, P2 = 2; everyone else 1).
         // If it fails: if P1 feels unfair, set P1 = 1 and keep the double turn as the Phase 2 escalation.
         public int turnsPerRound = 1;
+        public float threatOverride;   // optional override for EncounterRoller threat budget calculations
     }
 
     // One enemy move. Each hit gets its own defense reaction; allTargets hits every living party member
@@ -403,7 +404,11 @@ namespace Obscure
     {
         public string id, name, focus;
         public Tier tier;
-        public string[] enemies;   // spawn order = array order (initiative tie-break)
+        public string[] enemies;   // reference composition (threat budget & fallback), spawn order = array order (initiative tie-break)
+        public string[] anchors;   // always spawned first when rolling procedurally (null = none)
+        public string[] pool;      // candidate enemy ids for remaining slots (null = fixed encounter, no roll)
+        public int minCount, maxCount; // inclusive rolled enemy count bounds (0 = enemies.Length)
+        public bool Procedural => pool != null && pool.Length > 0;
         public int minFloor; // earliest floor this encounter can be rolled on
         public string music;  // MusicIds battle theme; null = the MusicLibrary's default (or random) battle theme
     }
@@ -644,6 +649,7 @@ namespace Obscure
         public int floor, lane;
         public string[] next = Array.Empty<string>();
         public string encounter;   // combat nodes
+        public string[] enemies;   // rolled enemy ids for this node (null = use encounter.enemies)
         public string eventId;     // event nodes
         public bool IsCombat => type == NodeType.Battle || type == NodeType.Elite || type == NodeType.Boss;
     }

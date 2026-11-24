@@ -725,7 +725,7 @@ namespace Obscure
             string pillClass;
             if (!row.known.HasValue)
             {
-                detail = row.label == "?!" ? "1 MORE HIT" : "HIT TO REVEAL";
+                detail = row.label == "?!" ? "1 MORE HIT" : "";
                 pillClass = row.label == "?!" ? "uitk-pill-warn" : "uitk-pill-muted";
             }
             else

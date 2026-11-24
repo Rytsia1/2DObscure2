@@ -47,7 +47,7 @@ namespace Obscure
             new EncounterDef { id = "tut_n1", name = "First Combat", tier = Tier.Normal, focus = "Basic combat; turn order; Defensive QTE",
                 enemies = new[] { "riftling", "riftling" } },
             new EncounterDef { id = "tut_n2", name = "Mixed Encounter", tier = Tier.Normal, focus = "Elemental damage; status effect; target priority",
-                enemies = new[] { "shard_wisp", "veil_stalker" } },
+                enemies = new[] { "ossuary_acolyte", "veil_stalker" } },
             new EncounterDef { id = "tut_boss", name = "Aetherion", tier = Tier.Boss, focus = "Break Gauge; telegraph; Heavy; Defensive QTE; resources",
                 enemies = new[] { "aetherion" } },
         };

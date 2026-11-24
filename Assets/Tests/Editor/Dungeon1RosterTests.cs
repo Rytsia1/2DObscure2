@@ -1394,6 +1394,16 @@ namespace Obscure.Tests
                 Assert.AreEqual(kv.Value.tier, enc.tier, kv.Key);
                 CollectionAssert.AreEqual(kv.Value.enemies, enc.enemies, kv.Key);
                 Assert.IsFalse(string.IsNullOrEmpty(enc.name), kv.Key);
+                if (kv.Key != "d1_boss")
+                {
+                    Assert.IsTrue(enc.Procedural, $"{kv.Key} should be procedural");
+                    Assert.IsNotNull(enc.anchors, $"{kv.Key} should keep a theme anchor");
+                    CollectionAssert.IsSubsetOf(enc.anchors, enc.enemies, $"{kv.Key} anchor in reference");
+                }
+                else
+                {
+                    Assert.IsFalse(enc.Procedural, "d1_boss stays fixed");
+                }
 
                 var b = new Battle(Database.Party.Select(id => new Unit(Database.Characters[id])), enc.enemies.Select(E), new List<string>(), new Random(1));
                 Assert.AreEqual(kv.Value.enemies.Length, b.Enemies.Count, kv.Key);

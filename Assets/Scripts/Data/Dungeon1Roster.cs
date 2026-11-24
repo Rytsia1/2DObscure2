@@ -861,40 +861,61 @@ namespace Obscure
             e.instinct = instinct;
         }
 
+        // Procedural encounter filler pools (never Enhanced variants or stage bosses).
+        public static readonly string[] AllCommonPool =
+            Enemies.Where(e => e.tier == Tier.Normal && !e.isEnhanced).Select(e => e.id).ToArray();
+        public static readonly string[] NonSupportCommonPool =
+            Enemies.Where(e => e.tier == Tier.Normal && !e.isEnhanced && e.attacks.All(a => !a.SupportsAlly)).Select(e => e.id).ToArray();
+
         public static readonly EncounterDef[] Encounters =
         {
             new EncounterDef { id = "d1_e1", name = "Ruined Gate", tier = Tier.Normal, minFloor = 0, focus = "Single-target physical; Defensive QTE introduction",
-                enemies = new[] { "hollow_squire", "hollow_squire" } },
+                enemies = new[] { "hollow_squire", "hollow_squire" },
+                anchors = new[] { "hollow_squire" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 2 },
             new EncounterDef { id = "d1_e2", name = "Fallen Watch", tier = Tier.Normal, minFloor = 0, focus = "Target priority; ranged pressure",
-                enemies = new[] { "gravebound_archer", "hollow_squire" } },
+                enemies = new[] { "gravebound_archer", "hollow_squire" },
+                anchors = new[] { "gravebound_archer" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 2 },
             new EncounterDef { id = "d1_e3", name = "Ash Courtyard", tier = Tier.Normal, minFloor = 1, focus = "Elemental damage, Burn, multi-hit Defensive QTE",
-                enemies = new[] { "cinder_wisp", "forgotten_militia" } },
+                enemies = new[] { "cinder_wisp", "forgotten_militia" },
+                anchors = new[] { "cinder_wisp" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 2 },
             new EncounterDef { id = "d1_e4", name = "Kennel of Lost Souls", tier = Tier.Normal, minFloor = 1, focus = "Status pressure; enemy sustain",
-                enemies = new[] { "soulbound_hound", "crypt_leech" } },
+                enemies = new[] { "soulbound_hound", "crypt_leech" },
+                anchors = new[] { "soulbound_hound" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 2 },
             new EncounterDef { id = "d1_e5", name = "Royal Remnant", tier = Tier.Normal, minFloor = 2, focus = "Enemy durability; target selection",
-                enemies = new[] { "possessed_royal_guard", "hollow_squire", "hollow_squire" } },
+                enemies = new[] { "possessed_royal_guard", "hollow_squire", "hollow_squire" },
+                anchors = new[] { "possessed_royal_guard" }, pool = NonSupportCommonPool, minCount = 3, maxCount = 4 },
             new EncounterDef { id = "d1_e6", name = "Reaper's Passage", tier = Tier.Elite, minFloor = 2, focus = "Stage 1 Boss: Soul Reaper with 3 allies; Accelerando",
-                enemies = new[] { "soul_reaper", "forgotten_militia", "soulbound_hound", "crypt_leech" }, music = MusicIds.Battle2 },
+                enemies = new[] { "soul_reaper", "forgotten_militia", "soulbound_hound", "crypt_leech" },
+                anchors = new[] { "soul_reaper" }, pool = AllCommonPool, minCount = 3, maxCount = 4, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e7", name = "Ossuary Threshold", tier = Tier.Elite, minFloor = 2, focus = "Stage 2 Boss: Royal Ossuary Knight with 3 allies; Heavy & Break interrupt",
-                enemies = new[] { "royal_ossuary_knight", "possessed_royal_guard", "gravebound_archer", "hollow_squire" }, music = MusicIds.Battle2 },
+                enemies = new[] { "royal_ossuary_knight", "possessed_royal_guard", "gravebound_archer", "hollow_squire" },
+                anchors = new[] { "royal_ossuary_knight" }, pool = AllCommonPool, minCount = 3, maxCount = 4, music = MusicIds.Battle2 },
             // v1.9 FINAL random Elite pool (sheet E6-E10). d1_e6 / d1_e7 above are the special Miniboss nodes (stage bosses).
             new EncounterDef { id = "d1_e8", name = "Reliquary Chamber", tier = Tier.Elite, minFloor = 2, focus = "Healing / sustain support; focus the Confessor",
-                enemies = new[] { "reliquary_confessor", "gravebound_archer" }, music = MusicIds.Battle2 },
+                enemies = new[] { "reliquary_confessor", "gravebound_archer" },
+                anchors = new[] { "reliquary_confessor" }, pool = AllCommonPool, minCount = 2, maxCount = 3, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e9", name = "Shattered Chapel", tier = Tier.Elite, minFloor = 2, focus = "Magic damage / MP management",
-                enemies = new[] { "graveglass_arcanist", "cinder_wisp" }, music = MusicIds.Battle2 },
+                enemies = new[] { "graveglass_arcanist", "cinder_wisp" },
+                anchors = new[] { "graveglass_arcanist" }, pool = AllCommonPool, minCount = 2, maxCount = 3, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e10", name = "Duelist's Gallery", tier = Tier.Elite, minFloor = 2, focus = "Physical multi-hit pressure",
-                enemies = new[] { "crownless_duelist", "forgotten_militia" }, music = MusicIds.Battle2 },
+                enemies = new[] { "crownless_duelist", "forgotten_militia" },
+                anchors = new[] { "crownless_duelist" }, pool = AllCommonPool, minCount = 2, maxCount = 3, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e11", name = "Fallen Mausoleum", tier = Tier.Elite, minFloor = 2, focus = "Durability / Break pressure",
-                enemies = new[] { "tombstone_colossus", "hollow_squire" }, music = MusicIds.Battle2 },
+                enemies = new[] { "tombstone_colossus", "hollow_squire" },
+                anchors = new[] { "tombstone_colossus" }, pool = AllCommonPool, minCount = 2, maxCount = 3, music = MusicIds.Battle2 },
             new EncounterDef { id = "d1_e12", name = "Mourning Bell Hall", tier = Tier.Elite, minFloor = 2, focus = "AoE / control pressure; telegraphed Funeral Chorus",
-                enemies = new[] { "mourning_bell_wraith", "soulbound_hound" }, music = MusicIds.Battle2 },
+                enemies = new[] { "mourning_bell_wraith", "soulbound_hound" },
+                anchors = new[] { "mourning_bell_wraith" }, pool = AllCommonPool, minCount = 2, maxCount = 3, music = MusicIds.Battle2 },
             // ponytail: support encounters are not in the v1.9 workbook Encounter Plan.
             new EncounterDef { id = "d1_e13", name = "Chapel of Bones", tier = Tier.Normal, minFloor = 1, focus = "Enemy healer; kill the Acolyte first",
-                enemies = new[] { "ossuary_acolyte", "possessed_royal_guard" } },
+                enemies = new[] { "ossuary_acolyte", "possessed_royal_guard" },
+                anchors = new[] { "ossuary_acolyte" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 3 },
             new EncounterDef { id = "d1_e14", name = "Dirge Hall", tier = Tier.Normal, minFloor = 2, focus = "Attack Up support on a multi-hit ally",
-                enemies = new[] { "dirge_chanter", "forgotten_militia", "hollow_squire" } },
+                enemies = new[] { "dirge_chanter", "forgotten_militia", "hollow_squire" },
+                anchors = new[] { "dirge_chanter" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 4 },
             new EncounterDef { id = "d1_e15", name = "Banner Line", tier = Tier.Normal, minFloor = 1, focus = "Defense Up support shielding the focused ally",
-                enemies = new[] { "hollow_banneret", "gravebound_archer" } },
+                enemies = new[] { "hollow_banneret", "gravebound_archer" },
+                anchors = new[] { "hollow_banneret" }, pool = NonSupportCommonPool, minCount = 2, maxCount = 3 },
             new EncounterDef { id = "d1_boss", name = "Zoroa", tier = Tier.Boss, focus = "Signature multi-hit, resources, Break timing, Phase 2 escalation",
                 enemies = new[] { "zoroa_p1" }, music = MusicIds.ZoroaP1 }, // Phase 2 replaces Phase 1; never spawned alongside it
         };

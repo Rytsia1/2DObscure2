@@ -19,7 +19,8 @@ namespace Obscure
             var party = Run?.Party ?? Database.Party.Select(id => new Unit(Database.Characters[id])).ToList();
             var items = Run?.Items ?? new List<string>(Database.StartingItems);
             var rng = Run?.Rng ?? new System.Random(1);
-            var battle = new Battle(party, enc.enemies.Select(id => Database.Enemies[id]), items, rng, Run);
+            var enemyIds = Run?.CurrentEnemies ?? enc.enemies;
+            var battle = new Battle(party, enemyIds.Select(id => Database.Enemies[id]), items, rng, Run);
             if (Run != null)
             {
                 foreach (var buff in Run.BattleBuffs)
@@ -363,7 +364,7 @@ namespace Obscure
                 SpawnPopup($"{StatusInfo.Name(id).ToUpperInvariant()} {(immune ? "IMMUNE" : "RESISTED")}",
                     h.pos.x + h.size.x / 2f, h.pos.y - 50f, Palette.Mist3, 14);
             };
-            AddLog(isBossHud ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(encounter) + (encounter.enemies.Length > 1 ? " attack!" : " attacks!"));
+            AddLog(isBossHud ? $"{Database.Enemies[encounter.enemies[0]].name} awakens." : MapScreen.EnemyNames(battle.Enemies.Select(e => e.enemy.id)) + (battle.Enemies.Count > 1 ? " attack!" : " attacks!"));
             StartCoroutine(Loop());
         }
 

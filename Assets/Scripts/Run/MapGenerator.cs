@@ -79,6 +79,7 @@ namespace Obscure
             {
                 var map = Build(
                     new Random(unchecked(seed * 7919 + attempt + safeAct * 1013 + (safeStage - 1) * 2677)),
+                    seed,
                     safeAct,
                     safeStage,
                     totalStages,
@@ -88,7 +89,7 @@ namespace Obscure
             throw new InvalidOperationException($"No valid map for seed {seed} act {act} stage {safeStage}");
         }
 
-        static MapDef Build(Random rng, int act, int stage, int totalStages, DungeonStageDef stageDef)
+        static MapDef Build(Random rng, int seed, int act, int stage, int totalStages, DungeonStageDef stageDef)
         {
             bool allowEliteNodes = stageDef == null || stageDef.allowEliteNodes;
             var floors = new List<List<NodeDef>>();
@@ -113,7 +114,11 @@ namespace Obscure
                 {
                     var parents = f == 0 ? new List<NodeDef>() : floors[f - 1].Where(p => p.next.Contains(n.id)).ToList();
                     n.type = PickType(f, parents, rng, allowEliteNodes);
-                    if (n.IsCombat) n.encounter = PickEncounter(n, rng, stageDef, stageBosses);
+                    if (n.IsCombat)
+                    {
+                        n.encounter = PickEncounter(n, rng, stageDef, stageBosses);
+                        n.enemies = RollNodeEnemies(seed, act, stage, n.id, n.encounter);
+                    }
                     if (n.type == NodeType.Event) n.eventId = events[nextEvent++ % events.Count].id; // spread events before repeating
                 }
             string dungeonName = (act >= 1 && act <= DungeonNames.Length) ? DungeonNames[act - 1] : $"Dungeon {act}";
@@ -180,6 +185,17 @@ namespace Obscure
                 return t;
             }
             return NodeType.Battle;
+        }
+
+        static string[] RollNodeEnemies(int seed, int act, int stage, string nodeId, string encounterId)
+        {
+            if (string.IsNullOrEmpty(encounterId) || !Database.Encounters.TryGetValue(encounterId, out var enc))
+                return null;
+            int h = 17;
+            if (nodeId != null)
+                foreach (char ch in nodeId) h = unchecked(h * 31 + ch);
+            int nodeSeed = unchecked(seed * 486187739 + act * 1000003 + stage * 9176 + h * 7919);
+            return EncounterRoller.Roll(enc, new Random(nodeSeed));
         }
 
         static string PickEncounter(NodeDef n, Random rng, DungeonStageDef stageDef, ICollection<string> stageBosses)

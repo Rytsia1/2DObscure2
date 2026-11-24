@@ -1075,20 +1075,26 @@ namespace Obscure
             Game.Go(Game.StateFor(n));
         }
 
-        public static string EnemyNames(EncounterDef e) => string.Join(", ", e.enemies.GroupBy(id => id)
+        public static string EnemyNames(EncounterDef e) => EnemyNames(e.enemies);
+
+        public static string EnemyNames(IEnumerable<string> enemyIds) => string.Join(", ", enemyIds.GroupBy(id => id)
             .Select(g => (g.Count() > 1 ? g.Count() + "X " : "") + Database.Enemies[g.Key].name.ToUpper()));
 
-        string Describe(NodeDef n) => n.type switch
+        string Describe(NodeDef n)
         {
-            NodeType.Shop => "A WANDERING MERCHANT HAS SET UP CAMP. BUY SUPPLIES WITH SPOILS.",
-            NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
-            NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
-            NodeType.Rest => "A QUIET ALCOVE. RECOVER THE PARTY OR IMPROVE A HERO.",
-            NodeType.Elite => EnemyNames(Database.Encounter(n.encounter)) + ". DANGEROUS — VALUABLE BOUNTY.",
-            NodeType.Boss => currentMap != null && !currentMap.IsFinalStage
-                ? $"STAGE {currentMap.stage} BOSS. " + EnemyNames(Database.Encounter(n.encounter)) + $". DEFEAT TO ADVANCE TO STAGE {currentMap.stage + 1}."
-                : "THE FINAL ENCOUNTER OF THIS DUNGEON. " + EnemyNames(Database.Encounter(n.encounter)) + ".",
-            _ => EnemyNames(Database.Encounter(n.encounter)),
-        };
+            string[] nodeEnemies = n.IsCombat ? (n.enemies ?? Database.Encounter(n.encounter).enemies) : null;
+            return n.type switch
+            {
+                NodeType.Shop => "A WANDERING MERCHANT HAS SET UP CAMP. BUY SUPPLIES WITH SPOILS.",
+                NodeType.Event => "SOMETHING STIRS IN THE DARK. OUTCOME UNKNOWN.",
+                NodeType.Treasure => "A CACHE OF SPOILS. CHOOSE ONE PRIZE.",
+                NodeType.Rest => "A QUIET ALCOVE. RECOVER THE PARTY OR IMPROVE A HERO.",
+                NodeType.Elite => EnemyNames(nodeEnemies) + ". DANGEROUS — VALUABLE BOUNTY.",
+                NodeType.Boss => currentMap != null && !currentMap.IsFinalStage
+                    ? $"STAGE {currentMap.stage} BOSS. " + EnemyNames(nodeEnemies) + $". DEFEAT TO ADVANCE TO STAGE {currentMap.stage + 1}."
+                    : "THE FINAL ENCOUNTER OF THIS DUNGEON. " + EnemyNames(nodeEnemies) + ".",
+                _ => EnemyNames(nodeEnemies),
+            };
+        }
     }
 }
