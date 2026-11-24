@@ -5726,6 +5726,17 @@ namespace Obscure
                     new EventChoice { label = "Move on", outcome = "You pass the obelisk in silence." },
                 },
             },
+            new EventDef
+            {
+                id = "tut_event", dungeonAct = -1, title = "Threshold Sanctuary",
+                text = "A quiet lantern hangs in an alcove between the rifts. Its steady flame offers a moment to prepare.",
+                choices = new[]
+                {
+                    new EventChoice { label = "Draw an offense blessing", randomModifier = true, modifierCategoryFilter = ModifierCategory.Offense, outcome = "A focused cadence settles over your party." },
+                    new EventChoice { label = "Anoint weapons", battleBuff = new StatusApply { id = StatusId.AttackUp, turns = 3, magnitude = 0.25f }, outcome = "Your blades drink the lantern's light." },
+                    new EventChoice { label = "Rest by the lantern", healPercent = 30, outcome = "Warmth steadies your breath before the next rift." },
+                },
+            },
         }.Concat(BuildDungeon1Events()).ToArray(), e => e.id);
 
 

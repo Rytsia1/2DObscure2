@@ -1201,15 +1201,16 @@ namespace Obscure
             Stats.battlesWon++;
             foreach (var u in Party) if (!u.Alive) u.hp = 1;
             bool boss = Current.type == NodeType.Boss;
+            bool isSecondFight = Current.encounter == "tut_n2";
             PendingReward = new RewardOffer
             {
                 title = boss ? "The Threshold Opens" : "Victory",
                 text = boss ? $"Aetherion yields. The path to Layer 1 is open. +{Prologue.ClearGold} Hub Gold."
-                    : Current.floor == 1 ? "Supplies recovered: 2 Draughts and 1 Ether."
+                    : isSecondFight ? "Supplies recovered: 2 Draughts and 1 Ether."
                     : "The rift residue fades.",
             };
             AwardBattleExp(Prologue.NodeExp[Math.Min(Current.floor, Prologue.NodeExp.Length - 1)], standing);
-            if (Current.floor == 1) foreach (var id in Prologue.Node2Items) TryAddConsumable(id);
+            if (isSecondFight) foreach (var id in Prologue.Node2Items) TryAddConsumable(id);
             // Non-boss Prologue battles offer 3 combat/recovery/QTE modifiers (Utility gold/loot mods have no effect in Prologue).
             // The Prologue boss (p2) excludes modifiers because EndPrologue clears them before entering the Hub.
             if (!boss)

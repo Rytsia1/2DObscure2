@@ -12,21 +12,27 @@ namespace Obscure
     public partial class CombatView
     {
         UiLabel coachLabel;
+        int coachTipVersion;
         static readonly System.Collections.Generic.HashSet<string> shownVariantTips = new();
 
         static PrologueScript Tut => Game.I?.Run?.Tutorial;
         static bool Coaching => Tut != null && !(Game.I?.Settings?.prologueCleared ?? false);
         static string QteKeyName => Controls.QteKey.ToString().ToUpperInvariant();
+        static string GuardKeyName => Controls.GuardKey.ToString().ToUpperInvariant();
 
         void InitCoach(Battle battle)
         {
             coachLabel = new UiLabel("")
             {
+                pickingMode = PickingMode.Ignore,
                 style =
                 {
-                    position = Position.Absolute, left = 120, top = 436, width = 1040,
-                    paddingLeft = 12, paddingRight = 12, paddingTop = 6, paddingBottom = 6,
-                    fontSize = 15, color = Palette.Gold1, backgroundColor = Palette.Hex(0x070A14, 220),
+                    position = Position.Absolute, left = 100, top = 432, width = 1080,
+                    paddingLeft = 14, paddingRight = 14, paddingTop = 6, paddingBottom = 6,
+                    fontSize = 14, color = Palette.Gold1, backgroundColor = Palette.Hex(0x070A14, 234),
+                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                    borderTopColor = Palette.Gold2, borderBottomColor = Palette.Gold2,
+                    borderLeftColor = Palette.Gold2, borderRightColor = Palette.Gold2,
                     unityTextAlign = TextAnchor.MiddleCenter, whiteSpace = WhiteSpace.Normal, display = DisplayStyle.None,
                 },
             };
@@ -36,36 +42,59 @@ namespace Obscure
             battle.Logged += line =>
             {
                 if (line.Contains("weakness!") || line.Contains("- resisted"))
-                    Tip("affinity", "WEAK takes 1.5x damage, RESISTED takes 0.5x. Check an enemy's dossier before you strike.");
+                    Tip("affinity", "WEAK takes 1.5x damage, RESISTED takes 0.5x. Open ANALYSIS (free, no turn) to inspect weaknesses.");
                 else if (line.Contains("charge is interrupted"))
-                    Tip("interrupt", "INTERRUPTED! A Broken enemy drops its charged attack.");
+                    Tip("interrupt", "INTERRUPTED! A Broken enemy drops its charged attack and takes bonus damage.");
                 else if (line.Contains("Aetherion opens the rift"))
                     Tip("phase2", "Phase 2: Rift Pulse hits the whole party. One ward protects everyone it hits.");
+                else if (line.Contains("Bone Mending"))
+                    Tip("healer_heal", "Ossuary Acolyte just healed an ally — focus down support enemies first!");
                 else if (line.StartsWith("Stalker") && line.EndsWith("is destroyed.") && Tut != null && !Tut.FearScripted)
                     Tip("intent_win", "You stopped it before it acted. Reading intent pays.");
+
+                // Lesson B: a single hero falling does not end the fight or run.
+                var downHero = battle.Party.FirstOrDefault(p => !p.Alive);
+                if (downHero != null && battle.Party.Any(p => p.Alive))
+                    Tip("hero_down", $"{downHero.name} is DOWN! As long as one hero stands, the fight continues — revive them or win to recover.");
             };
             battle.StatusApplied += (target, id, isBuff) =>
             {
+                // Lesson D: connect status icons & popups to buff/debuff meaning.
                 if (id == StatusId.Fear && target.IsPlayer)
                     Tip("fear", $"{target.name} is afraid: FEAR lowers damage dealt for a few turns. Statuses show as icons on the hero card.");
+                else
+                    Tip("status_visual", "Status icons & popups on a unit card show active buffs (blue/gold) or debuffs (red/purple).");
             };
         }
 
-        // Non-blocking: stays up until the next prompt.
+        // Non-blocking: stays up until replaced or auto-hides after 7 seconds.
         void Tip(string key, string text)
         {
             if (!Coaching || coachLabel == null || !Tut.FirstTime("tip:" + key)) return;
-            coachLabel.text = text.ToUpperInvariant();
-            coachLabel.style.display = DisplayStyle.Flex;
+            ShowBannerText("[TUTORIAL] " + text);
             AddLog("TIP: " + text);
+            StartCoroutine(AutoHideTip(++coachTipVersion));
         }
 
         void ShowVariantTip(string key, string text)
         {
             if (coachLabel == null || !shownVariantTips.Add(key)) return;
+            ShowBannerText("[TUTORIAL] " + text);
+            AddLog("TIP: " + text);
+            StartCoroutine(AutoHideTip(++coachTipVersion));
+        }
+
+        void ShowBannerText(string text)
+        {
             coachLabel.text = text.ToUpperInvariant();
             coachLabel.style.display = DisplayStyle.Flex;
-            AddLog("TIP: " + text);
+        }
+
+        IEnumerator AutoHideTip(int token)
+        {
+            yield return new WaitForSeconds(7f);
+            if (coachLabel != null && coachTipVersion == token)
+                coachLabel.style.display = DisplayStyle.None;
         }
 
         // Blocking: the fight waits for Confirm, so the player reads it before the bar moves.
@@ -77,8 +106,8 @@ namespace Obscure
                 if (Tut != null ? !Tut.FirstTime("tip:" + key) : !shownVariantTips.Add(key)) yield break;
             }
             else if (!Coaching || !Tut.FirstTime("tip:" + key)) yield break;
-            coachLabel.text = (text + "   ▸ CONFIRM").ToUpperInvariant();
-            coachLabel.style.display = DisplayStyle.Flex;
+            coachTipVersion++;
+            ShowBannerText($"[TUTORIAL] {text}   ▸ CONFIRM [ENTER / {QteKeyName}]");
             AddLog("TIP: " + text);
             yield return null;
             while (!Controls.Confirm) yield return null;
@@ -93,16 +122,27 @@ namespace Obscure
                 yield return Coach("assist" + Tut.Floor, "The Threshold sent you back. If the timing feels too tight, Settings has QTE Assist (Relaxed or Auto).");
             switch (Tut.Floor)
             {
-                case 0: yield return Coach("turns", "The bar at the top is the turn order: units act left to right, faster units first."); break;
-                case 1: yield return Coach("intent", "Icons over an enemy show a dangerous move before it happens, and who it targets."); break;
-                default: yield return Coach("break", "Hits wear down the BREAK gauge. At zero the enemy is Broken: it loses its next action and takes more damage."); break;
+                case 0:
+                    yield return Coach("turns", "Turn Order at the top shows who acts next (left to right, fastest first).");
+                    break;
+                case 2:
+                    // Lesson E: reading enemy cards + healer priority.
+                    yield return Coach("intent", "Read enemy cards for HP, gold BREAK bar & intent icons. Ossuary Acolyte heals allies — focus it down first!");
+                    break;
+                default:
+                    yield return Coach("break", "Hits wear down the gold BREAK gauge. Breaking an enemy while it charges CANCELS its big attack and boosts damage taken.");
+                    break;
             }
         }
 
         IEnumerator CoachPlayerTurn(Combatant c)
         {
             if (!Coaching) yield break;
-            yield return Coach("menu", "Your turn: choose ATTACK or a SKILL, then a target. Skills cost MP.");
+            // Lesson C: HP, MP, Break gauge & resources.
+            yield return Coach("menu", "Choose ATTACK or a SKILL. HP carries between fights; Skills cost MP (Basic Attack & PERFECT QTEs restore MP); hits drain BREAK.");
+
+            if (Tut.Floor == 2)
+                Tip("analysis", "Use ANALYSIS in the command menu (free, no turn spent) to inspect full enemy HP, Break & elemental weaknesses.");
 
             var threat = Battle.Enemies.FirstOrDefault(e => e.Alive && (e.Charge ?? e.Intent) != null && (e.Charge ?? e.Intent).move.HasHeavy);
             var plan = threat == null ? null : threat.Charge ?? threat.Intent;
@@ -116,26 +156,28 @@ namespace Obscure
 
             if (c.unit.hp < c.Stats.maxHp * 0.35f && Battle.Items.Count > 0)
                 Tip("item", "Low HP: ITEM > Draught restores 40 HP. HP carries over between fights.");
+            else if (c.unit.mp < 10)
+                Tip("low_mp", "Low MP: Basic ATTACK (and PERFECT QTEs) restore MP, or use an Ether from ITEM.");
         }
 
+        // Lesson A: Attack QTE vs Defensive QTE.
         IEnumerator CoachOffense() =>
-            Coach("offense", $"Attack QTE: press {QteKeyName} in the bracket. PERFECT hits harder, breaks more and refunds 1 MP.");
+            Coach("offense", $"ATTACK QTE (offense): press {QteKeyName} in the bracket — boosts damage, Break & refunds 1 MP on PERFECT.");
 
         IEnumerator CoachDefense(BattleAction act, Qte qte)
         {
             if (qte is DefenseQte dq && Battle?.run != null && !Battle.run.IsPrologue)
             {
-                string guardName = Controls.GuardKey.ToString().ToUpperInvariant();
                 for (int i = 0; i < dq.Hits; i++)
                 {
                     var v = dq.VariantAt(i);
                     if (v == QteVariant.None) continue;
                     string vText = v switch
                     {
-                        QteVariant.GuardCue => $"GUARD CUE (blue shield): press {guardName} as it lands.",
-                        QteVariant.Slip => $"SLIP (notched shield): hold {guardName} when it appears, then RELEASE at impact.",
-                        QteVariant.Flurry => $"FLURRY (two pips): press {guardName} twice — at impact and again right after.",
-                        QteVariant.Roll => $"ROLL: press the shown arrow AND {guardName} together at impact.",
+                        QteVariant.GuardCue => $"GUARD CUE (blue shield): press {GuardKeyName} as it lands.",
+                        QteVariant.Slip => $"SLIP (notched shield): hold {GuardKeyName} when it appears, then RELEASE at impact.",
+                        QteVariant.Flurry => $"FLURRY (two pips): press {GuardKeyName} twice — at impact and again right after.",
+                        QteVariant.Roll => $"ROLL: press the shown arrow AND {GuardKeyName} together at impact.",
                         _ => null,
                     };
                     if (vText != null)
@@ -150,14 +192,14 @@ namespace Obscure
             string kind = feint ? "feint" : PrologueScript.DefenseKind(act.attack, act.attack?.hits ?? 1);
             string text = kind switch
             {
-                "arrow" => "Dodge: press the arrow shown as the cue reaches the mark.",
-                "feint" => "Some cues fake you out. Wait for the real one before pressing.",
-                "ward" => "Magic is warded: type the runes shown before it lands.",
-                "shared_ward" => "One ward protects everyone this attack hits.",
+                "arrow" => "DEFENSIVE QTE (defense): press the arrow shown as the cue reaches the mark to dodge incoming damage.",
+                "feint" => "Feint cue: some cues fake you out — wait for the real arrow before pressing.",
+                "ward" => "DEFENSIVE QTE (magic ward): type the runes shown before the spell lands.",
+                "shared_ward" => "DEFENSIVE QTE (shared ward): one ward protects everyone this attack hits.",
                 "collapse" => $"An arrow chain, then a HEAVY final hit: hold {QteKeyName} through that impact. Heavy hits can't be fully parried.",
-                "brace" => $"HEAVY: hold {QteKeyName} through the impact.",
-                "chain" => "Each hit has its own cue.",
-                "struggle" => $"Mash {QteKeyName} to fill the gauge before it lands.",
+                "brace" => $"HEAVY hit: hold {QteKeyName} through the impact.",
+                "chain" => "Multi-hit attack: each hit has its own defensive cue.",
+                "struggle" => $"Drain attack: mash {QteKeyName} to fill the gauge before it lands.",
                 _ => null,
             };
             if (text != null) yield return Coach("def_" + kind, text);

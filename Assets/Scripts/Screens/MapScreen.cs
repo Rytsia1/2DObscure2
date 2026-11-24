@@ -69,6 +69,8 @@ namespace Obscure
             var titleLbl = UiRoot.Q<UiLabel>(className: "the-sunken-crypt-vars");
             if (titleLbl != null) titleLbl.text = map.name;
 
+            PrologueBanner.TryAttachPrologue(UiRoot, "THE THRESHOLD: Click or select the highlighted node to advance. Icons show Battle, Event, and Boss.");
+
             var pipLbl = UiRoot.Q<UiLabel>(className: "node-vars-5");
             if (pipLbl != null) pipLbl.text = string.Concat(Enumerable.Range(1, 8).Select(i => i <= map.act ? "◆" : "◇"));
 

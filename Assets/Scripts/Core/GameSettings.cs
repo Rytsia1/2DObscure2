@@ -20,6 +20,7 @@ namespace Obscure
         public bool reduceQteDistortions; // accessibility: disables status QTE distortions (Spec Part E)
         public bool reduceMotion; // skips combat screen shake and hit-stop freezes
         public bool prologueCleared; // profile flag: offers Skip Prologue on New Game and silences tutorial prompts (not a gameplay unlock)
+        public bool hubWelcomeShown; // shows the one-time Hub orientation banner after the Prologue
 
         public static readonly UnityEngine.InputSystem.Key[] QteKeys =
         {

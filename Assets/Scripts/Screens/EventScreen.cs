@@ -41,6 +41,8 @@ namespace Obscure
             if (artEl != null && sceneTex != null)
                 FigmaUi.SetBackgroundContain(artEl, sceneTex);
 
+            PrologueBanner.TryAttachPrologue(UiRoot, "EVENT: Choose one outcome. Blessings and Modifiers last until the Prologue ends.");
+
             int gold = Run != null ? Run.Gold : 0;
             var runGold = UiRoot.Q<VisualElement>(className: "currency-tag-run");
             if (runGold != null)

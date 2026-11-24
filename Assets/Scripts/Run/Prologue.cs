@@ -9,7 +9,7 @@ namespace Obscure
     public static class Prologue
     {
         // Fixed rewards (design §4.3): never RunConfig.ExpFor / BattleGold, which would push the party to Level 7.
-        public static readonly int[] NodeExp = { 40, 60, 0 };                     // per standing hero; 100 total = Level 2
+        public static readonly int[] NodeExp = { 40, 0, 60, 0 };                  // per standing hero by floor; 100 total = Level 2
         public static readonly string[] Node2Items = { "draught", "draught", "ether" }; // stocks the party for the boss
         public const int ClearGold = 40;                                         // Hub Gold on Prologue clear
         public const float FirstTimeSlow = 1.5f;                                 // first sight of each QTE type (Assist speed x1.5)
@@ -24,9 +24,10 @@ namespace Obscure
             name = "The Threshold", act = 1, stage = 1, totalStages = 1, stageName = "Prologue", allowEliteNodes = false, isPrologue = true,
             nodes = new[]
             {
-                new NodeDef { id = "p0", type = NodeType.Battle, floor = 0, next = new[] { "p1" }, encounter = "tut_n1" },
-                new NodeDef { id = "p1", type = NodeType.Battle, floor = 1, next = new[] { "p2" }, encounter = "tut_n2" },
-                new NodeDef { id = "p2", type = NodeType.Boss, floor = 2, encounter = "tut_boss" },
+                new NodeDef { id = "p0", type = NodeType.Battle, floor = 0, next = new[] { "p_event" }, encounter = "tut_n1" },
+                new NodeDef { id = "p_event", type = NodeType.Event, floor = 1, next = new[] { "p1" }, eventId = "tut_event" },
+                new NodeDef { id = "p1", type = NodeType.Battle, floor = 2, next = new[] { "p2" }, encounter = "tut_n2" },
+                new NodeDef { id = "p2", type = NodeType.Boss, floor = 3, encounter = "tut_boss" },
             },
         };
     }
@@ -57,7 +58,7 @@ namespace Obscure
         public (float feint, float stutter, bool forceFeint) Ramp(Combatant actor, EnemyAttack move)
         {
             if (Floor <= 0) return (0f, 0f, false);
-            if (Floor == 1)
+            if (Floor == 2)
             {
                 bool force = !FeintScripted && Seen("arrow") && move != null && !move.UsesMagic && move.hits == 1;
                 if (force) FeintScripted = true;

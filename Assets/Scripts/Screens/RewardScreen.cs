@@ -47,6 +47,9 @@ namespace Obscure
             MountFigma("21b---Combat-Victory---Confirm-Reward--v2");
             var screen = UiRoot.Q<VisualElement>(className: "_21b-combat-victory-confirm-reward-v2") ?? UiRoot;
 
+            if ((currentOffer.modifierChoices?.Count ?? 0) > 0)
+                PrologueBanner.TryAttachPrologue(UiRoot, "DUNGEON MODIFIER: Temporary passive boost for this run only (unlike permanent Relics). Pick 1 or Skip.");
+
             // Header title + top gold tags
             var titleLbl = UiRoot.Q<UiLabel>(className: "victory-vars-2");
             if (titleLbl != null) titleLbl.text = (currentOffer.title ?? "VICTORY").ToUpperInvariant();

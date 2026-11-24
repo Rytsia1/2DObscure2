@@ -41,6 +41,13 @@ namespace Obscure
             BindProgress();
             BindPartyStrip();
             EnsureFeedbackLabel();
+
+            if (Game?.Settings != null && !Game.Settings.hubWelcomeShown)
+            {
+                PrologueBanner.Attach(UiRoot, "THE HUB: Prologue complete! Prepare your party (Shop, Skills, Gear, Talents) — Dungeon 1 has real stakes and limited retries.");
+                Game.Settings.hubWelcomeShown = true;
+                Game.Settings.Save();
+            }
         }
 
         void BindTopBar()

@@ -13,7 +13,13 @@ namespace Obscure.Tests
 
         static void ClearNode(RunState run)
         {
-            run.Enter(run.Available.Single());
+            var node = run.Available.Single();
+            run.Enter(node);
+            if (node.type == NodeType.Event)
+            {
+                run.ChooseEvent(0);
+                return;
+            }
             run.WinCombat();
             run.ClaimReward(-1);
         }
@@ -54,13 +60,16 @@ namespace Obscure.Tests
 
             run.BeginPrologue();
             Assert.IsTrue(run.IsPrologue);
-            Assert.AreEqual(3, run.Map.nodes.Length);
-            ClearNode(run);
+            Assert.AreEqual(4, run.Map.nodes.Length);
+            Assert.IsTrue(run.Map.nodes.Any(n => n.type == NodeType.Event && n.eventId == "tut_event"), "Prologue must include an Event node");
+            ClearNode(run); // p0 (Battle 1)
             Assert.IsTrue(run.Party.All(u => u.level == 1 && u.exp == Prologue.NodeExp[0]));
-            ClearNode(run);
+            Assert.AreEqual(NodeType.Event, run.Available.Single().type);
+            ClearNode(run); // p_event (Event)
+            ClearNode(run); // p1 (Battle 2)
             Assert.IsTrue(run.Party.All(u => u.level == 2), "Node 2 brings the party to Level 2");
             Assert.AreEqual(draughts + 2, run.CarryCount("draught"));
-            ClearNode(run);
+            ClearNode(run); // p2 (Boss)
 
             Assert.IsFalse(run.IsPrologue);
             Assert.IsNull(run.Tutorial);
@@ -83,7 +92,8 @@ namespace Obscure.Tests
         {
             var run = NewRun();
             run.BeginPrologue();
-            ClearNode(run);
+            ClearNode(run); // p0
+            ClearNode(run); // p_event
             run.Party[0].hp = 5;
             run.Enter(run.Available.Single());
             var hp = run.Party.Select(u => u.hp).ToList();
@@ -151,6 +161,7 @@ namespace Obscure.Tests
 
             run.WinCombat();
             run.ClaimReward(-1);
+            ClearNode(run); // p_event
             run.Enter(run.Available.Single());
             b = BattleFor(run);
             var strike = BattleAction.Strike(b.Enemies[1], Move("veil_stalker", "Veil Strike"), b.Party[0]);
@@ -168,7 +179,8 @@ namespace Obscure.Tests
         {
             var run = NewRun();
             run.BeginPrologue();
-            ClearNode(run);
+            ClearNode(run); // p0
+            ClearNode(run); // p_event
             run.Enter(run.Available.Single());
             var b = BattleFor(run);
             var target = b.Party[0];
@@ -186,9 +198,11 @@ namespace Obscure.Tests
             var run = NewRun(seed: 11);
             run.BeginPrologue();
 
-            // Node 0 & Node 1: non-boss Prologue fights offer 3 non-Utility modifiers
+            // Node p0 & Node p1: non-boss Prologue fights offer 3 non-Utility modifiers (skipping p_event in between)
             for (int node = 0; node < 2; node++)
             {
+                if (run.Available.Single().type == NodeType.Event)
+                    ClearNode(run);
                 run.Enter(run.Available.Single());
                 run.WinCombat();
                 var mods = run.PendingReward.modifierChoices;
@@ -214,6 +228,7 @@ namespace Obscure.Tests
             run.ClaimReward(-1);
             Assert.IsFalse(run.IsPrologue);
             Assert.AreEqual(0, run.ModifierManager.Count, "All Prologue modifiers must clear before entering the Hub");
+            Assert.IsFalse(new GameSettings().hubWelcomeShown, "Hub welcome banner defaults to unshown for new players");
         }
     }
 }
