@@ -5,7 +5,7 @@ using UiLabel = UnityEngine.UIElements.Label;
 namespace Obscure
 {
     /// <summary>
-    /// Compact non-blocking [TUTORIAL] banner and step indicator for Prologue screens and the first Hub arrival.
+    /// Compact non-blocking tutorial banner and step indicator for Prologue screens and the first Hub arrival.
     /// </summary>
     public static class PrologueBanner
     {
@@ -20,14 +20,21 @@ namespace Obscure
             return $"TUTORIAL · STEP {step}/{total}";
         }
 
-        public static void TryAttachPrologue(VisualElement root, string text, float top = 56f, float left = 140f, float width = 1000f)
+        public static void TryAttachPrologue(
+            VisualElement root,
+            string text,
+            float top = 56f,
+            float left = 140f,
+            float width = 1000f,
+            float badgeRight = 16f,
+            float badgeTop = 12f)
         {
             if (!ShouldShowPrologue) return;
-            AttachStepBadge(root);
+            AttachStepBadge(root, right: badgeRight, top: badgeTop);
             Attach(root, text, top, left, width);
         }
 
-        public static VisualElement AttachStepBadge(VisualElement root, string customLabel = null)
+        public static VisualElement AttachStepBadge(VisualElement root, float right = 16f, float top = 12f, string customLabel = null)
         {
             if (root == null) return null;
             var badge = new UiLabel(customLabel ?? StepLabel())
@@ -36,8 +43,8 @@ namespace Obscure
                 style =
                 {
                     position = Position.Absolute,
-                    right = 16,
-                    top = 12,
+                    right = right,
+                    top = top,
                     paddingLeft = 10,
                     paddingRight = 10,
                     paddingTop = 4,
@@ -49,6 +56,7 @@ namespace Obscure
                     borderTopRightRadius = 4,
                     borderBottomLeftRadius = 4,
                     borderBottomRightRadius = 4,
+                    whiteSpace = WhiteSpace.NoWrap,
                     unityFontStyleAndWeight = FontStyle.Bold,
                 },
             };

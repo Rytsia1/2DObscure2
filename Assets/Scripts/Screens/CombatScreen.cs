@@ -160,8 +160,9 @@ namespace Obscure
                 if (rIdx + 1 < roundLabel.parent.childCount)
                 {
                     turnBar = roundLabel.parent[rIdx + 1];
-                    turnBar.style.maxWidth = 810;
-                    turnBar.style.right = 16; // stays on screen when a long act banner pushes it right
+                    bool prologueBadge = Game.I?.Run?.IsPrologue ?? false;
+                    turnBar.style.maxWidth = prologueBadge ? 640 : 810;
+                    turnBar.style.right = prologueBadge ? 184 : 16; // stays clear of long act banners and the Prologue step badge
 
                 }
             }
@@ -2165,8 +2166,14 @@ namespace Obscure
         void OpenAnalysis(Action onClose)
         {
             if (Battle == null || screenRoot == null) return;
+            HideCoachBanner();
+            SetCoachBadgeVisible(false);
             ClearPhase();
-            analysisModal.Open(Battle, screenRoot, phaseGo, onClose, Hint);
+            analysisModal.Open(Battle, screenRoot, phaseGo, () =>
+            {
+                SetCoachBadgeVisible(true);
+                onClose?.Invoke();
+            }, Hint);
         }
 
         // Enemies/fallen: first valid in order. Living allies: the most injured (lowest HP %), so heals and potions

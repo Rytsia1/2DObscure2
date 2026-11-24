@@ -12,7 +12,7 @@ namespace Obscure
     public partial class CombatView
     {
         UiLabel coachLabel;
-        VisualElement coachHighlight;
+        VisualElement coachHighlight, coachStepBadge;
         int coachTipVersion;
         static readonly System.Collections.Generic.HashSet<string> shownVariantTips = new();
 
@@ -37,7 +37,8 @@ namespace Obscure
                     backgroundColor = Palette.Hex(0xF6D365, 22),
                 },
             };
-            screenRoot.Add(coachHighlight);
+            var host = UiRoot ?? screenRoot;
+            host.Add(coachHighlight);
 
             coachLabel = new UiLabel("")
             {
@@ -53,10 +54,10 @@ namespace Obscure
                     unityTextAlign = TextAnchor.MiddleCenter, whiteSpace = WhiteSpace.Normal, display = DisplayStyle.None,
                 },
             };
-            screenRoot.Add(coachLabel);
+            host.Add(coachLabel);
             if (!Coaching) return;
 
-            PrologueBanner.AttachStepBadge(screenRoot);
+            coachStepBadge = PrologueBanner.AttachStepBadge(host, right: 16f, top: 10f);
 
             battle.Logged += line =>
             {
@@ -142,6 +143,12 @@ namespace Obscure
             var wb = el.worldBound;
             if (wb.width <= 1f || wb.height <= 1f) return null;
             return new Rect(wb.x - 4f, wb.y - 4f, wb.width + 8f, wb.height + 8f);
+        }
+
+        void SetCoachBadgeVisible(bool visible)
+        {
+            if (coachStepBadge != null)
+                coachStepBadge.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         void HideCoachBanner()

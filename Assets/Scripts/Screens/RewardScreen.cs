@@ -48,7 +48,7 @@ namespace Obscure
             var screen = UiRoot.Q<VisualElement>(className: "_21b-combat-victory-confirm-reward-v2") ?? UiRoot;
 
             if ((currentOffer.modifierChoices?.Count ?? 0) > 0)
-                PrologueBanner.TryAttachPrologue(UiRoot, "DUNGEON MODIFIER: Temporary passive boost for this run only (unlike permanent Relics). Pick 1 below or Continue.", top: 530f, left: 20f, width: 370f);
+                PrologueBanner.TryAttachPrologue(UiRoot, "NO RELIC OR GEAR DROPS IN THE PROLOGUE — PICK A TEMPORARY DUNGEON MODIFIER BELOW. (MODIFIERS LAST THIS RUN ONLY; RELICS ARE PERMANENT.)", top: 270f, left: 432f, width: 804f);
 
             // Header title + top gold tags
             var titleLbl = UiRoot.Q<UiLabel>(className: "victory-vars-2");
@@ -588,7 +588,7 @@ namespace Obscure
                 if (choiceCount == 0)
                 {
                     confirmFocusIdx = menu.items.Count;
-                    btnRow.Add(MakePrimaryConfirmButton(skipLabel, () => Claim(-1, hasModifierOffers ? selectedModifierIdx : -1)));
+                    btnRow.Add(MakePrimaryConfirmButton(skipLabel, () => Claim(-1, -1)));
                 }
                 else
                 {
