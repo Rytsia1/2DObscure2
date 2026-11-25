@@ -623,6 +623,22 @@ namespace Obscure
                 var it = menu.Add(row, a.ToString(), () => ShowTip(tip), tooltip: tip);
                 it.visual = on => row.style.backgroundColor = on ? Palette.Hex(0x2B2210) : Color.clear;
             }
+            if (u.unspentAsiPoints > 0)
+            {
+                var apHint = new UiLabel($"{u.unspentAsiPoints} UNSPENT AP · ALLOCATE AT TRAINING GROUND (HUB OR CAMPFIRE).")
+                {
+                    style =
+                    {
+                        marginTop = 14,
+                        paddingLeft = 10, paddingRight = 10, paddingTop = 8, paddingBottom = 8,
+                        fontSize = 12, color = Palette.Gold1, whiteSpace = WhiteSpace.Normal,
+                        backgroundColor = Palette.Hex(0x231B0B),
+                        borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                        borderTopColor = Palette.Gold3, borderBottomColor = Palette.Gold3, borderLeftColor = Palette.Gold3, borderRightColor = Palette.Gold3,
+                    }
+                };
+                left.Add(apHint);
+            }
             split.Add(left);
             split.Add(DetailPane(460, 490));
             mainHost.Add(split);

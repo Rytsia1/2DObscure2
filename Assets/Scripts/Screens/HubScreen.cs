@@ -104,6 +104,7 @@ namespace Obscure
         {
             var party = Run?.Party ?? new List<Unit>();
             int sp = party.Sum(u => u.skillLoadout?.SkillPoints ?? 0);
+            int ap = party.Sum(u => u.unspentAsiPoints);
             int dead = party.Count(u => !u.Alive);
             int relics = Run?.Relics.Count ?? 0;
 
@@ -113,8 +114,9 @@ namespace Obscure
             BindFacilityRow("Shop", () => Game?.Go(GameState.HubShop), "CONSUMABLES FOR GOLD. UNLIMITED STOCK.");
             BindFacilityRow("Armory", () => Game?.Go(GameState.Armory), "WEAPONS AND ARMOR FOR GOLD.");
             BindFacilityRow("Blacksmith", () => Game?.Go(GameState.Blacksmith), "UPGRADE GEAR. UPGRADES RAISE BASE STATS ONLY.");
-            BindFacilityRow("Training Ground", () => Game?.Go(GameState.Skills), "SPEND SKILL POINTS AND CHOOSE TALENTS.",
-                badgeText: sp > 0 ? $"{sp} SP" : null, badgeClass: "uitk-badge-ok");
+            string trainBadge = sp > 0 && ap > 0 ? $"{sp} SP · {ap} AP" : ap > 0 ? $"{ap} AP" : sp > 0 ? $"{sp} SP" : null;
+            BindFacilityRow("Training Ground", () => Game?.Go(GameState.Skills), "SPEND SKILL POINTS, ATTRIBUTE POINTS, AND CHOOSE TALENTS.",
+                badgeText: trainBadge, badgeClass: "uitk-badge-ok");
             BindFacilityRow("Temple", () => Game?.Go(GameState.Temple), "REVIVE FALLEN MEMBERS AND RECOVER HP / MP.",
                 badgeText: dead > 0 ? $"{dead} DEAD" : null, badgeClass: "uitk-badge-err");
             BindFacilityRow("Magic Shop", () => Game?.Go(GameState.MagicShop), "BUY AND SELL PERMANENT RELICS.",

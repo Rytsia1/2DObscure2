@@ -240,5 +240,139 @@ namespace Obscure.Tests
             Assert.AreEqual(180, StatCalculator.CalculateShieldOutput(150f, 5, 2)); // +17.5% + 3.0% = +20.5% -> floor(150 * 1.205) = 180
             Assert.AreEqual(0.1155f, StatCalculator.CalculateFinalBuffMagnitude(0.10f, 2, 5), 1e-5f); // +8% + 7.5% = +15.5%
         }
+
+        [Test]
+        public void AttributeAllocationDraft_StageIncreaseDecreaseResetAndCap20_DoesNotMutateUnit()
+        {
+            var def = new CharacterDef
+            {
+                id = "draft_fighter",
+                name = "Draft Fighter",
+                raceId = "dwarf", // +2 VIT
+                classId = "fighter",
+                baseScores = new AbilityScores(15, 10, 15, 8, 10, 10), // VIT 17, STR 15
+                stats = new Stats(95, 15, 8, 11, 8, 6)
+            };
+            var unit = new Unit(def);
+            while (unit.level < 7) unit.LevelUp(); // Lv 4 (+2) + Lv 7 (+2) = 4 AP
+            Assert.AreEqual(4, unit.unspentAsiPoints);
+            Assert.AreEqual(10, unit.NextAttributeMilestoneLevel());
+
+            var draft = new AttributeAllocationDraft(unit, Database.AsiConfig);
+            Assert.AreEqual(4, draft.RemainingPoints);
+            Assert.IsFalse(draft.HasPendingChanges);
+
+            // Stage 3 points into VIT (17 -> 20 cap)
+            Assert.IsTrue(draft.TryIncrease(Ability.VIT));
+            Assert.IsTrue(draft.TryIncrease(Ability.VIT));
+            Assert.IsTrue(draft.TryIncrease(Ability.VIT));
+            Assert.AreEqual(20, draft.GetPreviewUnbuffedScore(Ability.VIT));
+            Assert.IsTrue(draft.IsAtCap(Ability.VIT));
+            Assert.IsFalse(draft.CanIncrease(Ability.VIT));
+            Assert.IsFalse(draft.TryIncrease(Ability.VIT), "Cannot stage past normal cap 20.");
+            Assert.AreEqual(1, draft.RemainingPoints);
+
+            // Unit must remain unmutated while staged
+            Assert.AreEqual(17, unit.FinalScores.vit);
+            Assert.AreEqual(4, unit.unspentAsiPoints);
+
+            // Decrease and Reset work cleanly
+            Assert.IsTrue(draft.TryDecrease(Ability.VIT));
+            Assert.AreEqual(2, draft.RemainingPoints);
+            draft.Reset();
+            Assert.AreEqual(0, draft.TotalPending);
+            Assert.AreEqual(4, draft.RemainingPoints);
+            Assert.IsFalse(draft.CanDecrease(Ability.VIT));
+        }
+
+        [Test]
+        public void AttributeAllocationDraft_PreviewDerivedAndTryCommit_UpdatesStatsAndPersists()
+        {
+            var def = new CharacterDef
+            {
+                id = "draft_commit",
+                name = "Draft Commit",
+                raceId = "human",
+                classId = "fighter",
+                baseScores = new AbilityScores(14, 12, 14, 10, 10, 10),
+                stats = new Stats(95, 15, 8, 11, 8, 6)
+            };
+            var unit = new Unit(def);
+            while (unit.level < 4) unit.LevelUp(); // +2 AP
+            int beforeHp = unit.Derived.maxHp;
+            int beforeDef = unit.Derived.physicalDefense;
+            int beforeVit = unit.FinalScores.vit;
+
+            var draft = new AttributeAllocationDraft(unit, Database.AsiConfig);
+            Assert.IsTrue(draft.TryIncrease(Ability.VIT));
+            Assert.IsTrue(draft.TryIncrease(Ability.VIT));
+
+            var preview = draft.PreviewDerived();
+            Assert.Greater(preview.maxHp, beforeHp, "Preview MaxHP must reflect +2 VIT (+1 mod).");
+            Assert.GreaterOrEqual(preview.physicalDefense, beforeDef);
+            Assert.AreEqual(beforeHp, unit.Derived.maxHp, "Preview must not mutate Unit.Derived.");
+
+            Assert.IsTrue(draft.TryCommit(out int spent, out string err), err);
+            Assert.AreEqual(2, spent);
+            Assert.AreEqual(0, unit.unspentAsiPoints);
+            Assert.AreEqual(beforeVit + 2, unit.FinalScores.vit);
+            Assert.AreEqual(preview.maxHp, unit.Derived.maxHp, "Committed Derived stats must match live preview.");
+            Assert.IsFalse(draft.HasPendingChanges);
+
+            // Verify persistence payload captures both permanent bonuses and remaining unspent AP
+            var saved = SavedCharacterData.FromCharacterDef(def, unit);
+            Assert.AreEqual(0, saved.unspentAsiPoints);
+            Assert.AreEqual(2, saved.permanentAbilityBonuses.vit);
+        }
+
+        [Test]
+        public void SkillTreeScreen_CanAllocateAttributesAt_EnforcesHubAndCampfireOnly()
+        {
+            var map = MapGenerator.Generate(42, 1);
+            var party = new List<CharacterDef> { Database.Characters["knight"] };
+            var run = new RunState(map, party, 42);
+
+            // Standalone (no Game instance) allows EditMode screen verification
+            Assert.IsTrue(SkillTreeScreen.CanAllocateAttributesAt(null, run));
+
+            // Create a temporary Game-like test setup via real RunState Rest node vs non-Rest node
+            var restNode = Array.Find(map.nodes, n => n.type == NodeType.Rest);
+            var battleNode = Array.Find(map.nodes, n => n.type == NodeType.Battle);
+            Assert.IsNotNull(restNode, "Generated map should include a Rest node.");
+            Assert.IsNotNull(battleNode, "Generated map should include a Battle node.");
+
+            // While OnMap is true (not inside a Rest site), dungeon map cannot allocate
+            var go = new UnityEngine.GameObject("TestGameGate");
+            try
+            {
+                var game = go.AddComponent<Game>();
+                // Force Hub state -> allowed
+                game.Go(GameState.Hub);
+                Assert.IsTrue(SkillTreeScreen.CanAllocateAttributesAt(game, run), "Hub must allow AP allocation.");
+
+                // Force Map state while on map -> blocked
+                game.Go(GameState.Map);
+                Assert.IsFalse(SkillTreeScreen.CanAllocateAttributesAt(game, run), "Dungeon map outside a Campfire must block AP allocation.");
+
+                // Enter a Rest node (not in Cleared -> OnMap is false) -> allowed
+                var currentProp = typeof(RunState).GetProperty("Current");
+                currentProp.SetValue(run, restNode);
+                Assert.IsFalse(run.OnMap, "Unresolved Rest node must have OnMap == false.");
+                Assert.IsTrue(SkillTreeScreen.CanAllocateAttributesAt(game, run), "Active Campfire / Rest node must allow AP allocation.");
+
+                // After Rest node is cleared (back on Map) -> blocked
+                run.Cleared.Add(restNode.id);
+                Assert.IsTrue(run.OnMap);
+                Assert.IsFalse(SkillTreeScreen.CanAllocateAttributesAt(game, run), "Cleared Rest node back on Map must block AP allocation.");
+
+                // Non-Rest node -> blocked
+                currentProp.SetValue(run, battleNode);
+                Assert.IsFalse(SkillTreeScreen.CanAllocateAttributesAt(game, run), "Non-Rest dungeon node must block AP allocation.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
     }
 }

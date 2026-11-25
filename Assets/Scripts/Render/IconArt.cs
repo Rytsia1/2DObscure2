@@ -9,6 +9,7 @@ using UnityEngine.UIElements;
 //   Resources/Icons/Status/<StatusId>.png  status effects (combat HUD)
 //   Resources/Icons/Racial/<featId>.png    racial feats (_sigil.png = fallback)
 //   Resources/Icons/Elements/<Element>.png damage elements (Shadow uses Dark)
+//   Resources/Icons/Talents/<talentId>.png talents (TalentSystem ids)
 // Drawn at whole-number scales (3x = 48px in a 56px slot) so the pixels stay crisp.
 namespace Obscure
 {
@@ -25,6 +26,7 @@ namespace Obscure
         public static Texture2D SkillOrPassive(string id, bool passive) => passive ? Passive(id) : Skill(id);
         public static Texture2D Status(StatusId id) => Load("Status", id.ToString());
         public static Texture2D Reward(string id) => Load("Rewards", id);
+        public static Texture2D Talent(string id) => Load("Talents", id);
         // Racial feats; unknown ids fall back to the ancestral tree sigil.
         public static Texture2D Racial(string id) => Load("Racial", id) ?? Load("Racial", "_sigil");
         // Shadow is an alias of Dark, so name it explicitly: Enum.ToString() may pick either alias.

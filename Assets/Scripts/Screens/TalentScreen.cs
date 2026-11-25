@@ -229,7 +229,9 @@ namespace Obscure
                 var cell = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, width = 190 } };
                 var node = FigmaUi.InstantiateTemplate(done || now ? "Map-Node-Current" : "Map-Node-Locked") ?? new VisualElement();
                 node.style.width = 48; node.style.height = 48; node.style.marginRight = 10;
-                FigmaUi.SetInstanceText(node, "text-0", done ? Short(TalentSystem.GetTalent(hero.selectedTalentIds[i])?.name) : now ? "!" : "?");
+                var doneIcon = done ? IconArt.Talent(hero.selectedTalentIds[i]) : null;
+                FigmaUi.SetInstanceText(node, "text-0", doneIcon != null ? "" : done ? Short(TalentSystem.GetTalent(hero.selectedTalentIds[i])?.name) : now ? "!" : "?");
+                IconArt.Overlay(node, doneIcon, 2);
                 cell.Add(node);
                 var col = new VisualElement();
                 col.Add(new UiLabel($"LV {lv}") { style = { fontSize = 12, color = now ? Palette.Gold1 : done ? Palette.Mist1 : Palette.Mist3 } });
@@ -296,7 +298,11 @@ namespace Obscure
                     }
                 };
                 card.AddToClassList("uitk-talent-card");
-                card.Add(new UiLabel(td.name) { style = { fontSize = 18, color = owned ? Palette.Mist3 : sel ? Palette.Gold1 : Palette.Mist1, marginBottom = 6 } });
+                var head = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 6 } };
+                var icon = IconArt.Inline(IconArt.Talent(td.id), 2, 8);
+                if (icon != null) { if (owned) icon.style.opacity = 0.5f; head.Add(icon); }
+                head.Add(new UiLabel(td.name) { style = { fontSize = 18, color = owned ? Palette.Mist3 : sel ? Palette.Gold1 : Palette.Mist1, flexShrink = 1, whiteSpace = WhiteSpace.Normal } });
+                card.Add(head);
                 if (td.category != TalentCategory.Shared)
                 {
                     var tag = FigmaUi.InstantiateTemplate("Tag-Cls");

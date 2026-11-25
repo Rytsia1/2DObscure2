@@ -647,7 +647,12 @@ function catalogue() {
   const racial = [...blocks(A, "RacialFeatDef").map((b) => row(f(b, "id"), f(b, "name"), S.RACIAL[f(b, "id")] || S.RACIAL._sigil, "racial")), row("_sigil", "Racial", S.RACIAL._sigil, "racial")];
   const elSrc = fs.readFileSync(path.join(__dirname, "../../Assets/Scripts/Combat/Elements.cs"), "utf8").match(/enum Element\s*\{([^}]*)\}/)[1];
   const elements = elSrc.replace(/\/\/.*$/gm, "").split(",").map((x) => x.trim()).filter((x) => x && !x.includes("= Dark")).map((x) => x.split("=")[0].trim()).map((id) => row(id, id, S.ELEMENTS[id], "elements"));
-  return { items, gear, skills, passives, status, racial, elements };
+  // Talents: shared ones are TalentDef blocks with a literal id; class ones come from the classTalents table (id rule as in C#).
+  const T = fs.readFileSync(D + "TalentSystem.cs", "utf8");
+  const talents = blocks(T, "TalentDef").filter((b) => f(b, "id")).map((b) => row(f(b, "id"), f(b, "name"), S.TALENTS[f(b, "id")], "talents"));
+  for (const [, cid, names] of T.matchAll(/\("(\w+)",\s*new\[\]\s*\{([^}]*)\}\)/g))
+    for (const [, n] of names.matchAll(/"([^"]+)"/g)) { const id = cid + "_" + n.toLowerCase().replace(/ /g, "_").replace(/'/g, ""); talents.push(row(id, n, S.TALENTS[id], "talents")); }
+  return { items, gear, skills, passives, status, racial, elements, talents };
 }
 module.exports.catalogue = catalogue;
 
@@ -695,7 +700,7 @@ if (require.main === module && process.argv.includes("--test")) {
 if (require.main === module && process.argv.includes("--export")) {
   const fs = require("fs"), path = require("path"), crypto = require("crypto");
   const assets = path.resolve(__dirname, "../../Assets"), meta = fs.readFileSync(path.join(assets, "Resources/Fx/hit.png.meta"), "utf8");
-  const folders = { items: "Items", gear: "Gear", skills: "Skills", passives: "Passives", status: "Status", racial: "Racial", elements: "Elements" };
+  const folders = { items: "Items", gear: "Gear", skills: "Skills", passives: "Passives", status: "Status", racial: "Racial", elements: "Elements", talents: "Talents" };
   for (const [group, rows] of Object.entries(catalogue())) {
     const dir = path.join(assets, "Resources/Icons", folders[group]), done = new Set();
     fs.mkdirSync(dir, { recursive: true });
@@ -721,7 +726,9 @@ if (require.main === module && !process.argv.includes("--test")) {
     P.save(P.sheet([...bufs.map((b) => ({ ...b, scale: 4 })), ...bufs.map((b) => ({ buf: b.buf, label: "", scale: 1 }))], { cols: bufs.length }), `${out}/icons_check.png`);
     process.exit(0);
   }
+  const groupOnly = (process.argv.find((a) => a.startsWith("--group=")) || "").slice(8);
   for (const [group, rows] of Object.entries(cat)) {
+    if (groupOnly && group !== groupOnly) continue;
     const seen = new Set(), list = rows.filter((r) => !seen.has(r.id) && seen.add(r.id));
     const bufs = list.map((r) => { if (!r.fn) { missing.push(group + ":" + r.id); return null; } const c = new Canvas(); r.fn(c); return { buf: render(c), label: label(r.name) }; }).filter(Boolean);
     P.save(P.sheet(bufs.map((b) => ({ ...b, scale: 3 })), { cols: 12 }), `${out}/icons_${group}.png`);

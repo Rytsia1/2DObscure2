@@ -707,5 +707,79 @@ namespace Obscure.Tests
             Assert.IsNotNull(bossIntent);
             Assert.AreEqual(DisplayStyle.None, bossIntent.resolvedStyle.display, "Boss intent label must remain hidden.");
         }
+
+        [UnityTest]
+        public IEnumerator TrainingGround_AttributesAllocation_StageResetConfirmAndMapGate()
+        {
+            yield return Begin();
+            Game.I.EnterHubFromCreation(seed: 123);
+            yield return Settle();
+            Assert.AreEqual(GameState.Hub, State);
+
+            // Level up the entire party so regardless of PartyScreen.SelectedIndex the active hero has 2 AP
+            foreach (var u in Run.Party)
+                while (u.level < 4) u.LevelUp();
+
+            // 1. Open Training Ground from Hub -> Attributes view -> audit menu layout
+            yield return ClickMenuItem("Training Ground");
+            Assert.AreEqual(GameState.Skills, State);
+            var skillScreen = Game.I.CurrentScreen as SkillTreeScreen;
+            Assert.IsNotNull(skillScreen, "CurrentScreen must be SkillTreeScreen.");
+            var hero = skillScreen.CurrentHero;
+            Assert.AreEqual(2, hero.unspentAsiPoints, $"Hero {hero.name} should have 2 AP at Lv {hero.level}.");
+            // Pick an ability guaranteed below normal cap 20 (e.g., VIT or STR/INT)
+            var targetAbility = AbilityScores.AllAbilities.First(a => hero.UnbuffedScore(a) <= 18);
+            int startScore = hero.Score(targetAbility);
+            int startHp = hero.Derived.maxHp;
+
+            yield return ClickMenuItem("Attributes");
+            Assert.AreEqual(SkillTreeScreen.TrainingView.Attributes, skillScreen.CurrentView);
+            AssertActiveMenuAudit("TrainingGround-Attributes");
+
+            string plusText = $"+ {targetAbility}";
+            var plusItem = UitkMenu.ActiveMenu.items.First(i => i.text == plusText);
+            Assert.IsTrue(plusItem.interactable,
+                $"'{plusText}' should be interactable (editable={skillScreen.CanAllocateAttributesNow}, ap={hero.unspentAsiPoints}, unbuffed={hero.UnbuffedScore(targetAbility)}).");
+
+            // 2. Stage +1 -> verify Reset & Confirm become interactable while Unit is unmutated
+            yield return ClickMenuItem(plusText);
+            Assert.AreEqual(startScore, hero.Score(targetAbility), "Staging AP must not mutate Unit before Confirm.");
+            Assert.AreEqual(2, hero.unspentAsiPoints);
+            Assert.AreEqual(1, skillScreen.CurrentDraft.TotalPending, "Draft should have 1 staged point after clicking +.");
+            Assert.IsTrue(UitkMenu.ActiveMenu.items.First(i => i.text == "Reset").interactable);
+            Assert.IsTrue(UitkMenu.ActiveMenu.items.First(i => i.text == "Confirm").interactable);
+
+            // 3. Reset clears staged points cleanly
+            yield return ClickMenuItem("Reset");
+            Assert.AreEqual(0, skillScreen.CurrentDraft.TotalPending);
+            Assert.IsFalse(UitkMenu.ActiveMenu.items.First(i => i.text == "Confirm").interactable);
+
+            // 4. Stage +2 and Confirm -> permanently spends 2 AP and updates score
+            yield return ClickMenuItem(plusText);
+            yield return ClickMenuItem(plusText);
+            yield return ClickMenuItem("Confirm");
+            Assert.AreEqual(0, hero.unspentAsiPoints, "Confirm must spend staged AP.");
+            Assert.AreEqual(startScore + 2, hero.Score(targetAbility), "Confirm must raise attribute permanently.");
+            if (targetAbility == Ability.VIT)
+                Assert.Greater(hero.Derived.maxHp, startHp, "VIT increase must recalculate Derived MaxHP.");
+
+            // 5. Return to Skill Tree, then Back to Hub
+            yield return ClickMenuItem("Skill Tree");
+            AssertActiveMenuAudit("TrainingGround-BackToSkills");
+            yield return ClickMenuItem("Back");
+            Assert.AreEqual(GameState.Hub, State);
+
+            // 6. On Dungeon Map (outside a Campfire), Attributes allocation must be read-only
+            hero.unspentAsiPoints += 2;
+            Game.I.StartRun(seed: 123);
+            yield return Settle();
+            Assert.AreEqual(GameState.Map, State);
+            foreach (var u in Run.Party) u.unspentAsiPoints = 2;
+            Game.I.Go(GameState.Skills);
+            yield return Settle();
+            yield return ClickMenuItem("Attributes");
+            Assert.IsFalse(UitkMenu.ActiveMenu.items.First(i => i.text == plusText).interactable,
+                "AP allocation must be disabled on the Dungeon Map outside a Campfire.");
+        }
     }
 }

@@ -119,6 +119,7 @@ namespace Obscure
             screen.Add(row1SubLbl);
 
             var leveled = new List<Unit>();
+            bool anyGainedAp = false;
             for (int i = 0; i < 4; i++)
             {
                 var frame = UiRoot.Q<VisualElement>(className: frameClasses[i]);
@@ -149,6 +150,8 @@ namespace Obscure
                 if (levels > 0)
                 {
                     leveled.Add(u);
+                    for (int lv = u.level - levels + 1; lv <= u.level; lv++)
+                        if (Database.AsiConfig.GrantsAtLevel(lv)) anyGainedAp = true;
                     // Gold arrows climb the hero once the screen has laid out, one hero after another.
                     if (fig != null)
                         fig.schedule.Execute(() =>
@@ -216,8 +219,9 @@ namespace Obscure
                 else
                 {
                     string who = string.Join(", ", leveled.Select(u => $"{u.name} LV {u.level}")).ToUpperInvariant();
+                    string ap = anyGainedAp ? $" · +{Database.AsiConfig.pointsGranted} AP" : "";
                     string talent = leveled.Any(u => u.AvailableTalentSelections > 0) ? " · NEW TALENT" : "";
-                    noteBottom.text = $"LEVEL UP: {who} · +SP{talent}. SPEND AT A REST SITE OR IN THE HUB.";
+                    noteBottom.text = $"LEVEL UP: {who} · +SP{ap}{talent}. SPEND AT A REST SITE OR IN THE HUB.";
                     noteBottom.style.color = Palette.Gold2;
                     noteBottom.style.width = 340;
                     noteBottom.style.whiteSpace = WhiteSpace.Normal;

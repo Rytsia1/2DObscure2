@@ -646,13 +646,59 @@ namespace Obscure
             return level - before;
         }
 
+        // Unbuffed permanent score (base + race + permanent bonuses) checked against the normal progression cap (20).
+        public int UnbuffedScore(Ability ability) =>
+            abilities.baseScores[ability] + abilities.racialModifiers[ability] + abilities.permanentBonuses[ability];
+
+        // Next active AP milestone level within the current Level Cap, or -1 if no further milestones remain.
+        public int NextAttributeMilestoneLevel(AbilityScoreImprovementConfig asiConfig = null)
+        {
+            var cfg = asiConfig ?? Database.AsiConfig;
+            if (cfg?.availableAtLevels == null) return -1;
+            int next = int.MaxValue;
+            foreach (int lv in cfg.availableAtLevels)
+                if (lv > level && lv <= RunConfig.MaxLevel && lv < next)
+                    next = lv;
+            return next == int.MaxValue ? -1 : next;
+        }
+
+        // Non-destructive copy of the unit's AbilityScoreSheet with staged permanent bonuses applied.
+        public AbilityScoreSheet BuildPreviewAbilitySheet(AbilityScores extraPermanentBonuses) => new AbilityScoreSheet
+        {
+            baseScores = abilities.baseScores,
+            racialModifiers = abilities.racialModifiers,
+            permanentBonuses = abilities.permanentBonuses.Plus(extraPermanentBonuses),
+            equipmentBonuses = abilities.equipmentBonuses,
+            temporaryModifiers = abilities.temporaryModifiers,
+            capBreakingEquipmentBonuses = abilities.capBreakingEquipmentBonuses,
+            capBreakingTemporaryModifiers = abilities.capBreakingTemporaryModifiers,
+            minFinalScore = abilities.minFinalScore,
+            maxNormalScore = abilities.maxNormalScore,
+            maxFinalScore = abilities.maxFinalScore,
+        };
+
+        // Computes DerivedStats as if extraPermanentBonuses were applied, without mutating this Unit.
+        public DerivedStats PreviewDerivedStats(AbilityScores extraPermanentBonuses)
+        {
+            if (isEnemyUnit || extraPermanentBonuses.IsZero) return Derived;
+            var previewSheet = BuildPreviewAbilitySheet(extraPermanentBonuses);
+            return StatCalculator.Calculate(
+                previewSheet,
+                classDef,
+                level,
+                equipped.Values,
+                GatherAllDerivedModifiers(),
+                permanentLegacyBonuses,
+                passives,
+                equipped);
+        }
+
         // Spends an ASI point to permanently raise an Ability Score (up to MaxAbilityScore, default 20).
         public bool TrySpendAsiPoint(Ability ability, AbilityScoreImprovementConfig asiConfig = null)
         {
             var cfg = asiConfig ?? Database.AsiConfig;
             if (unspentAsiPoints <= 0) return false;
-            int currentUnbuffed = abilities.baseScores[ability] + abilities.racialModifiers[ability] + abilities.permanentBonuses[ability];
-            if (currentUnbuffed >= cfg.maxAbilityScore) return false;
+            if (UnbuffedScore(ability) >= cfg.maxAbilityScore) return false;
             unspentAsiPoints--;
             abilities.permanentBonuses = abilities.permanentBonuses.Add(ability, 1);
             RecalculateStats();

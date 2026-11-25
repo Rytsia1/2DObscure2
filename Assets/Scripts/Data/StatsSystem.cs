@@ -952,6 +952,105 @@ namespace Obscure
             availableAtLevels != null && Array.IndexOf(availableAtLevels, level) >= 0;
     }
 
+    // Staged Attribute Point (AP) allocation draft for Training Ground live preview and atomic confirmation.
+    public sealed class AttributeAllocationDraft
+    {
+        public readonly Unit Unit;
+        public readonly AbilityScoreImprovementConfig Config;
+        public AbilityScores Pending { get; private set; } = AbilityScores.Zero;
+
+        public AttributeAllocationDraft(Unit unit, AbilityScoreImprovementConfig config = null)
+        {
+            Unit = unit ?? throw new ArgumentNullException(nameof(unit));
+            Config = config ?? Database.AsiConfig;
+        }
+
+        public int TotalPending =>
+            Pending.str + Pending.dex + Pending.vit + Pending.intel + Pending.wis + Pending.cha;
+
+        public int RemainingPoints => Math.Max(0, Unit.unspentAsiPoints - TotalPending);
+        public bool HasPendingChanges => TotalPending > 0;
+
+        public int GetPending(Ability a) => Pending[a];
+        public int GetCurrentUnbuffedScore(Ability a) => Unit.UnbuffedScore(a);
+        public int GetPreviewUnbuffedScore(Ability a) => Unit.UnbuffedScore(a) + Pending[a];
+        public bool IsAtCap(Ability a) => GetPreviewUnbuffedScore(a) >= Config.maxAbilityScore;
+
+        public AbilityScoreSheet BuildPreviewSheet() => Unit.BuildPreviewAbilitySheet(Pending);
+        public AbilityScores PreviewFinalScores() => BuildPreviewSheet().FinalScores;
+        public AbilityScores PreviewModifiers() => BuildPreviewSheet().AbilityModifiers;
+        public DerivedStats PreviewDerived() => Unit.PreviewDerivedStats(Pending);
+
+        public bool CanIncrease(Ability a) =>
+            RemainingPoints > 0 && GetPreviewUnbuffedScore(a) < Config.maxAbilityScore;
+
+        public bool CanDecrease(Ability a) => Pending[a] > 0;
+
+        public bool TryIncrease(Ability a)
+        {
+            if (!CanIncrease(a)) return false;
+            Pending = Pending.Add(a, 1);
+            return true;
+        }
+
+        public bool TryDecrease(Ability a)
+        {
+            if (!CanDecrease(a)) return false;
+            Pending = Pending.Add(a, -1);
+            return true;
+        }
+
+        public void Reset() => Pending = AbilityScores.Zero;
+
+        public bool TryCommit(out int pointsSpent, out string error)
+        {
+            pointsSpent = 0;
+            error = null;
+            int total = TotalPending;
+            if (total <= 0)
+            {
+                error = "No attribute points staged.";
+                return false;
+            }
+            if (total > Unit.unspentAsiPoints)
+            {
+                error = "Staged points exceed available Attribute Points.";
+                return false;
+            }
+            foreach (var a in AbilityScores.AllAbilities)
+            {
+                int add = Pending[a];
+                if (add < 0)
+                {
+                    error = $"Invalid negative allocation for {a}.";
+                    return false;
+                }
+                if (add > 0 && Unit.UnbuffedScore(a) + add > Config.maxAbilityScore)
+                {
+                    error = $"{a} cannot exceed cap {Config.maxAbilityScore}.";
+                    return false;
+                }
+            }
+
+            foreach (var a in AbilityScores.AllAbilities)
+            {
+                int add = Pending[a];
+                for (int i = 0; i < add; i++)
+                {
+                    if (!Unit.TrySpendAsiPoint(a, Config))
+                    {
+                        error = $"Failed to spend Attribute Point on {a}.";
+                        return false;
+                    }
+                    pointsSpent++;
+                }
+            }
+
+            Pending = AbilityScores.Zero;
+            return true;
+        }
+    }
+
     // Reusable restriction definition for Equipment (Armor, Accessories, and restricted items).
     [Serializable]
     public class EquipmentRestriction

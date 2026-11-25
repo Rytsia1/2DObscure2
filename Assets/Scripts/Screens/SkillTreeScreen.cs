@@ -15,17 +15,52 @@ namespace Obscure
         int heroIndex;
 
         public Unit CurrentHero => party[Math.Clamp(heroIndex, 0, party.Count - 1)];
+        public enum TrainingView { Skills, Attributes }
+        public TrainingView CurrentView { get; private set; } = TrainingView.Skills;
+        public AttributeAllocationDraft CurrentDraft => EnsureDraft();
         static readonly int[] TierLevel = { 1, 4, 7, 10, 13 };
+        static readonly int[] ActiveApMilestones = { 4, 7, 10, 13 };
 
         UitkMenu menu;
         string selectedSkillId;
         bool isSelectedPassive;
         bool confirmRespecActive;
+        Ability selectedAbility = Ability.STR;
+        AttributeAllocationDraft draft;
         string feedback;
         bool feedbackBad;
         int focusIndex;
         bool rebuilding;
         readonly Dictionary<UitkMenu.Item, int> portraitItems = new Dictionary<UitkMenu.Item, int>();
+
+        // Hub and Campfire (Rest Site) only — matches Skill Tree / Loadout rules in GDD.
+        public static bool CanAllocateAttributesAt(Game game, RunState run)
+        {
+            if (game == null) return true;
+            if (game.LastBase == GameState.Hub || game.LastBase == GameState.MainMenu) return true;
+            return run != null && run.Current != null && run.Current.type == NodeType.Rest && !run.OnMap;
+        }
+
+        public bool CanAllocateAttributesNow => CanAllocateAttributesAt(Game, Run);
+
+        AttributeAllocationDraft EnsureDraft()
+        {
+            var hero = CurrentHero;
+            if (draft == null || draft.Unit != hero)
+                draft = new AttributeAllocationDraft(hero, Database.AsiConfig);
+            return draft;
+        }
+
+        public void ShowView(TrainingView view)
+        {
+            if (CurrentView == view) return;
+            draft?.Reset();
+            CurrentView = view;
+            confirmRespecActive = false;
+            feedback = null;
+            focusIndex = 0;
+            Rebuild();
+        }
 
         class Node { public string id; public bool passive; public int tier; public int row; public float x, y; }
 
@@ -96,6 +131,8 @@ namespace Obscure
             if (wasPortraitFocused)
                 focusIndex = FindPortraitFocusIndex(heroIndex, focusIndex);
             selectedSkillId = null;
+            draft = null;
+            confirmRespecActive = false;
             feedback = null;
             Rebuild();
         }
@@ -137,6 +174,7 @@ namespace Obscure
                 menu.onPrevPage = () => SwitchHero(-1);
                 menu.onNextPage = () => SwitchHero(1);
 
+                EnsureDraft();
                 var nodes = LayoutNodes();
                 if (selectedSkillId == null && nodes.Count > 0) { selectedSkillId = nodes[0].id; isSelectedPassive = nodes[0].passive; }
 
@@ -155,8 +193,16 @@ namespace Obscure
                     }
                 }
 
-                BuildTree(screen, nodes);
-                BuildDetail(screen);
+                if (CurrentView == TrainingView.Attributes)
+                {
+                    BuildAttributesPanel(screen);
+                    BuildAttributesDetail(screen);
+                }
+                else
+                {
+                    BuildTree(screen, nodes);
+                    BuildDetail(screen);
+                }
 
                 if (menu.items.Count > 0) menu.Focus(Mathf.Clamp(focusIndex, 0, menu.items.Count - 1), false, true);
             }
@@ -182,7 +228,7 @@ namespace Obscure
                 int idx = i; var u = party[i]; bool on = i == heroIndex;
                 if (fr.childCount > 0 && u.sprite != null && u.sprite.Length > 0)
                     FigmaUi.SetBackgroundContain(fr[0], FigmaUi.GetSpriteTexture(u.sprite, "sk_hdr_" + (u.classDef?.id ?? u.name)));
-                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; feedback = null; Rebuild(); } }, selected: on, onAdjust: d => SwitchHero(d));
+                var it = menu.Add(fr, u.name, () => { if (heroIndex != idx) { heroIndex = idx; selectedSkillId = null; draft = null; confirmRespecActive = false; feedback = null; Rebuild(); } }, selected: on, onAdjust: d => SwitchHero(d), tooltip: $"{u.name.ToUpperInvariant()} · {u.skillLoadout.SkillPoints} SP · {u.unspentAsiPoints} AP");
                 portraitItems[it] = idx;
                 it.visual = f =>
                 {
@@ -217,7 +263,7 @@ namespace Obscure
                     ? $"{hero.name} · Lv {hero.level}"
                     : $"{hero.name} · {cls} · Lv {hero.level}";
                 heroLbl.style.fontSize = 16;
-                heroLbl.style.maxWidth = 300;
+                heroLbl.style.maxWidth = 205;
                 heroLbl.style.overflow = Overflow.Hidden;
                 if (switcherRow != null)
                 {
@@ -230,16 +276,54 @@ namespace Obscure
             }
 
             var talBtn = FigmaUi.FindButton(UiRoot, "Talents ›");
+            bool inAttr = CurrentView == TrainingView.Attributes;
+            int apCount = hero.unspentAsiPoints;
+            string modeLabel = inAttr ? "‹ Skill Tree" : apCount > 0 ? $"Attributes ({apCount})" : "Attributes";
+            var modeBtn = FigmaUi.CreateButton(modeLabel, "button-slab", 150f);
+            modeBtn.name = "TrainingModeButton";
+            modeBtn.style.position = Position.Absolute;
+            modeBtn.style.top = 18;
+            modeBtn.style.height = 36;
+            modeBtn.style.paddingLeft = 10;
+            modeBtn.style.paddingRight = 10;
+            var modeLbl = modeBtn.Q<UiLabel>("uitkLabel");
+            if (modeLbl != null)
+            {
+                modeLbl.style.fontSize = 16;
+                if (!inAttr && apCount > 0) modeLbl.style.color = Palette.Gold1;
+            }
+            if (!inAttr && apCount > 0)
+            {
+                modeBtn.style.borderTopColor = Palette.Gold2;
+                modeBtn.style.borderBottomColor = Palette.Gold2;
+                modeBtn.style.borderLeftColor = Palette.Gold2;
+                modeBtn.style.borderRightColor = Palette.Gold2;
+            }
+            if (talBtn?.parent != null)
+                talBtn.parent.Insert(talBtn.parent.IndexOf(talBtn), modeBtn);
+            else
+                (UiRoot.Q<VisualElement>(className: "_16-training-ground-skill-tree") ?? UiRoot).Add(modeBtn);
+            FigmaUi.AnchorRight(modeBtn, 352f);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(modeBtn, inAttr ? "Skill Tree" : "Attributes",
+                () => ShowView(inAttr ? TrainingView.Skills : TrainingView.Attributes),
+                tooltip: inAttr ? "RETURN TO CLASS SKILL TREE" : "ALLOCATE ATTRIBUTE POINTS (AP)"));
+
             if (talBtn != null)
             {
                 FigmaUi.AnchorRight(talBtn, 212f);
                 FigmaUi.ApplyDefaultFocusVisual(menu.Add(talBtn, "Talents", () => Game?.Go(GameState.Talents)));
             }
 
+            var ptsCaption = UiRoot.Q<UiLabel>(className: "skill-points-vars");
+            if (ptsCaption != null)
+                ptsCaption.text = inAttr ? "ATTR POINTS" : "SKILL POINTS";
+
             var spVal = UiRoot.Q<UiLabel>(className: "_0-vars-11");
             if (spVal != null)
             {
-                spVal.text = hero.skillLoadout.SkillPoints.ToString();
+                int shownPts = inAttr ? EnsureDraft().RemainingPoints : hero.skillLoadout.SkillPoints;
+                spVal.text = shownPts.ToString();
+                spVal.style.color = shownPts > 0 ? Palette.Gold1 : Palette.Mist2;
                 spVal.style.left = StyleKeyword.Auto;
                 spVal.style.right = 10;
                 spVal.style.width = 48;
@@ -629,5 +713,424 @@ namespace Obscure
         }
         void Unequip() { var lo = CurrentHero.skillLoadout; var s = isSelectedPassive ? lo.PassiveSlots : lo.ActiveSlots; for (int i = 0; i < s.Length; i++) if (s[i] == selectedSkillId) s[i] = null; Say("SKILL UNEQUIPPED.", false, Sound.Equip); }
         void Respec() { if (!confirmRespecActive) { confirmRespecActive = true; Say("PRESS RESPEC AGAIN TO REFUND ALL SP.", false, Sound.ModalOpen); return; } CurrentHero.skillLoadout.Respec(CurrentHero.classDef, CurrentHero.level); confirmRespecActive = false; selectedSkillId = null; Say("ALL SP REFUNDED AND THE TREE RESET.", false); }
+
+        // ===================================================================== Attributes View (Hub & Campfire)
+
+        void BuildAttributesPanel(VisualElement screen)
+        {
+            var hero = CurrentHero;
+            var d = EnsureDraft();
+            bool editable = CanAllocateAttributesNow;
+            var guide = ClassStatGuidance.ForClass(hero.classDef);
+            var previewScores = d.PreviewFinalScores();
+            var previewMods = d.PreviewModifiers();
+
+            var host = new VisualElement { name = "AttributesLeftPanel", style = { position = Position.Absolute, left = 40, top = 84, width = 806, height = 602, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
+            screen.Add(host);
+
+            var hdr = FigmaUi.CreateSectionHeader($"{hero.name} attributes", 806f);
+            string rightStatus;
+            Color rightCol;
+            if (!editable)
+            {
+                rightStatus = "VIEW ONLY · HUB OR CAMPFIRE ONLY";
+                rightCol = Palette.Ember1;
+            }
+            else if (d.RemainingPoints > 0 || d.HasPendingChanges)
+            {
+                rightStatus = d.HasPendingChanges
+                    ? $"{d.RemainingPoints} AP LEFT · +{d.TotalPending} STAGED"
+                    : $"{d.RemainingPoints} AP AVAILABLE";
+                rightCol = Palette.Gold1;
+            }
+            else
+            {
+                int nextLv = hero.NextAttributeMilestoneLevel();
+                rightStatus = nextLv > 0 ? $"NEXT +2 AP AT LV {nextLv}" : "ALL CAP-15 MILESTONES EARNED";
+                rightCol = Palette.Mist2;
+            }
+            hdr.Add(new UiLabel(rightStatus) { style = { position = Position.Absolute, right = 0, top = 4, fontSize = 13, color = rightCol } });
+            host.Add(hdr);
+
+            // Milestone strip (Levels 4, 7, 10, 13 under active Level Cap 15)
+            var msRow = new VisualElement
+            {
+                style =
+                {
+                    flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                    justifyContent = Justify.SpaceBetween, height = 36, marginTop = 8, marginBottom = 8,
+                    paddingLeft = 10, paddingRight = 10, backgroundColor = Palette.Ink1,
+                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                    borderTopColor = Palette.Ink4, borderBottomColor = Palette.Ink4, borderLeftColor = Palette.Ink4, borderRightColor = Palette.Ink4,
+                    flexShrink = 0
+                }
+            };
+            var msLeft = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center } };
+            msLeft.Add(new UiLabel("AP MILESTONES") { style = { fontSize = 12, color = Palette.Mist3, marginRight = 12 } });
+            foreach (int lv in ActiveApMilestones)
+            {
+                bool reached = hero.level >= lv;
+                var chip = new UiLabel(reached ? $"✓ LV {lv} (+2)" : $"LV {lv} (+2)")
+                {
+                    style =
+                    {
+                        fontSize = 12, color = reached ? Palette.Gold1 : Palette.Mist3,
+                        marginRight = 10, paddingLeft = 6, paddingRight = 6, paddingTop = 2, paddingBottom = 2,
+                        backgroundColor = reached ? Palette.Hex(0x2B2210) : Palette.Ink2,
+                        borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                        borderTopColor = reached ? Palette.Gold3 : Palette.Ink4, borderBottomColor = reached ? Palette.Gold3 : Palette.Ink4,
+                        borderLeftColor = reached ? Palette.Gold3 : Palette.Ink4, borderRightColor = reached ? Palette.Gold3 : Palette.Ink4,
+                    }
+                };
+                msLeft.Add(chip);
+            }
+            msRow.Add(msLeft);
+            msRow.Add(new UiLabel($"NORMAL CAP {d.Config.maxAbilityScore}") { style = { fontSize = 12, color = Palette.Mist2 } });
+            host.Add(msRow);
+
+            // 6 Attribute allocation rows
+            var rowsCol = new VisualElement { style = { flexGrow = 1, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
+            host.Add(rowsCol);
+
+            foreach (var a in AbilityScores.AllAbilities)
+            {
+                var ab = a;
+                bool sel = ab == selectedAbility;
+                int curFinal = hero.Score(ab);
+                int curMod = hero.Mod(ab);
+                int prevFinal = previewScores[ab];
+                int prevMod = previewMods[ab];
+                int pend = d.GetPending(ab);
+                int bScore = hero.BaseScores[ab];
+                int rScore = hero.RacialModifiers[ab];
+                int pScore = hero.PermanentAbilityBonuses[ab];
+                int eqScore = hero.EquipmentAbilityBonuses[ab];
+                bool atCap = d.IsAtCap(ab);
+                bool canDec = editable && d.CanDecrease(ab);
+                bool canInc = editable && d.CanIncrease(ab);
+                var priority = guide.GetPriority(ab);
+
+                var row = new VisualElement
+                {
+                    name = $"AttrRow_{ab}",
+                    style =
+                    {
+                        flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                        height = 70, marginBottom = 8, flexShrink = 0, overflow = Overflow.Hidden
+                    }
+                };
+
+                // Left clickable info block (separate sibling from -/+ buttons so bounds never overlap)
+                var infoBox = new VisualElement
+                {
+                    style =
+                    {
+                        flexGrow = 1, flexShrink = 1, minWidth = 0, height = 70, marginRight = 8,
+                        flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center,
+                        paddingLeft = 12, paddingRight = 12,
+                        backgroundColor = sel ? Palette.Hex(0x2B2210) : Palette.Ink2,
+                        borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
+                        borderTopColor = sel ? Palette.Gold2 : Palette.Ink5, borderBottomColor = sel ? Palette.Gold2 : Palette.Ink5,
+                        borderLeftColor = sel ? Palette.Gold2 : Palette.Ink5, borderRightColor = sel ? Palette.Gold2 : Palette.Ink5,
+                    }
+                };
+
+                var leftText = new VisualElement { style = { flexGrow = 1, flexShrink = 1, minWidth = 0, flexDirection = FlexDirection.Column } };
+                var topLine = new VisualElement { style = { flexDirection = FlexDirection.Row, alignItems = UnityEngine.UIElements.Align.Center, marginBottom = 4 } };
+                topLine.Add(new UiLabel($"{ab} · {AbilityName(ab)}") { style = { fontSize = 16, color = sel ? Palette.Gold1 : Palette.Mist1, marginRight = 8 } });
+                if (priority == AbilityPriority.Primary)
+                    topLine.Add(MakePill("PRIMARY", Palette.Gold1, Palette.Gold3, Palette.Hex(0x2B2210)));
+                else if (priority == AbilityPriority.Secondary)
+                    topLine.Add(MakePill("SECONDARY", Palette.Mist2, Palette.Ink5, Palette.Ink1));
+                if (atCap)
+                    topLine.Add(MakePill($"MAX {d.Config.maxAbilityScore}", Palette.Gold2, Palette.Gold3, Palette.Ink1));
+                leftText.Add(topLine);
+
+                string srcText = $"BASE {bScore} · RACE {FmtSigned(rScore)} · PERM {FmtSigned(pScore)}"
+                    + (pend > 0 ? $" · STAGED +{pend}" : "")
+                    + (eqScore != 0 ? $" · EQP {FmtSigned(eqScore)}" : "");
+                leftText.Add(new UiLabel(srcText) { style = { fontSize = 12, color = pend > 0 ? Palette.Ok : Palette.Mist3 } });
+                infoBox.Add(leftText);
+
+                var scoreCol = new VisualElement { style = { width = 186, flexShrink = 0, flexDirection = FlexDirection.Column, alignItems = UnityEngine.UIElements.Align.FlexEnd } };
+                string scoreTxt = pend > 0 ? $"{curFinal} › {prevFinal}" : curFinal.ToString();
+                scoreCol.Add(new UiLabel(scoreTxt) { style = { fontSize = 20, color = pend > 0 ? Palette.Ok : Palette.Mist1 } });
+                string modTxt = pend > 0
+                    ? (prevMod != curMod
+                        ? $"MOD {AbilityScores.FormatMod(curMod)} › {AbilityScores.FormatMod(prevMod)}"
+                        : $"MOD {AbilityScores.FormatMod(curMod)} (ODD SCORE)")
+                    : $"MOD {AbilityScores.FormatMod(curMod)}";
+                Color modCol = pend > 0 ? (prevMod != curMod ? Palette.Ok : Palette.Gold2) : Palette.Mist2;
+                scoreCol.Add(new UiLabel(modTxt) { style = { fontSize = 12, color = modCol } });
+                infoBox.Add(scoreCol);
+
+                row.Add(infoBox);
+
+                var rowItem = menu.Add(infoBox, $"{ab} {AbilityName(ab)}", () =>
+                {
+                    if (selectedAbility != ab) { selectedAbility = ab; feedback = null; Rebuild(); }
+                }, selected: sel, tooltip: hero.ExplainAbility(ab));
+                rowItem.visual = on =>
+                {
+                    infoBox.style.backgroundColor = on || sel ? Palette.Hex(0x2B2210) : Palette.Ink2;
+                    var b = on ? Palette.Gold1 : sel ? Palette.Gold2 : Palette.Ink5;
+                    infoBox.style.borderTopColor = b; infoBox.style.borderBottomColor = b;
+                    infoBox.style.borderLeftColor = b; infoBox.style.borderRightColor = b;
+                };
+                rowItem.visual(false);
+
+                var decBtn = FigmaUi.CreateCompactButton("-", 46f, "button-slab");
+                decBtn.name = $"Dec_{ab}";
+                decBtn.style.height = 46;
+                decBtn.style.marginRight = 6;
+                decBtn.SetEnabled(canDec);
+                row.Add(decBtn);
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(decBtn, $"- {ab}", () => AdjustPendingAttribute(ab, -1), interactable: canDec, tooltip: $"REMOVE 1 STAGED POINT FROM {ab}"));
+
+                var incBtn = FigmaUi.CreateCompactButton("+", 46f, canInc ? "button-primary" : "button-slab");
+                incBtn.name = $"Inc_{ab}";
+                incBtn.style.height = 46;
+                incBtn.SetEnabled(canInc);
+                row.Add(incBtn);
+                FigmaUi.ApplyDefaultFocusVisual(menu.Add(incBtn, $"+ {ab}", () => AdjustPendingAttribute(ab, +1), interactable: canInc, tooltip: $"STAGE +1 AP INTO {ab}"));
+
+                rowsCol.Add(row);
+            }
+
+            host.Add(new UiLabel("1 AP = +1 SCORE · STACKABLE & BANKABLE · CAP 20 (EXPLICIT TEMP BUFFS MAY EXCEED 20).")
+            {
+                style = { fontSize = 11, color = Palette.Mist3, flexShrink = 0, marginTop = 2 }
+            });
+        }
+
+        void BuildAttributesDetail(VisualElement screen)
+        {
+            var hero = CurrentHero;
+            var d = EnsureDraft();
+            bool editable = CanAllocateAttributesNow;
+            var guide = ClassStatGuidance.ForClass(hero.classDef);
+            var before = hero.Derived;
+            var after = d.PreviewDerived();
+
+            var host = new VisualElement { name = "AttributesDetailPanel", style = { position = Position.Absolute, left = 894, top = 84, width = 346, height = 602, flexDirection = FlexDirection.Column, overflow = Overflow.Hidden } };
+            screen.Add(host);
+
+            string title = d.HasPendingChanges ? $"Preview (+{d.TotalPending} AP)" : $"{selectedAbility} · {AbilityName(selectedAbility)}";
+            host.Add(FigmaUi.CreateSectionHeader(title, 346f));
+
+            var detailScroll = FigmaUi.CreateVerticalScrollView();
+            detailScroll.style.flexGrow = 1;
+            detailScroll.style.flexBasis = 0;
+            detailScroll.style.minHeight = 0;
+            detailScroll.style.marginTop = 8;
+            detailScroll.style.marginBottom = 8;
+            host.Add(detailScroll);
+
+            if (!editable)
+            {
+                var lockBox = new UiLabel("ATTRIBUTE ALLOCATION IS ONLY AVAILABLE AT THE HUB OR A CAMPFIRE.")
+                {
+                    style =
+                    {
+                        fontSize = 12, color = Palette.Ember1, whiteSpace = WhiteSpace.Normal,
+                        paddingLeft = 8, paddingRight = 8, paddingTop = 6, paddingBottom = 6, marginBottom = 10,
+                        backgroundColor = Palette.Hex(0x2A160A),
+                        borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                        borderTopColor = Palette.Ember1, borderBottomColor = Palette.Ember1, borderLeftColor = Palette.Ember1, borderRightColor = Palette.Ember1,
+                    }
+                };
+                detailScroll.Add(lockBox);
+            }
+
+            if (Database.AbilityDefs.TryGetValue(selectedAbility, out var abDef) && !string.IsNullOrEmpty(abDef.description))
+                detailScroll.Add(new UiLabel(abDef.description.ToUpperInvariant()) { style = { fontSize = 13, color = Palette.Mist1, whiteSpace = WhiteSpace.Normal, marginBottom = 8 } });
+
+            string reason = guide.GetReason(selectedAbility, hero.classDef?.name);
+            if (!string.IsNullOrEmpty(reason))
+                detailScroll.Add(new UiLabel(reason.ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Gold2, whiteSpace = WhiteSpace.Normal, marginBottom = 12 } });
+
+            var previewRows = BuildDerivedPreviewRows(hero, d, before, after, selectedAbility);
+            if (d.HasPendingChanges)
+            {
+                detailScroll.Add(new UiLabel("DERIVED STAT CHANGES") { style = { fontSize = 12, color = Palette.Gold2, marginBottom = 6 } });
+                var changed = previewRows.Where(r => r.changed).ToList();
+                if (changed.Count == 0)
+                {
+                    detailScroll.Add(new UiLabel("NO MODIFIER THRESHOLD CROSSED YET. ADD 1 MORE AP TO AN ODD SCORE TO RAISE ITS MODIFIER.")
+                    {
+                        style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal, marginBottom = 8 }
+                    });
+                }
+                else
+                {
+                    foreach (var r in changed)
+                        detailScroll.Add(PreviewStatLine(r.label, $"{r.beforeText} › {r.afterText} ({r.deltaText})", Palette.Ok));
+                }
+            }
+            else
+            {
+                detailScroll.Add(new UiLabel($"SCALES WITH {selectedAbility}") { style = { fontSize = 12, color = Palette.Mist3, marginBottom = 6 } });
+                foreach (var r in previewRows.Where(x => x.related))
+                    detailScroll.Add(PreviewStatLine(r.label, r.beforeText, Palette.Mist1));
+            }
+
+            if (!string.IsNullOrEmpty(feedback))
+                host.Add(new UiLabel(feedback.ToUpperInvariant()) { style = { fontSize = 12, color = feedbackBad ? Palette.Err : Palette.Ok, whiteSpace = WhiteSpace.Normal, marginBottom = 8, flexShrink = 0 } });
+
+            bool canReset = editable && d.HasPendingChanges;
+            bool canConfirm = editable && d.HasPendingChanges;
+            var foot = new VisualElement { style = { borderTopWidth = 2, borderTopColor = Palette.Ink4, paddingTop = 10, flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, flexShrink = 0 } };
+
+            var resetBtn = FigmaUi.CreateButton("Reset", "button-slab", 116f);
+            resetBtn.name = "ResetPendingButton";
+            resetBtn.SetEnabled(canReset);
+            foot.Add(resetBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(resetBtn, "Reset", ResetPendingAttributes, interactable: canReset, tooltip: "CLEAR STAGED ATTRIBUTE POINTS"));
+
+            string confirmLabel = d.HasPendingChanges ? $"Confirm (+{d.TotalPending})" : "Confirm";
+            var confirmBtn = FigmaUi.CreateButton(confirmLabel, canConfirm ? "button-primary" : "button-slab", 218f);
+            confirmBtn.name = "ConfirmAttributesButton";
+            confirmBtn.SetEnabled(canConfirm);
+            foot.Add(confirmBtn);
+            FigmaUi.ApplyDefaultFocusVisual(menu.Add(confirmBtn, "Confirm", ConfirmPendingAttributes, interactable: canConfirm, tooltip: "PERMANENTLY APPLY STAGED ATTRIBUTE POINTS"));
+
+            host.Add(foot);
+        }
+
+        void AdjustPendingAttribute(Ability a, int delta)
+        {
+            if (!CanAllocateAttributesNow)
+            {
+                Say("ATTRIBUTE ALLOCATION IS ONLY AVAILABLE AT THE HUB OR A CAMPFIRE.", true);
+                return;
+            }
+            var d = EnsureDraft();
+            selectedAbility = a;
+            bool ok = delta > 0 ? d.TryIncrease(a) : d.TryDecrease(a);
+            if (!ok)
+            {
+                Sfx.Play(Sound.Deny);
+                return;
+            }
+            feedback = null;
+            Sfx.Play(delta > 0 ? Sound.Confirm : Sound.Move);
+            Rebuild();
+        }
+
+        void ResetPendingAttributes()
+        {
+            var d = EnsureDraft();
+            if (!d.HasPendingChanges) return;
+            d.Reset();
+            Say("STAGED ATTRIBUTE POINTS CLEARED.", false, Sound.Move);
+        }
+
+        void ConfirmPendingAttributes()
+        {
+            if (!CanAllocateAttributesNow)
+            {
+                Say("ATTRIBUTE ALLOCATION IS ONLY AVAILABLE AT THE HUB OR A CAMPFIRE.", true);
+                return;
+            }
+            var d = EnsureDraft();
+            string summary = d.Pending.Summary();
+            if (d.TryCommit(out int spent, out string err))
+                Say($"CONFIRMED {spent} AP: {summary}.", false, Sound.SkillUnlock);
+            else
+                Say(err ?? "CANNOT APPLY ATTRIBUTE POINTS.", true);
+        }
+
+        static VisualElement MakePill(string text, Color textColor, Color borderColor, Color bgColor) =>
+            new UiLabel(text)
+            {
+                style =
+                {
+                    fontSize = 10, color = textColor, backgroundColor = bgColor,
+                    marginRight = 6, paddingLeft = 5, paddingRight = 5, paddingTop = 1, paddingBottom = 1,
+                    borderTopWidth = 1, borderBottomWidth = 1, borderLeftWidth = 1, borderRightWidth = 1,
+                    borderTopColor = borderColor, borderBottomColor = borderColor, borderLeftColor = borderColor, borderRightColor = borderColor,
+                }
+            };
+
+        static VisualElement PreviewStatLine(string label, string value, Color valueColor)
+        {
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, alignItems = UnityEngine.UIElements.Align.Center, minHeight = 26, borderBottomWidth = 1, borderBottomColor = Palette.Ink3 } };
+            row.Add(new UiLabel(label) { style = { fontSize = 12, color = Palette.Mist2, marginRight = 6 } });
+            row.Add(new UiLabel(value) { style = { fontSize = 12, color = valueColor, unityTextAlign = TextAnchor.MiddleRight } });
+            return row;
+        }
+
+        static List<(string label, string beforeText, string afterText, string deltaText, bool changed, bool related)> BuildDerivedPreviewRows(
+            Unit hero, AttributeAllocationDraft d, DerivedStats b, DerivedStats a, Ability focused)
+        {
+            var list = new List<(string, string, string, string, bool, bool)>();
+            void AddInt(string label, int bv, int av, string suffix, params Ability[] gov)
+            {
+                int diff = av - bv;
+                string dStr = (diff > 0 ? "+" : "") + diff + suffix;
+                list.Add((label, $"{bv}{suffix}", $"{av}{suffix}", dStr, diff != 0, Array.IndexOf(gov, focused) >= 0));
+            }
+            void AddPctFloat(string label, float bv, float av, params Ability[] gov)
+            {
+                float bp = Mathf.Round(bv * 1000f) / 10f;
+                float ap = Mathf.Round(av * 1000f) / 10f;
+                float dp = Mathf.Round((ap - bp) * 10f) / 10f;
+                string Fmt(float v) => (v >= 0f ? "+" : "") + v.ToString("0.#") + "%";
+                list.Add((label, Fmt(bp), Fmt(ap), Fmt(dp), Mathf.Abs(dp) > 0.01f, Array.IndexOf(gov, focused) >= 0));
+            }
+
+            // Direct raw skill scaling indicators (STR / INT scale skills even on odd scores)
+            var prevFinal = d.PreviewFinalScores();
+            AddInt("RAW STR (PHYS SKILLS)", hero.Score(Ability.STR), prevFinal.str, "", Ability.STR);
+            AddInt("RAW INT (ELEM SKILLS)", hero.Score(Ability.INT), prevFinal.intel, "", Ability.INT);
+
+            // Resource & Restorative
+            AddInt("MAX HP", b.maxHp, a.maxHp, "", Ability.VIT);
+            AddInt("MAX MP", b.maxMp, a.maxMp, "", Ability.INT);
+            AddInt("HEALING POWER", b.healingPower, a.healingPower, "", Ability.WIS);
+            AddPctFloat("SHIELD POWER", b.shieldPowerBonus, a.shieldPowerBonus, Ability.WIS, Ability.CHA);
+
+            // Defensive
+            AddInt("PHYSICAL DEFENSE", b.physicalDefense, a.physicalDefense, "", Ability.STR, Ability.VIT);
+            AddInt("MAGIC DEFENSE", b.magicDefense, a.magicDefense, "", Ability.INT, Ability.WIS);
+            AddPctFloat("DAMAGE REDUCTION", b.damageReductionBonus, a.damageReductionBonus, Ability.VIT, Ability.STR);
+            AddInt("BLOCK POWER", b.blockPower, a.blockPower, "%", Ability.STR, Ability.VIT);
+            AddInt("EVASION", b.evasion, a.evasion, "%", Ability.DEX);
+            AddInt("STATUS RESISTANCE", b.statusResistance, a.statusResistance, "%", Ability.VIT, Ability.WIS);
+            AddInt("STAGGER RESISTANCE", b.staggerResistance, a.staggerResistance, "%", Ability.VIT, Ability.STR);
+
+            // Offensive
+            AddInt("PHYSICAL POWER", b.physicalPower, a.physicalPower, "", Ability.STR);
+            AddInt("MAGIC POWER", b.magicPower, a.magicPower, "", Ability.INT);
+            AddInt("RANGED ACCURACY", b.rangedAccuracyBonus, a.rangedAccuracyBonus, "%", Ability.DEX);
+            AddInt("PHYS CRIT CHANCE", b.criticalChance, a.criticalChance, "%", Ability.DEX, Ability.STR);
+            AddInt("ARMOR PENETRATION", b.armorPenetration, a.armorPenetration, "", Ability.STR, Ability.DEX);
+            AddInt("MAGIC PENETRATION", b.magicPenetration, a.magicPenetration, "", Ability.INT, Ability.WIS);
+            AddInt("COUNTER POWER", b.counterPower, a.counterPower, "%", Ability.DEX, Ability.STR);
+            AddInt("BREAK POWER", b.physicalBreakPower, a.physicalBreakPower, "", Ability.STR, Ability.DEX);
+
+            // Execution & Support
+            AddInt("INITIATIVE (SPD)", b.initiative, a.initiative, "", Ability.DEX, Ability.INT);
+            AddInt("ACTION SPEED", b.actionSpeed, a.actionSpeed, "", Ability.DEX, Ability.INT);
+            AddInt("QTE WINDOW", b.qteTimingBonus, a.qteTimingBonus, "%", Ability.DEX);
+            AddInt("QTE STABILITY", b.qteStability, a.qteStability, "%", Ability.DEX, Ability.WIS);
+            AddPctFloat("BUFF EFFECTIVENESS", b.buffEffectivenessBonus, a.buffEffectivenessBonus, Ability.CHA, Ability.WIS);
+            AddPctFloat("DEBUFF EFFECTIVENESS", b.debuffEffectivenessBonus, a.debuffEffectivenessBonus, Ability.CHA, Ability.INT);
+            AddInt("SUPPORT POWER", b.supportPower, a.supportPower, "%", Ability.CHA, Ability.WIS);
+
+            return list;
+        }
+
+        static string AbilityName(Ability a) => a switch
+        {
+            Ability.STR => "STRENGTH",
+            Ability.DEX => "DEXTERITY",
+            Ability.VIT => "VITALITY",
+            Ability.INT => "INTELLIGENCE",
+            Ability.WIS => "WISDOM",
+            _ => "CHARISMA",
+        };
+
+        static string FmtSigned(int v) => v >= 0 ? $"+{v}" : v.ToString();
     }
 }

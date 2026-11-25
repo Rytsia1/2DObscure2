@@ -533,4 +533,93 @@ const ELEMENTS = {
   Water: g("drop", { k: "B" }, { s: 1.3, y: 6.6 }),
 };
 
-module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, RACIAL, ELEMENTS, gearIcon };
+// ---------------- talents (keyed by TalentDef id in Data/TalentSystem.cs; class ids are <class>_<snake name>) ----------------
+// Shared talents read as their stat; class talents keep the class colours used by its skills and passives.
+const clover = (k = "N") => (c) => {
+  c.cap([[7, 8], [8.5, 13]], 0.6, 0.5, "m");
+  for (const r of [0, 90, 180, 270]) c.at({ x: 7, y: 7, r: r + 15 }, () => c.at({ y: -3.2, s: 0.5 }, () => G.heart(c, { k })));
+};
+// QTE timing window: gold brackets left and right of the subject (Quick Reflex / Steady Hand).
+const qteWindow = (k = "H") => (c) => { for (const [x, d] of [[1, 1], [12.5, -1]]) { c.line(x, 1.5, x, 12.5, k); c.line(x, 1.5, x + d * 1.5, 1.5, k); c.line(x, 12.5, x + d * 1.5, 12.5, k); } };
+const TALENTS = {
+  // shared
+  alert: all(g("eye", { iris: "Y" }, { s: 0.85, y: 7 }), down("K")),
+  healer: all(I("flask", { liquid: "K" }), plus("N")),
+  durable: all(I("shield", { boss: "G" }, { x: -0.5, y: 0.5, s: 0.85 }), g("heart", { k: "K" }, { x: 11, y: 10.8, s: 0.42 })),
+  keen_mind: all(I("book", { cover: "j", spine: "z" }, { x: -0.5, y: 0.5, s: 0.85 }), down("B")),
+  arcane_reserve: all(I("flask", { liquid: "B", shape: "tall" }), up("B")),
+  poisoner: all(diag("dagger", { blade: "O" }, { s: 0.95, x: 6, y: 6.5 }), g("drop", { k: "O" }, { x: 10.5, y: 11, s: 0.55 }), g("drop", { k: "O" }, { x: 12.2, y: 7, s: 0.35 })),
+  crusher: all(g("hammer", {}, { r: -30, s: 0.8, x: 7.5, y: 7 }), spark("H", 2.5, 10.5, 0.6), spark("H", 11.5, 3, 0.6)),
+  slasher: all(g("slash", { k: "T", r: 6.2, w: 1.5 }, { y: 6 }), g("drop", { k: "K" }, { x: 5.5, y: 10.5, s: 0.55 }), g("drop", { k: "K" }, { x: 9.8, y: 11.5, s: 0.4 })),
+  piercer: all(I("shield", { face: "S", rim: "s" }, { x: 0, y: 1.5, s: 0.75 }), diag("arrow", { head: "G" }, { s: 1.05 })),
+  lucky: clover(),
+  inspiring_leader: all(g("halo", { k: "H" }, { y: 2.6, s: 0.7 }), I("crown", { k: "G", gem: "K" }, { x: 1.5, y: 3.5, s: 0.8 })),
+  hardy_constitution: all(g("heart", { k: "K" }, { s: 0.95, x: 6.5, y: 7.5 }), up()),
+  combat_momentum: all(g("mark", { k: "T" }, { x: 4, y: 8 }), I("bootI", { kind: "boot" }, { x: 4, y: 1.5, s: 0.75 })),
+  unshakeable: all(I("helm", { k: "s", crest: "G" }, { x: 0.5, y: 1, s: 0.85 }), spark("H", 11.5, 2.5, 0.6)),
+  spellcraft_mastery: all(diag("staff", { gem: "A", prongs: "G" }, { s: 0.9 }), spark("A", 11, 3, 0.75)),
+  quick_reflex: all(qteWindow(), I("shield", { boss: "G" }, { x: 2.2, y: 2, s: 0.7 })),
+  spoils_seeker: all(I("pouch", { k: "l", tie: "G" }, { x: -0.8, y: 0.5, s: 0.85 }), g("coin", {}, { x: 10.8, y: 10.5, s: 0.6 })),
+  pinpoint_focus: all(g("target", { k: "r" }), (c) => c.ell(7, 7, 1.7, 1.7, "H"), spark("H", 11.8, 2.2, 0.55)),
+  steady_hand: all(qteWindow(), sword({}, { s: 0.7 })),
+  desperate_grit: all(g("heart", { k: "K" }, { s: 0.95, y: 8 }), g("crack", { k: "k" }, { x: 7, y: 8, s: 0.55 }), g("flame", { k: "F" }, { x: 11.5, y: 3, s: 0.45 })),
+  // fighter: steel and gold
+  fighter_weapon_adept: all(sword({}, { s: 0.85, x: 6, y: 8 }), spark("T", 11, 3, 0.75)),
+  fighter_guard_specialist: all(I("shield", { rim: "G", face: "S", boss: "G" }, { x: -0.5, y: 0.5, s: 0.85 }), up()),
+  fighter_tactical_opening: all(g("mark", { k: "T" }, { x: 4, y: 8.5 }), sword({}, { s: 0.75, x: 8.5, y: 6.5 })),
+  fighter_weapon_precision: all(g("target", { k: "r" }, { x: 10.5, y: 3.5, s: 0.42 }), diag("rapier", {}, { s: 1, x: 6.5, y: 7.5 })),
+  fighter_master_of_arms: all(diag("greatsword", { guard: "G" }, { s: 0.85 }), goldStar()),
+  // barbarian: blood red
+  barbarian_bloodlust: all(g("claw", { k: "K" }, { s: 0.75, x: 5, y: 7 }), g("drop", { k: "K" }, { x: 10.5, y: 9.5, s: 0.65 })),
+  barbarian_unbreakable_rage: all(I("shield", { rim: "r", face: "S" }, { x: -0.5, y: 0.5, s: 0.85 }), g("flame", { k: "K", core: false }, { x: 6.5, y: 7.5, s: 0.5 })),
+  barbarian_berserk_fury: all(g("axe", {}, { r: -35, s: 0.75, x: 5, y: 7.5, fx: true }), g("axe", {}, { r: 35, s: 0.75, x: 9, y: 7.5 }), spark("K", 7, 2.2, 0.6)),
+  barbarian_raging_momentum: all(g("mark", { k: "K" }, { x: 4.5, y: 8 }), g("flame", { k: "F" }, { x: 9, y: 7.5, s: 0.8 })),
+  barbarian_last_stand: all(I("shield", { face: "S" }, { x: -1, y: 1, s: 0.8 }), g("crack", { k: "k" }, { x: 5.6, y: 8, s: 0.6 }), g("axe", {}, { r: 20, s: 0.55, x: 10.5, y: 5 })),
+  // martial artist: fists, wind, soul cyan
+  martial_artist_flowing_strikes: all(g("wave", { k: "C" }, { x: 4, y: 4, s: 0.55 }), g("wave", { k: "C" }, { x: 4, y: 10.5, s: 0.55 }), g("fist", {}, { s: 0.75, x: 8.5, y: 7.2 })),
+  martial_artist_perfect_timing: all(g("hourglass", { k: "q", sand: "C", frame: "z" }, { s: 0.85, x: 6 }), spark("H", 11.5, 3, 0.7)),
+  martial_artist_combo_discipline: I("headband", { k: "r", gem: "C" }),
+  martial_artist_finisher_mastery: all(g("burst", { k: "T", coreK: "W" }, { s: 0.85 }), g("fist", { wrap: "G" }, { s: 0.6 })),
+  martial_artist_unbroken_rhythm: all(g("beads", { k: "z" }, { s: 1, y: 7.5 }), g("orb", { k: "C", r: 1.6 }, { y: 6 })),
+  // rogue: shadow and poison
+  rogue_opportunist: all(g("mark", { k: "D" }, { x: 3.5, y: 8.5 }), diag("dagger", {}, { s: 0.95, x: 8, y: 6.5 })),
+  rogue_exploit_weakness: all(I("shield", { face: "S", rim: "s" }), g("crack", { k: "K" }, { s: 0.9 })),
+  rogue_dirty_fighting: I("bomb", { k: "x", spark: "O" }, { x: 0.5, y: 0.5, s: 0.9 }),
+  rogue_shadow_step: all(g("mark", { k: "D" }, { x: 4, y: 8 }), g("moon", { k: "D" }, { x: 9, y: 7, s: 0.8 })),
+  rogue_executioner: all(g("skull", {}, { y: 9.5, s: 0.7 }), diag("dagger", { blade: "K" }, { x: 7, y: 3.8, s: 0.6, r: 180 })),
+  // ranger: leaf green, bow and arrow
+  ranger_hunters_instinct: all(g("eye", { iris: "G" }, { s: 0.8, y: 6 }), g("leaf", { k: "N" }, { x: 11, y: 11, s: 0.45, r: 30 })),
+  ranger_marked_prey: all(g("target", { k: "r" }, { s: 0.95 }), g("xmark", { k: "K" }, { s: 0.55 })),
+  ranger_deadly_precision: all(diag("arrow", { head: "G" }, { s: 0.95 }), spark("H", 11, 3, 0.75)),
+  ranger_longshot: all(diag("bow", {}, { s: 0.75, x: 5, y: 9 }), diag("arrow", {}, { s: 0.65, x: 9, y: 5 })),
+  ranger_predators_patience: all(g("hourglass", { k: "q", sand: "N", frame: "V" }, { s: 0.8, x: 5, y: 7.5 }), g("eye", { iris: "F", white: "y" }, { s: 0.45, x: 11, y: 3.5 })),
+  // cleric: holy gold
+  cleric_divine_grace: all(g("cross", { k: "H" }, { y: 8.5, s: 0.8 }), g("halo", { k: "G" }, { y: 2.2, s: 0.65 })),
+  cleric_sanctuary: all((c) => c.arc(7, 11, 5.2, 6.4, 180, 360, "H"), g("heart", { k: "K" }, { y: 9, s: 0.5 })),
+  cleric_holy_retribution: all(g("hammer", { head: "G", band: "H" }, { r: -35, s: 0.8, x: 8, y: 7.5 }), g("sun", {}, { x: 3.2, y: 3.2, s: 0.42 })),
+  cleric_guardians_resolve: all(I("shield", { rim: "G", face: "c", cross: "G" }, { x: -0.5, y: 0.5, s: 0.85 }), up("H")),
+  cleric_last_benediction: all(g("hand", { k: "f" }, { y: 9.5, s: 0.8 }), g("star", { n: 4, k: "H", r1: 4, r0: 1.2 }, { y: 3.5, s: 0.8 })),
+  // wizard: arcane violet, mana blue, the elements
+  wizard_elemental_adept: all(g("flame", { k: "F" }, { x: 3.8, y: 4.5, s: 0.6 }), g("bolt", {}, { x: 10.6, y: 4.5, s: 0.6 }), g("snow", {}, { x: 7, y: 10.5, s: 0.5 })),
+  wizard_focused_casting: all(diag("wand", { gem: "A" }, { s: 0.85, x: 6, y: 8 }), g("target", { k: "e" }, { x: 10.5, y: 3.5, s: 0.4 })),
+  wizard_elemental_insight: all(g("eye", { iris: "A" }, { s: 0.85, y: 8.5 }), g("flame", { k: "F" }, { x: 11, y: 3, s: 0.35 }), g("snow", {}, { x: 3, y: 3, s: 0.3 })),
+  wizard_arcane_efficiency: all(g("hourglass", { k: "q", sand: "A", frame: "u" }, { s: 0.85, x: 6 }), down("B")),
+  wizard_elemental_mastery: all(g("burst", { k: "F", coreK: "Y" }, { s: 0.85 }), g("snow", {}, { s: 0.4 }), goldStar()),
+  // warlock: shadow and soul
+  warlock_lingering_malice: all(g("cloud", { k: "v" }, { y: 6.5 }), g("drop", { k: "D" }, { x: 4, y: 11.5, s: 0.4 }), g("drop", { k: "D" }, { x: 9.5, y: 12, s: 0.4 })),
+  warlock_curse_potency: all(g("skull", { k: "v", eye: "D" }, { s: 0.9, x: 6, y: 8 }), up("D")),
+  warlock_dark_knowledge: I("book", { cover: "u", spine: "x", sigil: (c) => c.at({ s: 0.55 }, () => G.skull(c, { k: "v", eye: "D" })) }),
+  warlock_soul_harvester: all(I("scythe", { head: "S", haft: "x", edge: "C" }), g("orb", { k: "C", r: 1.6 }, { x: 4, y: 10 }), g("orb", { k: "C", r: 1.2 }, { x: 8, y: 11.5 })),
+  warlock_doom_weaver: all(g("hand", { k: "v", gap: "x" }, { y: 9, s: 0.75 }), (c) => { for (const x of [4, 7, 10]) c.line(x, 0, x, 4.5, "D"); }),
+  // druid: leaf, moss, bark
+  druid_natures_embrace: all(g("heart", { k: "N" }, { s: 0.9, y: 8 }), g("leaf", { k: "n" }, { x: 11, y: 3, s: 0.45, r: 30 })),
+  druid_wild_growth: all(g("tree", { k: "n" }, { y: 8, s: 0.95 }), up()),
+  druid_root_mastery: all(g("root", {}, { s: 0.95, y: 8.5 }), goldStar()),
+  druid_natures_wrath: all(g("leaf", { k: "N" }, { r: 30, s: 0.9, x: 6, y: 8 }), g("bolt", {}, { x: 10.5, y: 4, s: 0.55 })),
+  druid_primal_balance: (c) => { // light leaf half and dark bark half swirling into one disc
+    c.arc(7, 7, 0, 6, 90, 270, "n"); c.arc(7, 7, 0, 6, -90, 90, "V");
+    c.ell(7, 4, 3, 3, "n"); c.ell(7, 10, 3, 3, "V"); c.ell(7, 4, 1, 1, "V"); c.ell(7, 10, 1, 1, "n");
+  },
+};
+
+module.exports = { ITEMS, SKILLS, PASSIVES, STATUS, RACIAL, ELEMENTS, TALENTS, gearIcon };

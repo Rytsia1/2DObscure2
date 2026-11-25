@@ -194,11 +194,13 @@ namespace Obscure
             menu.onBack = () => feedbackLbl.text = "CHOOSE A CAMP ACTION TO CONTINUE.";
             int hp = Run != null ? Run.Party.Sum(RunState.RecoverAmount) : 0;
             int mp = Run != null ? Run.Party.Sum(RunState.RecoverMpAmount) : 0;
+            int partyAp = Run != null ? Run.Party.Sum(u => u.unspentAsiPoints) : 0;
             Option($"RECOVER +{hp} HP · +{mp} MP", $"HEAL {(int)(RunConfig.RestRecover * 100)}% OF MISSING HP AND MP ACROSS ALL HEROES", Recover);
-            Option("IMPROVE A HERO", "HONOR ONE HERO WITH A PERMANENT ATTRIBUTE OR MASTERY UPGRADE", ShowImprove);
+            Option("IMPROVE A HERO", "HONOR ONE HERO WITH A PERMANENT COMBAT DRILL UPGRADE", ShowImprove);
             Option("CAMP BOON (MODIFIER)", "PREPARE A TEMPORARY DUNGEON MODIFIER FOR THE LAYER", ShowCampModifiers);
             // Skills is a service screen: Back returns here with the rest still unused.
-            Option("DEVELOP SKILLS (FREE)", "DOES NOT USE THE CAMP. ALLOCATE SKILL POINTS, THEN COME BACK", () => Game?.Go(GameState.Skills));
+            string apReady = partyAp > 0 ? $" · {partyAp} AP READY" : "";
+            Option("DEVELOP SKILLS & ATTRIBUTES (FREE)", $"DOES NOT USE THE CAMP. SPEND SP, AP & TALENTS, THEN COME BACK{apReady}", () => Game?.Go(GameState.Skills));
         }
 
         void ShowCampModifiers()
