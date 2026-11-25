@@ -265,24 +265,30 @@ namespace Obscure.Tests
             Assert.AreEqual(0.30f, p.GetEffectiveResistance(StatusId.Burn), 1e-5f);
             Assert.AreEqual(StatusResistTier.Normal, p.GetTier(StatusId.Burn));
 
-            // Positive perStatus clamps at 0.75 cap
-            p.SetPerStatusResistance(StatusId.Fear, 0.60f); // 0.30 + 0.60 -> clamped to 0.75
-            Assert.AreEqual(0.75f, p.GetEffectiveResistance(StatusId.Fear), 1e-5f);
-            Assert.AreEqual(StatusResistTier.Resistant, p.GetTier(StatusId.Fear));
+            // Positive perStatus clamps at the 0.85 cap
+            p.SetPerStatusResistance(StatusId.Stun, 0.70f); // 0.30 + 0.70 -> clamped to 0.85
+            Assert.AreEqual(0.85f, p.GetEffectiveResistance(StatusId.Stun), 1e-5f);
+            Assert.AreEqual(StatusResistTier.Resistant, p.GetTier(StatusId.Stun));
 
-            // Negative perStatus reduces universal and floors at 0
+            // Mental statuses ignore the Status pool: Fear = Mental 0 + 0.60
+            p.SetPerStatusResistance(StatusId.Fear, 0.60f);
+            Assert.AreEqual(0.60f, p.GetEffectiveResistance(StatusId.Fear), 1e-5f);
+
+            // Negative perStatus reduces the pool and can go below 0
             p.SetPerStatusResistance(StatusId.Bleed, -0.20f); // 0.30 - 0.20 = 0.10
             Assert.AreEqual(0.10f, p.GetEffectiveResistance(StatusId.Bleed), 1e-5f);
             Assert.AreEqual(StatusResistTier.Vulnerable, p.GetTier(StatusId.Bleed));
 
-            p.SetPerStatusResistance(StatusId.Poison, -0.50f); // 0.30 - 0.50 -> floored to 0
-            Assert.AreEqual(0.0f, p.GetEffectiveResistance(StatusId.Poison), 1e-5f);
+            p.SetPerStatusResistance(StatusId.Poison, -0.50f); // 0.30 - 0.50 = -0.20
+            Assert.AreEqual(-0.20f, p.GetEffectiveResistance(StatusId.Poison), 1e-5f);
 
-            // Multiplicative reductions apply after clamp
+            // Multiplicative reductions apply after clamp, only to positive values
             p.AddReduction(0.50f);
-            Assert.AreEqual(0.375f, p.GetEffectiveResistance(StatusId.Fear), 1e-5f);
+            Assert.AreEqual(0.425f, p.GetEffectiveResistance(StatusId.Stun), 1e-5f);
+            Assert.AreEqual(0.30f, p.GetEffectiveResistance(StatusId.Fear), 1e-5f);
             Assert.AreEqual(0.05f, p.GetEffectiveResistance(StatusId.Bleed), 1e-5f);
-            Assert.AreEqual(1f - 0.375f, p.CalculateFinalApplicationChance(1f, StatusId.Fear), 1e-5f);
+            Assert.AreEqual(-0.20f, p.GetEffectiveResistance(StatusId.Poison), 1e-5f);
+            Assert.AreEqual(1f - 0.425f, p.CalculateFinalApplicationChance(1f, StatusId.Stun), 1e-5f);
 
             // Immunity stays separate and is never bypassed by reductions
             p.SetImmune(StatusId.Burn, true);

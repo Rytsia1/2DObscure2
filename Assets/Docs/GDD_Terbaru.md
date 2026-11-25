@@ -1193,7 +1193,7 @@ Liichtian adalah race original dalam dunia game dengan konsep dasar yang terinsp
 |---|---|
 | Activation | Active, memakai giliran Liichtian |
 | Target | Seluruh anggota party yang aktif |
-| Effect | Heal 10% Max HP masing-masing target; All Damage Taken −10%; Status Effect Resistance +20% (additive, tetap tunduk pada cap 75%) |
+| Effect | Heal 10% Max HP masing-masing target; All Damage Taken −10%; Status Resistance +20% (additive, tetap tunduk pada cap 85%; tidak menambah Mental Resistance) |
 | Duration | Selama 2 giliran Liichtian |
 | Usage limit | 1 per battle |
 
@@ -1554,7 +1554,7 @@ Penggunaan utility "sekali per dungeon" disimpan di run state dan di-reset saat 
 - [ ] Phased mencegah target single-target, tidak mencegah AoE, dan mengalihkan serangan yang sudah ditelegraph.
 - [ ] Iron Resolve menerapkan −30% damage taken dan −50% Break Power taken sampai giliran berikutnya.
 - [ ] Overdrive menerapkan bonus selama 3 giliran, lalu Exhausted selama 2 giliran yang tidak dapat di-cleanse.
-- [ ] Lightbound menyembuhkan dan memberi buff ke seluruh party yang aktif, dengan cap Status Effect Resistance 75%.
+- [ ] Lightbound menyembuhkan dan memberi buff ke seluruh party yang aktif, dengan cap Status Resistance 85%.
 - [ ] Ocean's Embrace memberi Shield, bonus window defensif, dan heal satu kali saat berakhir.
 - [ ] Feat yang memakai giliran tidak dapat diaktifkan saat Stun, Sleep, Mind Control, atau Down, tetapi dapat diaktifkan saat Silence.
 - [ ] Combat log menampilkan setiap penggunaan racial ability.
@@ -1584,7 +1584,7 @@ Seluruh parameter di §5, §6.2, dan §9.2 disimpan sebagai data configurable. P
 | Overdrive All Damage Bonus | +35% | Dragonborn menyumbang >40% damage party di boss |
 | Iron Resolve damage taken | −30% | Dwarf tidak pernah turun di bawah 50% HP di encounter elite |
 | Cooldown Fey Step | 4 | Elf Phased lebih dari 40% total giliran battle |
-| Lightbound Status Effect Resistance | +20% | Status musuh gagal >80% selama Lightbound aktif |
+| Lightbound Status Resistance | +20% | Status musuh gagal >80% selama Lightbound aktif |
 | Shield Ocean's Embrace | 25% Max HP | Target Ocean's Embrace tidak pernah kehilangan HP dalam 3 giliran |
 
 ### 16. Implementation Notes
@@ -1701,17 +1701,17 @@ Guard has experience protecting people, places, or territory. Its perk provides 
 
 **Identity:** Solitude, endurance, and self-control.
 
-Hermit has learned to endure difficult circumstances without relying on others. Its perk improves resistance to status effects.
+Hermit has learned to endure difficult circumstances without relying on others. Its perk improves resistance to Mental Effects (Mental Resistance, Bab 11 §9).
 
 | Rank | Unlock Level | Perk | Effect |
 |---|---:|---|---|
-| I | 1 | Quiet Endurance | Status Effect Resistance increases by 5%. |
-| II | 4 | Solitary Resolve | Status Effect Resistance increases to 8%. |
-| III | 7 | Inner Balance | Status Effect Resistance increases to 10%. |
-| IV | 10 | Unshaken Mind | Status Effect Resistance increases to 12%. |
-| V | 13 | Tranquil Spirit | Status Effect Resistance increases to 15%. When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn. |
+| I | 1 | Quiet Endurance | Mental Resistance increases by 5%. |
+| II | 4 | Solitary Resolve | Mental Resistance increases to 8%. |
+| III | 7 | Inner Balance | Mental Resistance increases to 10%. |
+| IV | 10 | Unshaken Mind | Mental Resistance increases to 12%. |
+| V | 13 | Tranquil Spirit | Mental Resistance increases to 15%. When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn. |
 
-**Design note:** This perk follows the game's Status Effect Resistance rules and does not grant automatic immunity.
+**Design note:** This perk follows the game's Mental Resistance rules (cap 85%) and does not grant automatic immunity.
 
 #### 3.5 Farmer — Hardy Harvest
 
@@ -1816,7 +1816,7 @@ Scribe is accustomed to observing and recording information. Its perk improves a
 | Acolyte | Healing and recovery | Cleric, Druid, support-oriented builds |
 | Charlatan | Damage against debuffed targets | Rogue, Warlock, Ranger |
 | Guard | Physical defense | Fighter, Cleric, Druid |
-| Hermit | Status Effect Resistance | All Classes |
+| Hermit | Mental Resistance | All Classes |
 | Farmer | Max HP and recovery | Fighter, Barbarian, durable builds |
 | Noble | Max MP and recovery | Wizard, Warlock, support-oriented builds |
 | Sage | MP efficiency | Wizard, Cleric, Druid |
@@ -2952,7 +2952,7 @@ Sembilan Shared Talent tambahan berikut telah difinalisasi nama dan efeknya (nam
 
 - **Hardy Constitution** *(sebelumnya Vitality)* — **+45 Max HP** dan **+10% Healing Received**.
 - **Combat Momentum** *(sebelumnya Battle Rhythm)* — **+8 Initiative** dan **+10 Action Speed**.
-- **Unshakeable** *(sebelumnya Iron Will)* — **+15% Status Resistance** dan **+10% Stagger Resistance**.
+- **Unshakeable** *(sebelumnya Iron Will)* — **+15% Mental Resistance** dan **+10% Stagger Resistance**.
 - **Spellcraft Mastery** *(sebelumnya Efficient Casting)* — **+12% Magic Power** dan **+10 Magic Penetration**.
 - **Quick Reflex** — **Defensive QTE window +10%** (QTE window modifier, masuk cap bersama `+25%`).
 - **Spoils Seeker** *(sebelumnya Fortune Seeker)* — **+15% Spoils (Gold)** dari hadiah battle & treasure selama pemilik talent masih hidup (*non-stacking*).
@@ -3926,7 +3926,7 @@ Nullification adalah pengecualian: jika komponen dinullifikasi, hasilnya 0 dan m
 
 - Jika skill menerapkan status per hit, tiap hit melakukan roll independen dan hit sukses dapat menambah instance.
 
-- Status Effect Resistance mengurangi chance aplikasi, bukan duration atau potency setelah aplikasi.
+- Status Resistance / Mental Resistance mengurangi chance aplikasi, bukan duration atau potency setelah aplikasi.
 
 - Roll status independen dari grade QTE, termasuk saat damage component bernilai 0 karena Defense atau Nullification.
 
@@ -3950,22 +3950,37 @@ Control Effect adalah status yang menghilangkan kontrol atas karakter atau mengu
 
 - Durasi Control Immunity adalah nilai baseline yang dapat di-balance lewat data.
 
-### 9. Status Effect Resistance
+### 9. Status Resistance & Mental Resistance
 
-|**Parameter**|**Aturan**|
-|---|---|
-|Type|Universal Status Effect Resistance; tidak terpisah per status.|
-|Sumber|Base Stats, Equipment, Buffs, Passives.|
-|StackingResistance|Additive.|
-|Cap|75%.|
-|Minimum|0%.|
-|Resistance Reduction|Percentage Reduction.|
-|Multiple reductions|Multiplicative Stacking.|
-|Boss|Resistance tinggi untuk non-Mental status; dapat direduksi.|
+*(Revisi 25 November 2026: Universal Status Effect Resistance dipecah menjadi dua pool terpisah; cap 75% → 85%; floor 0% → −85%.)*
 
-R_final = min(R_base + R_equipment + R_stats + R_buffs + R_passives, 75%) P_final = P_base × (1 − R_final) R_after = max(0, R_initial × ∏(1 − D_i))
+|**Parameter**|**Status Resistance**|**Mental Resistance**|
+|---|---|---|
+|Berlaku untuk|Semua status non-Mental (Burn, Poison, Bleed, Freeze, Shock, Curse, Stun, debuff).|Hanya Mental Effects (§12).|
+|Sumber|Base Stats/Attributes, Equipment, Buffs, Passives.|Base Stats/Attributes, Equipment, Buffs, Passives.|
+|Attribute scaling|Primary VIT +2.0%/mod, Secondary WIS +1.0%/mod.|Primary WIS +2.0%/mod, Secondary INT +1.0%/mod.|
+|Base|0% (netral); class dapat memberi base sendiri.|0% untuk semua class.|
+|Stacking|Additive.|Additive.|
+|Rentang|−85% sampai +85%.|−85% sampai +85%.|
+|Resistance Reduction|Percentage Reduction, multiplicative stacking.|Sama; debuff ResistanceDown mengurangi kedua pool.|
+|Boss|Resistance tinggi untuk non-Mental status; dapat direduksi.|Tidak relevan: Boss immune terhadap Mental Effects (§13).|
 
-Contoh: Status Effect Chance 80%, resistance 75% → chance final 20%. Resistance 60% dengan dua debuff 20% → 38.4% resistance; chance skill 40% → 24.64%.
+Kedua pool tidak saling menumpuk: Mental Effect hanya di-roll terhadap Mental Resistance, status lain hanya terhadap Status Resistance.
+
+```
+pool(S)      = Mental Resistance jika S adalah Mental Effect, selain itu Status Resistance
+R_raw(S)     = clamp(pool(S) + perStatus[S], −85%, +85%)
+R_eff(S)     = R_raw > 0 ? R_raw × ∏(1 − D_i) : R_raw     // reduksi hanya mengecilkan nilai positif
+P_final      = clamp(P_base × (1 − R_eff(S)), 0%, 100%)
+```
+
+- Resistance negatif menaikkan peluang status: resistance −85% membuat chance 50% menjadi 92.5%.
+- Resistance Reduction tidak menyentuh nilai negatif (agar debuff tidak justru menolong target).
+- Immunity (Boss + Mental, atau flag immunity per status) dicek sebelum roll dan tidak dapat ditembus.
+
+Contoh: Status Effect Chance 80%, Status Resistance 85% → chance final 12%. Resistance 60% dengan dua debuff 20% → 38.4% resistance; chance skill 40% → 24.64%.
+
+Nilai ±85% dan koefisien WIS/INT berstatus **Posture B (starting value)**. Uji: build endgame yang menumpuk resistance maksimal tetap terkena status ber-chance 100% sekitar 15% dari waktu. Jika playtester melaporkan "tidak pernah terkena", turunkan cap.
 
 ### 10. Damage Over Time
 
@@ -3983,7 +3998,7 @@ Contoh: Status Effect Chance 80%, resistance 75% → chance final 20%. Resistanc
 
 - DoT tidak otomatis Critical.
 
-- Status Effect Resistance tidak mengurangi tick damage setelah aplikasi berhasil.
+- Status Resistance tidak mengurangi tick damage setelah aplikasi berhasil.
 
 |**DoT**|**Damage Type / Stat**|
 |---|---|
@@ -4007,7 +4022,7 @@ Detail numerik dan perilaku spesifik status-status di atas masih perlu ditentuka
 
 ### 12. Mental Effect System
 
-Mental Effects adalah kategori Status Effect yang memengaruhi pikiran, persepsi, emosi, atau kontrol target. Mental Effect bukan Damage Type/elemen baru dan menggunakan Universal Status Effect Resistance.
+Mental Effects adalah kategori Status Effect yang memengaruhi pikiran, persepsi, emosi, atau kontrol target. Mental Effect bukan Damage Type/elemen baru dan di-roll terhadap Mental Resistance (§9), bukan Status Resistance.
 
 |**Mental Effect**|**Mekanik yang disepakati**|
 |---|---|
@@ -4035,11 +4050,11 @@ Mental Effects adalah kategori Status Effect yang memengaruhi pikiran, persepsi,
 
 |**Status Category**|**Aturan Boss**|
 |---|---|
-|Non-Mental Status Effect|Boss dapat terkena; memiliki Universal Status Effect Resistance<br>tinggi.|
+|Non-Mental Status Effect|Boss dapat terkena; memiliki Status Resistance<br>tinggi.|
 |Duration|Tetap mengikuti durasi skill; tidak ada durasi khusus Boss yang<br>lebih pendek.|
 |Resistance Reduction|Dapat dikurangi dengan Percentage Reduction dan multiplicative<br>stacking.|
 |Mental Effects|Boss immune terhadap seluruh Mental Effects.|
-|Immunity bypass|Status Effect Resistance Reduction tidak menembus Mental<br>Effect immunity.|
+|Immunity bypass|Mental Resistance dan Resistance Reduction tidak menembus Mental<br>Effect immunity.|
 
 ### 14. Open Questions
 
@@ -4227,7 +4242,7 @@ Semua angka bertanda *tuning* adalah nilai awal playtest. Angkanya konkret dan b
 **2. Aturan/mekanik.**
 
 - Pada skill hybrid (damage + status), grade QTE diterapkan pada semua component direct damage (aturan yang sudah ada).
-- Chance status dihitung dari base chance skill dan Status Effect Resistance target, tanpa pengaruh grade.
+- Chance status dihitung dari base chance skill dan Status/Mental Resistance target, tanpa pengaruh grade.
 - Status di-roll walaupun grade-nya Poor, dan walaupun damage akhirnya 0 karena Defense atau Nullification.
 - Status di-roll per hit hanya jika skill secara eksplisit menerapkannya per hit (aturan Bab 11 §7).
 - Pengecualian hanya boleh ada sebagai efek skill yang tertulis eksplisit di `qteProfile` skill tersebut, misalnya "Perfect: +1 durasi Bleed". Pengecualian seperti ini didokumentasikan per skill di Class System.
@@ -6234,7 +6249,7 @@ Affix dapat memberikan bonus stat atau efek tertentu.
 | Element-Specific | Fire, Ice, Lightning, Earth, Wind, Water, Holy, Shadow |
 | Defense | Physical Damage Taken Reduction |
 | Elemental Resistance | Fire Resistance, Ice Resistance, dan lainnya |
-| Status Resistance | Status Effect Resistance |
+| Status Resistance | Status Resistance (non-Mental) |
 | QTE | Offensive QTE Window, Defensive QTE Window |
 
 Affix dapat memiliki flat value atau percentage value.
@@ -6972,7 +6987,7 @@ Rarity relic memakai tingkatan sendiri, terpisah dari rarity equipment: Common, 
 | Gold (Bab 16) | Mata uang transaksi relic; harga TBD |
 | QTE (Bab 12) | Relic yang dipicu Perfect mengikuti batas Bab 12 §8.3: pemulihan resource maksimal 2% Max HP atau Max MP per pemicu dan maksimal satu pemicu per giliran karakter. Efek ini tidak aktif saat Auto-Good (Bab 12 §10.1). Relic yang mengubah timing window masuk cap bersama +25% |
 | Damage (Bab 11) | Bonus dan pengurangan damage dari relic adalah modifier multiplicative pada step yang sesuai di Bab 11 §7, sebelum Defensive QTE |
-| Status (Bab 11) | Bonus Status Effect Resistance dari relic additive dengan sumber lain dan tunduk pada cap 75% |
+| Status (Bab 11) | Bonus Status/Mental Resistance dari relic additive dengan sumber lain pada pool yang sama dan tunduk pada cap 85% |
 | Race (Bab 6) | Draconic Presence (Dragonborn) memperlihatkan efek relic sebelum diambil; Luminescent Insight (Liichtian) menandai relic yang membawa curse |
 | Dungeon Modifier (Bab 15) | Sistem terpisah; relic tidak dihitung dalam stack atau cap modifier |
 
@@ -7135,7 +7150,7 @@ Keputusan inti menetapkan bahwa modifier dapat di-stack dan sebagian efek memili
 | Total All Damage Taken reduction dari semua modifier | Maksimal 25% |
 | Timing window QTE | Masuk cap bersama +25% (Bab 12 §3.4); debuff window tetap dibatasi batas bawah W_P 66 ms |
 | Biaya skill | Minimum 1 MP |
-| Status Effect Resistance | Tetap tunduk pada cap 75% (Bab 11) |
+| Status Resistance / Mental Resistance | Tetap tunduk pada cap 85% per pool (Bab 11) |
 | Speed | Tidak boleh memberi atau menghapus extra turn |
 | Efek sekali pakai | Tidak ada cap stack; diterapkan saat diambil |
 

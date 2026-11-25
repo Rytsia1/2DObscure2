@@ -7,17 +7,18 @@ namespace Obscure
     // Enemy display tier for per-status resistance (Felna_Analysis_System_Spec_v1.md Part F).
     public enum StatusResistTier { Vulnerable, Normal, Resistant, Immune }
 
-    // Universal + Per-Status Effect Resistance profile (GDD Section 9 & 13; Analysis System Spec Part F).
-    // Universal sources stack additively; per-status offsets stack on top and clamp to [0, 75%].
-    // Resistance Reduction debuffs stack multiplicatively as percentage reductions.
-    // Bosses are 100% immune to Mental Effects; resistance reduction does NOT bypass immunity.
+    // Status Resistance + Mental Resistance profile (GDD Bab 11 §9 & §13; Analysis System Spec Part F).
+    // Two separate pools: Mental Effects roll against Mental Resistance only, every other status against Status Resistance only.
+    // Each pool: sources stack additively, per-status offsets stack on top, the total clamps to [-85%, +85%].
+    // Resistance Reduction debuffs stack multiplicatively on both pools and only shrink a positive value.
+    // Bosses are 100% immune to Mental Effects; neither Mental Resistance nor reductions bypass immunity.
     [Serializable]
     public class StatusResistanceProfile
     {
-        public const float MaxUniversalResistance = 0.75f; // 75% cap
-        public const float MinUniversalResistance = 0.0f;  // 0% floor
-        public const float MinPerStatusResistance = -0.50f;
-        public const float MaxPerStatusResistance = 0.75f;
+        // Posture B (designer decision, 2026-11-25): +/-85% per pool, neutral 0.
+        // Test: a fully stacked endgame build is still hit by a 100%-chance status ~15% of the time; if "never affected", lower the cap.
+        public const float MaxResistance = 0.85f;
+        public const float MinResistance = -0.85f;
 
         // Posture-B starting values (Felna_Analysis_System_Spec_v1.md Part F / Starting values):
         // Status tier cut-offs: <= -10% Vulnerable, > +15% Resistant, between = Normal, immunity flag = Immune.
@@ -32,7 +33,11 @@ namespace Obscure
         public float buffResistance;
         public float passivesResistance;
 
-        // Per-status resistance offsets in [-0.50, +0.75] (Spec Part F).
+        // Mental pool. Equipment & passives already arrive through the derived stat (mentalStatsResistance).
+        public float mentalStatsResistance;
+        public float mentalBuffResistance;
+
+        // Per-status resistance offsets in [-0.85, +0.85] (Spec Part F).
         public Dictionary<StatusId, float> perStatus = new Dictionary<StatusId, float>();
 
         // Explicit per-status immunity flags (separate from perStatus; never bypassed by reductions).
@@ -42,20 +47,25 @@ namespace Obscure
 
         public IReadOnlyList<float> ResistanceReductions => resistanceReductions;
 
+        // Status pool (non-Mental statuses).
         public float TotalUncappedAdditive =>
             baseResistance + equipmentResistance + statsResistance + buffResistance + passivesResistance;
 
-        // R_initial = min(R_base + R_equipment + R_stats + R_buffs + R_passives, 75%)
+        public float TotalMentalUncapped => mentalStatsResistance + mentalBuffResistance;
+
+        float PoolTotal(StatusId id) => StatusInfo.IsMental(id) ? TotalMentalUncapped : TotalUncappedAdditive;
+
+        // R_initial = clamp(R_base + R_equipment + R_stats + R_buffs + R_passives, -85%, +85%)
         public float InitialResistance =>
-            Mathf.Clamp(TotalUncappedAdditive, MinUniversalResistance, MaxUniversalResistance);
+            Mathf.Clamp(TotalUncappedAdditive, MinResistance, MaxResistance);
 
         public float GetPerStatusResistance(StatusId id) =>
-            perStatus != null && perStatus.TryGetValue(id, out var v) ? Mathf.Clamp(v, MinPerStatusResistance, MaxPerStatusResistance) : 0f;
+            perStatus != null && perStatus.TryGetValue(id, out var v) ? Mathf.Clamp(v, MinResistance, MaxResistance) : 0f;
 
         public void SetPerStatusResistance(StatusId id, float value)
         {
             perStatus ??= new Dictionary<StatusId, float>();
-            perStatus[id] = Mathf.Clamp(value, MinPerStatusResistance, MaxPerStatusResistance);
+            perStatus[id] = Mathf.Clamp(value, MinResistance, MaxResistance);
         }
 
         public void SetImmune(StatusId id, bool immune = true)
@@ -86,25 +96,23 @@ namespace Obscure
             return reductionProduct;
         }
 
-        // Universal effective resistance: R_after = max(0, R_initial * Product(1 - D_i)) (GDD Section 9)
-        public float GetEffectiveResistance()
-        {
-            float r = InitialResistance;
-            if (r <= 0f) return 0f;
-            return Mathf.Max(0f, r * ReductionProduct());
-        }
+        // Reductions only shrink a positive resistance; a negative value is left as is (otherwise a debuff would help the target).
+        float ApplyReductions(float raw) => raw > 0f ? raw * ReductionProduct() : raw;
+
+        // Status Resistance (no per-status offset), for display: R_after = R_initial * Product(1 - D_i) when positive.
+        public float GetEffectiveResistance() => ApplyReductions(InitialResistance);
+
+        // Mental Resistance (no per-status offset), for display.
+        public float GetEffectiveMentalResistance() =>
+            ApplyReductions(Mathf.Clamp(TotalMentalUncapped, MinResistance, MaxResistance));
 
         // Per-status effective resistance (Spec Part F):
-        // effective(S) = clamp(universal + perStatus[S], 0, 0.75) * Product(1 - reductions)
-        public float GetEffectiveResistance(StatusId id)
-        {
-            float r = Mathf.Clamp(TotalUncappedAdditive + GetPerStatusResistance(id), MinUniversalResistance, MaxUniversalResistance);
-            if (r <= 0f) return 0f;
-            return Mathf.Max(0f, r * ReductionProduct());
-        }
+        // effective(S) = clamp(pool(S) + perStatus[S], -0.85, 0.85), times Product(1 - reductions) when positive.
+        public float GetEffectiveResistance(StatusId id) =>
+            ApplyReductions(Mathf.Clamp(PoolTotal(id) + GetPerStatusResistance(id), MinResistance, MaxResistance));
 
         // GDD Section 13 & Spec Part F: Bosses are immune to all Mental Effects; explicit per-status immunity flags stay separate.
-        // Status Effect Resistance Reduction does NOT bypass immunity.
+        // Mental Resistance and Resistance Reduction never bypass immunity.
         public bool IsImmune(StatusId id, bool isBoss = false)
         {
             if (isBoss && StatusInfo.IsMental(id))
@@ -158,7 +166,9 @@ namespace Obscure
                 equipmentResistance = equipmentResistance,
                 statsResistance = statsResistance,
                 buffResistance = buffResistance,
-                passivesResistance = passivesResistance
+                passivesResistance = passivesResistance,
+                mentalStatsResistance = mentalStatsResistance,
+                mentalBuffResistance = mentalBuffResistance
             };
             copy.resistanceReductions.AddRange(resistanceReductions);
             if (perStatus != null)

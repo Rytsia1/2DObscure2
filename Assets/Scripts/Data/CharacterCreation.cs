@@ -525,6 +525,7 @@ namespace Obscure
         public float blockScaling = 3f;           // multiplied by STRModifier
         public int baseStatusResistance = 5;
         public float statusResistanceScaling = 3f;
+        public int baseMentalResistance = 0;      // Posture B: every class starts neutral; WIS/INT, gear, passives move it
         public int baseStaggerResistance = 13;
         public float staggerResistanceScaling = 4f;
 

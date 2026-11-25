@@ -26,7 +26,7 @@ namespace Obscure
             DerivedStatId.MaxHP, DerivedStatId.MaxMP, DerivedStatId.PhysicalPower, DerivedStatId.RangedPower,
             DerivedStatId.MagicPower, DerivedStatId.HealingPower, DerivedStatId.SupportPower, DerivedStatId.PhysicalDefense,
             DerivedStatId.MagicDefense, DerivedStatId.Evasion, DerivedStatId.CriticalChance, DerivedStatId.Initiative,
-            DerivedStatId.PhysicalBreakPower, DerivedStatId.MagicBreakPower, DerivedStatId.StatusResistance, DerivedStatId.QteTimingBonus,
+            DerivedStatId.PhysicalBreakPower, DerivedStatId.MagicBreakPower, DerivedStatId.StatusResistance, DerivedStatId.MentalResistance, DerivedStatId.QteTimingBonus,
         };
 
         static readonly DerivedStatId[] OverviewDerived =

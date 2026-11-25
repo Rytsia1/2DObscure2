@@ -212,9 +212,9 @@ namespace Obscure
                 proposedRarity = RelicProposedRarity.Uncommon,
                 triggerType = RelicTriggerType.Combat,
                 activationLimit = RelicActivationLimit.Passive,
-                gameplayEffect = "The party's Status Effect Resistance against Burn, Poison and Bleed increases by 8 percentage points.",
+                gameplayEffect = "The party's Status Resistance against Burn, Poison and Bleed increases by 8 percentage points.",
                 designIntent = "Helps the party handle damage-over-time and certain status pressure.",
-                description = "The party's Status Effect Resistance against Burn, Poison and Bleed increases by 8 percentage points.",
+                description = "The party's Status Resistance against Burn, Poison and Bleed increases by 8 percentage points.",
                 demerit = "— (no demerit)",
                 buyPrice = 1400,
                 sellPrice = 700

@@ -539,7 +539,7 @@ namespace Obscure
             }
             resistCard.Add(resistScroll);
 
-            var resNote = new UiLabel($"UNIVERSAL {av.universalStatusResistPct:0}% + PER-STATUS · CHANCE = BASE × (1 − RES)");
+            var resNote = new UiLabel($"STATUS {av.statusResistPct:0}% · MENTAL {av.mentalResistPct:0}% + PER-STATUS · CHANCE = BASE × (1 − RES)");
             resNote.AddToClassList("uitk-analysis-note");
             resistCard.Add(resNote);
             colResist.Add(resistCard);

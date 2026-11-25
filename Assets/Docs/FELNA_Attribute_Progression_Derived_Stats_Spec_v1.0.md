@@ -38,7 +38,7 @@ Prinsip utama yang dikunci (`FINAL (Locked — Approved)`):
 | `GDD_Terbaru.md` **Bab 8 (§1–§13)** | Class System (9 Classes) | Hanya 2 resource pool (**HP** dan **MP**); 3 kategori damage (**Physical**, **Elemental**, **Almighty**); Cleric §8.1: *Divine Grace* hanya menaikkan Healing Power dan tidak otomatis menaikkan Shield Power. |
 | `GDD_Terbaru.md` **Bab 9 (§1–§5)** | Talents System | Pilihan manual di Lv 3, 6, 9, 12, 15; *Durable* (`+10% Max HP`, `5% DR`), *Inspiring Leader* (`10% DR`), *Healer* (`+15% Healing`), *Alert* (`-10 pp Enemy Crit`), *Quick Reflex* / *Steady Hand* (`+10% QTE Window`). |
 | `GDD_Terbaru.md` **Bab 10 (§5.3, §7–§8)** | Turn Order, Broken & Scaling | Dynamic Initiative Queue berbasis `EffectiveSPD`; tie-breaker deterministik; **Speed tidak pernah memberi extra turn**; Enemy Break Gauge (`100` Normal/Elite, `200` Boss); Player Poise Gauge (`60`). |
-| `GDD_Terbaru.md` **Bab 11 (§1–§13)** | Damage & Status Effect | Base Damage `SkillPower + (Stat × Scaling)`; Physical Crit (`Base 5%`, `150%`, cap `95% / 300%`, finisher & Elemental tidak bisa Crit); Status Resistance additive (`Cap 75%`); Boss 100% Mental Immunity; `floor()` sekali per hit. |
+| `GDD_Terbaru.md` **Bab 11 (§1–§13)** | Damage & Status Effect | Base Damage `SkillPower + (Stat × Scaling)`; Physical Crit (`Base 5%`, `150%`, cap `95% / 300%`, finisher & Elemental tidak bisa Crit); Status Resistance & Mental Resistance additive, dua pool terpisah (`[-85%, +85%]`, revisi 25 Nov 2026); Boss 100% Mental Immunity; `floor()` sekali per hit. |
 | `GDD_Terbaru.md` **Bab 12 (§3.4–3.5, §6.5, §8.2)** | QTE, Block & Counter | Shared QTE Window cap `+25%` (`W_P ∈ [66, 125] ms`); Defensive QTE memakai `Block Power` (`cap 90%`, Perfect non-Heavy `1 - min(0.75, block)`, Good / Heavy Perfect `1 - 0.5 × block`, Full Parry `0 dmg` hanya saat Guard + Perfect non-Heavy); Counter pada Defensive Perfect dengan power `M × (1 + CounterPower / 100)`. |
 
 ### 2.2 Resolusi Konflik Desain (`FINAL (Locked — Approved)`)
@@ -47,7 +47,7 @@ Prinsip utama yang dikunci (`FINAL (Locked — Approved)`):
 |---|---|---|---|
 | **C-01** | **Isolasi Atribut (`v1.0`) vs. Integrasi Atribut (`v2.0`)** | `v1.0` memisahkan Defense, Block, Counter, Break, Speed, Crit, Penetration, Shield, DR, dan Status Resistance dari atribut, sedangkan spesifikasi baru mewajibkan seluruh Derived Stats tetap terhubung dengan 6 Ability Scores. | **Diintegrasikan Penuh (`FINAL`):** Seluruh 17 Derived Combat Stats kembali terhubung ke Primary (`w_1`) dan Secondary (`w_2 < w_1`) Attribute Modifiers di atas Class Base, Equipment, dan Passive. |
 | **C-02** | **Elemental Critical Chance vs. Aturan Critical Physical-Only** | Tabel proposal awal mencantumkan baris *Elemental Critical Chance*, sedangkan `GDD Bab 8 §2.2 & Bab 11 §3` menegaskan hanya Physical Damage yang dapat Critical. | **Dihapus / Physical-Only (`FINAL`):** Critical Chance **hanya berlaku untuk Physical Damage** (`Primary: DEX, Secondary: STR`). Elemental Damage tidak memiliki Critical Chance. |
-| **C-03** | **Status Resistance Governing Attributes** | Proposal awal menawarkan `WIS` dengan opsi `VIT / CHA`. | **Dikunci (`FINAL`):** **Status Resistance** menggunakan **`Primary: VIT (+2.0%/mod)`** dan **`Secondary: WIS (+1.0%/mod)`**, ditumpuk additive di dalam cap `75%` (`GDD Bab 11 §9`). |
+| **C-03** | **Status Resistance Governing Attributes** | Proposal awal menawarkan `WIS` dengan opsi `VIT / CHA`. | **Dikunci (`FINAL`):** **Status Resistance** menggunakan **`Primary: VIT (+2.0%/mod)`** dan **`Secondary: WIS (+1.0%/mod)`**, ditumpuk additive dalam rentang `[-85%, +85%]` (`GDD Bab 11 §9`, revisi 25 Nov 2026). **Mental Resistance** (pool terpisah untuk Mental Effects) menggunakan **`Primary: WIS (+2.0%/mod)`** dan **`Secondary: INT (+1.0%/mod)`**. |
 | **C-04** | **QTE Stability vs. QTE Timing Window** | `GDD Bab 12 §3.4 & §8.2` melarang perubahan `R_QTE` dan membatasi pelebaran window dasar pada `DEX` (`+3%/mod`, cap `+25%`). `QTE Stability` harus memiliki fungsi berbeda agar tidak menduplikasi `QTE Window`. | **Dikunci (`FINAL`):** **QTE Stability** menggunakan **`Primary: DEX (+2.0%/mod)`** dan **`Secondary: WIS (+1.0%/mod)`** (cap `50%`). Fungsinya: (1) mengurangi penalti penyempitan window akibat `Freeze` (`-15%`) dan mengurangi intensitas distorsi visual status (`ShakePx` / memperlebar `ClearZone` `150→220 ms`) sebesar `1%` relatif per poin, serta (2) memperlebar batas toleransi luar `PartialSuccess` pada evaluasi 4-kategori tanpa mengubah `W_P`, `W_G`, atau `R_QTE`. |
 | **C-05** | **Independensi Shield Power Cleric vs. Atribut** | `GDD Bab 8 §8.1` menetapkan *Divine Grace* meningkatkan Healing Power dan tidak otomatis meningkatkan Shield Power; Shield memakai modifier-nya sendiri. | **Dikunci (`FINAL`):** `Shield Power` adalah Derived Stat tersendiri (**`Primary: WIS (+3.5%/mod)`, `Secondary: CHA (+1.5%/mod)`**) yang terpisah dari `Healing Power` (**`Primary: WIS (+4.0%/mod)` saja**). Passive healing (*Divine Grace*, *Healer*) hanya memodifikasi `Healing Power`; passive shield (*Protective Faith*, *Divine Aegis*) hanya memodifikasi `Shield Power`. |
 | **C-06** | **Magic Defense & Magic Penetration vs. Elemental Resistance** | `BattleAction.Rules.Magic` dan `GDD Bab 10 §7.3` menggunakan flat `MDEF` (`Magic Defense`), sedangkan `DamageCalculator` Bab 11 §5 memiliki `% Elemental Resistance` per elemen (cap `75%`). | **Dikunci (`FINAL`):** Flat **`Magic Defense`** (`Primary: INT, Secondary: WIS`) dan flat **`Magic Penetration`** (`Primary: INT, Secondary: WIS`) dipertahankan pada `DerivedStats` untuk mitigasi `MATK vs MDEF`, berdampingan dengan `% Elemental Resistance` per elemen (`0–75%`) dari equipment/affinity/buff. |
@@ -92,7 +92,7 @@ Prinsip utama yang dikunci (`FINAL (Locked — Approved)`):
   - **Max HP** (`+4.0% Base HP` per `VIT Mod`, non-compounding)
 - **Primary Derived Stats (`w_1`):**
   - **Damage Reduction (`DR`)** (`+1.0%` per `VIT Mod`, shared cap `25%`)
-  - **Status Resistance (`STAT_RES`)** (`+2.0%` per `VIT Mod`, additive cap `75%`)
+  - **Status Resistance (`STAT_RES`)** (`+2.0%` per `VIT Mod`, additive, rentang `[-85%, +85%]`)
   - **Stagger Resistance (`STG_RES`)** (`+2.0%` per `VIT Mod`, cap `75%`)
 - **Secondary Derived Stats (`w_2`):**
   - **Physical Defense (`DEF`)** (`+0.75` per `VIT Mod`, mendukung `STR`)
@@ -119,6 +119,7 @@ Prinsip utama yang dikunci (`FINAL (Locked — Approved)`):
   - **Shield Power (`SHD_PWR`)** (`+3.5% Base Shield` per `WIS Mod`, terpisah dari Healing Power)
 - **Secondary Derived Stats (`w_2`):**
   - **Status Resistance (`STAT_RES`)** (`+1.0%` per `WIS Mod`, mendukung `VIT`)
+  - **Mental Resistance (`MENT_RES`)** (`+2.0%` per `WIS Mod`, Primary)
   - **Magic Defense (`MDF`)** (`+0.75` per `WIS Mod`, mendukung `INT`)
   - **Magic Penetration (`MPN`)** (`+0.6` per `WIS Mod`, mendukung `INT`)
   - **QTE Stability (`QTE_STAB`)** (`+1.0%` per `WIS Mod`, mendukung `DEX`)
@@ -153,7 +154,8 @@ Tabel pemetaan final di bawah ini mengunci tepat satu **Primary Attribute (`w_1`
 | **Defensive** | **Evasion** | `EVASION` | **`DEX` Mod** (`+2.0%`) | *None* | `BaseEva + 2%×DEXMod + Bonuses` | `[0%, 75%]` | `FINAL (Locked — Proposal)` |
 | **Defensive** | **Shield Power** | `MAX_SHIELD` | **`WIS` Mod** (`+3.5%`) | **`CHA` Mod** (`+1.5%`) | `floor(BaseShield × (1 + 0.035×WISMod + 0.015×CHAMod + Pct) + Flat)` | Bonus `[-25%, +50%]` | `FINAL (Locked — Resolved TBD)` |
 | **Defensive** | **Damage Reduction** | `DMG_RED` | **`VIT` Mod** (`+1.0%`) | **`STR` Mod** (`+0.5%`) | `BaseDR + 1.0%×VITMod + 0.5%×STRMod + Bonuses` | **`[0%, 25%]`** | `FINAL (Locked — Resolved TBD)` |
-| **Defensive** | **Status Resistance** | `STAT_RES` | **`VIT` Mod** (`+2.0%`) | **`WIS` Mod** (`+1.0%`) | `BaseRes + 2.0%×VITMod + 1.0%×WISMod + Bonuses` | **`[0%, 75%]`** | `FINAL (Locked — Approved)` |
+| **Defensive** | **Status Resistance** | `STAT_RES` | **`VIT` Mod** (`+2.0%`) | **`WIS` Mod** (`+1.0%`) | `BaseRes + 2.0%×VITMod + 1.0%×WISMod + Bonuses` | **`[-85%, +85%]`** | `FINAL (Revised 2026-11-25)` |
+| **Defensive** | **Mental Resistance** | `MENT_RES` | **`WIS` Mod** (`+2.0%`) | **`INT` Mod** (`+1.0%`) | `BaseMentalRes (0%) + 2.0%×WISMod + 1.0%×INTMod + Bonuses` | **`[-85%, +85%]`** | `Posture B (Added 2026-11-25)` |
 | **Defensive** | **Stagger Resistance** | `STG_RES` | **`VIT` Mod** (`+2.0%`) | **`STR` Mod** (`+1.0%`) | `BaseStg + floor(2.0×VITMod + 1.0×STRMod) + Bonuses` | **`[0%, 75%]`** | `FINAL (Locked — Resolved TBD)` |
 | **Defensive** | **Physical Defense** | `PHYS_DEF` | **`STR` Mod** (`+1.5`) | **`VIT` Mod** (`+0.75`) | `BaseDef + floor(1.5×STRMod + 0.75×VITMod) + Gear` | Min `0` | `FINAL (Locked — Resolved TBD)` |
 | **Defensive** | **Magic Defense** | `MAG_DEF` | **`INT` Mod** (`+1.5`) | **`WIS` Mod** (`+0.75`) | `BaseMDef + floor(1.5×INTMod + 0.75×WISMod) + Gear` | Min `0` | `FINAL (Locked — Resolved TBD)` |
@@ -192,11 +194,18 @@ Tabel pemetaan final di bawah ini mengunci tepat satu **Primary Attribute (`w_1`
    - **Representasi & Batas:** Persentase (`[0%, 25%]`).
 
 3. **Status Resistance (`STAT_RES`)**
-   - **Fungsi:** Mengurangi peluang masuknya Status Effect dan Mental Effect musuh (`P_final = P_base × (1 − R_effective)` sesuai `GDD Bab 11 §9`).
+   - **Fungsi:** Mengurangi peluang masuknya Status Effect **non-Mental** musuh (`P_final = P_base × (1 − R_effective)` sesuai `GDD Bab 11 §9`). Mental Effects memakai Mental Resistance (lihat 3b).
    - **Primary Attribute:** `VIT` (`+2.0%` per modifier).
    - **Secondary Attribute:** `WIS` (`+1.0%` per modifier).
-   - **Interaksi Sistem:** Mengisi komponen `R_stats` pada `StatusResistanceProfile`, ditumpuk additive dengan `R_base + R_equipment + R_buffs + R_passives` hingga cap **`75%`**, lalu dikalikan secara multiplicative oleh debuff `ResistanceDown`. Boss tetap 100% immune terhadap Mental Effects (`GDD Bab 11 §13`).
-   - **Representasi & Batas:** Persentase (`[0%, 75%]`).
+   - **Interaksi Sistem:** Mengisi komponen `R_stats` pada `StatusResistanceProfile`, ditumpuk additive dengan `R_base + R_equipment + R_buffs + R_passives` lalu di-clamp ke **`[-85%, +85%]`**, lalu nilai positif dikalikan secara multiplicative oleh debuff `ResistanceDown` (nilai negatif tidak diubah).
+   - **Representasi & Batas:** Persentase (`[-85%, +85%]`). Nilai negatif menaikkan peluang status masuk.
+
+3b. **Mental Resistance (`MENT_RES`)**
+   - **Fungsi:** Mengurangi peluang masuknya Mental Effects (Mind Control, Confusion, Fear, Despair, Charm, Sleep, Silence, Madness). Tidak menumpuk dengan Status Resistance.
+   - **Primary Attribute:** `WIS` (`+2.0%` per modifier).
+   - **Secondary Attribute:** `INT` (`+1.0%` per modifier).
+   - **Interaksi Sistem:** Mengisi `mentalStatsResistance` pada `StatusResistanceProfile` (Equipment & Passives masuk lewat derived stat), ditambah buff Mental. Rentang `[-85%, +85%]`; `ResistanceDown` ikut mereduksi nilai positif. Boss tetap 100% immune terhadap Mental Effects; Mental Resistance dan reduksi tidak menembus immunity (`GDD Bab 11 §13`).
+   - **Representasi & Batas:** Persentase (`[-85%, +85%]`), base `0%` untuk semua class (Posture B).
 
 4. **Stagger Resistance (`STG_RES`)**
    - **Fungsi:** Mengurangi Break Power (Poise damage) yang diterima hero terhadap `PlayerPoiseGauge = 60` sebelum faktor `(1 − R_QTE)` Defensive QTE (`GDD Bab 10 §5.3`).

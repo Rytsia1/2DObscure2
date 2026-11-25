@@ -188,7 +188,9 @@ namespace Obscure
 
             new FormulaDef { formulaId = "block_power_v1", inputs = new[] { "baseBlock", "STRModifier", "VITModifier", "shield" }, calculation = "BaseBlock + floor(2.0 * STRMod + 1.0 * VITMod) + Shield (Cap 90%)", scalingAbilities = new[] { Ability.STR, Ability.VIT } },
 
-            new FormulaDef { formulaId = "status_res_v1", inputs = new[] { "baseRes", "VITModifier", "WISModifier", "equip" }, calculation = "min(BaseRes + floor(2.0 * VITMod + 1.0 * WISMod) + Bonuses, 75%)", scalingAbilities = new[] { Ability.VIT, Ability.WIS } },
+            new FormulaDef { formulaId = "status_res_v1", inputs = new[] { "baseRes", "VITModifier", "WISModifier", "equip" }, calculation = "clamp(BaseRes + floor(2.0 * VITMod + 1.0 * WISMod) + Bonuses, -85%, 85%)", scalingAbilities = new[] { Ability.VIT, Ability.WIS } },
+
+            new FormulaDef { formulaId = "mental_res_v1", inputs = new[] { "baseMentalRes", "WISModifier", "INTModifier", "equip" }, calculation = "clamp(BaseMentalRes + floor(2.0 * WISMod + 1.0 * INTMod) + Bonuses, -85%, 85%)", scalingAbilities = new[] { Ability.WIS, Ability.INT } },
 
             new FormulaDef { formulaId = "stagger_res_v1", inputs = new[] { "baseStaggerRes", "VITModifier", "STRModifier", "equip" }, calculation = "BaseStagger + floor(2.0 * VITMod + 1.0 * STRMod) + Bonuses", scalingAbilities = new[] { Ability.VIT, Ability.STR } },
 
@@ -252,7 +254,9 @@ namespace Obscure
 
             [DerivedStatId.BlockPower] = new DerivedStatDef { statId = "BLK_PWR", id = DerivedStatId.BlockPower, displayName = "Block Power", shortName = "BLK", primarySources = new[] { "STR", "VIT" }, formulaId = "block_power_v1", description = "Defensive QTE mitigation (Primary STR +2/mod, Secondary VIT +1/mod, cap 90%)." },
 
-            [DerivedStatId.StatusResistance] = new DerivedStatDef { statId = "STAT_RES", id = DerivedStatId.StatusResistance, displayName = "Status Resistance", shortName = "SRS", primarySources = new[] { "VIT", "WIS" }, formulaId = "status_res_v1", description = "Universal status resistance (Primary VIT +2%/mod, Secondary WIS +1%/mod, cap 75%)." },
+            [DerivedStatId.StatusResistance] = new DerivedStatDef { statId = "STAT_RES", id = DerivedStatId.StatusResistance, displayName = "Status Resistance", shortName = "SRS", primarySources = new[] { "VIT", "WIS" }, formulaId = "status_res_v1", description = "Resistance to non-Mental status effects (Primary VIT +2%/mod, Secondary WIS +1%/mod, range -85% to +85%)." },
+
+            [DerivedStatId.MentalResistance] = new DerivedStatDef { statId = "MENT_RES", id = DerivedStatId.MentalResistance, displayName = "Mental Resistance", shortName = "MRS", primarySources = new[] { "WIS", "INT" }, formulaId = "mental_res_v1", description = "Resistance to Mental Effects (Primary WIS +2%/mod, Secondary INT +1%/mod, range -85% to +85%). Cannot bypass Boss Mental Immunity." },
 
             [DerivedStatId.StaggerResistance] = new DerivedStatDef { statId = "STG_RES", id = DerivedStatId.StaggerResistance, displayName = "Stagger Resistance", shortName = "STRS", primarySources = new[] { "VIT", "STR" }, formulaId = "stagger_res_v1", description = "Reduces incoming poise/break damage (Primary VIT +2%/mod, Secondary STR +1%/mod, cap 75%)." },
 
@@ -2148,41 +2152,41 @@ namespace Obscure
             {
                 id = "hermit", name = "Hermit",
                 narrativeIdentity = "Solitude, endurance, and self-control.",
-                description = "Learned to endure difficult circumstances without relying on others, fortifying resistance against afflictions.",
+                description = "Learned to endure difficult circumstances without relying on others, fortifying the mind against afflictions.",
                 perkName = "Solitary Wisdom",
-                perkDescription = "Increases Status Effect Resistance and restores MP when resisting negative effects.",
+                perkDescription = "Increases Mental Resistance and restores MP when resisting negative effects.",
                 ranks = new[]
                 {
                     new BackgroundRankDef
                     {
-                        rank = 1, requiredLevel = 1, perkName = "Quiet Endurance", perkDescription = "Status Effect Resistance increases by 5%.",
-                        statusResistanceBonus = 5,
-                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 5, ModifierKind.Flat, ModifierSource.Background, "Quiet Endurance") }
+                        rank = 1, requiredLevel = 1, perkName = "Quiet Endurance", perkDescription = "Mental Resistance increases by 5%.",
+                        mentalResistanceBonus = 5,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 5, ModifierKind.Flat, ModifierSource.Background, "Quiet Endurance") }
                     },
                     new BackgroundRankDef
                     {
-                        rank = 2, requiredLevel = 4, perkName = "Solitary Resolve", perkDescription = "Status Effect Resistance increases to 8%.",
-                        statusResistanceBonus = 8,
-                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 8, ModifierKind.Flat, ModifierSource.Background, "Solitary Resolve") }
+                        rank = 2, requiredLevel = 4, perkName = "Solitary Resolve", perkDescription = "Mental Resistance increases to 8%.",
+                        mentalResistanceBonus = 8,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 8, ModifierKind.Flat, ModifierSource.Background, "Solitary Resolve") }
                     },
                     new BackgroundRankDef
                     {
-                        rank = 3, requiredLevel = 7, perkName = "Inner Balance", perkDescription = "Status Effect Resistance increases to 10%.",
-                        statusResistanceBonus = 10,
-                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 10, ModifierKind.Flat, ModifierSource.Background, "Inner Balance") }
+                        rank = 3, requiredLevel = 7, perkName = "Inner Balance", perkDescription = "Mental Resistance increases to 10%.",
+                        mentalResistanceBonus = 10,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 10, ModifierKind.Flat, ModifierSource.Background, "Inner Balance") }
                     },
                     new BackgroundRankDef
                     {
-                        rank = 4, requiredLevel = 10, perkName = "Unshaken Mind", perkDescription = "Status Effect Resistance increases to 12%.",
-                        statusResistanceBonus = 12,
-                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 12, ModifierKind.Flat, ModifierSource.Background, "Unshaken Mind") }
+                        rank = 4, requiredLevel = 10, perkName = "Unshaken Mind", perkDescription = "Mental Resistance increases to 12%.",
+                        mentalResistanceBonus = 12,
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 12, ModifierKind.Flat, ModifierSource.Background, "Unshaken Mind") }
                     },
                     new BackgroundRankDef
                     {
-                        rank = 5, requiredLevel = 13, perkName = "Tranquil Spirit", perkDescription = "Status Effect Resistance increases to 15%. When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn.",
-                        statusResistanceBonus = 15,
+                        rank = 5, requiredLevel = 13, perkName = "Tranquil Spirit", perkDescription = "Mental Resistance increases to 15%. When the character successfully resists a status effect, restore MP equal to 3% of Max MP, at most once per turn.",
+                        mentalResistanceBonus = 15,
                         statusResistMpRestorePercent = 0.03f,
-                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 15, ModifierKind.Flat, ModifierSource.Background, "Tranquil Spirit") }
+                        modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 15, ModifierKind.Flat, ModifierSource.Background, "Tranquil Spirit") }
                     }
                 }
             },
@@ -3468,11 +3472,11 @@ namespace Obscure
 
                 id = "iron_will", name = "Iron Will", classId = "fighter", tier = 4,
 
-                description = "+1 VIT, +10 Status Resistance.",
+                description = "+1 VIT, +10 Mental Resistance.",
 
                 abilityBonuses = new AbilityScores(0, 0, 1, 0, 0, 0),
 
-                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 10, ModifierKind.Flat, ModifierSource.Passive, "Iron Will") }
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 10, ModifierKind.Flat, ModifierSource.Passive, "Iron Will") }
 
             },
 
@@ -3718,9 +3722,9 @@ namespace Obscure
 
                 id = "inner_focus", name = "Inner Focus", classId = "martial_artist", tier = 3,
 
-                description = "+5 Status Resistance, +5% Critical Chance.",
+                description = "+5 Mental Resistance, +5% Critical Chance.",
 
-                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 5, ModifierKind.Flat, ModifierSource.Passive, "Inner Focus"), StatModifier.ForDerived(DerivedStatId.CriticalChance, 5, ModifierKind.Flat, ModifierSource.Passive, "Inner Focus") }
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 5, ModifierKind.Flat, ModifierSource.Passive, "Inner Focus"), StatModifier.ForDerived(DerivedStatId.CriticalChance, 5, ModifierKind.Flat, ModifierSource.Passive, "Inner Focus") }
 
             },
 
@@ -4084,9 +4088,9 @@ namespace Obscure
 
                 id = "unwavering_faith", name = "Unwavering Faith", classId = "cleric", tier = 4,
 
-                description = "+15 Status Resistance, +6 Magic Defense.",
+                description = "+15 Mental Resistance, +6 Magic Defense.",
 
-                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.StatusResistance, 15, ModifierKind.Flat, ModifierSource.Passive, "Unwavering Faith"), StatModifier.ForDerived(DerivedStatId.MagicDefense, 6, ModifierKind.Flat, ModifierSource.Passive, "Unwavering Faith") }
+                modifiers = new[] { StatModifier.ForDerived(DerivedStatId.MentalResistance, 15, ModifierKind.Flat, ModifierSource.Passive, "Unwavering Faith"), StatModifier.ForDerived(DerivedStatId.MagicDefense, 6, ModifierKind.Flat, ModifierSource.Passive, "Unwavering Faith") }
 
             },
 

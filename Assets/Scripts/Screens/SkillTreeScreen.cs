@@ -1097,6 +1097,7 @@ namespace Obscure
             AddInt("BLOCK POWER", b.blockPower, a.blockPower, "%", Ability.STR, Ability.VIT);
             AddInt("EVASION", b.evasion, a.evasion, "%", Ability.DEX);
             AddInt("STATUS RESISTANCE", b.statusResistance, a.statusResistance, "%", Ability.VIT, Ability.WIS);
+            AddInt("MENTAL RESISTANCE", b.mentalResistance, a.mentalResistance, "%", Ability.WIS, Ability.INT);
             AddInt("STAGGER RESISTANCE", b.staggerResistance, a.staggerResistance, "%", Ability.VIT, Ability.STR);
 
             // Offensive

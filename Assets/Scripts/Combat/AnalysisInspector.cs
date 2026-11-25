@@ -74,7 +74,8 @@ namespace Obscure
         public int blockPower, staggerResistance;
         public float qteTimingBonusPct;
 
-        public float universalStatusResistPct;
+        public float statusResistPct;
+        public float mentalResistPct;
         public readonly List<AnalysisElementRow> elements = new List<AnalysisElementRow>();
         public readonly List<AnalysisStatusRow> statusResistances = new List<AnalysisStatusRow>();
         public readonly List<AnalysisActiveEffectRow> activeStatuses = new List<AnalysisActiveEffectRow>();
@@ -252,7 +253,8 @@ namespace Obscure
                 blockPower = d.blockPower,
                 staggerResistance = ally.StaggerRes,
                 qteTimingBonusPct = d.QteTimingBonusFraction * 100f,
-                universalStatusResistPct = ally.StatusController.ResistanceProfile.GetEffectiveResistance() * 100f,
+                statusResistPct = ally.StatusController.ResistanceProfile.GetEffectiveResistance() * 100f,
+                mentalResistPct = ally.StatusController.ResistanceProfile.GetEffectiveMentalResistance() * 100f,
             };
 
             if (u.shield > 0)

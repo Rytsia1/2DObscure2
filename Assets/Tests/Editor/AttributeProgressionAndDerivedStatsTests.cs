@@ -125,6 +125,8 @@ namespace Obscure.Tests
             Assert.AreEqual(0.04f, StatCalculator.CalculateDamageReductionBonus(3, 2), 1e-4f); // 3*1% + 2*0.5% = 4%
             Assert.AreEqual(8, StatCalculator.CalculateStatusResistanceBonus(3, 2));     // floor(3*2.0 + 2*1.0) = 8
             Assert.AreEqual(8, StatCalculator.CalculateStaggerResistanceBonus(3, 2));    // floor(3*2.0 + 2*1.0) = 8
+            Assert.AreEqual(8, StatCalculator.CalculateMentalResistanceBonus(3, 2));     // WIS +3, INT +2: floor(3*2.0 + 2*1.0) = 8
+            Assert.AreEqual(-3, StatCalculator.CalculateMentalResistanceBonus(-1, -1));  // low WIS/INT pushes it negative
 
             // 4. INT 16 (+3), WIS 14 (+2)
             Assert.AreEqual(74f, StatCalculator.CalculateElementalSkillBaseDamage(50f, 16, 1.5f), 1e-4f);
@@ -152,6 +154,7 @@ namespace Obscure.Tests
             Assert.Greater(StatCalculator.CalculateShieldPowerBonus(4, 0), StatCalculator.CalculateShieldPowerBonus(0, 4));
             Assert.Greater(StatCalculator.CalculateDamageReductionBonus(4, 0), StatCalculator.CalculateDamageReductionBonus(0, 4));
             Assert.Greater(StatCalculator.CalculateStatusResistanceBonus(4, 0), StatCalculator.CalculateStatusResistanceBonus(0, 4));
+            Assert.Greater(StatCalculator.CalculateMentalResistanceBonus(4, 0), StatCalculator.CalculateMentalResistanceBonus(0, 4));
             Assert.Greater(StatCalculator.CalculateStaggerResistanceBonus(4, 0), StatCalculator.CalculateStaggerResistanceBonus(0, 4));
             Assert.Greater(StatCalculator.CalculatePhysicalDefenseBonus(4, 0), StatCalculator.CalculatePhysicalDefenseBonus(0, 4));
             Assert.Greater(StatCalculator.CalculateMagicDefenseBonus(4, 0), StatCalculator.CalculateMagicDefenseBonus(0, 4));

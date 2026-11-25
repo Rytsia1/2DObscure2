@@ -211,6 +211,7 @@ namespace Obscure.Tests
 
             target.StatusController.ResistanceProfile.baseResistance = 0f;
             target.StatusController.ResistanceProfile.statsResistance = 0f;
+            target.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             // 1. Apply Stun
             var stunApply = new StatusApply { id = StatusId.Stun, turns = 1, chance = 1f };

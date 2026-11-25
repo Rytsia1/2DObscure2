@@ -579,18 +579,20 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void Talent_Unshakeable_GrantsStatusAndStaggerResistance()
+        public void Talent_Unshakeable_GrantsMentalAndStaggerResistance()
         {
             var unit = new Unit(Database.Characters["knight"]);
             unit.selectedTalentIds.Clear();
             unit.RecalculateStats();
             int baseStatusRes = unit.Derived.statusResistance;
+            int baseMentalRes = unit.Derived.mentalResistance;
             int baseStaggerRes = unit.Derived.staggerResistance;
 
             unit.selectedTalentIds.Add("unshakeable");
             unit.RecalculateStats();
 
-            Assert.AreEqual(baseStatusRes + (int)TalentSystem.UnshakeableStatusResist, unit.Derived.statusResistance);
+            Assert.AreEqual(baseMentalRes + (int)TalentSystem.UnshakeableMentalResist, unit.Derived.mentalResistance);
+            Assert.AreEqual(baseStatusRes, unit.Derived.statusResistance, "Unshakeable no longer adds Status Resistance");
             Assert.AreEqual(baseStaggerRes + (int)TalentSystem.UnshakeableStaggerResist, unit.Derived.staggerResistance);
         }
 

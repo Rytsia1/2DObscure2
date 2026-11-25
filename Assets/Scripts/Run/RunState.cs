@@ -220,6 +220,8 @@ namespace Obscure
                 evasion = Math.Max(0, 5 + mods.dex * 2),
                 blockPower = 50,
                 statusResistance = Math.Max(0, (mods.vit + mods.wis) * 3),
+                // Enemy floor stays 0 so existing rosters keep their balance; negatives come from per-status offsets.
+                mentalResistance = Math.Max(0, mods.wis * 2 + mods.intel),
                 staggerResistance = d.breakResistance + Math.Max(0, mods.vit * 2),
                 initiative = stats.spd,
                 actionSpeed = 100 + mods.dex * 5,
@@ -303,7 +305,7 @@ namespace Obscure
             }
             if (HasTalent("unshakeable"))
             {
-                list.Add(StatModifier.ForDerived(DerivedStatId.StatusResistance, TalentSystem.UnshakeableStatusResist, ModifierKind.Flat, ModifierSource.Talent, "Unshakeable"));
+                list.Add(StatModifier.ForDerived(DerivedStatId.MentalResistance, TalentSystem.UnshakeableMentalResist, ModifierKind.Flat, ModifierSource.Talent, "Unshakeable"));
                 list.Add(StatModifier.ForDerived(DerivedStatId.StaggerResistance, TalentSystem.UnshakeableStaggerResist, ModifierKind.Flat, ModifierSource.Talent, "Unshakeable"));
             }
             if (HasTalent("spellcraft_mastery"))

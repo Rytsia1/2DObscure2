@@ -59,7 +59,7 @@ namespace Obscure
             DerivedStatId.MaxHP, DerivedStatId.MaxMP, DerivedStatId.PhysicalPower, DerivedStatId.RangedPower,
             DerivedStatId.MagicPower, DerivedStatId.HealingPower, DerivedStatId.SupportPower, DerivedStatId.PhysicalDefense,
             DerivedStatId.MagicDefense, DerivedStatId.Evasion, DerivedStatId.CriticalChance, DerivedStatId.Initiative,
-            DerivedStatId.PhysicalBreakPower, DerivedStatId.StatusResistance, DerivedStatId.QteTimingBonus,
+            DerivedStatId.PhysicalBreakPower, DerivedStatId.StatusResistance, DerivedStatId.MentalResistance, DerivedStatId.QteTimingBonus,
         };
 
         UitkMenu menu, bgModalMenu;
@@ -1111,7 +1111,7 @@ namespace Obscure
             Ability.DEX => new[] { DerivedStatId.Evasion, DerivedStatId.QteTimingBonus, DerivedStatId.Initiative, DerivedStatId.CriticalChance },
             Ability.VIT => new[] { DerivedStatId.MaxHP, DerivedStatId.StatusResistance, DerivedStatId.StaggerResistance },
             Ability.INT => new[] { DerivedStatId.MagicPower, DerivedStatId.MaxMP, DerivedStatId.MagicDefense, DerivedStatId.MagicPenetration },
-            Ability.WIS => new[] { DerivedStatId.HealingPower, DerivedStatId.MaxShield, DerivedStatId.QteStability },
+            Ability.WIS => new[] { DerivedStatId.HealingPower, DerivedStatId.MentalResistance, DerivedStatId.MaxShield, DerivedStatId.QteStability },
             _ => new[] { DerivedStatId.SupportPower, DerivedStatId.MaxShield }
         };
 
@@ -1813,7 +1813,8 @@ namespace Obscure
             AddStatRow(rightScroll, "DEF / MDEF / SPD", $"{d.physicalDefense} / {d.magicDefense} / {d.initiative}");
             AddStatRow(rightScroll, "CRIT", $"{d.criticalChance}% (x{d.criticalDamage / 100f:0.00})");
             AddStatRow(rightScroll, "BLOCK / STAGGER RES", $"{d.blockPower} / {d.staggerResistance}");
-            AddStatRow(rightScroll, "STATUS RES / QTE BONUS", $"{d.statusResistance}% / +{d.QteTimingBonusFraction * 100f:0.#}%");
+            AddStatRow(rightScroll, "STATUS / MENTAL RES", $"{d.statusResistance}% / {d.mentalResistance}%");
+            AddStatRow(rightScroll, "QTE BONUS", $"+{d.QteTimingBonusFraction * 100f:0.#}%");
             AddStatRow(rightScroll, "BREAK (PHY / MAG)", $"{d.physicalBreakPower} / {d.magicBreakPower}");
 
             SheetHeader("ELEMENTAL AFFINITIES");

@@ -51,7 +51,7 @@ namespace Obscure
         public float lowHpPhysicalDamageTakenReduction; // Rank V: 0.05 (when HP < 30%)
 
         // 4. Hermit
-        public int statusResistanceBonus;           // Rank I: 5, II: 8, III: 10, IV: 12, V: 15
+        public int mentalResistanceBonus;           // Mental Resistance, Rank I: 5, II: 8, III: 10, IV: 12, V: 15
         public float statusResistMpRestorePercent;  // Rank V: 0.03 (restore 3% Max MP on resist, max once/turn)
 
         // 5. Farmer

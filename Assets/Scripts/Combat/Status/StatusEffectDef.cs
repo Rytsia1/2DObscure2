@@ -93,7 +93,7 @@ namespace Obscure
             Register(new StatusEffectDef
             {
                 id = StatusId.ResistanceDown, name = "Resistance Down", tag = "RD", category = StatusCategory.Debuff,
-                description = "Reduces Universal Status Effect Resistance by a percentage.",
+                description = "Reduces Status Resistance and Mental Resistance by a percentage.",
                 stackingRule = StatusStackingRule.Independent, defaultMagnitude = 0.20f
             });
 

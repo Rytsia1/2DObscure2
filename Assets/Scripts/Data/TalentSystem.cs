@@ -122,7 +122,7 @@ namespace Obscure
         public const float HardyConstitutionHealReceivedBonus = 0.10f; // +10% Healing Received
         public const float CombatMomentumInitiative = 8f;              // +8 Initiative
         public const float CombatMomentumActionSpeed = 10f;            // +10 Action Speed
-        public const float UnshakeableStatusResist = 15f;              // +15% Status Resistance
+        public const float UnshakeableMentalResist = 15f;              // +15% Mental Resistance
         public const float UnshakeableStaggerResist = 10f;             // +10% Stagger Resistance
         public const float SpellcraftMasteryMagicPowerPercent = 0.12f; // +12% Magic Power
         public const float SpellcraftMasteryMagicPen = 10f;            // +10 Magic Penetration
@@ -301,7 +301,7 @@ namespace Obscure
             {
                 id = "unshakeable",
                 name = "Unshakeable",
-                description = "Increases Status Resistance by +15% and Stagger Resistance by +10%.",
+                description = "Increases Mental Resistance by +15% and Stagger Resistance by +10%.",
                 category = TalentCategory.Shared,
                 isDesignFinalized = true
             });

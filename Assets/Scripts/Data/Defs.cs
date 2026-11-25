@@ -206,7 +206,7 @@ namespace Obscure
         public AiKind ai;
         public Affinities affinities = Affinities.None;
         public EnemyAffinityProfile affinityProfile;
-        public Dictionary<StatusId, float> statusResist; // Per-status resistance offsets in [-0.50, +0.75] (Analysis Spec Part F)
+        public Dictionary<StatusId, float> statusResist; // Per-status resistance offsets in [-0.85, +0.85] (Analysis Spec Part F)
         public StatusId[] statusImmune = Array.Empty<StatusId>(); // Explicit per-status immunity flags
         public Element[] concealedAffinities = Array.Empty<Element>(); // Boss affinities requiring 2 triggers to reveal (Analysis Spec Part D)
         public AbilityScores abilityScores = AbilityScores.Uniform(10);

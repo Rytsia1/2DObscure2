@@ -242,7 +242,10 @@ namespace Obscure.Tests
             Assert.Greater(knight.Derived.magicDefense, mDefBeforeWis, "WIS secondary (+0.75/mod) increases Magic Defense");
             Assert.AreEqual(1.12f, knight.Derived.healingWisMultiplier, 1e-4f);
 
+            // Mental Resistance: INT is the secondary (+1.0%/mod)
+            int mentalBeforeInt = knight.Derived.mentalResistance;
             knight.AddPermanentAbilityBonus(Ability.INT, 8); // INT 8 -> 16 (mod -1 -> +3)
+            Assert.AreEqual(mentalBeforeInt + 4, knight.Derived.mentalResistance, "INT secondary (+1.0%/mod) raises Mental Resistance");
             Assert.AreEqual(16, knight.Derived.maxMp); // floor(15 * 1.12) = 16
 
             // Changing DEX updates Ranged Accuracy, Evasion, QTE Timing Window, Initiative, CriticalChance, CounterPower, and QTE Stability

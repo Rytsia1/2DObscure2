@@ -42,7 +42,8 @@ namespace Obscure
         internal static readonly DerivedStatId[] ComparedStats = // also used by RewardScreen's equipment preview
         {
             DerivedStatId.MaxHP, DerivedStatId.PhysicalPower, DerivedStatId.MagicPower, DerivedStatId.PhysicalDefense,
-            DerivedStatId.MagicDefense, DerivedStatId.CriticalChance, DerivedStatId.Initiative, DerivedStatId.StatusResistance
+            DerivedStatId.MagicDefense, DerivedStatId.CriticalChance, DerivedStatId.Initiative, DerivedStatId.StatusResistance,
+            DerivedStatId.MentalResistance
         };
 
         static readonly Color Up = Palette.Hex(0x7FF0AD), Down = Palette.Hex(0xFF9A8C);

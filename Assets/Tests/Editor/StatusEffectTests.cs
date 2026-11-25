@@ -18,6 +18,7 @@ namespace Obscure.Tests
             var hero = new Combatant(unit, Side.Party, 0, name, name.Substring(0, 3).ToUpperInvariant());
             hero.StatusController.ResistanceProfile.baseResistance = 0f;
             hero.StatusController.ResistanceProfile.statsResistance = 0f;
+            hero.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
             return hero;
         }
 
@@ -35,11 +36,12 @@ namespace Obscure.Tests
             var unit = new Unit(enemyDef);
             var enemy = new Combatant(unit, Side.Enemy, 0, name, name.Substring(0, Math.Min(3, name.Length)).ToUpperInvariant(), enemyDef);
             enemy.StatusController.ResistanceProfile.statsResistance = 0f;
+            enemy.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
             return enemy;
         }
 
         // =====================================================================
-        // 1. Universal Status Effect Resistance & Application Tests (GDD Section 9 & 13)
+        // 1. Status Resistance / Mental Resistance & Application Tests (GDD Bab 11 §9 & §13)
         // =====================================================================
 
         [Test]
@@ -60,7 +62,7 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void UniversalResistance_StacksAdditively_AndCapsAt75Percent()
+        public void StatusResistance_StacksAdditively_AndCapsAt85Percent()
         {
             var profile = new StatusResistanceProfile();
             profile.baseResistance = 0.20f;
@@ -69,18 +71,85 @@ namespace Obscure.Tests
             profile.buffResistance = 0.25f; // Uncapped = 0.90f (90%)
 
             Assert.AreEqual(0.90f, profile.TotalUncappedAdditive, 0.001f);
-            Assert.AreEqual(0.75f, profile.InitialResistance, 0.001f);
-            Assert.AreEqual(0.75f, profile.GetEffectiveResistance(), 0.001f);
+            Assert.AreEqual(0.85f, profile.InitialResistance, 0.001f);
+            Assert.AreEqual(0.85f, profile.GetEffectiveResistance(), 0.001f);
+        }
+
+        [Test]
+        public void StatusAndMentalPools_AreSeparate()
+        {
+            var p = new StatusResistanceProfile { statsResistance = 0.50f, mentalStatsResistance = 0.20f };
+
+            Assert.AreEqual(0.50f, p.GetEffectiveResistance(StatusId.Burn), 1e-5f, "non-Mental uses Status Resistance");
+            Assert.AreEqual(0.20f, p.GetEffectiveResistance(StatusId.Sleep), 1e-5f, "Mental uses Mental Resistance only");
+            Assert.AreEqual(0.20f, p.GetEffectiveMentalResistance(), 1e-5f);
+
+            p.mentalBuffResistance = 0.10f;
+            Assert.AreEqual(0.30f, p.GetEffectiveResistance(StatusId.Charm), 1e-5f, "Mental buffs add to the Mental pool");
+            Assert.AreEqual(0.50f, p.GetEffectiveResistance(StatusId.Poison), 1e-5f, "Mental buffs do not touch Status Resistance");
+
+            var clone = p.Clone();
+            Assert.AreEqual(0.30f, clone.GetEffectiveResistance(StatusId.Charm), 1e-5f, "Clone keeps the Mental pool");
+        }
+
+        [Test]
+        public void BothPools_ClampAtPlusMinus85_AndNegativeRaisesChance()
+        {
+            var p = new StatusResistanceProfile { statsResistance = -2f, mentalStatsResistance = 2f };
+            Assert.AreEqual(-0.85f, p.GetEffectiveResistance(StatusId.Burn), 1e-5f);
+            Assert.AreEqual(0.85f, p.GetEffectiveResistance(StatusId.Fear), 1e-5f);
+            Assert.AreEqual(0.925f, p.CalculateFinalApplicationChance(0.5f, StatusId.Burn), 1e-5f, "-85% turns 50% into 92.5%");
+            Assert.AreEqual(1f, p.CalculateFinalApplicationChance(0.9f, StatusId.Burn), 1e-5f, "final chance clamps to 100%");
+
+            var m = new StatusResistanceProfile { mentalStatsResistance = -2f };
+            Assert.AreEqual(-0.85f, m.GetEffectiveMentalResistance(), 1e-5f);
+        }
+
+        [Test]
+        public void ResistanceDown_ShrinksPositiveInBothPools_AndLeavesNegativeUnchanged()
+        {
+            var p = new StatusResistanceProfile { statsResistance = 0.60f, mentalStatsResistance = 0.40f };
+            p.AddReduction(0.50f);
+            Assert.AreEqual(0.30f, p.GetEffectiveResistance(StatusId.Burn), 1e-5f);
+            Assert.AreEqual(0.20f, p.GetEffectiveResistance(StatusId.Sleep), 1e-5f);
+
+            var n = new StatusResistanceProfile { statsResistance = -0.40f, mentalStatsResistance = -0.30f };
+            n.AddReduction(0.50f);
+            Assert.AreEqual(-0.40f, n.GetEffectiveResistance(StatusId.Burn), 1e-5f, "a reduction must not help the target");
+            Assert.AreEqual(-0.30f, n.GetEffectiveResistance(StatusId.Sleep), 1e-5f);
+        }
+
+        [Test]
+        public void Boss_MentalImmunity_HoldsAgainstNegativeMentalResistanceAndReductions()
+        {
+            var p = new StatusResistanceProfile { mentalStatsResistance = -0.85f };
+            p.AddReduction(0.90f);
+            foreach (var id in new[] { StatusId.Sleep, StatusId.Fear, StatusId.Charm, StatusId.MindControl })
+            {
+                Assert.IsTrue(p.IsImmune(id, isBoss: true));
+                Assert.AreEqual(0f, p.CalculateFinalApplicationChance(1f, id, isBoss: true), 1e-5f);
+                Assert.IsFalse(p.RollApplication(1f, id, isBoss: true, () => 0f));
+            }
+        }
+
+        [Test]
+        public void MindThemedContent_GrantsMentalResistance()
+        {
+            var hermitRank1 = Database.Backgrounds["hermit"].ranks[0];
+            Assert.AreEqual(5, hermitRank1.mentalResistanceBonus);
+            Assert.IsTrue(hermitRank1.modifiers.All(m => m.derivedStat == DerivedStatId.MentalResistance));
+            foreach (var pid in new[] { "iron_will", "inner_focus", "unwavering_faith" })
+                Assert.IsTrue(Database.Passives[pid].modifiers.Any(m => m.derivedStat == DerivedStatId.MentalResistance), pid);
         }
 
         [Test]
         public void ResistanceReductions_StackMultiplicatively_MatchingGDDFormulas()
         {
             // GDD Section 9 example:
-            // "Status Effect Chance 80%, resistance 75% -> chance final 20%."
-            var profile1 = new StatusResistanceProfile { baseResistance = 0.75f };
+            // "Status Effect Chance 80%, Status Resistance 85% -> chance final 12%."
+            var profile1 = new StatusResistanceProfile { baseResistance = 0.85f };
             float chance1 = profile1.CalculateFinalApplicationChance(0.80f, StatusId.Burn);
-            Assert.AreEqual(0.20f, chance1, 0.0001f);
+            Assert.AreEqual(0.12f, chance1, 0.0001f);
 
             // GDD Section 9 second example:
             // "Resistance 60% with two 20% debuffs -> 38.4% resistance; skill chance 40% -> 24.64%."
@@ -155,6 +224,7 @@ namespace Obscure.Tests
             // Bypass resistance check by setting resistance to 0
             target.StatusController.ResistanceProfile.baseResistance = 0f;
             target.StatusController.ResistanceProfile.statsResistance = 0f;
+            target.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             Assert.IsTrue(target.StatusController.TryApplyStatus(burn1, hero, target, out var inst1));
             Assert.IsTrue(target.StatusController.TryApplyStatus(burn2, hero, target, out var inst2));
@@ -470,6 +540,7 @@ namespace Obscure.Tests
             var hero = battle.Party[0];
             hero.StatusController.ResistanceProfile.baseResistance = 0f;
             hero.StatusController.ResistanceProfile.statsResistance = 0f;
+            hero.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             // Uncursed heal
             hero.unit.hp = 10;
@@ -570,6 +641,7 @@ namespace Obscure.Tests
                 e = b.Enemies[0];
                 e.StatusController.ResistanceProfile.baseResistance = 0f;
                 e.StatusController.ResistanceProfile.statsResistance = 0f;
+                e.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
                 return b;
             }
 
@@ -613,6 +685,7 @@ namespace Obscure.Tests
             var foe = battle.Enemies[0];
             hero.StatusController.ResistanceProfile.baseResistance = 0f;
             hero.StatusController.ResistanceProfile.statsResistance = 0f;
+            hero.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
             hero.unit.mp = 5;
 
             battle.Apply(hero, new StatusApply { id = StatusId.Despair, turns = 3, magnitude = 0f, chance = 1f }, foe, 1f);
@@ -667,6 +740,7 @@ namespace Obscure.Tests
             var foe = battle.Enemies[0];
             hero.StatusController.ResistanceProfile.baseResistance = 0f;
             hero.StatusController.ResistanceProfile.statsResistance = 0f;
+            hero.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             // Pre-existing buff before Despair
             battle.Apply(hero, new StatusApply { id = StatusId.DefenseUp, turns = 3, magnitude = 0.25f, chance = 1f }, hero, 1f);
@@ -726,6 +800,7 @@ namespace Obscure.Tests
             var foe = battle.Enemies[0];
             hero1.StatusController.ResistanceProfile.baseResistance = 0f;
             hero1.StatusController.ResistanceProfile.statsResistance = 0f;
+            hero1.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             battle.Apply(hero1, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, foe, 1f);
             Assert.IsTrue(hero1.IsMindControlled);
@@ -748,6 +823,7 @@ namespace Obscure.Tests
             var foe2 = battle2.Enemies[0];
             a2.StatusController.ResistanceProfile.baseResistance = 0f;
             a2.StatusController.ResistanceProfile.statsResistance = 0f;
+            a2.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
             battle2.Apply(a2, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, foe2, 1f);
 
             int ally2Before = ally2.unit.hp;
@@ -762,6 +838,7 @@ namespace Obscure.Tests
             var soloFoe = soloBattle.Enemies[0];
             soloHero.StatusController.ResistanceProfile.baseResistance = 0f;
             soloHero.StatusController.ResistanceProfile.statsResistance = 0f;
+            soloHero.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
             soloBattle.Apply(soloHero, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, soloFoe, 1f);
 
             var selfAct = soloBattle.BuildMindControlledAction(soloHero);
@@ -799,6 +876,7 @@ namespace Obscure.Tests
             var hero = battle.Party[0];
             e1.StatusController.ResistanceProfile.baseResistance = 0f;
             e1.StatusController.ResistanceProfile.statsResistance = 0f;
+            e1.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             battle.Apply(e1, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, hero, 1f);
             Assert.IsNull(e1.Intent, "Applying Mind Control must clear existing enemy intent");
@@ -823,6 +901,7 @@ namespace Obscure.Tests
             var soloHero = soloBattle.Party[0];
             soloEnemy.StatusController.ResistanceProfile.baseResistance = 0f;
             soloEnemy.StatusController.ResistanceProfile.statsResistance = 0f;
+            soloEnemy.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
             soloBattle.Apply(soloEnemy, new StatusApply { id = StatusId.MindControl, turns = 2, chance = 1f }, soloHero, 1f);
 
             Assert.IsTrue(EnemyAI.HasLegalAction(soloBattle, soloEnemy));
@@ -858,6 +937,7 @@ namespace Obscure.Tests
             var enemy = battle.Enemies[0];
             enemy.StatusController.ResistanceProfile.baseResistance = 0f;
             enemy.StatusController.ResistanceProfile.statsResistance = 0f;
+            enemy.StatusController.ResistanceProfile.mentalStatsResistance = 0f;
 
             // Apply Mind Control using defaultDuration (turns = 0)
             battle.Apply(enemy, new StatusApply { id = StatusId.MindControl, turns = 0, chance = 1f }, hero, 1f);

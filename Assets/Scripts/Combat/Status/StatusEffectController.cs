@@ -96,7 +96,7 @@ namespace Obscure
                     return false;
             }
 
-            // 2. Roll Universal Status Effect Resistance (GDD Section 9)
+            // 2. Roll Status Resistance (non-Mental) or Mental Resistance (Mental Effects) (GDD Bab 11 §9)
             // A perfect QTE (chance >= 1f with high power) may guarantee unless immune or resisted
             float rollProvider() => rng != null ? (float)rng.NextDouble() : UnityEngine.Random.value;
             if (!ResistanceProfile.RollApplication(apply.chance, apply.id, isBoss, rollProvider))

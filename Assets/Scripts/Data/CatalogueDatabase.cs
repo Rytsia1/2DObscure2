@@ -2243,7 +2243,7 @@ namespace Obscure
                 fixedSpecialEffect = "Once/battle revive wearer at 10% HP after lethal damage; party wipe still ends run",
                 specialEffectId = "fx_eq070",
                 suggestedSource = "Layer 8",
-                baseStatsSummary = "VIT +8; HP +12; Universal Status Resistance +8%",
+                baseStatsSummary = "VIT +8; HP +12; Status Resistance +8%",
                 allowedClassesText = "Fighter; Barbarian; Martial Artist; Rogue; Ranger; Cleric; Wizard; Warlock; Druid",
                 restrictions = new EquipmentRestriction
                 {
@@ -2587,7 +2587,7 @@ namespace Obscure
                 fixedSpecialEffect = "Cursed Trait: Boon and Curse active while equipped",
                 specialEffectId = "fx_eq080",
                 suggestedSource = "Special Cursed Equipment Drop (source TBD)",
-                baseStatsSummary = "INT +8; Shadow Damage +8%; Status Effect Resistance -6%; Max HP -10%",
+                baseStatsSummary = "INT +8; Shadow Damage +8%; Status Resistance -6%; Max HP -10%",
                 allowedClassesText = "Warlock",
                 restrictions = new EquipmentRestriction
                 {
@@ -3299,10 +3299,10 @@ namespace Obscure
             {
                 id = "CON020",
                 name = "Daemon Ward Incense",
-                description = "Party gains +8% Universal Status Effect Resistance for 2 battles.",
+                description = "Party gains +8% Status Resistance for 2 battles.",
                 category = "Buff Item",
                 rarity = EquipmentRarity.Epic,
-                itemEffect = "Party gains +8% Universal Status Effect Resistance for 2 battles.",
+                itemEffect = "Party gains +8% Status Resistance for 2 battles.",
                 target = "Party",
                 usageRestriction = "Before combat",
                 maxStack = 2,

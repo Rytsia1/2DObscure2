@@ -194,7 +194,10 @@ namespace Obscure
 
             StatusController.isBoss = enemy != null && enemy.tier == Tier.Boss;
             if (unit != null)
-                StatusController.ResistanceProfile.statsResistance = Math.Clamp(unit.Derived.statusResistance / 100f, 0f, 0.75f);
+            {
+                StatusController.ResistanceProfile.statsResistance = unit.Derived.StatusResistFraction;
+                StatusController.ResistanceProfile.mentalStatsResistance = unit.Derived.MentalResistFraction;
+            }
             if (enemy != null && enemy.tier == Tier.Boss)
                 StatusController.ResistanceProfile.baseResistance = 0.50f; // High base resistance for Bosses (GDD Section 13)
             ApplyEnemyStatusResistances(enemy);
@@ -296,7 +299,8 @@ namespace Obscure
                 unit.hp = unit.stats.maxHp;
                 unit.mp = unit.stats.maxMp;
                 unit.shield = 0;
-                StatusController.ResistanceProfile.statsResistance = Math.Clamp(unit.Derived.statusResistance / 100f, 0f, 0.75f);
+                StatusController.ResistanceProfile.statsResistance = unit.Derived.StatusResistFraction;
+                StatusController.ResistanceProfile.mentalStatsResistance = unit.Derived.MentalResistFraction;
             }
             cooldowns.Clear();
             cooldownsJustExpiredThisTurn.Clear();

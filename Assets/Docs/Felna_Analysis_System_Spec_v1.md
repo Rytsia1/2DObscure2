@@ -41,7 +41,7 @@ It also adds **per-status resistance**.
   - `EnemyAffinityProfile` / `AffinityType { Normal, Weakness, Resistant, Nullification }` (`Combat/Damage/EnemyAffinity.cs`, used by `DamageCalculator` and Null Break).
 - Neither model has Drain or Reflect.
 - **No Dungeon 1 roster enemy has any affinity set yet**, so Part F authors a table.
-- **Status resistance is one universal value per unit** (`StatusResistanceProfile`: additive sources, 75% cap, multiplicative reductions). Bosses also have 100% mental immunity.
+- **Status resistance has two pools per unit** (`StatusResistanceProfile`): Status Resistance for non-Mental statuses and Mental Resistance for Mental Effects. Each has additive sources, a [-85%, +85%] range and multiplicative reductions on positive values. Bosses also have 100% mental immunity. *(Revised 2026-11-25; was one universal value with a 75% cap.)*
 - **Elements:** Physical, Fire, Ice, Lightning, Arcane, Holy, Dark (= Shadow), Earth, Wind, Water.
 - **Attributes:** STR, DEX, VIT, INT, WIS, CHA. There is no AGI attribute; **AGI maps to DEX**.
 - **Enemies have no level.** Inspection shows the tier and the dungeon instead of inventing one.
@@ -180,10 +180,10 @@ No player source of Drain or Reflect exists yet. The rules are symmetric, so the
 ## Part F: Per-status resistance
 
 ### Model
-- Each status gets its own resistance on top of the existing universal value. `perStatus` ranges from −0.5 to +0.75.
+- Each status gets its own offset on top of its pool (Status Resistance, or Mental Resistance for Mental Effects). `perStatus` ranges from −0.85 to +0.85.
 - Effective resistance to status S:
 
-  `effective(S) = clamp(universal + perStatus[S], 0, 0.75) × Π(1 − reductions)`
+  `raw(S) = clamp(pool(S) + perStatus[S], −0.85, 0.85)`; `effective(S) = raw > 0 ? raw × Π(1 − reductions) : raw`
 
 - **Immunity** stays a separate flag. Bosses keep their mental immunity.
 
@@ -198,7 +198,7 @@ No player source of Drain or Reflect exists yet. The rules are symmetric, so the
 
 ### Allies
 - Per-status values come from race, equipment and buffs.
-- Lightbound stays a universal +20%.
+- Lightbound stays a +20% Status Resistance buff (non-Mental pool only).
 
 ### Dungeon 1 affinity and status table (starting values, not final; update the v1.9 xlsx to match)
 

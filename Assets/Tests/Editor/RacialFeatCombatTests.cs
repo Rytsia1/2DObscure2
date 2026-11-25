@@ -157,7 +157,7 @@ namespace Obscure.Tests
         }
 
         [Test]
-        public void Bug2_LightboundRaisesUniversalStatusResistanceAndRemovesOnExpiry()
+        public void Bug2_LightboundRaisesStatusResistanceAndRemovesOnExpiry()
         {
             var liichtU = MakeHero("liichtian");
             var allyU = MakeHero("human");
@@ -170,7 +170,7 @@ namespace Obscure.Tests
             b.Perform(BattleAction.RacialFeat(liicht));
 
             float boostedRes = ally.StatusController.ResistanceProfile.GetEffectiveResistance();
-            Assert.AreEqual(Math.Min(0.75f, baseRes + 0.20f), boostedRes, 1e-4f, "Lightbound adds +20% status resistance under 75% cap");
+            Assert.AreEqual(Math.Min(0.85f, baseRes + 0.20f), boostedRes, 1e-4f, "Lightbound adds +20% status resistance under 85% cap");
 
             AdvanceUntilOwnerTurns(b, ally, 1);
             Assert.AreEqual(1, ally.LightboundTurns);
@@ -180,15 +180,16 @@ namespace Obscure.Tests
             Assert.AreEqual(0, ally.LightboundTurns);
             Assert.AreEqual(baseRes, ally.StatusController.ResistanceProfile.GetEffectiveResistance(), 1e-4f, "Status resistance bonus removed on expiry");
 
-            // 75% cap check & second battle non-stacking check
+            // 85% cap check & second battle non-stacking check
             var b2 = new Battle(new[] { liichtU, allyU }, new[] { Database.Enemies["hollow_squire"] }, new List<string>(), new Random(2));
             var liicht2 = b2.Party[0];
             var ally2 = b2.Party[1];
             Assert.AreEqual(0f, ally2.LightboundResistBonus, 1e-4f, "New battle starts with no leftover Lightbound bonus");
-            ally2.StatusController.ResistanceProfile.equipmentResistance = 0.65f;
+            ally2.StatusController.ResistanceProfile.equipmentResistance = 0.75f;
             NextTurnFor(b2, liicht2);
             b2.Perform(BattleAction.RacialFeat(liicht2));
-            Assert.AreEqual(0.75f, ally2.StatusController.ResistanceProfile.GetEffectiveResistance(), 1e-4f, "Lightbound stays under 75% cap");
+            Assert.AreEqual(0.85f, ally2.StatusController.ResistanceProfile.GetEffectiveResistance(), 1e-4f, "Lightbound stays under 85% cap");
+            Assert.AreEqual(0f, ally2.StatusController.ResistanceProfile.mentalBuffResistance, 1e-4f, "Lightbound does not touch Mental Resistance");
         }
 
         [Test]

@@ -49,7 +49,9 @@ namespace Obscure
         CounterPower,
         // Break Stats
         PhysicalBreakPower,
-        MagicBreakPower
+        MagicBreakPower,
+        // Appended last so serialized int values of the stats above do not shift.
+        MentalResistance
     }
 
     public enum ModifierKind
@@ -422,10 +424,15 @@ namespace Obscure
         public float strDamageReductionPerMod = 0.005f;
         public float maxDamageReduction = 0.25f;
 
-        // Status Resistance: Primary VIT (+2.0%/mod), Secondary WIS (+1.0%/mod), additive cap 75%
+        // Status Resistance (non-Mental): Primary VIT (+2.0%/mod), Secondary WIS (+1.0%/mod), range [-85%, +85%]
         public float vitStatusResPerMod = 2.0f;
         public float wisStatusResPerMod = 1.0f;
-        public float maxStatusResistance = 0.75f;
+        public float maxStatusResistance = 0.85f;
+
+        // Mental Resistance (Mental Effects only): Primary WIS (+2.0%/mod), Secondary INT (+1.0%/mod), range [-85%, +85%]
+        // Posture B: mirrors the Status Resistance coefficients; tune if WIS builds shrug off every Mental Effect.
+        public float wisMentalResPerMod = 2.0f;
+        public float intMentalResPerMod = 1.0f;
 
         // Stagger Resistance: Primary VIT (+2.0%/mod), Secondary STR (+1.0%/mod), cap 75%
         public float vitStaggerResPerMod = 2.0f;
@@ -768,7 +775,8 @@ namespace Obscure
         public int magicDefense;
         public int evasion;          // percentage (e.g. 5 = 5%)
         public int blockPower;       // percentage (e.g. 50 = 50%)
-        public int statusResistance; // percentage
+        public int statusResistance; // percentage, non-Mental statuses
+        public int mentalResistance; // percentage, Mental Effects only
         public int staggerResistance;
 
         // Turn Stats
@@ -788,7 +796,8 @@ namespace Obscure
         public float CritMultiplier => Math.Max(1f, criticalDamage / 100f);
         public float EvasionFraction => Mathf.Clamp(evasion / 100f, 0f, 0.75f);
         public float BlockFraction => Mathf.Clamp(blockPower / 100f, 0f, 0.90f);
-        public float StatusResistFraction => Mathf.Clamp(statusResistance / 100f, 0f, 0.75f);
+        public float StatusResistFraction => Mathf.Clamp(statusResistance / 100f, -0.85f, 0.85f);
+        public float MentalResistFraction => Mathf.Clamp(mentalResistance / 100f, -0.85f, 0.85f);
         public float QteTimingBonusFraction => Mathf.Clamp(qteTimingBonus / 100f, -0.15f, 0.25f);
         public float QteStabilityFraction => Mathf.Clamp(qteStability / 100f, 0f, 0.50f);
 
@@ -819,6 +828,7 @@ namespace Obscure
             DerivedStatId.CounterPower => counterPower,
             DerivedStatId.PhysicalBreakPower => physicalBreakPower,
             DerivedStatId.MagicBreakPower => magicBreakPower,
+            DerivedStatId.MentalResistance => mentalResistance,
             _ => 0
         };
 
@@ -851,6 +861,7 @@ namespace Obscure
                 case DerivedStatId.CounterPower: counterPower = v; break;
                 case DerivedStatId.PhysicalBreakPower: physicalBreakPower = v; break;
                 case DerivedStatId.MagicBreakPower: magicBreakPower = v; break;
+                case DerivedStatId.MentalResistance: mentalResistance = v; break;
             }
         }
 
@@ -861,6 +872,7 @@ namespace Obscure
             id == DerivedStatId.Evasion ||
             id == DerivedStatId.BlockPower ||
             id == DerivedStatId.StatusResistance ||
+            id == DerivedStatId.MentalResistance ||
             id == DerivedStatId.QteTimingBonus ||
             id == DerivedStatId.QteStability;
 
@@ -1535,6 +1547,12 @@ namespace Obscure
             return FloorInt(cfg.vitStatusResPerMod * vitModifier + cfg.wisStatusResPerMod * wisModifier);
         }
 
+        public static int CalculateMentalResistanceBonus(int wisModifier, int intModifier = 0, AttributeSystemConfig config = null)
+        {
+            var cfg = config ?? AttributeSystemConfig.Default;
+            return FloorInt(cfg.wisMentalResPerMod * wisModifier + cfg.intMentalResPerMod * intModifier);
+        }
+
         public static int CalculateStaggerResistanceBonus(int vitModifier, int strModifier = 0, AttributeSystemConfig config = null)
         {
             var cfg = config ?? AttributeSystemConfig.Default;
@@ -1886,8 +1904,10 @@ namespace Obscure
             float rawEvasion = c.baseEvasion + CalculateEvasionBonus(mods.dex, cfg);
             // Block Power: Primary STR (+2.0/mod), Secondary VIT (+1.0/mod), cap 90%
             float rawBlock = c.baseBlockPower + CalculateBlockPowerBonus(mods.str, mods.vit, cfg);
-            // Status Resistance: Primary VIT (+2.0%/mod), Secondary WIS (+1.0%/mod), additive cap 75%
+            // Status Resistance: Primary VIT (+2.0%/mod), Secondary WIS (+1.0%/mod), range [-85%, +85%]
             float rawStatusRes = c.baseStatusResistance + CalculateStatusResistanceBonus(mods.vit, mods.wis, cfg);
+            // Mental Resistance: Primary WIS (+2.0%/mod), Secondary INT (+1.0%/mod), range [-85%, +85%]
+            float rawMentalRes = c.baseMentalResistance + CalculateMentalResistanceBonus(mods.wis, mods.intel, cfg);
             // Stagger Resistance: Primary VIT (+2.0%/mod), Secondary STR (+1.0%/mod), cap 75%
             float rawStaggerRes = c.baseStaggerResistance + CalculateStaggerResistanceBonus(mods.vit, mods.str, cfg);
             // Damage Reduction: Primary VIT (+1.0%/mod), Secondary STR (+0.5%/mod), shared cap 25%
@@ -1936,7 +1956,8 @@ namespace Obscure
                 magicDefense = Eval(DerivedStatId.MagicDefense, rawMagDef, 0, 999),
                 evasion = Eval(DerivedStatId.Evasion, rawEvasion, 0, 75),
                 blockPower = Eval(DerivedStatId.BlockPower, rawBlock, 0, cfg.maxBlockPower),
-                statusResistance = Eval(DerivedStatId.StatusResistance, rawStatusRes, 0, 75),
+                statusResistance = Eval(DerivedStatId.StatusResistance, rawStatusRes, -85, 85),
+                mentalResistance = Eval(DerivedStatId.MentalResistance, rawMentalRes, -85, 85),
                 staggerResistance = Eval(DerivedStatId.StaggerResistance, rawStaggerRes, 0, cfg.maxStaggerResistance),
                 initiative = Eval(DerivedStatId.Initiative, rawInitiative, 1, 999),
                 actionSpeed = Eval(DerivedStatId.ActionSpeed, rawActionSpeed, 1, 999),
@@ -2077,6 +2098,10 @@ namespace Obscure
                 case DerivedStatId.StatusResistance:
                     baseVal = c.baseStatusResistance;
                     abilityContrib = CalculateStatusResistanceBonus(mods.vit, mods.wis, cfg);
+                    break;
+                case DerivedStatId.MentalResistance:
+                    baseVal = c.baseMentalResistance;
+                    abilityContrib = CalculateMentalResistanceBonus(mods.wis, mods.intel, cfg);
                     break;
                 case DerivedStatId.StaggerResistance:
                     baseVal = c.baseStaggerResistance;
