@@ -922,7 +922,7 @@ namespace Obscure.Tests
                 talent.Open(host.transform);
                 var sv = UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.ScrollView>(talent.UiRoot);
                 Assert.IsNotNull(sv, "TalentScreen must wrap talent cards in a ScrollView.");
-                int cardCount = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.VisualElement>(sv, className: "tag-cls").ToList().Count;
+                int cardCount = UnityEngine.UIElements.UQueryExtensions.Query<UnityEngine.UIElements.VisualElement>(sv, className: "uitk-talent-card").ToList().Count;
                 Assert.Greater(cardCount, 6, "TalentScreen must render all compatible talents, not cap at 6.");
                 talent.Close();
 

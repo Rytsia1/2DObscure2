@@ -117,6 +117,24 @@ namespace Obscure
         public const float InspiringLeaderReduction = 0.10f;       // 10% party Damage Reduction (multiplier 0.90f)
         public const int InspiringLeaderDuration = 3;              // 3 turns duration
 
+        // Additional Shared Talents (3.12 - 3.20)
+        public const float HardyConstitutionMaxHpFlat = 45f;           // +45 flat Max HP
+        public const float HardyConstitutionHealReceivedBonus = 0.10f; // +10% Healing Received
+        public const float CombatMomentumInitiative = 8f;              // +8 Initiative
+        public const float CombatMomentumActionSpeed = 10f;            // +10 Action Speed
+        public const float UnshakeableStatusResist = 15f;              // +15% Status Resistance
+        public const float UnshakeableStaggerResist = 10f;             // +10% Stagger Resistance
+        public const float SpellcraftMasteryMagicPowerPercent = 0.12f; // +12% Magic Power
+        public const float SpellcraftMasteryMagicPen = 10f;            // +10 Magic Penetration
+        public const float QuickReflexDefensiveQteBonus = 0.10f;       // +10% Defensive QTE window
+        public const float SteadyHandOffensiveQteBonus = 0.10f;        // +10% Offensive QTE window
+        public const float SpoilsSeekerGoldBonus = 0.15f;              // +15% Spoils (Gold) while alive
+        public const float PinpointFocusCritChance = 6f;               // +6% Critical Chance
+        public const float PinpointFocusCritDamage = 15f;              // +15% Critical Damage
+        public const float DesperateGritHpThreshold = 0.35f;           // Active at HP <= 35% Max HP
+        public const float DesperateGritDamageBonus = 0.15f;           // +15% All Damage Dealt
+        public const float DesperateGritDamageReduction = 0.15f;       // -15% All Damage Taken
+
         public static int GetTalentSlotsAtLevel(int level) =>
             MilestoneLevels.Count(m => level >= m);
 
@@ -128,7 +146,7 @@ namespace Obscure
         static TalentSystem()
         {
             RegisterSharedTalents();
-            RegisterProposedSharedTalents();
+            RegisterAdditionalSharedTalents();
             RegisterAllClassSpecificTalents();
         }
 
@@ -256,27 +274,97 @@ namespace Obscure
             });
         }
 
-        static void RegisterProposedSharedTalents()
+        static void RegisterAdditionalSharedTalents()
         {
-            // Section 4: Proposed Shared Talent Concepts (not finalized)
-            string[] proposedNames =
+            // 3.12 Hardy Constitution (formerly Vitality)
+            Register(new TalentDef
             {
-                "Vitality", "Battle Rhythm", "Iron Will", "Efficient Casting",
-                "Quick Reflex", "Fortune Seeker", "Keen Eye", "Steady Hand", "Survivor's Instinct"
-            };
+                id = "hardy_constitution",
+                name = "Hardy Constitution",
+                description = "Increases Max HP by +45 and increases Healing Received by +10%.",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
 
-            foreach (var pName in proposedNames)
+            // 3.13 Combat Momentum (formerly Battle Rhythm)
+            Register(new TalentDef
             {
-                string id = "shared_" + pName.ToLowerInvariant().Replace(" ", "_").Replace("'", "");
-                Register(new TalentDef
-                {
-                    id = id,
-                    name = pName,
-                    description = $"{pName} (Proposed Shared Talent — pending design specification).",
-                    category = TalentCategory.Shared,
-                    isDesignFinalized = false
-                });
-            }
+                id = "combat_momentum",
+                name = "Combat Momentum",
+                description = "Increases Initiative by +8 and Action Speed by +10 in the turn order.",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.14 Unshakeable (formerly Iron Will)
+            Register(new TalentDef
+            {
+                id = "unshakeable",
+                name = "Unshakeable",
+                description = "Increases Status Resistance by +15% and Stagger Resistance by +10%.",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.15 Spellcraft Mastery (formerly Efficient Casting)
+            Register(new TalentDef
+            {
+                id = "spellcraft_mastery",
+                name = "Spellcraft Mastery",
+                description = "Increases Magic Power by +12% and Magic Penetration by +10.",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.16 Quick Reflex
+            Register(new TalentDef
+            {
+                id = "quick_reflex",
+                name = "Quick Reflex",
+                description = "Widens Defensive QTE timing windows by +10% (stacks up to the +25% shared cap).",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.17 Spoils Seeker (formerly Fortune Seeker)
+            Register(new TalentDef
+            {
+                id = "spoils_seeker",
+                name = "Spoils Seeker",
+                description = "Increases Spoils (Gold) gained from battles and treasures by +15% while alive (non-stacking).",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.18 Pinpoint Focus (formerly Keen Eye)
+            Register(new TalentDef
+            {
+                id = "pinpoint_focus",
+                name = "Pinpoint Focus",
+                description = "Increases Critical Chance by +6% and Critical Damage by +15%.",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.19 Steady Hand
+            Register(new TalentDef
+            {
+                id = "steady_hand",
+                name = "Steady Hand",
+                description = "Widens Offensive QTE timing windows by +10% (stacks up to the +25% shared cap).",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
+
+            // 3.20 Desperate Grit (formerly Survivor's Instinct)
+            Register(new TalentDef
+            {
+                id = "desperate_grit",
+                name = "Desperate Grit",
+                description = "When HP is at or below 35% Max HP, deals +15% All Damage and takes -15% All Damage.",
+                category = TalentCategory.Shared,
+                isDesignFinalized = true
+            });
         }
 
         static void RegisterAllClassSpecificTalents()

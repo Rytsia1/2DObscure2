@@ -514,5 +514,238 @@ namespace Obscure.Tests
                 Assert.AreEqual(5, count, $"Class '{c}' must have exactly 5 class-specific talents registered in catalog.");
             }
         }
+
+        // =====================================================================
+        // 15. Additional 9 Shared Talents (Finalized Names & Effects)
+        // =====================================================================
+
+        [Test]
+        public void SharedTalents_AllTwentyAreFinalized_AndHaveUniqueNamesAcrossSystems()
+        {
+            var shared = Database.Talents.Values.Where(t => t.category == TalentCategory.Shared).ToList();
+            Assert.AreEqual(20, shared.Count, "Expected 20 finalized Shared Talents.");
+            Assert.IsTrue(shared.All(t => t.isDesignFinalized), "All 20 Shared Talents must be finalized.");
+
+            var otherNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in Database.Passives.Values) otherNames.Add(p.name);
+            foreach (var bg in Database.Backgrounds.Values)
+                if (bg.ranks != null)
+                    foreach (var r in bg.ranks)
+                        if (!string.IsNullOrEmpty(r.perkName)) otherNames.Add(r.perkName);
+            foreach (var race in Database.Races.Values)
+                if (!string.IsNullOrEmpty(race.racialFeat?.name)) otherNames.Add(race.racialFeat.name);
+            foreach (var mod in Database.DungeonModifiers.Values) otherNames.Add(mod.displayName);
+
+            foreach (var t in shared)
+                Assert.IsFalse(otherNames.Contains(t.name), $"Shared Talent name '{t.name}' collides with another system.");
+        }
+
+        [Test]
+        public void Talent_HardyConstitution_GrantsMaxHpAndHealingReceived()
+        {
+            var unit = new Unit(Database.Characters["knight"]);
+            unit.selectedTalentIds.Clear();
+            unit.RecalculateStats();
+            int baseHp = unit.stats.maxHp;
+
+            unit.selectedTalentIds.Add("hardy_constitution");
+            unit.RecalculateStats();
+            Assert.AreEqual(baseHp + (int)TalentSystem.HardyConstitutionMaxHpFlat, unit.stats.maxHp);
+
+            var b = NewBattle("skeleton");
+            var knight = P(b, "Knight");
+            knight.unit.selectedTalentIds.Add("hardy_constitution");
+            knight.unit.RecalculateStats();
+            knight.unit.hp = 10;
+
+            var hit = b.Heal(knight, 50);
+            Assert.AreEqual(55, hit.amount, "Hardy Constitution must grant +10% healing received (50 * 1.10 = 55)");
+        }
+
+        [Test]
+        public void Talent_CombatMomentum_GrantsInitiativeAndActionSpeed()
+        {
+            var unit = new Unit(Database.Characters["rogue"]);
+            unit.selectedTalentIds.Clear();
+            unit.RecalculateStats();
+            int baseInit = unit.Derived.initiative;
+            int baseSpd = unit.Derived.actionSpeed;
+
+            unit.selectedTalentIds.Add("combat_momentum");
+            unit.RecalculateStats();
+
+            Assert.AreEqual(baseInit + (int)TalentSystem.CombatMomentumInitiative, unit.Derived.initiative);
+            Assert.AreEqual(baseSpd + (int)TalentSystem.CombatMomentumActionSpeed, unit.Derived.actionSpeed);
+        }
+
+        [Test]
+        public void Talent_Unshakeable_GrantsStatusAndStaggerResistance()
+        {
+            var unit = new Unit(Database.Characters["knight"]);
+            unit.selectedTalentIds.Clear();
+            unit.RecalculateStats();
+            int baseStatusRes = unit.Derived.statusResistance;
+            int baseStaggerRes = unit.Derived.staggerResistance;
+
+            unit.selectedTalentIds.Add("unshakeable");
+            unit.RecalculateStats();
+
+            Assert.AreEqual(baseStatusRes + (int)TalentSystem.UnshakeableStatusResist, unit.Derived.statusResistance);
+            Assert.AreEqual(baseStaggerRes + (int)TalentSystem.UnshakeableStaggerResist, unit.Derived.staggerResistance);
+        }
+
+        [Test]
+        public void Talent_SpellcraftMastery_GrantsMagicPowerPercentAndMagicPenetration()
+        {
+            var unit = new Unit(Database.Characters["mage"]);
+            unit.selectedTalentIds.Clear();
+            unit.RecalculateStats();
+            int baseMagPen = unit.Derived.magicPenetration;
+            int baseMag = unit.Derived.magicPower;
+
+            unit.selectedTalentIds.Add("spellcraft_mastery");
+            unit.RecalculateStats();
+
+            Assert.AreEqual(baseMagPen + (int)TalentSystem.SpellcraftMasteryMagicPen, unit.Derived.magicPenetration);
+            Assert.Greater(unit.Derived.magicPower, baseMag);
+        }
+
+        [Test]
+        public void Talent_QuickReflexAndSteadyHand_WidenQteWindowsAndRespectSharedCap()
+        {
+            var b = NewBattle("skeleton");
+            var knight = P(b, "Knight");
+            var enemy = b.Enemies.First();
+
+            var baseOff = (TimingQte)QteFactory.Offense(BattleAction.Attack(knight, enemy), Tier.Normal, QteAssist.Standard, new System.Random(1));
+            var baseDef = (DefenseQte)QteFactory.Defense(BattleAction.Attack(enemy, knight), QteAssist.Standard, null, new System.Random(1));
+
+            knight.unit.selectedTalentIds.Add("steady_hand");
+            knight.unit.selectedTalentIds.Add("quick_reflex");
+
+            var buffOff = (TimingQte)QteFactory.Offense(BattleAction.Attack(knight, enemy), Tier.Normal, QteAssist.Standard, new System.Random(1));
+            var buffDef = (DefenseQte)QteFactory.Defense(BattleAction.Attack(enemy, knight), QteAssist.Standard, null, new System.Random(1));
+
+            Assert.AreEqual(baseOff.TimingBonusFraction + 0.10f, buffOff.TimingBonusFraction, 0.001f);
+            Assert.AreEqual(baseDef.TimingBonusFraction + 0.10f, buffDef.TimingBonusFraction, 0.001f);
+
+            // Clamped at shared +25% cap when stacked with modifiers
+            var run = new RunState(MapGenerator.Generate(10, act: 1, stage: 1), Database.Party.Select(id => Database.Characters[id]), 10);
+            run.Party[0].selectedTalentIds.Add("steady_hand");
+            run.Party[0].selectedTalentIds.Add("quick_reflex");
+            run.ModifierManager.AddModifier("MOD-004", run);
+            run.ModifierManager.AddModifier("MOD-004", run); // +20% offensive
+            run.ModifierManager.AddModifier("MOD-005", run);
+            run.ModifierManager.AddModifier("MOD-005", run); // +20% defensive
+
+            var cappedOff = (TimingQte)QteFactory.Offense(BattleAction.Attack(knight, enemy), Tier.Normal, QteAssist.Standard, new System.Random(1), run);
+            var cappedDef = (DefenseQte)QteFactory.Defense(BattleAction.Attack(enemy, knight), QteAssist.Standard, run, new System.Random(1));
+            Assert.LessOrEqual(cappedOff.TimingBonusFraction, DungeonModifierManager.MaxQteWindowBonus + 0.001f);
+            Assert.LessOrEqual(cappedDef.TimingBonusFraction, DungeonModifierManager.MaxQteWindowBonus + 0.001f);
+        }
+
+        [Test]
+        public void Talent_SpoilsSeeker_BoostsGoldWhenAlive_NonStacking_InactiveWhenKO()
+        {
+            var run = new RunState(MapGenerator.Generate(11, act: 1, stage: 1), Database.Party.Select(id => Database.Characters[id]), 11);
+
+            run.Party[0].selectedTalentIds.Add("spoils_seeker");
+            run.AddGold(100);
+            Assert.AreEqual(115, run.Gold, "Spoils Seeker grants +15% gold while owner is alive");
+
+            // Non-stacking with second party member
+            run.Gold = 0;
+            run.Party[1].selectedTalentIds.Add("spoils_seeker");
+            run.AddGold(100);
+            Assert.AreEqual(115, run.Gold, "Spoils Seeker must not stack across party members");
+
+            // Inactive if all owners are KO
+            run.Gold = 0;
+            run.Party[0].hp = 0;
+            run.Party[1].hp = 0;
+            run.AddGold(100);
+            Assert.AreEqual(100, run.Gold, "Spoils Seeker must not apply if all owners are KO");
+        }
+
+        [Test]
+        public void Talent_PinpointFocus_GrantsCritChanceAndCritDamage()
+        {
+            var unit = new Unit(Database.Characters["rogue"]);
+            unit.selectedTalentIds.Clear();
+            unit.RecalculateStats();
+            int baseCrit = unit.Derived.criticalChance;
+            int baseCritDmg = unit.Derived.criticalDamage;
+
+            unit.selectedTalentIds.Add("pinpoint_focus");
+            unit.RecalculateStats();
+
+            Assert.AreEqual(baseCrit + (int)TalentSystem.PinpointFocusCritChance, unit.Derived.criticalChance);
+            Assert.AreEqual(baseCritDmg + (int)TalentSystem.PinpointFocusCritDamage, unit.Derived.criticalDamage);
+        }
+
+        [Test]
+        public void Talent_DesperateGrit_ActivatesBelow35PercentHpForBothDealtAndTaken()
+        {
+            static Combatant AdvanceTo(Battle battle, Combatant target)
+            {
+                for (int i = 0; i < 40; i++)
+                {
+                    var cur = battle.NextTurn();
+                    if (cur == target) return cur;
+                    battle.Perform(BattleAction.Guard(cur));
+                }
+                Assert.Fail($"Combatant {target.name} never reached a turn.");
+                return null;
+            }
+
+            // Use identical seeded battles so RNG variance is identical between full-HP and low-HP checks.
+            Battle SetupDealtBattle(bool lowHp, out Combatant knight, out Combatant enemy)
+            {
+                var battle = NewBattle("skeleton");
+                knight = P(battle, "Knight");
+                enemy = battle.Enemies.First();
+                enemy.unit.stats.def = 0;
+                enemy.unit.stats.maxHp = 10000;
+                enemy.unit.hp = 10000;
+                knight.unit.abilities.baseScores = AbilityScores.Uniform(10).With(Ability.STR, 18).With(Ability.DEX, 1);
+                knight.unit.selectedTalentIds.Add("desperate_grit");
+                knight.unit.RecalculateStats(fillResources: true);
+                knight.unit.hp = lowHp
+                    ? (int)Math.Floor(knight.Stats.maxHp * TalentSystem.DesperateGritHpThreshold)
+                    : knight.Stats.maxHp;
+                AdvanceTo(battle, knight);
+                return battle;
+            }
+
+            var bFull = SetupDealtBattle(false, out var kFull, out var eFull);
+            int dmgFull = bFull.Perform(BattleAction.Attack(kFull, eFull), 1f, new[] { QteResult.Good })[0].amount;
+
+            var bLow = SetupDealtBattle(true, out var kLow, out var eLow);
+            int dmgLow = bLow.Perform(BattleAction.Attack(kLow, eLow), 1f, new[] { QteResult.Good })[0].amount;
+            Assert.AreEqual((int)Math.Round(dmgFull * 1.15f), dmgLow, "Desperate Grit must grant +15% damage dealt at <= 35% HP");
+
+            // Incoming damage reduction
+            Battle SetupTakenBattle(bool lowHp, out Combatant knight, out Combatant enemy)
+            {
+                var battle = NewBattle("skeleton");
+                knight = P(battle, "Knight");
+                enemy = battle.Enemies.First();
+                knight.unit.stats.def = 0;
+                enemy.unit.abilities.baseScores = AbilityScores.Uniform(1);
+                knight.unit.selectedTalentIds.Add("desperate_grit");
+                knight.unit.hp = lowHp
+                    ? (int)Math.Floor(knight.Stats.maxHp * TalentSystem.DesperateGritHpThreshold)
+                    : knight.Stats.maxHp;
+                AdvanceTo(battle, enemy);
+                return battle;
+            }
+
+            var bTakenFull = SetupTakenBattle(false, out var ktFull, out var etFull);
+            int takenFull = bTakenFull.Perform(BattleAction.Attack(etFull, ktFull), 1f, new[] { QteResult.Good })[0].amount;
+
+            var bTakenLow = SetupTakenBattle(true, out var ktLow, out var etLow);
+            int takenLow = bTakenLow.Perform(BattleAction.Attack(etLow, ktLow), 1f, new[] { QteResult.Good })[0].amount;
+            Assert.AreEqual((int)Math.Round(takenFull * 0.85f), takenLow, "Desperate Grit must reduce damage taken by 15% at <= 35% HP");
+        }
     }
 }

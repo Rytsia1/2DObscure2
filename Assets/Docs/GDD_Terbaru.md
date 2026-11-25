@@ -2946,21 +2946,19 @@ Shared Talent dapat dipilih oleh karakter dari class apa pun.
 - Efek langsung berakhir jika pemilik Talent mati, meskipun durasi belum habis.
 - Nilai final dan timing turn masih perlu balancing/penetapan lebih lanjut.
 
-#### 3.12 Additional Shared Talent Concepts
+#### 3.12 Additional Shared Talents (Finalized)
 
-Nama berikut pernah diusulkan untuk Shared Talent Pool, tetapi efeknya belum difinalisasi:
+Sembilan Shared Talent tambahan berikut telah difinalisasi nama dan efeknya (nama yang bertabrakan/ambigu dengan Ability Score, Passive, Background Perk, atau Dungeon Modifier telah direvisi agar unik):
 
-- Vitality
-- Battle Rhythm
-- Iron Will
-- Efficient Casting
-- Quick Reflex — Defensive QTE window +10% (QTE window modifier).
-- Fortune Seeker
-- Keen Eye
-- Steady Hand — Offensive QTE window +10% (QTE window modifier).
-- Survivor's Instinct
-
-Dalam GDD v0.2, hanya Quick Reflex dan Steady Hand yang memiliki efek QTE. Efek Talent lainnya belum ditentukan. Nama Battle Rhythm dapat dipertimbangkan ulang setelah efeknya ditetapkan karena namanya mengisyaratkan interaksi QTE.
+- **Hardy Constitution** *(sebelumnya Vitality)* — **+45 Max HP** dan **+10% Healing Received**.
+- **Combat Momentum** *(sebelumnya Battle Rhythm)* — **+8 Initiative** dan **+10 Action Speed**.
+- **Unshakeable** *(sebelumnya Iron Will)* — **+15% Status Resistance** dan **+10% Stagger Resistance**.
+- **Spellcraft Mastery** *(sebelumnya Efficient Casting)* — **+12% Magic Power** dan **+10 Magic Penetration**.
+- **Quick Reflex** — **Defensive QTE window +10%** (QTE window modifier, masuk cap bersama `+25%`).
+- **Spoils Seeker** *(sebelumnya Fortune Seeker)* — **+15% Spoils (Gold)** dari hadiah battle & treasure selama pemilik talent masih hidup (*non-stacking*).
+- **Pinpoint Focus** *(sebelumnya Keen Eye)* — **+6% Critical Chance** dan **+15% Critical Damage**.
+- **Steady Hand** — **Offensive QTE window +10%** (QTE window modifier, masuk cap bersama `+25%`).
+- **Desperate Grit** *(sebelumnya Survivor's Instinct)* — Saat **HP ≤ 35% Max HP**, menghasilkan **+15% All Damage Dealt** dan **−15% All Damage Taken**.
 
 ### 4. Class-Specific Talent Pools
 
@@ -3140,8 +3138,8 @@ Hal-hal berikut masih perlu ditentukan sebelum seluruh Talent System dianggap fi
 4. Bonus peluang Stun dari Crusher.
 5. Bonus peluang Bleed dari Slasher.
 6. Nilai Physical Resistance penetration dan cakupan serangan Piercer.
-7. Efek dan status final Vitality, Battle Rhythm, Iron Will, Efficient Casting, Fortune Seeker, Keen Eye, dan Survivor's Instinct.
-8. Konfirmasi apakah semua konsep Shared Talent tambahan masuk ke pool final.
+7. ~~Efek dan status final 9 Shared Talents tambahan~~ — **Selesai** (direvisi & diimplementasikan sebagai Hardy Constitution, Combat Momentum, Unshakeable, Spellcraft Mastery, Quick Reflex, Spoils Seeker, Pinpoint Focus, Steady Hand, dan Desperate Grit pada §3.12).
+8. Konfirmasi apakah seluruh 20 Shared Talents tetap berada di pool final.
 9. Efek lengkap dan nilai balancing seluruh Class-Specific Talent yang belum dispesifikasikan.
 10. Apakah akan ada Talent prerequisite atau persyaratan level khusus di luar milestone pemilihan.
 11. Harga Scroll of Emptiness di Hub Shop.
@@ -5231,19 +5229,19 @@ Affix baru (kategori "QTE", tambahan untuk tabel kategori affix di Bab 13 §6.1)
 | Quick Reflex | Window defensif +10% | Modifier 3.4 |
 | Steady Hand | Window ofensif +10% | Modifier 3.4 |
 | Lucky | 20% retry saat Poor | Aturan yang sudah ada + 8.1 |
-| Vitality, Battle Rhythm, Iron Will, Efficient Casting, Fortune Seeker, Keen Eye, Survivor's Instinct | Tidak ada | Efek non-QTE ditetapkan di Talents System |
+| Hardy Constitution, Combat Momentum, Unshakeable, Spellcraft Mastery, Spoils Seeker, Pinpoint Focus, Desperate Grit | Tidak ada | Efek non-QTE difinalisasi di Bab 9 §3.12 |
 | Alert, Healer, Durable, Keen Mind, Arcane Reserve, Poisoner, Crusher, Slasher, Piercer, Inspiring Leader | Tidak ada | Durable dan Inspiring Leader berinteraksi lewat Damage Reduction (5.1) |
 
 - Quick Reflex dan Steady Hand ditumpuk dengan sumber window lain di bawah cap +25%.
 - Talent hanya boleh menyentuh QTE lewat modifier window atau retry; tidak ada talent yang mengubah R\_QTE atau grade.
 
-**3. Interaksi dengan sistem lain.** 7.5: Perfect Timing (Martial Artist) setara dengan Quick Reflex + Steady Hand dalam satu talent, sebagai keunggulan identitas class. 8.3: talent window bersaing dengan affix equipment dalam mencapai cap. Talents System: Battle Rhythm dan Keen Eye tidak diberi efek QTE agar daftar talent QTE tetap pendek dan mudah dipahami.
+**3. Interaksi dengan sistem lain.** 7.5: Perfect Timing (Martial Artist) setara dengan Quick Reflex + Steady Hand dalam satu talent, sebagai keunggulan identitas class. 8.3: talent window bersaing dengan affix equipment dalam mencapai cap. Talents System: `Battle Rhythm` telah diganti namanya menjadi **Combat Momentum** dan `Keen Eye` menjadi **Pinpoint Focus**, keduanya tidak diberi efek QTE agar daftar talent QTE tetap pendek dan mudah dipahami.
 
 **4. Kurva kesulitan dan sumber tantangan.** Talent window adalah pilihan untuk pemain yang kesulitan dengan eksekusi, dengan harga berupa talent lain yang tidak diambil (misalnya Durable atau Healer). Pemain yang mahir mendapat nilai lebih dari talent non-QTE.
 
 **5. Risiko.**
 
-- Nama "Battle Rhythm" terdengar seperti talent QTE, sehingga pemain bisa salah paham. Mitigasi: pertimbangkan mengganti nama talent itu saat efeknya ditetapkan.
+- ~~Nama "Battle Rhythm" terdengar seperti talent QTE~~ — Mitigasi selesai: telah diganti namanya menjadi **Combat Momentum** (efek Initiative & Action Speed).
 - Quick Reflex bisa menjadi pilihan wajib di dungeon akhir. Mitigasi: telemetri pick rate di bawah.
 
 **6. Cara pengujian.**

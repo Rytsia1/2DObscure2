@@ -295,13 +295,17 @@ namespace Obscure
                         borderTopWidth = 2, borderBottomWidth = 2, borderLeftWidth = 2, borderRightWidth = 2,
                     }
                 };
+                card.AddToClassList("uitk-talent-card");
                 card.Add(new UiLabel(td.name) { style = { fontSize = 18, color = owned ? Palette.Mist3 : sel ? Palette.Gold1 : Palette.Mist1, marginBottom = 6 } });
-                var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
-                if (tag != null)
+                if (td.category != TalentCategory.Shared)
                 {
-                    FigmaUi.SetInstanceText(tag, "text-0", td.category == TalentCategory.Shared ? "SHARED" : ClassName(hero).ToUpperInvariant());
-                    tag.style.marginBottom = 6;
-                    card.Add(tag);
+                    var tag = FigmaUi.InstantiateTemplate("Tag-Cls");
+                    if (tag != null)
+                    {
+                        FigmaUi.SetInstanceText(tag, "text-0", ClassName(hero).ToUpperInvariant());
+                        tag.style.marginBottom = 6;
+                        card.Add(tag);
+                    }
                 }
                 string fx = (owned ? "OWNED · " : "") + (td.description ?? "");
                 card.Add(new UiLabel(fx.ToUpperInvariant()) { style = { fontSize = 12, color = Palette.Mist2, whiteSpace = WhiteSpace.Normal } });

@@ -294,6 +294,28 @@ namespace Obscure
                 list.Add(StatModifier.ForDerived(DerivedStatId.MaxHP, TalentSystem.DurableHpBonus, ModifierKind.PercentAdd, ModifierSource.Talent, "Durable"));
             if (HasTalent("arcane_reserve"))
                 list.Add(StatModifier.ForDerived(DerivedStatId.MaxMP, TalentSystem.ArcaneReserveMaxMpBonus, ModifierKind.Flat, ModifierSource.Talent, "Arcane Reserve"));
+            if (HasTalent("hardy_constitution"))
+                list.Add(StatModifier.ForDerived(DerivedStatId.MaxHP, TalentSystem.HardyConstitutionMaxHpFlat, ModifierKind.Flat, ModifierSource.Talent, "Hardy Constitution"));
+            if (HasTalent("combat_momentum"))
+            {
+                list.Add(StatModifier.ForDerived(DerivedStatId.Initiative, TalentSystem.CombatMomentumInitiative, ModifierKind.Flat, ModifierSource.Talent, "Combat Momentum"));
+                list.Add(StatModifier.ForDerived(DerivedStatId.ActionSpeed, TalentSystem.CombatMomentumActionSpeed, ModifierKind.Flat, ModifierSource.Talent, "Combat Momentum"));
+            }
+            if (HasTalent("unshakeable"))
+            {
+                list.Add(StatModifier.ForDerived(DerivedStatId.StatusResistance, TalentSystem.UnshakeableStatusResist, ModifierKind.Flat, ModifierSource.Talent, "Unshakeable"));
+                list.Add(StatModifier.ForDerived(DerivedStatId.StaggerResistance, TalentSystem.UnshakeableStaggerResist, ModifierKind.Flat, ModifierSource.Talent, "Unshakeable"));
+            }
+            if (HasTalent("spellcraft_mastery"))
+            {
+                list.Add(StatModifier.ForDerived(DerivedStatId.MagicPower, TalentSystem.SpellcraftMasteryMagicPowerPercent, ModifierKind.PercentAdd, ModifierSource.Talent, "Spellcraft Mastery"));
+                list.Add(StatModifier.ForDerived(DerivedStatId.MagicPenetration, TalentSystem.SpellcraftMasteryMagicPen, ModifierKind.Flat, ModifierSource.Talent, "Spellcraft Mastery"));
+            }
+            if (HasTalent("pinpoint_focus"))
+            {
+                list.Add(StatModifier.ForDerived(DerivedStatId.CriticalChance, TalentSystem.PinpointFocusCritChance, ModifierKind.Flat, ModifierSource.Talent, "Pinpoint Focus"));
+                list.Add(StatModifier.ForDerived(DerivedStatId.CriticalDamage, TalentSystem.PinpointFocusCritDamage, ModifierKind.Flat, ModifierSource.Talent, "Pinpoint Focus"));
+            }
             list.AddRange(permanentModifiers);
             list.AddRange(temporaryModifiers);
             return list;
@@ -1306,10 +1328,18 @@ namespace Obscure
             foreach (var kv in HubEconomy.HubRestock) HubShopStock[kv.Key] = kv.Value;
         }
 
+        void ApplySpoilsSeekerBonus(ref int gold)
+        {
+            if (gold <= 0 || Party == null) return;
+            if (Party.Any(u => u != null && u.Alive && u.HasTalent("spoils_seeker")))
+                gold = Math.Max(1, (int)Math.Round(gold * (1f + TalentSystem.SpoilsSeekerGoldBonus)));
+        }
+
         public void AddGold(int amount)
         {
             if (amount > 0)
             {
+                ApplySpoilsSeekerBonus(ref amount);
                 ModifierManager.ModifyGoldReward(ref amount);
                 RelicManager.ModifyGoldReward(ref amount);
                 Stats.goldEarned += amount;
@@ -1595,6 +1625,7 @@ namespace Obscure
             var c = CurrentEvent?.choices?[index];
             if (c == null || c.gold <= 0) return 0;
             int g = ScaleEffect(RunConfig.ScaleEventGold(c.gold), EvaluateEventChoice(CurrentEvent, c).effectScale);
+            ApplySpoilsSeekerBonus(ref g);
             ModifierManager.ModifyGoldReward(ref g);
             RelicManager.ModifyGoldReward(ref g);
             return g;

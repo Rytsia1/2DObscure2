@@ -842,10 +842,13 @@ namespace Obscure
             var profile = QteConfig.For(tier, assist);
             var r = run ?? a.actor?.run;
             float charBonus = a.actor != null ? a.actor.unit.Derived.QteTimingBonusFraction : 0f;
+            float talentBonus = (a.actor?.unit != null && a.actor.unit.HasTalent("steady_hand"))
+                ? TalentSystem.SteadyHandOffensiveQteBonus
+                : 0f;
             float modDelta = (a.actor != null && a.actor.IsPlayer && r?.ModifierManager != null)
                 ? r.ModifierManager.GetOffensiveQteWindowDelta()
                 : 0f;
-            float windowBonus = Math.Clamp(charBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
+            float windowBonus = Math.Clamp(charBonus + talentBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             if (r?.Tutorial != null && r.Tutorial.FirstTime("offense_" + kind)) profile = profile.Scaled(1f, Prologue.FirstTimeSlow);
 
             bool reduceDistortions = Game.I?.Settings?.reduceQteDistortions ?? false;
@@ -889,10 +892,13 @@ namespace Obscure
             var r = run ?? a.target?.run;
             float statTimingBonus = a.target != null ? a.target.unit.Derived.QteTimingBonusFraction : 0f;
             float embraceBonus = (a.target != null && a.target.OceansEmbraceShieldActive) ? 0.10f : 0f;
+            float talentBonus = (a.target?.unit != null && a.target.unit.HasTalent("quick_reflex"))
+                ? TalentSystem.QuickReflexDefensiveQteBonus
+                : 0f;
             float modDelta = (a.target != null && a.target.IsPlayer && r?.ModifierManager != null)
                 ? r.ModifierManager.GetDefensiveQteWindowDelta()
                 : 0f;
-            float totalTimingBonus = Math.Clamp(statTimingBonus + embraceBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
+            float totalTimingBonus = Math.Clamp(statTimingBonus + embraceBonus + talentBonus + modDelta, -0.50f, DungeonModifierManager.MaxQteWindowBonus);
             var tier = a.actor.enemy?.tier ?? Tier.Normal;
             bool isEnhanced = a.actor.enemy != null && a.actor.enemy.isEnhanced;
             bool reduceDistortions = Game.I?.Settings?.reduceQteDistortions ?? false;

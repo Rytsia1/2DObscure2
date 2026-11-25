@@ -1194,6 +1194,13 @@ namespace Obscure
                 }
             }
 
+            // Talent: Desperate Grit (+15% All Damage Dealt when HP <= 35% Max HP)
+            if (attacker?.unit != null && attacker.unit.HasTalent("desperate_grit") &&
+                attacker.unit.hp <= (int)Math.Floor(attacker.Stats.maxHp * TalentSystem.DesperateGritHpThreshold))
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * (1f + TalentSystem.DesperateGritDamageBonus)));
+            }
+
             // Dungeon Modifier System: ModifyDamageReceived BEFORE Defensive QTE (Bab 12 §5.1 & Bab 15 §5)
             if (t != null && t.IsPlayer && run?.ModifierManager != null)
             {
@@ -1203,6 +1210,13 @@ namespace Obscure
                 {
                     amount = Math.Max(1, (int)Math.Round(amount * modRecvMult));
                 }
+            }
+
+            // Talent: Desperate Grit (-15% All Damage Taken when HP <= 35% Max HP)
+            if (t?.unit != null && t.unit.HasTalent("desperate_grit") &&
+                t.unit.hp <= (int)Math.Floor(t.Stats.maxHp * TalentSystem.DesperateGritHpThreshold))
+            {
+                amount = Math.Max(1, (int)Math.Round(amount * (1f - TalentSystem.DesperateGritDamageReduction)));
             }
 
             // Hidden Stage 2-3 Enemy Affixes (Relentless on enemy attacks; Fortified on legacy Deal path).
@@ -1562,6 +1576,10 @@ namespace Obscure
             if (healer?.unit != null && healer.unit.HasTalent("healer"))
             {
                 amount = (int)Math.Round(amount * (1f + TalentSystem.HealerBonus));
+            }
+            if (t?.unit != null && t.unit.HasTalent("hardy_constitution"))
+            {
+                amount = (int)Math.Round(amount * (1f + TalentSystem.HardyConstitutionHealReceivedBonus));
             }
             if (t?.unit?.background != null)
             {
